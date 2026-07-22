@@ -27,9 +27,11 @@ Exit criteria:
 
 ## Phase 1: vertical flight laboratory
 
+Status: complete.
+
 Purpose: create the smallest end-to-end vehicle simulation.
 
-Current progress: the production `no_std` core executes the complete validated vertical mission through immutable, fail-closed transitions. Exact interpolation and acceleration-division fast paths preserve general fallbacks and the golden checksum while reducing checked dynamics to 114,981.59 PAL cycles per step. The raw physics loop reaches 8.57 Hz with 6.64 percent headroom. Allocation-free canonical telemetry now emits through caller-provided sinks at the initial state, configured stride, terminal state, and numeric faults. Events accumulate until accepted by a frame, and the golden 257-frame stream matches an independent byte-stream CRC. Target-visible timing measures telemetry at an additional 7,475.28 cycles per physics step over checksum mode; the full recorded-validation path reaches 5.72 Hz. A host writer and strict stream inspector reproduce and validate the golden stream. A constant-memory C64 sink retains the latest frame plus accumulated event history and renders a post-run status page whose actual screen memory is verified under PAL VICE. An 80-digit Decimal comparison separates fixed-point/table error from integrator bias, confirms two refined RK4 runs within declared tolerances, and supplies the accumulated altitude/velocity deltas reported by the C64. The final completion audit remains.
+Current result: the production `no_std` core executes the complete validated vertical mission through immutable, fail-closed transitions. Final linked-layout timing measures raw dynamics at 118,111.48 PAL cycles per step (8.34 Hz, 4.10 percent headroom) and checksum plus canonical telemetry at 175,307.68 cycles per step (5.62 Hz). Host capture and strict inspection reproduce the 257-frame stream. A 38,519-byte C64 acceptance PRG reports zero failures, while the 28,353-byte post-run display retains an 80-byte status sink and is verified from screen memory. An 80-digit Decimal comparison separates fixed-point error from integrator bias and supplies the accumulated altitude/velocity deltas displayed by the C64. All exit criteria pass; see `phase1/COMPLETION.md`.
 
 Planned capabilities:
 

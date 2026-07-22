@@ -52,6 +52,18 @@ try {
     $payload = ($json -join "`n") | ConvertFrom-Json
     if (-not $payload.stable) { throw "Telemetry timing was not stable." }
     $result = $payload.runs[0]
+    $artifactBytes = (Get-Item -LiteralPath $artifact).Length
+    if ([double]$result.dynamics_cycles_per_step -gt $budgetPerStep) {
+        throw "Checked dynamics exceeded the PAL 8 Hz budget."
+    }
+    $accepted = Get-Content -Raw -LiteralPath phase1/telemetry-timing-v2.json | ConvertFrom-Json
+    if ([long]$result.dynamics_net_cycles -ne [long]$accepted.checked_dynamics.net_cycles `
+        -or [long]$result.mission_net_cycles -ne [long]$accepted.dynamics_with_rolling_checksum.net_cycles `
+        -or [long]$result.telemetry_net_cycles -ne [long]$accepted.checksum_and_canonical_telemetry.net_cycles `
+        -or [long]$result.boundary_overhead_cycles -ne [long]$accepted.boundary_overhead_cycles `
+        -or $artifactBytes -ne [long]$accepted.timed_prg_bytes) {
+        throw "Telemetry timing differs from telemetry-timing-v2.json."
+    }
 
     $rows = @(
         [pscustomobject]@{
@@ -83,7 +95,7 @@ try {
         [double]$result.telemetry_overhead_per_frame)
     Write-Host "Emitted: $($result.frames_written) frames, $($result.bytes_written) bytes"
     Write-Host ("PAL 8 Hz budget: {0:N2} cycles/step." -f $budgetPerStep)
-    Write-Host "Timed PRG: $((Get-Item -LiteralPath $artifact).Length) bytes"
+    Write-Host "Timed PRG: $artifactBytes bytes"
     Write-Host "Boundary cost: $($result.boundary_overhead_cycles) cycles"
     Write-Host "Each path was identical across $Runs run(s)."
     Write-Host "PHASE 1 TELEMETRY TIMING GATE: PASS"

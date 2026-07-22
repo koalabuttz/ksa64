@@ -1,5 +1,7 @@
 # Phase 1: vertical-flight laboratory
 
+Status: complete.
+
 Phase 1 has an end-to-end deterministic vertical mission executor, a passing raw physics budget, canonical stride-aware telemetry emission, target-visible telemetry timing, host capture/inspection, a verified C64 post-run display, and independent high-precision accumulated-error evidence: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, exact summaries, allocation-free binary serialization and decoding, event accumulation, caller-provided sinks, strict stream validation, and compact host/C64 text views.
 
 ## Current slice
@@ -35,17 +37,19 @@ The `ksa64-core` crate provides:
 - Explicit preservation of simulation and sink failures, including simultaneous fault-reporting failures.
 - An independently generated 257-frame, 10,312-byte mission-stream oracle with CRC-32 `0xcf56fe65`.
 - A three-path PAL timing harness measuring raw dynamics, per-successor checksumming, and checksum plus canonical telemetry.
-- Three stable telemetry runs at 172,152.59 cycles per physics step (5.72 Hz), with telemetry itself adding 7,475.28 cycles per step or 59,569.54 cycles per emitted frame.
+- Three stable final-layout telemetry runs at 175,307.68 cycles per physics step (5.62 Hz), with telemetry itself adding 7,504.00 cycles per step or 59,798.38 cycles per emitted frame.
 - Allocation-free portable decoders for canonical headers and frames, including exact schema, identity, reserved-bit, and CRC validation.
 - A `std` host writer sink and inspector that enforce initial-state, order, stride, time, fault, and terminal-stream semantics.
 - A host command that captures or inspects `.kst` files and renders interpreted final-state telemetry without using decimal values for validation.
 - A constant-memory C64 sink that retains one header, the latest frame, frame count, and accumulated event bits.
 - A direct 40x25 post-run status page verified from actual VIC-II screen memory under PAL VICE.
-- Explicit separation of display work from the accepted raw and recorded timing regions; the status PRG is 28,149 bytes.
+- Explicit separation of display work from the accepted raw and recorded timing regions; the status PRG is 28,353 bytes.
+- A target-practical 38,519-byte C64 acceptance pack that executes analytic, force, transition, mission, record, and scenario checks under PAL VICE.
+- An on-screen 80-byte measurement for the retained C64 status sink.
 - An 80-digit Decimal comparison separating fixed-point/table error from integrator error and confirming RK4 convergence.
 - Generated C64 presentation constants for the final fixed-minus-confirmed-RK4 deltas: -279.355 m altitude and -2.857 m/s velocity.
 
-The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. Exact interpolation and acceleration-division fast paths reduce checked dynamics to 114,981.59 PAL cycles per step, clearing the raw PAL 8 Hz budget with 6.64 percent headroom. Its telemetry stream scheduler is production code; host storage and C64 presentation remain adapters outside the physics core. The diagnostic C64 self-test is 49,468 bytes with the C64 adapter module available, while the standalone post-run status PRG with accumulated-error reporting is 28,149 bytes.
+The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. The final linked-layout audit measures checked dynamics at 118,111.48 PAL cycles per step, clearing the raw PAL 8 Hz budget with 4.10 percent headroom. Its telemetry stream scheduler is production code; host storage and C64 presentation remain adapters outside the physics core. The exhaustive C64 diagnostic build is 49,773 bytes, the target-practical acceptance PRG is 38,519 bytes, and the standalone post-run status PRG is 28,353 bytes.
 
 ## Golden mission result
 
@@ -83,12 +87,16 @@ The production core executes the complete golden 2,048-step mission and matches 
         tests/
     phase1/
         README.md
+        COMPLETION.md
         check.ps1
+        complete.ps1
+        c64_self_test.ps1
         timing.ps1
         telemetry_timing.ps1
         high_precision.ps1
         status_display.ps1
-        telemetry-timing-v1.json
+        production-timing-v4.json
+        telemetry-timing-v2.json
         high-precision-v1.json
         HIGH-PRECISION.md
         generated/
@@ -98,7 +106,9 @@ The production core executes the complete golden 2,048-step mission and matches 
 
 From the project root:
 
+    .\phase1\complete.ps1
     .\phase1\check.ps1
+    .\phase1\c64_self_test.ps1
     .\phase1\timing.ps1
     .\phase1\telemetry_timing.ps1
     .\phase1\high_precision.ps1
@@ -106,7 +116,7 @@ From the project root:
     cargo run -p ksa64-host -- capture target/phase1-vertical.kst
     cargo run -p ksa64-host -- inspect target/phase1-vertical.kst
 
-The first command verifies the accepted artifacts, runs native tests, executes the exact fixture pack through rust-mos, and builds both physical-C64 PRGs. The second preserves the dedicated raw/checksum timing gate. The third measures raw, checksum, and canonical telemetry paths together and requires three stable runs under the pinned PAL VICE common clock. The fourth recomputes and verifies the independent Decimal/RK4 comparison. The fifth runs the complete mission and verifies the finished PETSCII page by reading C64 screen memory from VICE.
+The first command runs the complete Phase 1 completion matrix. The remaining commands expose its individual gates: core/cross-target correctness, raw/checksum timing, canonical telemetry timing, independent Decimal/RK4 comparison, and C64 screen-memory verification.
 
 To regenerate the Rust bindings deliberately:
 
@@ -121,4 +131,4 @@ Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Audit every Phase 1 exit criterion, rerun the complete correctness, timing, high-precision, host-capture, and C64-display gates, then freeze the phase-completion record. New dynamics belong to Phase 2.
+Begin Phase 2 planning from the accepted boundary: two-dimensional motion, pitch guidance, staging, dynamic pressure, and orbital classification. Preserve the Phase 1 exact core and validation gates as regression evidence.

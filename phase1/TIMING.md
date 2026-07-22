@@ -2,7 +2,7 @@
 
 Date: 2026-07-22
 
-Status: raw physics-budget and telemetry-attribution gates passed. Exact checked dynamics runs at 8.57 Hz; checksum plus canonical telemetry runs at 5.72 Hz, with telemetry itself adding 7,475.28 cycles per physics step over checksum mode.
+Status: final Phase 1 linked-layout gates passed. Exact checked dynamics runs at 8.34 Hz; checksum plus canonical telemetry runs at 5.62 Hz, with telemetry itself adding 7,504.00 cycles per physics step over checksum mode.
 
 ## Measurement boundary
 
@@ -23,15 +23,17 @@ At 985,248 processor clocks per second, the 0.125-second timestep permits 123,15
 |---|---:|---:|---:|---:|
 | v1: general production arithmetic | 160,904.64 | 6.12 Hz | -37,748.64 | baseline |
 | v2: integral-Q12 environment interpolation | 127,932.69 | 7.70 Hz | -4,776.69 | -20.49% |
-| v3: reduced acceleration division | 114,981.59 | 8.57 Hz | +8,174.41 | -10.12% from v2 |
+| v3: reduced acceleration division checkpoint | 114,981.59 | 8.57 Hz | +8,174.41 | -10.12% from v2 |
+| v4: final Phase 1 linked layout | 118,111.48 | 8.34 Hz | +5,044.52 | +2.72% from v3 |
 
-Together, the two exact specializations remove 45,923.05 cycles per step, or 28.54 percent of the v1 checked-dynamics cost. The final margin is 6.64 percent of the raw 8 Hz budget.
+The final binary remains 42,793.16 cycles per step, or 26.60 percent, faster than v1. Its margin is 4.10 percent of the raw 8 Hz budget. The v3-to-v4 change is whole-program code layout from the final adapters and acceptance surfaces, not a dynamics-model change; the exact final state and checksum are unchanged.
 
 Machine-readable evidence is retained separately:
 
 - `production-timing-v1.json`: general production arithmetic.
 - `production-timing-v2.json`: specialized environment interpolation.
-- `production-timing-v3.json`: specialized acceleration division.
+- production-timing-v3.json: specialized acceleration division checkpoint.
+- production-timing-v4.json: final Phase 1 linked layout.
 
 ## Exact fast paths
 
@@ -49,7 +51,7 @@ The v3 diagnostic timing PRG is 22,973 bytes. This is 913 bytes larger than v2 b
 
 ## Validation-policy cost
 
-The v3 mission path with per-successor rolling FNV-1a costs 164,489.59 cycles per step, while checked dynamics alone costs 114,981.59. Full-state hashing therefore adds 49,508.00 cycles per step and does not fit 8 Hz.
+The final v4 mission path with per-successor rolling FNV-1a costs 167,610.48 cycles per step, while checked dynamics alone costs 118,111.48. Full-state hashing therefore adds 49,499.00 cycles per step and does not fit 8 Hz.
 
 This does not invalidate the physics-budget result. The checksum is deterministic validation policy rather than dynamics, and KSA64 does not require all modes to run in real time. The telemetry gate must preserve canonical checksums while keeping validation cadence and interactive scheduling explicit.
 
@@ -61,27 +63,28 @@ All three PAL VICE runs were identical:
 
 | Path | Total cycles | Cycles/physics step | Maximum rate | 8 Hz margin |
 |---|---:|---:|---:|---:|
-| Checked dynamics | 235,477,621 | 114,979.31 | 8.57 Hz | +8,176.69 |
-| Dynamics + rolling checksum | 337,259,130 | 164,677.31 | 5.98 Hz | -41,521.31 |
-| Checksum + canonical telemetry | 352,568,502 | 172,152.59 | 5.72 Hz | -48,996.59 |
+| Checked dynamics | 241,892,732 | 118,111.69 | 8.34 Hz | +5,044.31 |
+| Dynamics + rolling checksum | 343,661,953 | 167,803.69 | 5.87 Hz | -44,647.69 |
+| Checksum + canonical telemetry | 359,030,136 | 175,307.68 | 5.62 Hz | -52,151.68 |
 
-Canonical scheduling, record serialization, record CRCs, and the volatile discard copies add 15,309,372 cycles per mission: 7,475.28 cycles per physics step, 59,569.54 cycles per emitted frame, or 4.54 percent over checksum mode. The full path does not fit 8 Hz, but telemetry is not the dominant reason; per-successor exact-state hashing costs roughly 6.6 times the telemetry increment.
+Canonical scheduling, record serialization, record CRCs, and the volatile discard copies add 15,368,183 cycles per mission: 7,504.00 cycles per physics step, 59,798.38 cycles per emitted frame, or 4.47 percent over checksum mode. The full path does not fit 8 Hz, but telemetry is not the dominant reason; per-successor exact-state hashing costs roughly 6.6 times the telemetry increment.
 
-The diagnostic telemetry PRG is 29,444 bytes and the accepted machine-readable evidence is `telemetry-timing-v1.json`. Small raw/checksum differences from `production-timing-v3.json` are whole-program code-layout effects from adding the third executor instantiation, so attribution uses differences between paths in this same binary.
+The final diagnostic telemetry PRG is 29,165 bytes and the accepted machine-readable evidence is `telemetry-timing-v2.json`. Small raw/checksum differences from `production-timing-v4.json` are whole-program code-layout effects from adding the third executor instantiation, so attribution uses differences between paths in this same binary.
 
-This closes the timing question without forcing one runtime policy. Recorded validation may preserve every successor checksum and run at 5.72 Hz. An interactive mode can keep the 8.57 Hz dynamics path and use a cheaper or less frequent validation policy later, while canonical telemetry format and scheduling remain unchanged.
+This closes the timing question without forcing one runtime policy. Recorded validation may preserve every successor checksum and run at 5.62 Hz. An interactive mode can keep the 8.34 Hz dynamics path and use a cheaper or less frequent validation policy later, while canonical telemetry format and scheduling remain unchanged.
 ## Finding
 
-The raw Phase 1 physics loop fits its provisional cadence without weakening the numeric contract or narrowing accepted scenarios. All 34 native tests, rust-mos exact execution, the C64 correctness build, and both three-run common-clock timing gates pass with the unchanged `0x72bf6e0e` mission checksum.
+The raw Phase 1 physics loop fits its provisional cadence without weakening the numeric contract or narrowing accepted scenarios. All 44 native tests, exhaustive rust-mos exact execution, target-practical C64 acceptance, and both final three-run common-clock timing gates pass with the unchanged `0x72bf6e0e` mission checksum.
 
-Arithmetic optimization remains paused: the new measurement shows serialization is a modest increment, while validation cadence is the larger policy decision. The next Phase 1 slice is a host capture and strict inspection adapter using the accepted sink and binary format, followed by C64 presentation.
+Arithmetic optimization remains paused: serialization is a modest increment, while validation cadence is the larger policy decision. Host capture, C64 presentation, memory reporting, and high-precision accumulated-error evidence now pass; Phase 1 is complete.
 
 ## Reproduce
 
 From the project root in PowerShell:
 
+    .\phase1\complete.ps1
     .\phase1\check.ps1
     .\phase1\timing.ps1
     .\phase1\telemetry_timing.ps1
 
-The first script verifies generated inputs and exact execution across native Rust, rust-mos, and the C64 build. The second preserves the accepted raw/checksum measurement. The third builds the telemetry timing PRG, requires three stable runs by default, and prints the checksum and serialization deltas, 8 Hz margins, frame/byte counts, and artifact size.
+The first script reruns the complete Phase 1 matrix. The second verifies generated inputs and exact execution across native Rust and rust-mos while building the C64 artifacts. The third preserves the accepted raw/checksum measurement. The fourth builds the telemetry timing PRG, requires three stable runs by default, and prints the checksum and serialization deltas, 8 Hz margins, frame/byte counts, and artifact size.

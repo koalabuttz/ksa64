@@ -19,4 +19,4 @@ pub mod c64_timer;
 mod self_test;
 
 #[cfg(feature = "fixtures")]
-pub use self_test::run_numeric_self_tests;
+pub use self_test::{run_c64_acceptance_self_tests, run_numeric_self_tests};

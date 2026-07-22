@@ -533,6 +533,21 @@ fn check_scenario() -> u16 {
     }
 }
 
+/// Target-practical acceptance pack; exhaustive arithmetic and whole-stream checks run in mos-sim.
+pub fn run_c64_acceptance_self_tests() -> u16 {
+    let mut failures = 0u16;
+    failures += failure_count(vectors::NUMERIC_CONTRACT == "ksa64.numeric.phase1-v1");
+    failures += check_interpolation();
+    failures += check_constant_velocity();
+    failures += check_acceleration_cases();
+    failures += check_mass_flow();
+    failures += check_force_model();
+    failures += check_transitions();
+    failures += check_mission();
+    failures += check_telemetry();
+    failures += check_scenario();
+    failures
+}
 pub fn run_numeric_self_tests() -> u16 {
     let mut failures = 0u16;
     failures += failure_count(vectors::NUMERIC_CONTRACT == "ksa64.numeric.phase1-v1");

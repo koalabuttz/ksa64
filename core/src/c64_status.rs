@@ -266,8 +266,11 @@ pub fn render_status(scenario: &Scenario, sink: &C64StatusSink) -> Result<(), Te
         write_fixed_3(19, 16, 12, error_data::FINAL_VELOCITY_ERROR_M_S_Q16, 16);
         write_text(19, 29, "M/S");
 
-        write_text(20, 0, "RAW PHYSICS       8.57 HZ");
-        write_text(21, 0, "RECORDED MODE     5.72 HZ");
+        write_text(20, 0, "RAW PHYSICS       8.34 HZ");
+        write_text(21, 0, "RECORDED MODE     5.62 HZ");
+        write_text(22, 0, "STATUS SINK");
+        write_u32_right(22, 16, 12, core::mem::size_of::<C64StatusSink>() as u32);
+        write_text(22, 29, "B");
         write_text(23, 0, "POST-RUN DISPLAY - TIMING EXCLUDED");
     }
     Ok(())

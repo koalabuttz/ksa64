@@ -51,6 +51,7 @@ class StatusDisplayResult:
     velocity_error: str
     raw_rate: str
     recorded_rate: str
+    memory: str
     timing_note: str
 
 
@@ -73,8 +74,9 @@ def parse_result(memory: bytes) -> StatusDisplayResult | None:
         17: "CUTOFF  DEPLETED  END",
         18: "HP ALT DELTA        -279.355 M",
         19: "HP VEL DELTA          -2.857 M/S",
-        20: "RAW PHYSICS       8.57 HZ",
-        21: "RECORDED MODE     5.72 HZ",
+        20: "RAW PHYSICS       8.34 HZ",
+        21: "RECORDED MODE     5.62 HZ",
+        22: "STATUS SINK               80 B",
         23: "POST-RUN DISPLAY - TIMING EXCLUDED",
     }
     for row, text in expected.items():
@@ -99,6 +101,7 @@ def parse_result(memory: bytes) -> StatusDisplayResult | None:
         velocity_error=screen[19],
         raw_rate=screen[20],
         recorded_rate=screen[21],
+        memory=screen[22],
         timing_note=screen[23],
     )
 

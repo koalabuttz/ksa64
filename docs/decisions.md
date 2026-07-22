@@ -545,6 +545,24 @@ Consequence:
 
 Phase 1 has measured, decomposed accumulated-error evidence rather than a generic tolerance. The C64 status PRG grows to 28,149 bytes and reports the rounded total deltas as -279.355 m and -2.857 m/s. Adding a second force evaluation would erase the accepted raw 8 Hz margin, while the measured error is adequate for this learning laboratory; new integrator work is deferred to Phase 2 requirements.
 
+## D-036: Accept Phase 1 against the final linked binaries
+
+Status: Accepted
+
+Decision:
+
+Close Phase 1 only after one completion runner passes the generated-artifact, native, exhaustive rust-mos, target-practical C64, raw timing, telemetry timing, high-precision, host-capture, and C64 screen-memory gates. Treat the final linked-layout measurements as authoritative while retaining earlier timing snapshots as optimization history.
+
+Use a dedicated C64 acceptance pack for analytic motion, mass flow, environment, forces, transitions, the full checksummed mission, canonical records, and scenario ingestion. Keep the larger exhaustive arithmetic and whole-stream pack under `mos-sim`, where it remains practical. Report the C64 acceptance result persistently through masked VIC-II color registers.
+
+Rationale:
+
+The final audit caught both transient/readback mistakes in the C64 result harness and a whole-program timing shift after the last adapters were linked. Three stable final runs measure raw dynamics at 118,111.48 cycles per step (8.34 Hz, 4.10 percent headroom) and checksum plus canonical telemetry at 175,307.68 cycles per step (5.62 Hz). The exact mission checksum and telemetry stream identity remain unchanged.
+
+Consequence:
+
+All Phase 1 exit criteria pass. The C64 reports cycle rates, an 80-byte retained-sink footprint, and accumulated high-precision deltas on its verified post-run page. The accepted final artifacts are 49,773 bytes for the exhaustive diagnostic build, 38,519 bytes for C64 acceptance, and 28,353 bytes for the status program. Further vehicle dynamics begin in Phase 2.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

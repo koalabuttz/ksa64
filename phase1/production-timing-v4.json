@@ -1,0 +1,56 @@
+{
+  "schema": "ksa64.phase1.production-timing-v4",
+  "date": "2026-07-22",
+  "optimization": "phase1-final-linked-layout",
+  "target": "PAL C64",
+  "clock_hz": 985248,
+  "target_rate_hz": 8,
+  "budget_cycles_per_step": 123156,
+  "vice": {
+    "version": "3.10",
+    "executable_sha256": "b48f9117916e960ca6a59ca32bc63765f9b30f2b6bb3ef056514c8bcce0a7030"
+  },
+  "rust_mos_image": "ghcr.io/koalabuttz/rust-mos@sha256:9ddd4ce9502e54409fb56e0a80a2200f1df693a629f2911ff4f1c81303e51271",
+  "runs": 3,
+  "stable": true,
+  "steps_per_run": 2048,
+  "boundary_overhead_cycles": 4,
+  "timed_prg_bytes": 22694,
+  "checked_dynamics": {
+    "net_cycles": 241892310,
+    "cycles_per_step": 118111.4794921875,
+    "maximum_rate_hz": 8.341678592428176,
+    "margin_cycles_at_8_hz": 5044.5205078125,
+    "headroom_at_8_hz_percent": 4.096041206122723,
+    "fits_8_hz_budget": true,
+    "reduction_from_v2_cycles_per_step": 9821.21142578125,
+    "reduction_from_v2_percent": 7.676858319253734,
+    "reduction_from_v1_cycles_per_step": 42793.16455078125,
+    "reduction_from_v1_percent": 26.595357023600606
+  },
+  "dynamics_with_rolling_checksum": {
+    "net_cycles": 343266260,
+    "cycles_per_step": 167610.478515625,
+    "maximum_rate_hz": 5.878200508258517,
+    "margin_cycles_at_8_hz": -44454.478515625,
+    "fits_8_hz_budget": false,
+    "reduction_from_v2_cycles_per_step": 10045.21142578125,
+    "reduction_from_v2_percent": 5.65431449400485
+  },
+  "rolling_checksum_delta": {
+    "cycles": 101373950,
+    "cycles_per_step": 49498.9990234375,
+    "percent_of_checked_dynamics": 41.90871136002629
+  },
+  "final_truth": {
+    "step": 2048,
+    "time_q16": 16777216,
+    "altitude_q12": 1555457,
+    "velocity_q24": 31437299,
+    "acceleration_q28": -2346189,
+    "mass_q12": 491520,
+    "propellant_q12": 0,
+    "checksum": "0x72bf6e0e",
+    "cutoff_events": 1
+  }
+}
