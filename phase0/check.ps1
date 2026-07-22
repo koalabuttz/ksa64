@@ -68,6 +68,15 @@ try {
     Write-Host "Rust vertical workload: PASS"
 
     Write-Host ""
+    Write-Host "== rust-mos optimized vertical workload =="
+    & $rustWrapper -WorkingDirectory "phase0/candidates/rust" @rustBuildArguments `
+        --bin ksa64-phase0-rust-vertical-optimized-sim
+    if ($LASTEXITCODE -ne 0) { throw "Optimized Rust vertical workload build failed." }
+    & $rustWrapper -WorkingDirectory "phase0/candidates/rust" sh -lc `
+        "mos-sim target/mos-sim-none/release/ksa64-phase0-rust-vertical-optimized-sim"
+    if ($LASTEXITCODE -ne 0) { throw "Optimized Rust vertical workload failed." }
+    Write-Host "Optimized Rust vertical workload: PASS"
+    Write-Host ""
     Write-Host "== rust-mos C64 artifacts =="
     $rustC64Arguments = @(
         "cargo", "build", "--release",
@@ -85,7 +94,9 @@ try {
     & $rustWrapper -WorkingDirectory "phase0/candidates/rust" @rustC64Arguments `
         --bin ksa64-phase0-rust-vertical-c64
     if ($LASTEXITCODE -ne 0) { throw "Rust vertical C64 build failed." }
-
+    & $rustWrapper -WorkingDirectory "phase0/candidates/rust" @rustC64Arguments `
+        --bin ksa64-phase0-rust-vertical-optimized-c64
+    if ($LASTEXITCODE -ne 0) { throw "Optimized Rust vertical C64 build failed." }
     Write-Host ""
     Write-Host "== Native Oscar64-compatible C++ =="
     $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -118,12 +129,26 @@ try {
         "phase0\candidates\oscar64\vertical_main.cpp " +
         "phase0\candidates\oscar64\vertical.cpp " +
         "phase0\candidates\oscar64\arithmetic.cpp " +
+        "phase0\candidates\oscar64\optimized.cpp " +
         "/Fo:`"$oscarOutput\\`" /Fe:`"$nativeVerticalExecutable`""
     & cmd.exe /d /c $verticalCompileCommand
     if ($LASTEXITCODE -ne 0) { throw "Native C++ vertical build failed." }
     & $nativeVerticalExecutable
     if ($LASTEXITCODE -ne 0) { throw "Native C++ vertical workload failed." }
 
+    $nativeOptimizedVerticalExecutable = Join-Path $oscarOutput "phase0-vertical-optimized-native.exe"
+    $optimizedVerticalCompileCommand =
+        "call `"$vcvarsall`" x64 >nul && " +
+        "cl /nologo /std:c++14 /O2 /W4 /WX /GR- " +
+        "phase0\candidates\oscar64\vertical_optimized_main.cpp " +
+        "phase0\candidates\oscar64\vertical.cpp " +
+        "phase0\candidates\oscar64\arithmetic.cpp " +
+        "phase0\candidates\oscar64\optimized.cpp " +
+        "/Fo:`"$oscarOutput\\`" /Fe:`"$nativeOptimizedVerticalExecutable`""
+    & cmd.exe /d /c $optimizedVerticalCompileCommand
+    if ($LASTEXITCODE -ne 0) { throw "Native optimized C++ vertical build failed." }
+    & $nativeOptimizedVerticalExecutable
+    if ($LASTEXITCODE -ne 0) { throw "Native optimized C++ vertical workload failed." }
     Write-Host ""
     Write-Host "== Oscar64 C64 execution =="
     $oscarArtifact = Join-Path $oscarOutput "phase0-oscar64.prg"
@@ -137,17 +162,27 @@ try {
         "-o=$oscarVerticalArtifact" `
         phase0/candidates/oscar64/vertical_main.cpp `
         phase0/candidates/oscar64/vertical.cpp `
-        phase0/candidates/oscar64/arithmetic.cpp
+        phase0/candidates/oscar64/arithmetic.cpp `
+        phase0/candidates/oscar64/optimized.cpp
     if ($LASTEXITCODE -ne 0) { throw "Oscar64 C64 vertical workload failed." }
-
+    $oscarOptimizedVerticalArtifact = Join-Path $oscarOutput "phase0-vertical-optimized-oscar64.prg"
+    & $oscarWrapper -ReturnToCaller "-tm=c64" "-pp" "-O2" "-dKSA64_OSCAR64" "-e" `
+        "-o=$oscarOptimizedVerticalArtifact" `
+        phase0/candidates/oscar64/vertical_optimized_main.cpp `
+        phase0/candidates/oscar64/vertical.cpp `
+        phase0/candidates/oscar64/arithmetic.cpp `
+        phase0/candidates/oscar64/optimized.cpp
+    if ($LASTEXITCODE -ne 0) { throw "Oscar64 optimized vertical workload failed." }
     Write-Host ""
     Write-Host "== Artifact sizes =="
     $artifacts = @(
         Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-c64"
         Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-manual-c64"
         Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-vertical-c64"
+        Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-vertical-optimized-c64"
         $oscarArtifact
         $oscarVerticalArtifact
+        $oscarOptimizedVerticalArtifact
     )
     foreach ($artifact in $artifacts) {
         $file = Get-Item -LiteralPath $artifact

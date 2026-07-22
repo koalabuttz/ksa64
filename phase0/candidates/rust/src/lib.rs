@@ -1,13 +1,16 @@
 #![no_std]
 
 mod manual;
+mod optimized;
 mod vertical;
 pub use manual::{
     divide_scaled_manual, interpolate_fixed_manual, multiply_scaled_manual,
     run_manual_arithmetic_vectors,
 };
 pub use vertical::{
-    hash_vertical_state, run_vertical_manual, vertical_step_manual, VerticalRun, VerticalState,
+    hash_vertical_state, run_vertical_kernel_manual, run_vertical_kernel_optimized,
+    run_vertical_manual, run_vertical_optimized, vertical_state_matches_checkpoint,
+    vertical_step_manual, vertical_step_optimized, VerticalRun, VerticalState,
 };
 
 pub mod vertical_vectors {

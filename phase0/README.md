@@ -6,18 +6,18 @@ This directory is deliberately separate from future production source. Everythin
 
 ## Current status
 
-The arithmetic and vertical-flight correctness gates are complete:
+The arithmetic, vertical-flight correctness, and first performance gates are complete:
 
-- The Phase 0 v1 numeric and vertical-workload contract is frozen.
-- Generated Rust and C++ bindings consume the same checked JSON vectors.
-- Specialized Rust and Oscar64 C++ pass every arithmetic vector.
-- Both candidates match all 12 vertical checkpoints and checksum `0x3a014fa6`.
-- Rust completes the correctness workload in 441,745,996 simulated cycles.
-- Oscar64 completes it in 457,888,329 profiled cycles.
+- Both candidates pass every arithmetic vector, vertical checkpoint, and checksum.
+- Dynamics-only runners exclude checkpoint and rolling-checksum overhead.
+- Exact drag-halving and interpolation-fraction specializations preserve `0x3a014fa6`.
+- Rust falls from 344,098,644 to 225,070,332 cycles, a 34.59% reduction.
+- Oscar64 falls from 410,417,915 to 235,021,443 cycles, a 42.74% reduction.
+- The optimized kernels use 109,898 and 114,757 reported cycles per 0.125-second step.
 - Compiler-provided Rust `u64` arithmetic remains a reproducible failing baseline.
-- Dynamics-only timing and arithmetic optimization have not begun.
+- CIA timing on a common C64 target remains required before comparing languages directly.
 
-See [RESULTS.md](RESULTS.md) for measurements, the rust-mos finding, and the next gate.
+See [RESULTS.md](RESULTS.md) for measurements, profile evidence, and the next gate.
 
 ## Layout
 
@@ -25,6 +25,7 @@ See [RESULTS.md](RESULTS.md) for measurements, the rust-mos finding, and the nex
         CONTRACT.md
         README.md
         RESULTS.md
+        benchmark.ps1
         check.ps1
         candidates/
             rust/
@@ -70,11 +71,11 @@ Rust and C++ must consume the same integer data and produce the same exact resul
 
 ## Next implementation slice
 
-1. Separate dynamics-only timing from checkpoint and checksum work.
-2. Isolate multiply, divide, interpolation, and complete-step costs.
-3. Inspect generated assembly and map-file contributions.
-4. Test exact range-specific reciprocal strategies against restoring division.
-5. Add CIA timing after emulator measurements are stable.
+1. Add identical CIA timer boundaries to both C64 dynamics runners.
+2. Run both binaries through one cycle-accurate C64 environment.
+3. Add primitive timing for multiply, general divide, and fast interpolation divide.
+4. Investigate the remaining 2,048 acceleration divisions without changing results.
+5. Confirm timing on real hardware when available, then apply the language rubric.
 
 No language wins because it reaches a benchmark result first.
 

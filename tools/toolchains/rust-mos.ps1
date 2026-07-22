@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+    [switch]$ReturnToCaller,
+
     [string]$WorkingDirectory = ".",
 
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
@@ -54,5 +56,10 @@ $dockerArguments = @(
 ) + $Command
 
 & docker @dockerArguments
-exit $LASTEXITCODE
+$dockerExitCode = $LASTEXITCODE
+if ($ReturnToCaller) {
+    $global:LASTEXITCODE = $dockerExitCode
+    return
+}
+exit $dockerExitCode
 

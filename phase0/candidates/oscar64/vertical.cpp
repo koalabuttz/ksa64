@@ -1,5 +1,6 @@
 #include "vertical.hpp"
 #include "arithmetic.hpp"
+#include "optimized.hpp"
 #include "../../generated/phase0_vectors.hpp"
 #include "../../generated/phase0_vertical.hpp"
 
@@ -88,6 +89,79 @@ void vertical_step(VerticalState & state) {
     state.time_q12 += TIMESTEP_Q12;
 }
 
+void vertical_step_optimized(VerticalState & state) {
+    bool engine_active = vertical_engine_active(state);
+    long density = interpolate_fixed_fast(
+        state.altitude_q12,
+        ALTITUDE_KNOTS_Q12,
+        DENSITY_Q28,
+        ENVIRONMENT_KNOT_COUNT
+    );
+    long gravity = interpolate_fixed_fast(
+        state.altitude_q12,
+        ALTITUDE_KNOTS_Q12,
+        GRAVITY_Q28,
+        ENVIRONMENT_KNOT_COUNT
+    );
+
+    ArithmeticStatus status;
+    long speed_squared = multiply_scaled(
+        state.velocity_q24,
+        velocity_magnitude(state.velocity_q24),
+        24,
+        status
+    );
+    long rho_v2 = multiply_scaled(density, speed_squared, 28, status);
+    long drag_with_two = multiply_scaled(rho_v2, CDA_Q16, 28, status);
+    long drag = halve_round_nonnegative(drag_with_two);
+    long weight = multiply_scaled(state.mass_q12, gravity, 28, status);
+    long thrust = engine_active ? THRUST_Q12 : 0;
+    long net_force = thrust - weight - drag;
+    state.acceleration_q28 = divide_scaled(
+        net_force,
+        state.mass_q12,
+        28,
+        status
+    );
+
+    long delta_velocity = multiply_scaled(
+        state.acceleration_q28,
+        TIMESTEP_Q12,
+        16,
+        status
+    );
+    state.velocity_q24 += delta_velocity;
+
+    long delta_altitude = multiply_scaled(
+        state.velocity_q24,
+        TIMESTEP_Q12,
+        24,
+        status
+    );
+    state.altitude_q12 += delta_altitude;
+
+    if (engine_active) {
+        long consumed = multiply_scaled(
+            MASS_FLOW_Q12,
+            TIMESTEP_Q12,
+            12,
+            status
+        );
+        if (consumed > state.propellant_q12) {
+            consumed = state.propellant_q12;
+        }
+        state.propellant_q12 -= consumed;
+        state.mass_q12 -= consumed;
+        if (state.mass_q12 < DRY_MASS_Q12) {
+            state.mass_q12 = DRY_MASS_Q12;
+        }
+        if (state.propellant_q12 == 0) {
+            ++state.cutoff_events;
+        }
+    }
+
+    state.time_q12 += TIMESTEP_Q12;
+}
 static unsigned long hash_word(unsigned long hash, long value) {
     unsigned long raw = (unsigned long)value;
     unsigned char byte_index = 0;
@@ -113,7 +187,7 @@ unsigned long hash_vertical_state(
     return hash_word(hash, (long)state.cutoff_events);
 }
 
-static bool checkpoint_matches(
+bool vertical_state_matches_checkpoint(
     const VerticalState & state,
     const VerticalCheckpoint & checkpoint
 ) {
@@ -127,6 +201,36 @@ static bool checkpoint_matches(
         && state.cutoff_events == checkpoint.cutoff_events;
 }
 
+void run_vertical_kernel(VerticalState & state) {
+    state.time_q12 = 0;
+    state.altitude_q12 = 0;
+    state.velocity_q24 = 0;
+    state.acceleration_q28 = 0;
+    state.mass_q12 = INITIAL_MASS_Q12;
+    state.propellant_q12 = INITIAL_PROPELLANT_Q12;
+    state.cutoff_events = 0;
+
+    unsigned step = 0;
+    while (step < VERTICAL_TOTAL_STEPS) {
+        vertical_step(state);
+        ++step;
+    }
+}
+void run_vertical_kernel_optimized(VerticalState & state) {
+    state.time_q12 = 0;
+    state.altitude_q12 = 0;
+    state.velocity_q24 = 0;
+    state.acceleration_q28 = 0;
+    state.mass_q12 = INITIAL_MASS_Q12;
+    state.propellant_q12 = INITIAL_PROPELLANT_Q12;
+    state.cutoff_events = 0;
+
+    unsigned step = 0;
+    while (step < VERTICAL_TOTAL_STEPS) {
+        vertical_step_optimized(state);
+        ++step;
+    }
+}
 void run_vertical_workload(VerticalRun & run) {
     run.state.time_q12 = 0;
     run.state.altitude_q12 = 0;
@@ -139,7 +243,7 @@ void run_vertical_workload(VerticalRun & run) {
     run.checkpoint_failures = 0;
 
     unsigned checkpoint_index = 0;
-    if (!checkpoint_matches(run.state, VERTICAL_CHECKPOINTS[0])) {
+    if (!vertical_state_matches_checkpoint(run.state, VERTICAL_CHECKPOINTS[0])) {
         ++run.checkpoint_failures;
     }
     ++checkpoint_index;
@@ -153,7 +257,47 @@ void run_vertical_workload(VerticalRun & run) {
             checkpoint_index < VERTICAL_CHECKPOINT_COUNT
             && step == VERTICAL_CHECKPOINTS[checkpoint_index].step
         ) {
-            if (!checkpoint_matches(
+            if (!vertical_state_matches_checkpoint(
+                run.state,
+                VERTICAL_CHECKPOINTS[checkpoint_index]
+            )) {
+                ++run.checkpoint_failures;
+            }
+            ++checkpoint_index;
+        }
+        ++step;
+    }
+}
+void run_vertical_workload_optimized(VerticalRun & run) {
+    run.state.time_q12 = 0;
+    run.state.altitude_q12 = 0;
+    run.state.velocity_q24 = 0;
+    run.state.acceleration_q28 = 0;
+    run.state.mass_q12 = INITIAL_MASS_Q12;
+    run.state.propellant_q12 = INITIAL_PROPELLANT_Q12;
+    run.state.cutoff_events = 0;
+    run.checksum = FNV_OFFSET;
+    run.checkpoint_failures = 0;
+
+    unsigned checkpoint_index = 0;
+    if (!vertical_state_matches_checkpoint(
+        run.state,
+        VERTICAL_CHECKPOINTS[0]
+    )) {
+        ++run.checkpoint_failures;
+    }
+    ++checkpoint_index;
+
+    unsigned step = 1;
+    while (step <= VERTICAL_TOTAL_STEPS) {
+        vertical_step_optimized(run.state);
+        run.checksum = hash_vertical_state(run.checksum, run.state);
+
+        if (
+            checkpoint_index < VERTICAL_CHECKPOINT_COUNT
+            && step == VERTICAL_CHECKPOINTS[checkpoint_index].step
+        ) {
+            if (!vertical_state_matches_checkpoint(
                 run.state,
                 VERTICAL_CHECKPOINTS[checkpoint_index]
             )) {

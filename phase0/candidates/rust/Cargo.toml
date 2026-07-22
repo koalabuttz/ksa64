@@ -26,6 +26,11 @@ path = "src/vertical_c64_main.rs"
 required-features = ["c64"]
 
 [[bin]]
+name = "ksa64-phase0-rust-vertical-optimized-c64"
+path = "src/vertical_optimized_c64_main.rs"
+required-features = ["c64"]
+
+[[bin]]
 name = "ksa64-phase0-rust-sim"
 path = "src/sim_main.rs"
 required-features = ["sim"]
@@ -38,6 +43,21 @@ required-features = ["sim"]
 [[bin]]
 name = "ksa64-phase0-rust-vertical-sim"
 path = "src/vertical_sim_main.rs"
+required-features = ["sim"]
+
+[[bin]]
+name = "ksa64-phase0-rust-vertical-optimized-sim"
+path = "src/vertical_optimized_sim_main.rs"
+required-features = ["sim"]
+
+[[bin]]
+name = "ksa64-phase0-rust-vertical-kernel-sim"
+path = "src/vertical_kernel_sim_main.rs"
+required-features = ["sim"]
+
+[[bin]]
+name = "ksa64-phase0-rust-vertical-kernel-optimized-sim"
+path = "src/vertical_kernel_optimized_sim_main.rs"
 required-features = ["sim"]
 
 [profile.release]
