@@ -509,6 +509,24 @@ Consequence:
 
 The host can now capture the golden 257-frame stream to a `.kst` file, read it back, reproduce stream CRC-32 `0xcf56fe65`, and display the final physical state. Corrupt records, bad cadence, terminal misuse, and I/O refusal fail closed. Exact replay remains distinct from structural inspection. The next gate is a C64 text-status sink that stores only the latest accepted frame and renders outside the accepted timing regions.
 
+## D-034: Render retained mission status after the measured C64 run
+
+Status: Accepted
+
+Decision:
+
+Implement the C64 display as a telemetry sink adapter, not as another mission executor or a display dependency in the physics core. Retain exactly one canonical header, the latest accepted frame, a frame count, and the union of accepted event bits. After mission execution completes, decode that retained data through the portable record contract and render a direct 40x25 status page in screen and color memory.
+
+Treat the final footer as the display-complete sentinel for automated screen-memory inspection. Keep rendering outside both accepted timing regions and label the page accordingly. Preserve events across frames because cutoff and depletion can precede the terminal end-of-run frame.
+
+Rationale:
+
+The golden stream is 10,312 bytes, but the useful post-run status requires constant storage. Reusing the canonical sink boundary proves that the C64 view consumes the same telemetry contract as host capture. Direct VICE screen-memory verification catches PETSCII conversion, layout, formatting, retained-state, and partial-paint errors without adding VIC-II work to physics or serialization timing.
+
+Consequence:
+
+The 27,866-byte status PRG reports the complete 2,048-step mission, 257 accepted frames, final state, checksum, event history, and measured raw/recorded rates on a real C64 memory map. Live refresh remains deliberately unmeasured and out of scope. The next gate is independent high-precision comparison and C64 accumulated-error reporting.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

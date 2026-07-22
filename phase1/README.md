@@ -1,6 +1,6 @@
 # Phase 1: vertical-flight laboratory
 
-Phase 1 has an end-to-end deterministic vertical mission executor, a passing raw physics budget, canonical stride-aware telemetry emission, target-visible telemetry timing, and host capture/inspection: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, exact summaries, allocation-free binary serialization and decoding, event accumulation, caller-provided sinks, strict stream validation, and a compact host text view. C64 UI is not implemented yet.
+Phase 1 has an end-to-end deterministic vertical mission executor, a passing raw physics budget, canonical stride-aware telemetry emission, target-visible telemetry timing, host capture/inspection, and a verified C64 post-run display: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, exact summaries, allocation-free binary serialization and decoding, event accumulation, caller-provided sinks, strict stream validation, and compact host/C64 text views.
 
 ## Current slice
 
@@ -39,8 +39,11 @@ The `ksa64-core` crate provides:
 - Allocation-free portable decoders for canonical headers and frames, including exact schema, identity, reserved-bit, and CRC validation.
 - A `std` host writer sink and inspector that enforce initial-state, order, stride, time, fault, and terminal-stream semantics.
 - A host command that captures or inspects `.kst` files and renders interpreted final-state telemetry without using decimal values for validation.
+- A constant-memory C64 sink that retains one header, the latest frame, frame count, and accumulated event bits.
+- A direct 40x25 post-run status page verified from actual VIC-II screen memory under PAL VICE.
+- Explicit separation of display work from the accepted raw and recorded timing regions; the status PRG is 27,866 bytes.
 
-The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. Exact interpolation and acceleration-division fast paths reduce checked dynamics to 114,981.59 PAL cycles per step, clearing the raw PAL 8 Hz budget with 6.64 percent headroom. Its telemetry stream scheduler is production code; storage and presentation remain separate later boundaries. The diagnostic C64 self-test is 48,310 bytes after adding the compact whole-stream checker and portable decoder coverage rather than embedding the 10,312-byte oracle.
+The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. Exact interpolation and acceleration-division fast paths reduce checked dynamics to 114,981.59 PAL cycles per step, clearing the raw PAL 8 Hz budget with 6.64 percent headroom. Its telemetry stream scheduler is production code; host storage and C64 presentation remain adapters outside the physics core. The diagnostic C64 self-test is 49,468 bytes with the C64 adapter module available, while the standalone post-run status PRG is 27,866 bytes.
 
 ## Golden mission result
 
@@ -79,6 +82,7 @@ The production core executes the complete golden 2,048-step mission and matches 
         check.ps1
         timing.ps1
         telemetry_timing.ps1
+        status_display.ps1
         telemetry-timing-v1.json
         generated/
         reference/
@@ -90,10 +94,11 @@ From the project root:
     .\phase1\check.ps1
     .\phase1\timing.ps1
     .\phase1\telemetry_timing.ps1
+    .\phase1\status_display.ps1
     cargo run -p ksa64-host -- capture target/phase1-vertical.kst
     cargo run -p ksa64-host -- inspect target/phase1-vertical.kst
 
-The first command verifies the accepted artifacts, runs native tests, executes the exact fixture pack through rust-mos, and builds the physical-C64 PRG. The second preserves the dedicated raw/checksum timing gate. The third measures raw, checksum, and canonical telemetry paths together and requires three stable runs under the pinned PAL VICE common clock.
+The first command verifies the accepted artifacts, runs native tests, executes the exact fixture pack through rust-mos, and builds both physical-C64 PRGs. The second preserves the dedicated raw/checksum timing gate. The third measures raw, checksum, and canonical telemetry paths together and requires three stable runs under the pinned PAL VICE common clock. The fourth runs the complete mission and verifies the finished PETSCII page by reading C64 screen memory from VICE.
 
 To regenerate the Rust bindings deliberately:
 
@@ -107,4 +112,4 @@ Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Add a C64 text-status sink that retains only the latest accepted telemetry frame and renders a compact PETSCII flight page after, or independently from, the measured physics loop. Begin with final/post-run presentation so VIC-II work cannot silently alter the accepted dynamics and telemetry timing boundaries; live refresh policy remains a later measurement.
+Add an independent high-precision mission calculation and freeze accumulated altitude/velocity error evidence against both the accepted fixed-step model and a finer integration. Report the resulting error measurements on the C64 post-run page without moving display work into the accepted timing regions.

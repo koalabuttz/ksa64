@@ -10,6 +10,9 @@ pub mod telemetry;
 pub mod vehicle;
 
 #[cfg(feature = "c64")]
+pub mod c64_status;
+
+#[cfg(feature = "c64")]
 pub mod c64_timer;
 
 #[cfg(feature = "fixtures")]

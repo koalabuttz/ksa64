@@ -51,18 +51,22 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "rust-mos core self-tests failed." }
 
     Write-Host ""
-    Write-Host "== C64 production-core artifact =="
+    Write-Host "== C64 production artifacts =="
     & $rustWrapper -WorkingDirectory "." cargo build --release `
         --target mos-c64-none `
         --features c64 `
         -Z build-std=core `
         -Z build-std-features=compiler-builtins-mem `
-        --bin ksa64-phase1-numeric-c64
-    if ($LASTEXITCODE -ne 0) { throw "C64 numeric self-test build failed." }
+        --bin ksa64-phase1-numeric-c64 `
+        --bin ksa64-phase1-telemetry-status-c64
+    if ($LASTEXITCODE -ne 0) { throw "C64 production artifact build failed." }
 
-    $artifact = Get-Item -LiteralPath `
+    $numericArtifact = Get-Item -LiteralPath `
         (Join-Path $projectRoot "target\mos-c64-none\release\ksa64-phase1-numeric-c64")
-    Write-Host "C64 core self-test: $($artifact.Length) bytes"
+    $statusArtifact = Get-Item -LiteralPath `
+        (Join-Path $projectRoot "target\mos-c64-none\release\ksa64-phase1-telemetry-status-c64")
+    Write-Host "C64 core self-test: $($numericArtifact.Length) bytes"
+    Write-Host "C64 status display: $($statusArtifact.Length) bytes"
     Write-Host ""
     Write-Host "PHASE 1 CORE GATES: PASS"
 } finally {
