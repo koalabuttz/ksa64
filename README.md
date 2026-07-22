@@ -95,4 +95,4 @@ The compiler and arithmetic experiment is complete. Both candidates passed the f
 - Oscar64: 235,627,088 CIA cycles, or 115,052.29 cycles per step.
 - Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
 
-Phase 0 is complete, and the first Phase 1 production gate passes. The next milestone is the versioned scenario-image parser and validator; vehicle state and forces wait until configuration enters through that accepted boundary.
+Phase 0 is complete, and the first two Phase 1 production gates pass: deterministic numerics and validated scenario ingestion. The next milestone is generated environment bindings and initialization of an immutable vertical truth state; force evaluation comes afterward.

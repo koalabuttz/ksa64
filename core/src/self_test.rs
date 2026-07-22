@@ -1,6 +1,12 @@
 use crate::numeric::{
     add, divide_scaled, interpolate_clamped, multiply_scaled, subtract, NumericFault, NumericStatus,
 };
+use crate::scenario::{parse_scenario_image, SCENARIO_IMAGE_LENGTH, SIMPLE_EARTH_ENVIRONMENT_ID};
+
+const SCENARIO_IMAGE: &[u8; SCENARIO_IMAGE_LENGTH] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../phase0/numeric/scenario-v1.bin"
+));
 
 mod vectors {
     include!(concat!(
@@ -182,6 +188,24 @@ fn check_mass_flow() -> u16 {
     failures
 }
 
+fn check_scenario() -> u16 {
+    let mut crc_failures = failure_count(crate::scenario::crc32_ieee(b"123456789") == 0xcbf4_3926);
+    match parse_scenario_image(SCENARIO_IMAGE) {
+        Ok(scenario) => {
+            let mut failures = 0u16;
+            failures += failure_count(scenario.scenario_id == 0xef03_0ab2);
+            failures += failure_count(scenario.timestep.raw() == 8_192);
+            failures += failure_count(scenario.steps == 2_048);
+            failures += failure_count(scenario.initial.total_mass.raw() == 2_048_000);
+            failures += failure_count(scenario.vehicle.thrust.raw() == 31_130);
+            failures += failure_count(scenario.environment_id == SIMPLE_EARTH_ENVIRONMENT_ID);
+            crc_failures += failures;
+            crc_failures
+        }
+        Err(_) => crc_failures + 1,
+    }
+}
+
 pub fn run_numeric_self_tests() -> u16 {
     let mut failures = 0u16;
     failures += failure_count(vectors::NUMERIC_CONTRACT == "ksa64.numeric.phase1-v1");
@@ -190,5 +214,6 @@ pub fn run_numeric_self_tests() -> u16 {
     failures += check_constant_velocity();
     failures += check_acceleration_cases();
     failures += check_mass_flow();
+    failures += check_scenario();
     failures
 }

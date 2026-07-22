@@ -2,6 +2,7 @@
 
 pub mod numeric;
 pub mod quantities;
+pub mod scenario;
 
 #[cfg(feature = "fixtures")]
 mod self_test;

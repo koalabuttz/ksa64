@@ -35,12 +35,12 @@ try {
     )
 
     Write-Host ""
-    Write-Host "== rust-mos exact numeric execution =="
+    Write-Host "== rust-mos exact core execution =="
     & $rustWrapper -WorkingDirectory "." @mosBuildArguments
     if ($LASTEXITCODE -ne 0) { throw "rust-mos numeric runner build failed." }
     & $rustWrapper -WorkingDirectory "." sh -lc `
         "mos-sim target/mos-sim-none/release/ksa64-phase1-numeric-sim"
-    if ($LASTEXITCODE -ne 0) { throw "rust-mos numeric self-tests failed." }
+    if ($LASTEXITCODE -ne 0) { throw "rust-mos core self-tests failed." }
 
     Write-Host ""
     Write-Host "== C64 production-core artifact =="
@@ -54,9 +54,9 @@ try {
 
     $artifact = Get-Item -LiteralPath `
         (Join-Path $projectRoot "target\mos-c64-none\release\ksa64-phase1-numeric-c64")
-    Write-Host "C64 numeric self-test: $($artifact.Length) bytes"
+    Write-Host "C64 core self-test: $($artifact.Length) bytes"
     Write-Host ""
-    Write-Host "PHASE 1 NUMERIC GATE: PASS"
+    Write-Host "PHASE 1 CORE GATES: PASS"
 } finally {
     Pop-Location
 }

@@ -307,6 +307,22 @@ Consequence:
 
 Vehicle and environment code will consume these wrappers and status rules rather than raw unlabelled integers. Host-only high-precision comparisons remain outside the exact product core.
 
+## D-022: Validate packed scenarios before constructing truth state
+
+Status: Accepted
+
+Decision:
+
+Parse only the exact 76-byte `KSC1` v1 record in the product core. Check framing, CRC-32, numeric-contract ID, environment ID, field envelopes, mass relationships, total duration, burn duration, and conservative thrust acceleration before returning strong configuration types. Preserve reserved flag bits without assigning v1 meaning.
+
+Rationale:
+
+The C64 should never begin a run from corrupted, incompatible, or numerically impossible configuration. Performing these checks once at ingestion keeps later hot paths small. Preserving reserved flags follows the format rule that readers ignore unknown bits and permits compatible metadata additions without weakening version and identity checks.
+
+Consequence:
+
+Vehicle truth state may be created only from a validated `Scenario`. Human-readable JSON remains a host concern; the exact core parses no text and allocates no memory.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

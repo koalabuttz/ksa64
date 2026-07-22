@@ -29,7 +29,7 @@ Exit criteria:
 
 Purpose: create the smallest end-to-end vehicle simulation.
 
-Current progress: the production `no_std` numeric core, strong Q-format types, sticky fault handling, generated analytic pack, MOS execution, and C64 self-test artifact pass. Scenario ingestion is next; vehicle dynamics have not begun.
+Current progress: the production `no_std` numeric core and the fail-closed 76-byte scenario parser pass natively, through MOS execution, and as a C64 self-test artifact. Environment bindings and truth-state initialization are next; vehicle dynamics have not begun.
 
 Planned capabilities:
 
