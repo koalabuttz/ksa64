@@ -1,5 +1,6 @@
 use crate::dynamics::{advance_vertical_state, evaluate_vertical_forces, VerticalStepError};
 use crate::environment::SimpleEarthEnvironment;
+use crate::mission::{hash_vertical_truth, run_vertical_mission, VERTICAL_CHECKSUM_OFFSET};
 use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericFault, NumericStatus};
 use crate::quantities::{Altitude, Mass, Time, Velocity};
 use crate::scenario::{parse_scenario_image, SCENARIO_IMAGE_LENGTH, SIMPLE_EARTH_ENVIRONMENT_ID};
@@ -28,6 +29,13 @@ mod transition_vectors {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../phase1/generated/transition_v1.rs"
+    ));
+}
+
+mod mission_vectors {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../phase1/generated/mission_v1.rs"
     ));
 }
 
@@ -291,6 +299,39 @@ fn check_transitions() -> u16 {
     failures
 }
 
+fn check_mission() -> u16 {
+    let scenario = match parse_scenario_image(SCENARIO_IMAGE) {
+        Ok(scenario) => scenario,
+        Err(_) => return 1,
+    };
+    let initial = VerticalTruthState::initial(&scenario);
+    let mut failures = failure_count(
+        hash_vertical_truth(VERTICAL_CHECKSUM_OFFSET, &initial)
+            == mission_vectors::INITIAL_TRUTH_CHECKSUM,
+    );
+    match run_vertical_mission(&scenario) {
+        Ok(summary) => {
+            let truth = summary.final_truth();
+            failures += failure_count(summary.completed_steps() == mission_vectors::FINAL_STEP);
+            failures += failure_count(truth.time().raw() == mission_vectors::FINAL_TIME_Q16);
+            failures +=
+                failure_count(truth.altitude().raw() == mission_vectors::FINAL_ALTITUDE_Q12);
+            failures +=
+                failure_count(truth.velocity().raw() == mission_vectors::FINAL_VELOCITY_Q24);
+            failures += failure_count(
+                truth.acceleration().raw() == mission_vectors::FINAL_ACCELERATION_Q28,
+            );
+            failures += failure_count(truth.total_mass().raw() == mission_vectors::FINAL_MASS_Q12);
+            failures +=
+                failure_count(truth.propellant().raw() == mission_vectors::FINAL_PROPELLANT_Q12);
+            failures += failure_count(summary.checksum() == mission_vectors::FINAL_CHECKSUM);
+            failures += failure_count(summary.cutoff_events() == mission_vectors::CUTOFF_EVENTS);
+        }
+        Err(_) => failures += 1,
+    }
+    failures
+}
+
 fn check_scenario() -> u16 {
     let mut crc_failures = failure_count(crate::scenario::crc32_ieee(b"123456789") == 0xcbf4_3926);
     match parse_scenario_image(SCENARIO_IMAGE) {
@@ -331,6 +372,7 @@ pub fn run_numeric_self_tests() -> u16 {
     failures += check_mass_flow();
     failures += check_force_model();
     failures += check_transitions();
+    failures += check_mission();
     failures += check_scenario();
     failures
 }

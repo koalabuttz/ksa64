@@ -1,6 +1,6 @@
 # Phase 1: vertical-flight laboratory
 
-Phase 1 now has its production numeric layer, versioned scenario-ingestion boundary, generated Earth environment, immutable vertical truth, pure force evaluation, and one checked semi-implicit-Euler transition. Mission execution, telemetry presentation, and C64 UI are not implemented yet.
+Phase 1 now has an end-to-end deterministic vertical mission executor: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, and an exact final summary. Telemetry serialization and C64 UI are not implemented yet.
 
 ## Current slice
 
@@ -21,9 +21,22 @@ The `ksa64-core` crate provides:
 - Generated exact cases for powered flight, bidirectional drag, both cutoff conditions, and numeric-envelope containment.
 - A fail-closed single-step transition with semi-implicit Euler, bounded propellant consumption, exact cutoff events, and immutable successor truth.
 - Generated transition cases covering ordinary motion, final partial consumption, burn-boundary cutoff, coast, and refused faults.
+- Deterministic execution to the scenario step limit with a compact final truth, cutoff count, and rolling exact-state FNV-1a checksum.
+- A failure result that preserves the last valid truth, checksum, cutoff count, numeric status, and cause.
 - Native, `mos-sim-none`, and `mos-c64-none` build paths.
 
-The production core can now advance exactly one checked physics step. It deliberately has no mission run loop, telemetry writer, or presentation layer yet.
+The production core can now execute the complete golden 2,048-step mission and match an independently generated final state and checksum. It deliberately has no telemetry writer or presentation layer yet.
+
+## Golden mission result
+
+- Completed steps: `2048`.
+- Mission time Q16.16: `16777216` (256 seconds).
+- Final altitude Q20.12: `1555457`.
+- Final velocity Q8.24: `31437299`.
+- Final acceleration Q4.28: `-2346189`.
+- Final mass/propellant Q20.12: `491520` / `0`.
+- Engine-cutoff events: `1`.
+- Rolling exact-state checksum: `0x72bf6e0e`.
 
 ## Layout
 
@@ -60,9 +73,10 @@ To regenerate the Rust bindings deliberately:
     python -B phase1/reference/emit_environment_bindings.py
     python -B phase1/reference/emit_force_bindings.py
     python -B phase1/reference/emit_transition_bindings.py
+    python -B phase1/reference/emit_mission_bindings.py
 
 Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Add a deterministic mission executor that repeatedly applies the checked transition up to the validated scenario step count, stops on the first fault, and returns a compact final summary and exact-state checksum. Keep telemetry serialization and UI outside this slice.
+Measure the production mission executor on the common C64 clock, separating dynamics-plus-validation cost from optional presentation work. Record cycles per step, available 8 Hz margin, diagnostic PRG size, and any measured hotspot before implementing telemetry.

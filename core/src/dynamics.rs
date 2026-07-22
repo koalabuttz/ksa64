@@ -126,6 +126,7 @@ pub fn evaluate_vertical_forces(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum VerticalStepError {
     NumericFault,
     ScenarioComplete,

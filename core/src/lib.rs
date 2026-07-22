@@ -2,6 +2,7 @@
 
 pub mod dynamics;
 pub mod environment;
+pub mod mission;
 pub mod numeric;
 pub mod quantities;
 pub mod scenario;

@@ -262,7 +262,7 @@ Rust/rust-mos and the Phase 1 numeric foundation are selected. Phase 1 now has a
         telemetry comparison
         benchmark automation
 
-The numeric contract, overflow policy, baseline integrator, and data formats are accepted in `phase0/numeric/FOUNDATION.md` and `docs/data-formats.md`. The production `core/` crate now implements the numeric layer, scenario parser, generated environment sampler, immutable vertical truth, pure force evaluation, and one fail-closed semi-implicit-Euler transition. Deterministic mission execution remains the next Phase 1 slice.
+The numeric contract, overflow policy, baseline integrator, and data formats are accepted in `phase0/numeric/FOUNDATION.md` and `docs/data-formats.md`. The production `core/` crate now implements the numeric layer, scenario parser, generated environment sampler, immutable vertical truth, pure force evaluation, fail-closed semi-implicit-Euler transitions, and deterministic mission execution with a compact summary. Production timing and telemetry remain the next Phase 1 slices.
 
 ## Extension path
 

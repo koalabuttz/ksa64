@@ -101,7 +101,9 @@ Magic: ASCII `KST1`.
 
 Status bit 0 means engine active. Event bit 0 means engine cutoff, bit 1 means propellant depleted, bit 2 means numeric fault, and bit 3 means end of run. All other v1 bits are reserved.
 
-The rolling checksum covers the canonical exact state after every physics step, not just emitted frames. Phase 1 fixes its precise field order alongside the state structure before implementation. The frame CRC protects framing and storage; the rolling checksum identifies the first deterministic state divergence. They serve different purposes.
+The rolling checksum starts from FNV-1a offset `2166136261` and incorporates each successful successor state, excluding the unadvanced initial state. Every state contributes seven 32-bit words as little-endian bytes in this exact order: completed step index, mission time, altitude, velocity, acceleration, total mass, and propellant. It never hashes Rust memory layout, padding, status flags, or events.
+
+The frame CRC protects framing and storage; the rolling checksum identifies deterministic state divergence. They serve different purposes.
 
 ## Host CSV view
 

@@ -29,7 +29,7 @@ Exit criteria:
 
 Purpose: create the smallest end-to-end vehicle simulation.
 
-Current progress: the production `no_std` core validates packed scenarios, samples the generated environment, evaluates typed forces, and returns one checked semi-implicit-Euler successor without mutating prior truth. Exact cases cover ordinary motion, signed drag, final partial propellant consumption, burn-boundary cutoff, coast, scenario completion, and fault refusal. A deterministic mission executor is next; telemetry serialization has not begun.
+Current progress: the production `no_std` core executes the complete validated vertical mission through immutable, fail-closed transitions and returns final truth, cutoff count, and a rolling exact-state checksum. The 2,048-step golden run matches an independent generator, while a failing run preserves its last valid state and checksum. Production timing is next; telemetry serialization has not begun.
 
 Planned capabilities:
 

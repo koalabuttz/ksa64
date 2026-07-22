@@ -64,6 +64,11 @@ def scenario_values(root: Path) -> dict[str, int]:
         raise ValueError("golden Phase 1 scenario image is invalid")
     return {
         "timestep": struct.unpack_from("<i", image, 16)[0],
+        "steps": struct.unpack_from("<I", image, 20)[0],
+        "initial_altitude": struct.unpack_from("<i", image, 32)[0],
+        "initial_velocity": struct.unpack_from("<i", image, 36)[0],
+        "initial_mass": struct.unpack_from("<i", image, 40)[0],
+        "initial_propellant": struct.unpack_from("<i", image, 44)[0],
         "dry_mass": struct.unpack_from("<i", image, 48)[0],
         "thrust": struct.unpack_from("<i", image, 52)[0],
         "mass_flow": struct.unpack_from("<i", image, 56)[0],

@@ -375,6 +375,24 @@ Consequence:
 
 The core can advance one trustworthy physics step but does not yet execute a mission. The next gate will repeatedly apply this operation to the validated step limit, stop on the first error, and produce a compact deterministic summary and exact-state checksum; telemetry remains separate.
 
+## D-026: Execute missions with a canonical rolling checksum
+
+Status: Accepted
+
+Decision:
+
+Run a validated Phase 1 scenario from its initial truth until the declared step count by repeatedly invoking the checked transition. After each successful successor, update a 32-bit FNV-1a checksum over explicit little-endian raw fields in this order: step, time, altitude, velocity, acceleration, total mass, and propellant. Do not hash the initial unadvanced state, memory layout, status, or event flags.
+
+On success, return final truth, checksum, and cutoff-event count. On failure, return the last valid truth, checksum through that truth, cutoff count, sticky numeric status, and step-error cause. The executor performs no allocation, I/O, telemetry serialization, or presentation.
+
+Rationale:
+
+The loop centralizes completion and failure semantics without weakening the independently tested step boundary. Explicit checksum bytes remain identical across host and MOS targets and allow later telemetry tools to locate deterministic divergence. Returning the last valid snapshot makes a fault diagnosable without exposing a partially computed successor.
+
+Consequence:
+
+The exact core now performs an end-to-end vertical mission. Its common-clock execution cost must be measured before telemetry and UI are added; the independently generated golden mission fixes the current final state and checksum as regression evidence.
+
 ## Open decisions
 
 The following remain deliberately unresolved:
