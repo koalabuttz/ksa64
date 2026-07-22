@@ -339,6 +339,24 @@ Consequence:
 
 The environment and initial state are production code, but they do not yet constitute a simulator. The next slice will return a typed force or acceleration snapshot without mutating truth; only a later integration gate may create successor truth states.
 
+## D-024: Evaluate vertical forces without mutating truth
+
+Status: Accepted
+
+Decision:
+
+Use positive-up signed vertical dynamics. Thrust is nonnegative upward, weight is reported as a nonnegative downward magnitude, and drag is a signed force opposing velocity. Compute `net = thrust - weight + drag`, then divide by mass for acceleration. The engine is active only while propellant remains and mission time is strictly before burn duration. Return all results in a private-field `VerticalForceSnapshot`; do not mutate truth.
+
+The evaluator records `InvalidInput` in the sticky numeric status when net force or acceleration escapes the accepted Phase 1 coupled envelope. Environment samples also have private fields, so production callers can obtain them only through the accepted sampler. A generated and digest-pinned exact pack covers powered rest, upward and downward drag, burn-time cutoff, propellant cutoff in vacuum, and a deliberate acceleration-envelope escape.
+
+Rationale:
+
+A signed drag component removes ambiguity at negative velocity while preserving a direct sum of forces along the modeled axis. Keeping evaluation pure makes force arithmetic independently testable and prevents an accidental partial update when a numeric fault occurs. Explicit model-domain faults catch values that fit `i32` but invalidate the range proof.
+
+Consequence:
+
+Force evaluation is production-ready but simulated time still cannot advance. The next gate may introduce one checked semi-implicit-Euler transition that returns successor truth and performs bounded mass consumption; run loops and telemetry remain later work.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

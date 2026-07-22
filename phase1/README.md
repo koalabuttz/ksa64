@@ -1,6 +1,6 @@
 # Phase 1: vertical-flight laboratory
 
-Phase 1 now has its production numeric layer, versioned scenario-ingestion boundary, generated Earth-environment bindings, and immutable initial vertical truth state. Force evaluation, state integration, telemetry presentation, and C64 UI are not implemented yet.
+Phase 1 now has its production numeric layer, versioned scenario-ingestion boundary, generated Earth environment, immutable initial vertical truth state, and pure vertical force evaluation. State integration, telemetry presentation, and C64 UI are not implemented yet.
 
 ## Current slice
 
@@ -16,7 +16,9 @@ The `ksa64-core` crate provides:
 - A fail-closed parser for the 76-byte scenario image, including CRC, identity, range, mass, duration, and acceleration-envelope checks.
 - Generated production bindings for the accepted `earth.simple-atmosphere.v1` density and gravity tables.
 - Typed, clamped environment sampling through the production interpolation primitive.
-- An immutable 28-byte initial vertical truth state that can only be constructed from a validated `Scenario`.
+- An immutable 28-byte initial vertical truth state that can only be constructed from a validated Scenario.
+- Pure typed evaluation of thrust, weight, signed drag, net force, and acceleration without truth mutation.
+- Generated exact cases for powered flight, bidirectional drag, both cutoff conditions, and numeric-envelope containment.
 - Native, `mos-sim-none`, and `mos-c64-none` build paths.
 
 The analytic integration loops exist only as self-tests of the numeric contract. They are not a vehicle simulator.
@@ -31,6 +33,7 @@ The analytic integration loops exist only as self-tests of the numeric contract.
             quantities.rs
             scenario.rs
             environment.rs
+            dynamics.rs
             vehicle.rs
             self_test.rs
             bin/
@@ -53,9 +56,10 @@ To regenerate the Rust bindings deliberately:
 
     python -B phase1/reference/emit_numeric_bindings.py
     python -B phase1/reference/emit_environment_bindings.py
+    python -B phase1/reference/emit_force_bindings.py
 
 Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Add a pure vertical force-evaluation boundary that consumes validated vehicle configuration, immutable truth, and an environment sample. It should produce a typed force/acceleration snapshot without mutating truth state. Time integration remains the following slice.
+Add one checked semi-implicit-Euler transition that consumes immutable truth, the force snapshot, and the validated timestep, then returns a new truth state. Include bounded propellant consumption and cutoff behavior, but do not add a mission run loop or telemetry yet.

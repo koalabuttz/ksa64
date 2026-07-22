@@ -54,4 +54,23 @@ impl VerticalTruthState {
     pub const fn propellant(self) -> Mass {
         self.propellant
     }
+
+    #[cfg(any(test, feature = "fixtures"))]
+    pub(crate) const fn fixture(
+        time: Time,
+        altitude: Altitude,
+        velocity: Velocity,
+        total_mass: Mass,
+        propellant: Mass,
+    ) -> Self {
+        Self {
+            step: 0,
+            time,
+            altitude,
+            velocity,
+            acceleration: Acceleration::ZERO,
+            total_mass,
+            propellant,
+        }
+    }
 }

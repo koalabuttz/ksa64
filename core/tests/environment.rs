@@ -29,8 +29,8 @@ fn environment_matches_frozen_interpolation_points() {
     let mut status = NumericStatus::CLEAR;
     for (altitude, density, gravity) in cases {
         let sample = environment.sample(Altitude::from_raw(altitude), &mut status);
-        assert_eq!(sample.density.raw(), density);
-        assert_eq!(sample.gravity.raw(), gravity);
+        assert_eq!(sample.density().raw(), density);
+        assert_eq!(sample.gravity().raw(), gravity);
     }
     assert!(status.is_clear());
 }
@@ -51,7 +51,7 @@ fn validated_scenario_initializes_immutable_truth_exactly() {
 
     let mut status = NumericStatus::CLEAR;
     let initial_environment = environment.sample(truth.altitude(), &mut status);
-    assert_eq!(initial_environment.density.raw(), 328_833_434);
-    assert_eq!(initial_environment.gravity.raw(), 2_632_453);
+    assert_eq!(initial_environment.density().raw(), 328_833_434);
+    assert_eq!(initial_environment.gravity().raw(), 2_632_453);
     assert!(status.is_clear());
 }

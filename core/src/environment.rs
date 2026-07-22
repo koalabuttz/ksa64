@@ -13,8 +13,18 @@ mod data {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EnvironmentSample {
-    pub density: Density,
-    pub gravity: Acceleration,
+    density: Density,
+    gravity: Acceleration,
+}
+
+impl EnvironmentSample {
+    pub const fn density(self) -> Density {
+        self.density
+    }
+
+    pub const fn gravity(self) -> Acceleration {
+        self.gravity
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

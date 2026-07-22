@@ -1,5 +1,6 @@
 #![no_std]
 
+pub mod dynamics;
 pub mod environment;
 pub mod numeric;
 pub mod quantities;

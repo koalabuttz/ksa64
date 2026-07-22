@@ -1,6 +1,7 @@
+use crate::dynamics::evaluate_vertical_forces;
 use crate::environment::SimpleEarthEnvironment;
 use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericFault, NumericStatus};
-use crate::quantities::Altitude;
+use crate::quantities::{Altitude, Mass, Time, Velocity};
 use crate::scenario::{parse_scenario_image, SCENARIO_IMAGE_LENGTH, SIMPLE_EARTH_ENVIRONMENT_ID};
 use crate::vehicle::VerticalTruthState;
 
@@ -13,6 +14,13 @@ mod vectors {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../phase1/generated/numeric_v1.rs"
+    ));
+}
+
+mod force_vectors {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../phase1/generated/force_v1.rs"
     ));
 }
 
@@ -68,8 +76,8 @@ fn check_interpolation() -> u16 {
         let vector = vectors::INTERPOLATION_VECTORS[index];
         let mut status = NumericStatus::CLEAR;
         let sample = environment.sample(Altitude::from_raw(vector.altitude_q12), &mut status);
-        failures += failure_count(sample.density.raw() == vector.density_q28);
-        failures += failure_count(sample.gravity.raw() == vector.gravity_q28);
+        failures += failure_count(sample.density().raw() == vector.density_q28);
+        failures += failure_count(sample.gravity().raw() == vector.gravity_q28);
         failures += failure_count(status.is_clear());
         index += 1;
     }
@@ -179,6 +187,40 @@ fn check_mass_flow() -> u16 {
     failures
 }
 
+fn check_force_model() -> u16 {
+    let scenario = match parse_scenario_image(SCENARIO_IMAGE) {
+        Ok(scenario) => scenario,
+        Err(_) => return 1,
+    };
+    let environment = SimpleEarthEnvironment::from_scenario(&scenario);
+    let mut failures = 0u16;
+    let mut index = 0usize;
+    while index < force_vectors::FORCE_CASES.len() {
+        let case = force_vectors::FORCE_CASES[index];
+        let truth = VerticalTruthState::fixture(
+            Time::from_raw(case.time_q16),
+            Altitude::from_raw(case.altitude_q12),
+            Velocity::from_raw(case.velocity_q24),
+            Mass::from_raw(case.mass_q12),
+            Mass::from_raw(case.propellant_q12),
+        );
+        let mut status = NumericStatus::CLEAR;
+        let sample = environment.sample(truth.altitude(), &mut status);
+        failures += failure_count(sample.density().raw() == case.density_q28);
+        failures += failure_count(sample.gravity().raw() == case.gravity_q28);
+        let snapshot = evaluate_vertical_forces(scenario.vehicle(), &truth, sample, &mut status);
+        failures += failure_count(snapshot.engine_active() == (case.engine_active != 0));
+        failures += failure_count(snapshot.thrust().raw() == case.thrust_q12);
+        failures += failure_count(snapshot.weight().raw() == case.weight_q12);
+        failures += failure_count(snapshot.drag().raw() == case.drag_q12);
+        failures += failure_count(snapshot.net_force().raw() == case.net_force_q12);
+        failures += failure_count(snapshot.acceleration().raw() == case.acceleration_q28);
+        failures += failure_count(status.bits() == case.expected_faults);
+        index += 1;
+    }
+    failures
+}
+
 fn check_scenario() -> u16 {
     let mut crc_failures = failure_count(crate::scenario::crc32_ieee(b"123456789") == 0xcbf4_3926);
     match parse_scenario_image(SCENARIO_IMAGE) {
@@ -199,8 +241,8 @@ fn check_scenario() -> u16 {
             failures += failure_count(truth.total_mass() == scenario.initial().total_mass());
             let mut status = NumericStatus::CLEAR;
             let sample = environment.sample(truth.altitude(), &mut status);
-            failures += failure_count(sample.density.raw() == 328_833_434);
-            failures += failure_count(sample.gravity.raw() == 2_632_453);
+            failures += failure_count(sample.density().raw() == 328_833_434);
+            failures += failure_count(sample.gravity().raw() == 2_632_453);
             failures += failure_count(status.is_clear());
             crc_failures += failures;
             crc_failures
@@ -217,6 +259,7 @@ pub fn run_numeric_self_tests() -> u16 {
     failures += check_constant_velocity();
     failures += check_acceleration_cases();
     failures += check_mass_flow();
+    failures += check_force_model();
     failures += check_scenario();
     failures
 }

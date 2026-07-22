@@ -2,7 +2,7 @@
 
 KSA64 is a proposed aerospace simulation framework for the Commodore 64: a small but technically serious system for simulating launch vehicles, flight software, sensors, guidance, telemetry, failures, and eventually hardware-in-the-loop operation across multiple physical C64s.
 
-> Project status: Phase 1 implementation. Numeric, scenario, environment, and initial truth-state gates exist; force evaluation has not begun.
+> Project status: Phase 1 implementation. Numeric, scenario, environment, truth-state, and pure force-evaluation gates exist; state integration has not begun.
 
 ## The idea
 
@@ -60,7 +60,7 @@ The Phase 0 compiler experiment selected a portable Rust core:
 - Platform-specific display, sound, REU, timing, and user-port code stays outside the core.
 - Oscar64 C++ remains an independent optimization and generated-code reference.
 
-The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now has a production `no_std` Rust implementation with native, MOS-simulator, and C64 self-test paths. Validated scenarios can select the generated Earth environment and initialize private vertical truth; vehicle forces and state transitions have not been implemented yet.
+The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now has a production `no_std` Rust implementation with native, MOS-simulator, and C64 self-test paths. Validated scenarios can select the generated Earth environment, initialize private vertical truth, and evaluate an immutable typed force snapshot. Truth-state transitions have not been implemented yet.
 
 ## Documentation
 
@@ -95,4 +95,4 @@ The compiler and arithmetic experiment is complete. Both candidates passed the f
 - Oscar64: 235,627,088 CIA cycles, or 115,052.29 cycles per step.
 - Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
 
-Phase 0 is complete, and the first three Phase 1 production gates pass: deterministic numerics, validated scenario ingestion, and generated environment sampling plus immutable truth initialization. The next milestone is pure force evaluation; state integration comes afterward.
+Phase 0 is complete, and four Phase 1 production gates pass: deterministic numerics, validated scenario ingestion, generated environment sampling plus immutable truth initialization, and pure vertical force evaluation. The next milestone is one checked semi-implicit-Euler state transition; a mission loop comes afterward.
