@@ -409,6 +409,22 @@ Consequence:
 
 The timing evidence is trustworthy, but the current executor is not yet an 8 Hz real-time core. Validation checksums remain available and deterministic, while interactive scheduling may choose a different validation cadence later. Telemetry and display work remain blocked behind the focused interpolation optimization and fresh measurement.
 
+## D-028: Specialize integral-Q12 interpolation without weakening fallback behavior
+
+Status: Accepted
+
+Decision:
+
+Add a checked interpolation primitive for tables whose positive knot spans are exact integral Q20.12 kilometre counts. Compute the Q0.16 fraction with the Phase 0 32-by-16 restoring divider, preserve nearest rounding with exact halves away from zero, and reject an invalid specialized span through `NumericStatus`. Keep the general interpolation and 64-by-32 division paths for other valid models.
+
+Rationale:
+
+The simple Earth table satisfies the narrower contract, and direct tests show the specialized and general primitives agree at clamps, knots, interiors, and rounding boundaries. The golden mission remains bit-exact across native Rust and MOS targets. Three PAL common-clock runs reduce checked dynamics from 160,904.64 to 127,932.69 cycles per step, a 20.49 percent improvement.
+
+Consequence:
+
+Checked dynamics rises from 6.12 Hz to 7.70 Hz but remains 4,776.69 cycles per step, or 3.88 percent, over the provisional 8 Hz budget. The next optimization target is the one remaining general acceleration division per step. Telemetry remains deferred until that measurement closes or deliberately revises the target.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

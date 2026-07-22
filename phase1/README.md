@@ -27,7 +27,7 @@ The `ksa64-core` crate provides:
 - Separate checked-dynamics and rolling-validation paths generated from one executor for controlled timing.
 - A three-run PAL VICE common-clock measurement with target-visible CIA timing.
 
-The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. The timing gate records 160,904.64 cycles per checked dynamics step and a 49,506.00-cycle per-step checksum delta. It deliberately has no telemetry writer or presentation layer yet.
+The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. Exact integral-Q12 environment interpolation reduces checked dynamics by 20.49 percent to 127,932.69 PAL cycles per step, while full rolling validation costs 177,655.69. It deliberately has no telemetry writer or presentation layer yet.
 
 ## Golden mission result
 
@@ -82,4 +82,4 @@ Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Replace the two general 64-by-32 environment interpolation divisions per step with the algebraically exact 32-by-16 specialization proven in Phase 0, then repeat the common-clock gate. Checked dynamics must recover the provisional raw 8 Hz budget before telemetry work begins; rolling checksum policy remains an independently measured validation cost.
+Specialize the remaining general 64-by-32 acceleration division without changing accepted results or rejecting arbitrary valid scenarios, then repeat the common-clock gate. Checked dynamics is 4,776.69 cycles per step short of the provisional raw 8 Hz budget; telemetry remains paused until that gap is resolved.

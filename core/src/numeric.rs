@@ -143,6 +143,48 @@ fn set_bit(value: &mut Unsigned64, position: u8) {
     }
 }
 
+fn divide_unsigned_32_by_16(numerator: u32, denominator: u16) -> (u32, u16) {
+    let divisor = denominator as u32;
+    let mut quotient = 0u32;
+    let mut remainder = 0u32;
+    let mut position = 32u8;
+
+    while position != 0 {
+        position -= 1;
+        remainder = (remainder << 1) | ((numerator >> position) & 1);
+        if remainder >= divisor {
+            remainder -= divisor;
+            quotient |= 1u32 << position;
+        }
+    }
+    (quotient, remainder as u16)
+}
+
+fn divide_unsigned_fraction_q16_integral_q12(
+    numerator_q12: i32,
+    denominator_q12: i32,
+    status: &mut NumericStatus,
+) -> i32 {
+    if numerator_q12 < 0
+        || denominator_q12 <= 0
+        || numerator_q12 >= denominator_q12
+        || denominator_q12 & 0x0fff != 0
+        || (denominator_q12 >> 12) > u16::MAX as i32
+        || numerator_q12 > (u32::MAX >> 4) as i32
+    {
+        status.record(NumericFault::InvalidInput);
+        return 0;
+    }
+
+    let scaled_numerator = (numerator_q12 as u32) << 4;
+    let denominator_units = (denominator_q12 >> 12) as u16;
+    let (mut quotient, remainder) = divide_unsigned_32_by_16(scaled_numerator, denominator_units);
+    if remainder as u32 >= denominator_units as u32 - remainder as u32 {
+        quotient += 1;
+    }
+    quotient as i32
+}
+
 fn divide_unsigned_64_by_32(numerator: Unsigned64, denominator: u32) -> (Unsigned64, u32) {
     let mut quotient = Unsigned64 { low: 0, high: 0 };
     let mut remainder = 0u32;
@@ -270,6 +312,53 @@ pub fn interpolate_clamped(x: i32, xs: &[i32], ys: &[i32], status: &mut NumericS
             let denominator = subtract(x1, x0, status);
             let mut fraction = divide_scaled(numerator, denominator, 16, status);
             fraction = fraction.clamp(0, 65_535);
+            let range = subtract(ys[index + 1], ys[index], status);
+            let delta = multiply_scaled(range, fraction, 16, status);
+            return add(ys[index], delta, status);
+        }
+        index += 1;
+    }
+
+    status.record(NumericFault::InvalidInput);
+    0
+}
+
+/// Clamped interpolation specialized for integral Q20.12 knot spans.
+///
+/// This preserves the general Q0.16 rounding contract while reducing the
+/// fraction division from 64-by-32 to 32-by-16 arithmetic.
+pub fn interpolate_clamped_integral_q12(
+    x: i32,
+    xs: &[i32],
+    ys: &[i32],
+    status: &mut NumericStatus,
+) -> i32 {
+    if xs.is_empty() || xs.len() != ys.len() {
+        status.record(NumericFault::InvalidInput);
+        return 0;
+    }
+    if x <= xs[0] {
+        return ys[0];
+    }
+
+    let last = xs.len() - 1;
+    if x >= xs[last] {
+        return ys[last];
+    }
+
+    let mut index = 0usize;
+    while index < last {
+        let x0 = xs[index];
+        let x1 = xs[index + 1];
+        if x1 <= x0 {
+            status.record(NumericFault::InvalidInput);
+            return 0;
+        }
+        if x < x1 {
+            let numerator = subtract(x, x0, status);
+            let denominator = subtract(x1, x0, status);
+            let fraction =
+                divide_unsigned_fraction_q16_integral_q12(numerator, denominator, status);
             let range = subtract(ys[index + 1], ys[index], status);
             let delta = multiply_scaled(range, fraction, 16, status);
             return add(ys[index], delta, status);

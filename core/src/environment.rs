@@ -1,6 +1,6 @@
 //! Accepted Phase 1 Earth environment and typed lookup results.
 
-use crate::numeric::{interpolate_clamped, NumericStatus};
+use crate::numeric::{interpolate_clamped_integral_q12, NumericStatus};
 use crate::quantities::{Acceleration, Altitude, Density};
 use crate::scenario::{Scenario, SIMPLE_EARTH_ENVIRONMENT_ID};
 
@@ -57,9 +57,11 @@ impl SimpleEarthEnvironment {
             if data::DENSITY_Q28[index] < 0 || data::GRAVITY_Q28[index] <= 0 {
                 return false;
             }
-            if index != 0 && data::ALTITUDE_KNOTS_Q12[index] <= data::ALTITUDE_KNOTS_Q12[index - 1]
-            {
-                return false;
+            if index != 0 {
+                let span = data::ALTITUDE_KNOTS_Q12[index] - data::ALTITUDE_KNOTS_Q12[index - 1];
+                if span <= 0 || span & 0x0fff != 0 || (span >> 12) > u16::MAX as i32 {
+                    return false;
+                }
             }
             index += 1;
         }
@@ -67,13 +69,13 @@ impl SimpleEarthEnvironment {
     }
 
     pub fn sample(self, altitude: Altitude, status: &mut NumericStatus) -> EnvironmentSample {
-        let density = interpolate_clamped(
+        let density = interpolate_clamped_integral_q12(
             altitude.raw(),
             &data::ALTITUDE_KNOTS_Q12,
             &data::DENSITY_Q28,
             status,
         );
-        let gravity = interpolate_clamped(
+        let gravity = interpolate_clamped_integral_q12(
             altitude.raw(),
             &data::ALTITUDE_KNOTS_Q12,
             &data::GRAVITY_Q28,

@@ -1,7 +1,8 @@
 use core::mem::size_of;
 
 use ksa64_core::numeric::{
-    add, divide_scaled, interpolate_clamped, multiply_scaled, subtract, NumericFault, NumericStatus,
+    add, divide_scaled, interpolate_clamped, interpolate_clamped_integral_q12, multiply_scaled,
+    subtract, NumericFault, NumericStatus,
 };
 use ksa64_core::quantities::{
     Acceleration, Altitude, Cda, Density, DensitySpeedSquared, Force, Fraction, Mass, MassFlow,
@@ -117,6 +118,42 @@ fn two_word_primitives_match_host_widening_across_boundary_grid() {
             }
         }
     }
+}
+
+#[test]
+fn integral_q12_interpolation_matches_general_contract() {
+    let xs = [0, 8_192, 20_480, 40_960, 81_920];
+    let ys = [
+        328_833_434,
+        270_177_602,
+        197_599_634,
+        111_000_745,
+        23_866_596,
+    ];
+    let probes = [
+        -1, 0, 1, 4_095, 4_096, 8_191, 8_192, 14_336, 20_479, 20_480, 30_720, 40_959, 40_960,
+        61_440, 81_919, 81_920, 81_921,
+    ];
+
+    for probe in probes {
+        let mut general_status = NumericStatus::CLEAR;
+        let general = interpolate_clamped(probe, &xs, &ys, &mut general_status);
+        let mut specialized_status = NumericStatus::CLEAR;
+        let specialized =
+            interpolate_clamped_integral_q12(probe, &xs, &ys, &mut specialized_status);
+        assert_eq!(specialized, general, "probe {probe}");
+        assert_eq!(specialized_status, general_status, "probe {probe}");
+    }
+}
+
+#[test]
+fn integral_q12_interpolation_rejects_non_integral_spans() {
+    let mut status = NumericStatus::CLEAR;
+    assert_eq!(
+        interpolate_clamped_integral_q12(4_096, &[0, 8_193], &[0, 100], &mut status),
+        0
+    );
+    assert!(status.contains(NumericFault::InvalidInput));
 }
 
 #[test]
