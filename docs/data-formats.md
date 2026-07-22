@@ -117,4 +117,4 @@ Optional interpreted columns may follow, but regression tools compare raw column
 
 `phase0/reference/generate_numeric_foundation.py` packs the checked-in example scenario and a two-frame telemetry fixture. It records complete hexadecimal encodings, CRCs, lengths, and SHA-256 digests in `phase0/numeric/numeric-v1.json`.
 
-The fixtures verify a future Rust packer/reader independently: matching a structure in memory is not enough; the emitted bytes must match exactly.
+The production Rust telemetry writers now match this independent fixture byte for byte on native, rust-mos, and C64 targets. A future reader must meet the same rule: matching a structure in memory is not enough; emitted or accepted bytes must match exactly.

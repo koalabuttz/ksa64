@@ -441,6 +441,22 @@ Consequence:
 
 Checked dynamics now reaches 8.57 Hz with 8,174.41 cycles per step, or 6.64 percent, of raw 8 Hz headroom. The arithmetic performance gate is closed. Per-successor rolling checksum validation remains separately measured above budget, so telemetry work must make validation policy and scheduling explicit rather than hiding it inside the physics result.
 
+## D-030: Serialize canonical telemetry records into caller-owned buffers
+
+Status: Accepted
+
+Decision:
+
+Write telemetry without allocation into exact-length caller-owned buffers. A stream header is exactly 32 bytes and derives identity, timestep, and stride from a validated `Scenario`. A frame is exactly 40 bytes and carries strongly typed truth fields, private-construction status and event flags, the rolling state checksum, and a CRC-32 over its first 36 bytes. Reject noncanonical output lengths before writing any field.
+
+Rationale:
+
+This keeps binary layout independent of Rust struct representation, padding, and host endianness. Private flag storage prevents reserved bits from leaking into v1 records, while explicit constructors cover every accepted flag. The writers reproduce the independently generated 112-byte golden stream—including header and frame CRCs—byte for byte in native tests and the MOS self-test.
+
+Consequence:
+
+Canonical records can now be produced on every target, but the mission executor does not yet schedule or transport them. The next gate will emit initial and stride-aligned frames through a caller-supplied sink, accumulate events between frames, and keep checksum/serialization timing separate from the passing raw physics budget.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

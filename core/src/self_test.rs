@@ -2,13 +2,21 @@ use crate::dynamics::{advance_vertical_state, evaluate_vertical_forces, Vertical
 use crate::environment::SimpleEarthEnvironment;
 use crate::mission::{hash_vertical_truth, run_vertical_mission, VERTICAL_CHECKSUM_OFFSET};
 use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericFault, NumericStatus};
-use crate::quantities::{Altitude, Mass, Time, Velocity};
+use crate::quantities::{Acceleration, Altitude, Mass, Time, Velocity};
 use crate::scenario::{parse_scenario_image, SCENARIO_IMAGE_LENGTH, SIMPLE_EARTH_ENVIRONMENT_ID};
+use crate::telemetry::{
+    write_telemetry_frame, write_telemetry_header, TelemetryEvents, TelemetryFrame,
+    TelemetryStatus, TELEMETRY_FRAME_LENGTH, TELEMETRY_HEADER_LENGTH,
+};
 use crate::vehicle::VerticalTruthState;
 
 const SCENARIO_IMAGE: &[u8; SCENARIO_IMAGE_LENGTH] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../phase0/numeric/scenario-v1.bin"
+));
+const TELEMETRY_STREAM: &[u8; 112] = include_bytes!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../phase0/numeric/telemetry-v1.bin"
 ));
 
 mod vectors {
@@ -332,6 +340,50 @@ fn check_mission() -> u16 {
     failures
 }
 
+fn check_telemetry() -> u16 {
+    let scenario = match parse_scenario_image(SCENARIO_IMAGE) {
+        Ok(scenario) => scenario,
+        Err(_) => return 1,
+    };
+    let mut failures = 0u16;
+    let mut header = [0u8; TELEMETRY_HEADER_LENGTH];
+    failures += failure_count(write_telemetry_header(&scenario, &mut header).is_ok());
+    failures += failure_count(header == TELEMETRY_STREAM[..TELEMETRY_HEADER_LENGTH]);
+
+    let initial = VerticalTruthState::initial(&scenario);
+    let initial_frame = TelemetryFrame::from_truth(
+        initial,
+        TelemetryStatus::from_engine_active(true),
+        TelemetryEvents::NONE,
+        VERTICAL_CHECKSUM_OFFSET,
+    );
+    let mut frame = [0u8; TELEMETRY_FRAME_LENGTH];
+    failures += failure_count(write_telemetry_frame(&initial_frame, &mut frame).is_ok());
+    failures += failure_count(
+        frame
+            == TELEMETRY_STREAM
+                [TELEMETRY_HEADER_LENGTH..TELEMETRY_HEADER_LENGTH + TELEMETRY_FRAME_LENGTH],
+    );
+
+    let second_frame = TelemetryFrame::new(
+        8,
+        Time::from_raw(65_536),
+        Altitude::from_raw(16),
+        Velocity::from_raw(134_218),
+        Acceleration::from_raw(2_147_484),
+        Mass::from_raw(2_037_760),
+        Mass::from_raw(1_546_240),
+        TelemetryStatus::from_engine_active(true),
+        TelemetryEvents::NONE,
+        0x1234_5678,
+    );
+    failures += failure_count(write_telemetry_frame(&second_frame, &mut frame).is_ok());
+    failures += failure_count(
+        frame == TELEMETRY_STREAM[TELEMETRY_HEADER_LENGTH + TELEMETRY_FRAME_LENGTH..],
+    );
+    failures
+}
+
 fn check_scenario() -> u16 {
     let mut crc_failures = failure_count(crate::scenario::crc32_ieee(b"123456789") == 0xcbf4_3926);
     match parse_scenario_image(SCENARIO_IMAGE) {
@@ -373,6 +425,7 @@ pub fn run_numeric_self_tests() -> u16 {
     failures += check_force_model();
     failures += check_transitions();
     failures += check_mission();
+    failures += check_telemetry();
     failures += check_scenario();
     failures
 }

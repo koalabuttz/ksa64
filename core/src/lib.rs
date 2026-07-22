@@ -6,6 +6,7 @@ pub mod mission;
 pub mod numeric;
 pub mod quantities;
 pub mod scenario;
+pub mod telemetry;
 pub mod vehicle;
 
 #[cfg(feature = "c64")]
