@@ -1,10 +1,21 @@
 #![no_std]
 
 mod manual;
+mod vertical;
 pub use manual::{
     divide_scaled_manual, interpolate_fixed_manual, multiply_scaled_manual,
     run_manual_arithmetic_vectors,
 };
+pub use vertical::{
+    hash_vertical_state, run_vertical_manual, vertical_step_manual, VerticalRun, VerticalState,
+};
+
+pub mod vertical_vectors {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../generated/phase0_vertical.rs"
+    ));
+}
 
 pub mod vectors {
     include!(concat!(

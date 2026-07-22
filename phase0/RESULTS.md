@@ -39,6 +39,26 @@ These are correctness-runner PRGs, not isolated kernel sizes:
 
 Replacing compiler-provided wide arithmetic reduced the Rust correctness artifact by 7,996 bytes. Oscar64 is 1,895 bytes smaller than the specialized Rust runner at this checkpoint. No language decision should be made from whole-runner size alone; generated assembly, isolated kernel size, cycles, and the vertical workload still matter.
 
+## Vertical correctness gate
+
+Both specialized candidates reproduce all 12 fixed checkpoints and the final FNV-1a checksum `0x3a014fa6` after 2,048 steps.
+
+| Candidate | Correctness-runner cycles | Approximate 1 MHz time | C64 artifact |
+|---|---:|---:|---:|
+| Specialized Rust/rust-mos | 441,745,996 | 7 min 22 s | 11,567 bytes |
+| Oscar64 C++ | 457,888,329 | 7 min 38 s | 6,097 bytes |
+
+The cycle counts include the physics loop, checkpoint comparisons, and rolling checksum. Rust was measured with `mos-sim --cycles`; Oscar64 was measured with its integrated profiling emulator. The 3.5 percent difference is encouraging but preliminary because the two emulators are not yet a calibrated common timing source.
+
+Oscar64's profile attributes 298,078,218 cycles, about 65 percent of the total, to the restoring 64-by-32 divider. The next performance slice should therefore focus on division and workload-specific reciprocal strategies before broader source-level optimization.
+
+This gate also confirms the expected flight events:
+
+- Engine cutoff occurs once at step 1,216, or T+152 seconds.
+- Propellant reaches zero and mass reaches the 120-tonne dry mass.
+- The coast phase continues through T+256 seconds.
+- No arithmetic operation saturates in the frozen workload.
+
 ## Reproduce
 
 From the project root in PowerShell:
@@ -51,9 +71,12 @@ The failing Rust baseline is considered reproduced only when it returns exactly 
 
 ## Next gate
 
-Implement the frozen vertical-flight step twice:
+Turn the correctness workload into a controlled performance experiment:
 
-1. Specialized two-word Rust arithmetic.
-2. Oscar64-compatible two-word C++ arithmetic.
+1. Separate dynamics-only timing from checkpoints and checksum work.
+2. Isolate multiplication, division, interpolation, and full-step cycle costs.
+3. Inspect generated assembly and map-file contributions.
+4. Compare general restoring division with range-specific reciprocal approaches.
+5. Preserve exact checkpoints and checksum for every eligible optimization.
 
-Both implementations must reproduce all fixed checkpoints and the final FNV-1a checksum before cycle measurements count.
+The language decision remains open until the sustained workload is measured after obvious arithmetic bottlenecks are addressed.

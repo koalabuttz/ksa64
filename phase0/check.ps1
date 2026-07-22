@@ -16,6 +16,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Phase 0 JSON vectors are stale." }
     & python -B phase0/reference/emit_candidate_vectors.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 0 candidate bindings are stale." }
+    & python -B phase0/reference/emit_vertical_bindings.py --check
+    if ($LASTEXITCODE -ne 0) { throw "Phase 0 vertical bindings are stale." }
 
     Write-Host ""
     Write-Host "== Native Rust =="
@@ -56,6 +58,16 @@ try {
     Write-Host "Baseline rust-mos result: expected 2 failures (documented toolchain risk)"
 
     Write-Host ""
+    Write-Host "== rust-mos vertical workload =="
+    & $rustWrapper -WorkingDirectory "phase0/candidates/rust" @rustBuildArguments `
+        --bin ksa64-phase0-rust-vertical-sim
+    if ($LASTEXITCODE -ne 0) { throw "Rust vertical workload build failed." }
+    & $rustWrapper -WorkingDirectory "phase0/candidates/rust" sh -lc `
+        "mos-sim --cycles target/mos-sim-none/release/ksa64-phase0-rust-vertical-sim"
+    if ($LASTEXITCODE -ne 0) { throw "Rust vertical workload failed." }
+    Write-Host "Rust vertical workload: PASS"
+
+    Write-Host ""
     Write-Host "== rust-mos C64 artifacts =="
     $rustC64Arguments = @(
         "cargo", "build", "--release",
@@ -70,6 +82,9 @@ try {
     & $rustWrapper -WorkingDirectory "phase0/candidates/rust" @rustC64Arguments `
         --bin ksa64-phase0-rust-manual-c64
     if ($LASTEXITCODE -ne 0) { throw "Specialized Rust C64 build failed." }
+    & $rustWrapper -WorkingDirectory "phase0/candidates/rust" @rustC64Arguments `
+        --bin ksa64-phase0-rust-vertical-c64
+    if ($LASTEXITCODE -ne 0) { throw "Rust vertical C64 build failed." }
 
     Write-Host ""
     Write-Host "== Native Oscar64-compatible C++ =="
@@ -96,21 +111,43 @@ try {
     & $nativeExecutable
     if ($LASTEXITCODE -ne 0) { throw "Native C++ candidate vectors failed." }
 
+    $nativeVerticalExecutable = Join-Path $oscarOutput "phase0-vertical-native.exe"
+    $verticalCompileCommand =
+        "call `"$vcvarsall`" x64 >nul && " +
+        "cl /nologo /std:c++14 /O2 /W4 /WX /GR- " +
+        "phase0\candidates\oscar64\vertical_main.cpp " +
+        "phase0\candidates\oscar64\vertical.cpp " +
+        "phase0\candidates\oscar64\arithmetic.cpp " +
+        "/Fo:`"$oscarOutput\\`" /Fe:`"$nativeVerticalExecutable`""
+    & cmd.exe /d /c $verticalCompileCommand
+    if ($LASTEXITCODE -ne 0) { throw "Native C++ vertical build failed." }
+    & $nativeVerticalExecutable
+    if ($LASTEXITCODE -ne 0) { throw "Native C++ vertical workload failed." }
+
     Write-Host ""
     Write-Host "== Oscar64 C64 execution =="
     $oscarArtifact = Join-Path $oscarOutput "phase0-oscar64.prg"
-    & $oscarWrapper "-tm=c64" "-pp" "-O2" "-dKSA64_OSCAR64" "-e" `
+    & $oscarWrapper -ReturnToCaller "-tm=c64" "-pp" "-O2" "-dKSA64_OSCAR64" "-e" `
         "-o=$oscarArtifact" `
         phase0/candidates/oscar64/main.cpp `
         phase0/candidates/oscar64/arithmetic.cpp
     if ($LASTEXITCODE -ne 0) { throw "Oscar64 C64 vectors failed." }
+    $oscarVerticalArtifact = Join-Path $oscarOutput "phase0-vertical-oscar64.prg"
+    & $oscarWrapper -ReturnToCaller "-tm=c64" "-pp" "-O2" "-dKSA64_OSCAR64" "-e" `
+        "-o=$oscarVerticalArtifact" `
+        phase0/candidates/oscar64/vertical_main.cpp `
+        phase0/candidates/oscar64/vertical.cpp `
+        phase0/candidates/oscar64/arithmetic.cpp
+    if ($LASTEXITCODE -ne 0) { throw "Oscar64 C64 vertical workload failed." }
 
     Write-Host ""
     Write-Host "== Artifact sizes =="
     $artifacts = @(
         Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-c64"
         Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-manual-c64"
+        Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-vertical-c64"
         $oscarArtifact
+        $oscarVerticalArtifact
     )
     foreach ($artifact in $artifacts) {
         $file = Get-Item -LiteralPath $artifact
@@ -118,7 +155,7 @@ try {
     }
 
     Write-Host ""
-    Write-Host "PHASE 0 ARITHMETIC CHECK: PASS"
+    Write-Host "PHASE 0 CORRECTNESS GATES: PASS"
 } finally {
     Pop-Location
 }

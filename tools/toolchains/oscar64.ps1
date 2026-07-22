@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+    [switch]$ReturnToCaller,
+
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]]$CompilerArguments
 )
@@ -48,5 +50,10 @@ if (-not $CompilerArguments -or $CompilerArguments.Count -eq 0) {
 }
 
 & $compiler @CompilerArguments
-exit $LASTEXITCODE
+$compilerExitCode = $LASTEXITCODE
+if ($ReturnToCaller) {
+    $global:LASTEXITCODE = $compilerExitCode
+    return
+}
+exit $compilerExitCode
 

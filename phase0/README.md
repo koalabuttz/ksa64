@@ -6,15 +6,16 @@ This directory is deliberately separate from future production source. Everythin
 
 ## Current status
 
-The arithmetic correctness slice is complete:
+The arithmetic and vertical-flight correctness gates are complete:
 
 - The Phase 0 v1 numeric and vertical-workload contract is frozen.
 - Generated Rust and C++ bindings consume the same checked JSON vectors.
-- Native Rust and native C++ pass the arithmetic vectors.
-- Specialized two-word Rust passes under `mos-sim` and builds for the C64.
-- Oscar64 C++ passes in Oscar64's integrated C64 emulator.
-- Compiler-provided Rust `u64` arithmetic is retained as a reproducible failing baseline.
-- Vertical-flight implementation and cycle measurements have not begun.
+- Specialized Rust and Oscar64 C++ pass every arithmetic vector.
+- Both candidates match all 12 vertical checkpoints and checksum `0x3a014fa6`.
+- Rust completes the correctness workload in 441,745,996 simulated cycles.
+- Oscar64 completes it in 457,888,329 profiled cycles.
+- Compiler-provided Rust `u64` arithmetic remains a reproducible failing baseline.
+- Dynamics-only timing and arithmetic optimization have not begun.
 
 See [RESULTS.md](RESULTS.md) for measurements, the rust-mos finding, and the next gate.
 
@@ -31,9 +32,12 @@ See [RESULTS.md](RESULTS.md) for measurements, the rust-mos finding, and the nex
         generated/
             phase0_vectors.rs
             phase0_vectors.hpp
+            phase0_vertical.rs
+            phase0_vertical.hpp
         reference/
             generate_vectors.py
             emit_candidate_vectors.py
+            emit_vertical_bindings.py
         vectors/
             phase0-v1.json
             phase0-v1.sha256
@@ -66,11 +70,11 @@ Rust and C++ must consume the same integer data and produce the same exact resul
 
 ## Next implementation slice
 
-1. Implement the frozen vertical-flight step with specialized two-word Rust arithmetic.
-2. Implement the same step with Oscar64-compatible C++ arithmetic.
-3. Match all fixed checkpoints and the final FNV-1a checksum.
-4. Inspect generated assembly and isolate kernel sizes.
-5. Add CIA and emulator cycle measurements only after exact agreement.
+1. Separate dynamics-only timing from checkpoint and checksum work.
+2. Isolate multiply, divide, interpolation, and complete-step costs.
+3. Inspect generated assembly and map-file contributions.
+4. Test exact range-specific reciprocal strategies against restoring division.
+5. Add CIA timing after emulator measurements are stable.
 
 No language wins because it reaches a benchmark result first.
 
