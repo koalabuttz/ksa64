@@ -1,0 +1,67 @@
+{
+  "schema": "ksa64.phase1.high-precision",
+  "version": 1,
+  "method": {
+    "decimal_precision_digits": 80,
+    "same_step": "semi-implicit Euler at 0.125 s using unquantized source values",
+    "reference": "RK4 at 0.00390625 s using unquantized source values",
+    "confirmation": "RK4 at 0.001953125 s using unquantized source values",
+    "environment": "source density knots and analytic gravity evaluated at table knots, linearly interpolated"
+  },
+  "fixed_exact": {
+    "time_s": "256.000000000000000000",
+    "altitude_km": "379.750244140625000000",
+    "velocity_km_s": "1.873809039592742920",
+    "acceleration_km_s2": "-0.008740235120058060",
+    "mass_t": "120.000000000000000000",
+    "propellant_t": "0.000000000000000000"
+  },
+  "decimal_same_step": {
+    "time_s": "256.000000000000000000",
+    "altitude_km": "379.742401954191637272",
+    "velocity_km_s": "1.873766960374982941",
+    "acceleration_km_s2": "-0.008740467558913744",
+    "mass_t": "120.000000000000000000",
+    "propellant_t": "0.000000000000000000"
+  },
+  "decimal_rk4_reference": {
+    "time_s": "256.000000000000000000",
+    "altitude_km": "380.029599126288271515",
+    "velocity_km_s": "1.876665760228212026",
+    "acceleration_km_s2": "-0.008739129784235058",
+    "mass_t": "120.000000000000000000",
+    "propellant_t": "0.000000000000000000"
+  },
+  "decimal_rk4_confirmation": {
+    "time_s": "256.000000000000000000",
+    "altitude_km": "380.029599132775731848",
+    "velocity_km_s": "1.876665760265183242",
+    "acceleration_km_s2": "-0.008739129784218414",
+    "mass_t": "120.000000000000000000",
+    "propellant_t": "0.000000000000000000"
+  },
+  "fixed_minus_same_step": {
+    "altitude_m": "7.842186433362727583",
+    "velocity_m_s": "0.042079217759978795",
+    "acceleration_m_s2": "0.000232438855684623"
+  },
+  "same_step_minus_rk4_confirmation": {
+    "altitude_m": "-287.197178584094575796",
+    "velocity_m_s": "-2.898799890200300844",
+    "acceleration_m_s2": "-0.001337774695330482"
+  },
+  "fixed_minus_rk4_confirmation": {
+    "altitude_m": "-279.354992150731848213",
+    "velocity_m_s": "-2.856720672440322049",
+    "acceleration_m_s2": "-0.001105335839645859"
+  },
+  "rk4_reference_minus_confirmation": {
+    "altitude_m": "-0.000006487460332905",
+    "velocity_m_s": "-0.000000036971216210",
+    "acceleration_m_s2": "-0.000000000016644534"
+  },
+  "convergence_tolerance": {
+    "altitude_m_less_than": "0.001",
+    "velocity_m_s_less_than": "0.00001"
+  }
+}

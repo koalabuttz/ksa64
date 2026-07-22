@@ -21,6 +21,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Phase 1 transition bindings are stale." }
     & python -B phase1/reference/emit_mission_bindings.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 1 mission bindings are stale." }
+    & python -B phase1/reference/generate_high_precision.py --check
+    if ($LASTEXITCODE -ne 0) { throw "Phase 1 high-precision evidence is stale." }
 
     Write-Host ""
     Write-Host "== Native production core =="

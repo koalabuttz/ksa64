@@ -47,6 +47,8 @@ class StatusDisplayResult:
     stride: str
     checksum: str
     events: str
+    altitude_error: str
+    velocity_error: str
     raw_rate: str
     recorded_rate: str
     timing_note: str
@@ -69,6 +71,8 @@ def parse_result(memory: bytes) -> StatusDisplayResult | None:
         12: "STRIDE                     8",
         14: "STATE CHECKSUM      72BF6E0E",
         17: "CUTOFF  DEPLETED  END",
+        18: "HP ALT DELTA        -279.355 M",
+        19: "HP VEL DELTA          -2.857 M/S",
         20: "RAW PHYSICS       8.57 HZ",
         21: "RECORDED MODE     5.72 HZ",
         23: "POST-RUN DISPLAY - TIMING EXCLUDED",
@@ -91,6 +95,8 @@ def parse_result(memory: bytes) -> StatusDisplayResult | None:
         stride=screen[12],
         checksum=screen[14],
         events=screen[17],
+        altitude_error=screen[18],
+        velocity_error=screen[19],
         raw_rate=screen[20],
         recorded_rate=screen[21],
         timing_note=screen[23],

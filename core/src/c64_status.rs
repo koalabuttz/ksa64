@@ -9,6 +9,13 @@ use crate::telemetry::{
     TelemetryReadError, TelemetrySink, TELEMETRY_FRAME_LENGTH, TELEMETRY_HEADER_LENGTH,
 };
 
+mod error_data {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../phase1/generated/high_precision_v1.rs"
+    ));
+}
+
 const SCREEN: *mut u8 = 0x0400 as *mut u8;
 const COLOR_RAM: *mut u8 = 0xd800 as *mut u8;
 const BORDER_COLOR: *mut u8 = 0xd020 as *mut u8;
@@ -252,6 +259,12 @@ pub fn render_status(scenario: &Scenario, sink: &C64StatusSink) -> Result<(), Te
         if fault {
             write_text(17, 23, "NUMERIC FAULT");
         }
+        write_text(18, 0, "HP ALT DELTA");
+        write_fixed_3(18, 16, 12, error_data::FINAL_ALTITUDE_ERROR_M_Q16, 16);
+        write_text(18, 29, "M");
+        write_text(19, 0, "HP VEL DELTA");
+        write_fixed_3(19, 16, 12, error_data::FINAL_VELOCITY_ERROR_M_S_Q16, 16);
+        write_text(19, 29, "M/S");
 
         write_text(20, 0, "RAW PHYSICS       8.57 HZ");
         write_text(21, 0, "RECORDED MODE     5.72 HZ");

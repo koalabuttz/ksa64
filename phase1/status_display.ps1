@@ -56,6 +56,8 @@ try {
         $result.stride,
         $result.checksum,
         $result.events,
+        $result.altitude_error,
+        $result.velocity_error,
         $result.raw_rate,
         $result.recorded_rate,
         $result.timing_note

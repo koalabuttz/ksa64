@@ -73,7 +73,7 @@ Use a compact host-only floating-point calculation to estimate error introduced 
 - Integrator.
 - Simplified constants.
 
-This comparison should share scenario inputs but does not need the product interface, displays, avionics, or storage architecture.
+This comparison should share scenario inputs but does not need the product interface, displays, avionics, or storage architecture. Phase 1 implements this as an 80-digit Decimal semi-implicit-Euler run at the product step plus RK4 runs at 1/32 and 1/64 of that step. The finer pair must converge within 1 mm altitude and 0.01 mm/s velocity; the accepted evidence is recorded in `phase1/HIGH-PRECISION.md`.
 
 ### 6. Independent external tools
 

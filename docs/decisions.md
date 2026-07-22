@@ -527,6 +527,24 @@ Consequence:
 
 The 27,866-byte status PRG reports the complete 2,048-step mission, 257 accepted frames, final state, checksum, event history, and measured raw/recorded rates on a real C64 memory map. Live refresh remains deliberately unmeasured and out of scope. The next gate is independent high-precision comparison and C64 accumulated-error reporting.
 
+## D-035: Attribute accumulated error with Decimal and refined RK4 paths
+
+Status: Accepted
+
+Decision:
+
+Implement the Phase 1 high-precision comparison as a deliberately independent Python `Decimal` model at 80-digit precision. Run semi-implicit Euler at the product's 0.125-second step and update order to isolate fixed-point/table quantization. Separately run RK4 at 1/32 and 1/64 of the product step to estimate integration error and require the two refined results to agree within 1 mm altitude and 0.01 mm/s velocity.
+
+Generate reviewed Q16.16 presentation constants for the total fixed-minus-confirmed-RK4 altitude and velocity deltas. Display those constants only after the C64 mission completes; they cannot influence dynamics. Retain semi-implicit Euler for Phase 1 and reconsider the integrator when Phase 2 defines orbital-insertion accuracy needs.
+
+Rationale:
+
+At 256 seconds, fixed-point execution differs from unquantized same-step Decimal by +7.842186 m and +0.042079 m/s. The same-step Decimal result differs from confirmed RK4 by -287.197179 m and -2.898800 m/s, so timestep/integrator bias dominates numeric quantization. The total fixed-point deltas are -279.354992 m and -2.856721 m/s. The two RK4 paths differ by only 0.006487 mm and 0.000037 mm/s, well inside their declared convergence bounds.
+
+Consequence:
+
+Phase 1 has measured, decomposed accumulated-error evidence rather than a generic tolerance. The C64 status PRG grows to 28,149 bytes and reports the rounded total deltas as -279.355 m and -2.857 m/s. Adding a second force evaluation would erase the accepted raw 8 Hz margin, while the measured error is adequate for this learning laboratory; new integrator work is deferred to Phase 2 requirements.
+
 ## Open decisions
 
 The following remain deliberately unresolved:
@@ -534,5 +552,4 @@ The following remain deliberately unresolved:
 - License for KSA64.
 - Target C64 and REU configurations beyond the baseline unexpanded C64.
 - Minimum acceptable simulation rate once display and telemetry are included.
-- Whether the high-precision host comparison uses numeric generics or a deliberately independent compact implementation.
 
