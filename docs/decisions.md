@@ -474,6 +474,21 @@ One executor prevents dynamics, cutoff counting, checksumming, and fault semanti
 Consequence:
 
 Canonical mission telemetry is now schedulable without choosing RAM, REU, disk, serial, or screen transport. The diagnostic C64 self-test grows to 47,447 bytes. The next gate must measure rolling checksum plus serialization scheduling with a discard sink under the established PAL common clock, separately from the already passing raw dynamics budget.
+## D-032: Measure canonical telemetry separately from validation policy
+
+Status: Accepted
+
+Decision:
+
+Measure three production paths in one PAL C64 diagnostic binary: checked dynamics, dynamics with a rolling checksum over every successor, and checksum plus canonical stride-aware telemetry. Force all serialized bytes to materialize through fixed volatile discard buffers, but exclude display, disk, REU, and serial transport. Attribute telemetry cost by subtracting checksum mode from the full telemetry path in the same binary; do not compare separate binary layouts for that delta.
+
+Rationale:
+
+Three stable runs measure canonical telemetry at an additional 15,309,372 cycles per 2,048-step mission: 7,475.28 cycles per physics step, 59,569.54 cycles per emitted frame, and 4.54 percent over checksum mode. The full recorded-validation path costs 172,152.59 cycles per physics step and reaches 5.72 Hz. Per-successor state hashing is substantially more expensive than telemetry serialization, so treating the entire miss as an I/O problem would direct optimization at the wrong subsystem.
+
+Consequence:
+
+The telemetry timing gate is closed without weakening the canonical stream. Recorded validation may run below real time, while future interactive scheduling may select a cheaper checksum cadence and retain the 8.57 Hz raw dynamics path. Transport implementations must be measured separately because this result includes only synchronous volatile discard copies. The next gate is host capture and strict stream inspection through the accepted sink boundary.
 ## Open decisions
 
 The following remain deliberately unresolved:

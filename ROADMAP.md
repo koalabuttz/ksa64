@@ -29,7 +29,7 @@ Exit criteria:
 
 Purpose: create the smallest end-to-end vehicle simulation.
 
-Current progress: the production `no_std` core executes the complete validated vertical mission through immutable, fail-closed transitions. Exact interpolation and acceleration-division fast paths preserve general fallbacks and the golden checksum while reducing checked dynamics to 114,981.59 PAL cycles per step. The raw physics loop reaches 8.57 Hz with 6.64 percent headroom. Allocation-free canonical telemetry now emits through caller-provided sinks at the initial state, configured stride, terminal state, and numeric faults. Events accumulate until accepted by a frame, and the golden 257-frame stream matches an independent byte-stream CRC. Telemetry timing is next.
+Current progress: the production `no_std` core executes the complete validated vertical mission through immutable, fail-closed transitions. Exact interpolation and acceleration-division fast paths preserve general fallbacks and the golden checksum while reducing checked dynamics to 114,981.59 PAL cycles per step. The raw physics loop reaches 8.57 Hz with 6.64 percent headroom. Allocation-free canonical telemetry now emits through caller-provided sinks at the initial state, configured stride, terminal state, and numeric faults. Events accumulate until accepted by a frame, and the golden 257-frame stream matches an independent byte-stream CRC. Target-visible timing measures telemetry at an additional 7,475.28 cycles per physics step over checksum mode; the full recorded-validation path reaches 5.72 Hz. Host capture and inspection are next.
 
 Planned capabilities:
 

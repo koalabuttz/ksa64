@@ -1,6 +1,6 @@
 # Phase 1: vertical-flight laboratory
 
-Phase 1 has an end-to-end deterministic vertical mission executor, a passing raw physics budget, and canonical stride-aware telemetry emission: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, exact summaries, allocation-free binary serialization, event accumulation, and caller-provided sinks. Telemetry timing and C64 UI are not implemented yet.
+Phase 1 has an end-to-end deterministic vertical mission executor, a passing raw physics budget, canonical stride-aware telemetry emission, and target-visible telemetry timing: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, exact summaries, allocation-free binary serialization, event accumulation, and caller-provided sinks. Host capture and C64 UI are not implemented yet.
 
 ## Current slice
 
@@ -34,6 +34,8 @@ The `ksa64-core` crate provides:
 - Sticky cutoff and depletion events that clear only after a sink accepts their frame.
 - Explicit preservation of simulation and sink failures, including simultaneous fault-reporting failures.
 - An independently generated 257-frame, 10,312-byte mission-stream oracle with CRC-32 `0xcf56fe65`.
+- A three-path PAL timing harness measuring raw dynamics, per-successor checksumming, and checksum plus canonical telemetry.
+- Three stable telemetry runs at 172,152.59 cycles per physics step (5.72 Hz), with telemetry itself adding 7,475.28 cycles per step or 59,569.54 cycles per emitted frame.
 
 The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. Exact interpolation and acceleration-division fast paths reduce checked dynamics to 114,981.59 PAL cycles per step, clearing the raw PAL 8 Hz budget with 6.64 percent headroom. Its telemetry stream scheduler is production code; storage and presentation remain separate later boundaries. The diagnostic C64 self-test is 47,447 bytes after adding a compact whole-stream checker rather than embedding the 10,312-byte oracle.
 
@@ -76,8 +78,9 @@ From the project root:
 
     .\phase1\check.ps1
     .\phase1\timing.ps1
+    .\phase1\telemetry_timing.ps1
 
-The first command verifies the accepted artifacts, runs native tests, executes the exact fixture pack through rust-mos, and builds the physical-C64 PRG. The second builds the dedicated timing PRG and requires three stable measurements under the pinned PAL VICE common clock.
+The first command verifies the accepted artifacts, runs native tests, executes the exact fixture pack through rust-mos, and builds the physical-C64 PRG. The second preserves the dedicated raw/checksum timing gate. The third measures raw, checksum, and canonical telemetry paths together and requires three stable runs under the pinned PAL VICE common clock.
 
 To regenerate the Rust bindings deliberately:
 
@@ -91,4 +94,4 @@ Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Measure checksum plus serialization scheduling separately from raw physics using a discard sink and the established PAL common clock. Record the total and per-step/per-frame costs, determine whether 8 Hz remains feasible with canonical telemetry enabled, and keep transport or display costs outside that measurement.
+Add a host capture and inspection adapter around `TelemetrySink`. It should write the canonical binary stream without changing core scheduling, read it back with strict framing and CRC validation, and render a compact text summary suitable for development. Keep C64 display and transport policy as the following boundary.

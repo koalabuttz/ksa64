@@ -1,0 +1,67 @@
+{
+  "schema": "ksa64.phase1.telemetry-timing-v1",
+  "date": "2026-07-22",
+  "target": "PAL C64",
+  "clock_hz": 985248,
+  "target_rate_hz": 8,
+  "budget_cycles_per_step": 123156,
+  "vice": {
+    "version": "3.10",
+    "executable_sha256": "b48f9117916e960ca6a59ca32bc63765f9b30f2b6bb3ef056514c8bcce0a7030"
+  },
+  "rust_mos_image": "ghcr.io/koalabuttz/rust-mos@sha256:9ddd4ce9502e54409fb56e0a80a2200f1df693a629f2911ff4f1c81303e51271",
+  "runs": 3,
+  "stable": true,
+  "steps_per_run": 2048,
+  "frames_per_run": 257,
+  "bytes_per_run": 10312,
+  "boundary_overhead_cycles": 4,
+  "timed_prg_bytes": 29444,
+  "sink": "volatile 32-byte header and 40-byte frame discard buffers",
+  "checked_dynamics": {
+    "net_cycles": 235477621,
+    "cycles_per_step": 114979.30712890625,
+    "maximum_rate_hz": 8.568915786693802,
+    "margin_cycles_at_8_hz": 8176.69287109375,
+    "fits_8_hz_budget": true
+  },
+  "dynamics_with_rolling_checksum": {
+    "net_cycles": 337259130,
+    "cycles_per_step": 164677.3095703125,
+    "maximum_rate_hz": 5.982900756459877,
+    "margin_cycles_at_8_hz": -41521.3095703125,
+    "fits_8_hz_budget": false
+  },
+  "checksum_and_canonical_telemetry": {
+    "net_cycles": 352568502,
+    "cycles_per_step": 172152.5888671875,
+    "maximum_rate_hz": 5.723108821558881,
+    "margin_cycles_at_8_hz": -48996.5888671875,
+    "fits_8_hz_budget": false
+  },
+  "rolling_checksum_delta": {
+    "cycles": 101781509,
+    "cycles_per_step": 49698.00244140625,
+    "percent_of_checked_dynamics": 43.22343183516365
+  },
+  "telemetry_delta_over_checksum": {
+    "cycles": 15309372,
+    "cycles_per_step": 7475.279296875,
+    "cycles_per_frame": 59569.540856031126,
+    "cycles_per_emitted_byte": 1484.6171450737006,
+    "percent_of_checksum_mode": 4.53934990581278
+  },
+  "final_truth": {
+    "step": 2048,
+    "time_q16": 16777216,
+    "altitude_q12": 1555457,
+    "velocity_q24": 31437299,
+    "acceleration_q28": -2346189,
+    "mass_q12": 491520,
+    "propellant_q12": 0,
+    "checksum": "0x72bf6e0e",
+    "cutoff_events": 1,
+    "final_events": "0x0008",
+    "final_frame_crc32": "0x64c6d22d"
+  }
+}
