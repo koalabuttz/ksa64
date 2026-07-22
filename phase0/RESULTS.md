@@ -2,11 +2,11 @@
 
 Date: 2026-07-22
 
-Status: correctness and first dynamics-performance gates complete; common CIA timing remains.
+Status: correctness, dynamics-performance, and common CIA timing gates complete; primitive attribution and resource review remain.
 
 ## Scope
 
-This result covers exact fixed-point arithmetic, the complete vertical workload, dynamics-only timing, and the first exact arithmetic optimizations. It does not yet select the final KSA64 language because both candidates still require a common CIA timing method.
+This result covers exact fixed-point arithmetic, the complete vertical workload, dynamics-only timing, the first exact arithmetic optimizations, and a common target-visible timing pass. It does not yet select the final KSA64 language because primitive attribution and the remaining resource review are still required.
 
 ## Correctness results
 
@@ -70,9 +70,29 @@ The timing runners execute the same 2,048 dynamics steps but exclude rolling FNV
 | Oscar64 C++ | General divider baseline | 410,417,915 | 200,399.37 | 4,921 bytes | - |
 | Oscar64 C++ | Exact specialized path | 235,021,443 | 114,756.56 | 4,997 bytes | 42.74% |
 
-Rust is measured with `mos-sim --cycles`; Oscar64 uses its integrated profiling emulator. Reductions within each toolchain are controlled comparisons. The absolute Rust/Oscar totals are still preliminary because they do not yet come from one common C64 timer and emulator.
+Rust is measured with `mos-sim --cycles`; Oscar64 uses its integrated profiling emulator. Reductions within each toolchain are controlled comparisons. Their absolute totals use different accounting and are retained for optimization history; the common-clock comparison below supersedes them for cross-language conclusions.
 
-At the frozen 0.125-second timestep, a nominal 1 MHz machine provides about 125,000 cycles per step. Both optimized physics kernels are below that raw budget, which makes an 8 Hz Phase 0 model plausible before display, sensor, guidance, and scheduling costs are added.
+## Common C64 timing gate
+
+Both optimized C64 PRGs were measured in the same official PAL VICE 3.10 `x64sc` environment using a target-visible 32-bit CIA1 counter. Timer A counts processor clocks and Timer B counts Timer A underflows. Each executable blanks the VIC display, disables sprites and CIA interrupts, aligns both boundary measurements to the start of a video frame, subtracts its empty-boundary cost, and publishes its result and final state at `$c000`.
+
+| Candidate | Net CIA cycles | Cycles/step | Boundary cost | Timed PRG | Three-run result |
+|---|---:|---:|---:|---:|---|
+| Rust/rust-mos | 223,772,332 | 109,263.83 | 4 | 9,026 bytes | Identical |
+| Oscar64 C++ | 235,627,088 | 115,052.29 | 18 | 5,865 bytes | Identical |
+
+Rust uses 11,854,756 fewer cycles, or 5.03 percent fewer than Oscar64. Expressed as throughput, the Rust kernel is 5.30 percent faster. This is a real but modest advantage, well inside the experiment's 25 percent threshold for retaining the incumbent language when the remaining gates pass.
+
+Every timed run produced the same frozen final state:
+
+- Altitude Q12: `1,555,457`.
+- Velocity Q24: `31,437,297`.
+- Acceleration Q28: `-2,346,189`.
+- Mass Q12: `491,520`.
+- Propellant Q12: `0`.
+- Cutoff events: `1`.
+
+At the frozen 0.125-second timestep, a PAL C64 provides roughly 123,000 processor cycles per step. Both common-clock kernels fit that raw 8 Hz budget before display, sensor, guidance, and scheduling costs are added. Rust leaves about 13,700 cycles per step and Oscar64 about 7,900; this makes optimization of the remaining acceleration division materially useful even though the physics kernel is already feasible.
 
 ### Exact specializations
 
@@ -107,19 +127,20 @@ From the project root in PowerShell:
 
     .\phase0\check.ps1
     .\phase0\benchmark.ps1
+    .\phase0\timing.ps1
 
-The check verifies generated artifacts, runs native Rust tests, executes both Rust variants with the simulator bundled in the pinned rust-mos image, builds the C64 Rust artifacts, builds and runs the native C++ candidate, executes the Oscar64 C64 candidate, and reports artifact sizes. The benchmark runs the baseline and optimized dynamics-only kernels, captures both emulator profiles, and prints cycle, size, and reduction summaries.
+The check verifies generated artifacts, runs native Rust tests, executes both Rust variants with the simulator bundled in the pinned rust-mos image, builds the C64 Rust artifacts, builds and runs the native C++ candidate, executes the Oscar64 C64 candidate, and reports artifact sizes. The benchmark runs the baseline and optimized dynamics-only kernels, captures both tool-specific profiles, and prints cycle, size, and reduction summaries. The timing script builds both target-visible runners and requires identical results across three sequential PAL VICE runs.
 
 The failing Rust baseline is considered reproduced only when it returns exactly two failures. A changed result forces a fresh investigation rather than turning a known failure into an ignored test.
 
 ## Next gate
 
-Put both candidates on one target-visible timing method:
+Attribute the common-clock result and finish the evidence needed by the language rubric:
 
-1. Add identical CIA timer boundaries around the 2,048-step kernel.
-2. Execute both PRGs in one cycle-accurate C64 environment.
-3. Measure primitive multiply, general divide, and fast interpolation-divide runners.
-4. Confirm that the remaining acceleration division is the next material bottleneck.
-5. Repeat a smaller confirmation on real hardware when available.
+1. Measure primitive multiply, general divide, and fast interpolation-divide runners with the same CIA/VICE path.
+2. Confirm that the remaining acceleration division is the next material bottleneck.
+3. Record static RAM, zero-page, stack, and generated-code observations for the timed builds.
+4. Repeat a smaller confirmation on real hardware when available.
+5. Record the Phase 0 language and arithmetic decision.
 
-The language decision remains open. The reported optimized totals differ by less than five percent, well inside the range where the common-timer requirement matters more than the apparent lead.
+The language decision remains open until that review, but the common timing result favors the Rust incumbent: it is correct, 5.03 percent lower in cycle cost, and still satisfies the experiment's substantial-performance-parity condition.

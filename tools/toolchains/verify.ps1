@@ -99,5 +99,23 @@ Write-Host "Bytes:    $($oscarArtifactFile.Length)"
 Write-Host "SHA-256:  $oscarArtifactHash"
 
 Write-Host ""
+Write-Host "== VICE installation =="
+$viceExecutable = Join-Path (
+    $projectRoot
+) $versions.vice.projectRelativeExecutable.Replace("/", "\")
+if (-not (Test-Path -LiteralPath $viceExecutable -PathType Leaf)) {
+    throw "Pinned project-local VICE is missing. Run tools/toolchains/setup-vice.ps1."
+}
+$viceHash = (
+    Get-FileHash -Algorithm SHA256 -LiteralPath $viceExecutable
+).Hash.ToLowerInvariant()
+if ($viceHash -ne $versions.vice.executableSha256) {
+    throw "VICE executable hash does not match the pinned release."
+}
+Write-Host "Emulator: $viceExecutable"
+Write-Host "Version:  $($versions.vice.version)"
+Write-Host "SHA-256:  $viceHash"
+
+Write-Host ""
 Write-Host "TOOLCHAIN VERIFICATION: PASS"
 

@@ -1,5 +1,7 @@
 #![no_std]
 
+#[cfg(feature = "c64")]
+pub mod c64_timer;
 mod manual;
 mod optimized;
 mod vertical;

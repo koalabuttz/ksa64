@@ -97,6 +97,9 @@ try {
     & $rustWrapper -WorkingDirectory "phase0/candidates/rust" @rustC64Arguments `
         --bin ksa64-phase0-rust-vertical-optimized-c64
     if ($LASTEXITCODE -ne 0) { throw "Optimized Rust vertical C64 build failed." }
+    & $rustWrapper -WorkingDirectory "phase0/candidates/rust" @rustC64Arguments `
+        --bin ksa64-phase0-rust-vertical-timed-c64
+    if ($LASTEXITCODE -ne 0) { throw "Timed Rust vertical C64 build failed." }
     Write-Host ""
     Write-Host "== Native Oscar64-compatible C++ =="
     $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -173,6 +176,15 @@ try {
         phase0/candidates/oscar64/arithmetic.cpp `
         phase0/candidates/oscar64/optimized.cpp
     if ($LASTEXITCODE -ne 0) { throw "Oscar64 optimized vertical workload failed." }
+    $oscarTimedVerticalArtifact = Join-Path $oscarOutput "phase0-vertical-timed-oscar64.prg"
+    & $oscarWrapper -ReturnToCaller "-tm=c64" "-pp" "-O2" "-dKSA64_OSCAR64" `
+        "-o=$oscarTimedVerticalArtifact" `
+        phase0/candidates/oscar64/vertical_timed_main.cpp `
+        phase0/candidates/oscar64/vertical.cpp `
+        phase0/candidates/oscar64/arithmetic.cpp `
+        phase0/candidates/oscar64/optimized.cpp `
+        phase0/candidates/oscar64/c64_timer.cpp
+    if ($LASTEXITCODE -ne 0) { throw "Oscar64 timed vertical build failed." }
     Write-Host ""
     Write-Host "== Artifact sizes =="
     $artifacts = @(
@@ -180,9 +192,11 @@ try {
         Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-manual-c64"
         Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-vertical-c64"
         Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-vertical-optimized-c64"
+        Join-Path $rustCandidate "target\mos-c64-none\release\ksa64-phase0-rust-vertical-timed-c64"
         $oscarArtifact
         $oscarVerticalArtifact
         $oscarOptimizedVerticalArtifact
+        $oscarTimedVerticalArtifact
     )
     foreach ($artifact in $artifacts) {
         $file = Get-Item -LiteralPath $artifact

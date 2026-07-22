@@ -12,5 +12,12 @@
     "archiveSha256": "36b8ea7bedd79c751117cb6ae0a199037370c36fd29ceda38b08aafa43441fd4",
     "compilerSha256": "718294db4008e00fcd9f729ac5479f96a8768de21393f89f9e2efa9a6e5134a9",
     "projectRelativeCompiler": ".toolchains/oscar64/v1.32.272/oscar64/bin/oscar64.exe"
+  },
+  "vice": {
+    "version": "3.10",
+    "archiveUrl": "https://downloads.sourceforge.net/project/vice-emu/releases/binaries/windows/GTK3VICE-3.10-win64.zip",
+    "archiveSha256": "beb3791d90e98f7e012c0028f26fbaa6545c8fce676f852a67f8ad893dee9d08",
+    "executableSha256": "b48f9117916e960ca6a59ca32bc63765f9b30f2b6bb3ef056514c8bcce0a7030",
+    "projectRelativeExecutable": ".toolchains/vice/3.10/GTK3VICE-3.10-win64/bin/x64sc.exe"
   }
 }

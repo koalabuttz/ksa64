@@ -31,6 +31,11 @@ path = "src/vertical_optimized_c64_main.rs"
 required-features = ["c64"]
 
 [[bin]]
+name = "ksa64-phase0-rust-vertical-timed-c64"
+path = "src/vertical_timed_c64_main.rs"
+required-features = ["c64"]
+
+[[bin]]
 name = "ksa64-phase0-rust-sim"
 path = "src/sim_main.rs"
 required-features = ["sim"]

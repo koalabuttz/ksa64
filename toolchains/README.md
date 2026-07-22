@@ -70,6 +70,20 @@ Oscar64 recognizes the cpp extension as C++ mode. The upstream manual also permi
 
 The v1.32.272 smoke test confirmed that Oscar64 does not accept every standard C++ spelling: explicit and reinterpret_cast were rejected, while constructors, constexpr, static_assert, and zero-storage wrapper structs compiled. Phase 0 must target the tested Oscar64 subset rather than assuming desktop-compiler syntax.
 
+### VICE
+
+Common target timing uses the official portable Windows GTK3 build of VICE 3.10 and its cycle-accurate `x64sc` emulator. The release archive and executable are pinned by SHA-256 in `versions.json`.
+
+Install it under the ignored `.toolchains` directory:
+
+    powershell -File tools/toolchains/setup-vice.ps1
+
+The expected executable is:
+
+    .toolchains/vice/3.10/GTK3VICE-3.10-win64/bin/x64sc.exe
+
+Phase 0 launches it hidden in PAL warp mode, reads the target-visible CIA timing result through VICE's binary monitor, and runs candidates sequentially so emulator instances do not contend for shared UI state.
+
 ## Verify everything
 
 From the repository root:
@@ -83,7 +97,8 @@ The verification script:
 3. Builds and links the minimal rust-mos C64 smoke fixture.
 4. Verifies the Oscar64 compiler hash and file version.
 5. Builds and links the minimal Oscar64 C++ C64 smoke fixture.
-6. Reports the resulting PRG paths, sizes, and SHA-256 hashes.
+6. Verifies the pinned VICE executable hash.
+7. Reports the resulting PRG paths, sizes, and SHA-256 hashes.
 
 Smoke outputs are ignored. The fixtures are toolchain checks, not simulator code.
 
@@ -107,4 +122,6 @@ Never replace the rust-mos tag with latest, and never allow Oscar64 discovery th
 - Oscar64 reference manual: https://github.com/drmortalwombat/oscar64/blob/main/oscar64.md
 - Oscar64 v1.32.272 release: https://github.com/drmortalwombat/oscar64/releases/tag/v1.32.272
 - rust-mos fork consumer and image pin: https://github.com/koalabuttz/roguelike
+- VICE homepage and current release: https://vice-emu.sourceforge.io/
+- VICE binary monitor protocol: https://vice-emu.sourceforge.io/vice_13.html
 
