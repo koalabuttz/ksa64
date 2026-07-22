@@ -189,13 +189,29 @@ Rationale:
 
 The known C64 MoonLander project uses CC BY-NC-SA terms, and PREDICT uses GPL terms. KSA64 should not acquire licensing constraints accidentally through casual copying.
 
+## D-014: Freeze a benchmark-only numeric contract before implementation
+
+Status: Accepted for Phase 0
+
+Decision:
+
+Use the versioned contract in `phase0/CONTRACT.md` as the common specification for the Rust and Oscar64 implementations. Generate shared arithmetic and vertical-flight vectors with an independent, standard-library-only Python program before writing either target implementation.
+
+Rationale:
+
+This prevents either language implementation from silently defining the expected behavior. Exact units, scales, rounding, saturation, operation order, checkpoints, and checksums make cross-target disagreements diagnosable.
+
+Consequence:
+
+The Phase 0 formats and simplified vehicle model are benchmark fixtures, not final simulator architecture decisions. Results may justify changing the eventual product formats, overflow policy, integrator, or environment models.
+
 ## Open decisions
 
 The following remain deliberately unresolved:
 
 - Final language and compiler.
 - License for KSA64.
-- Fixed-point format for each physical quantity.
+- Final simulator fixed-point format for each physical quantity.
 - Overflow policy: saturation, checked failure, or proven range.
 - Initial integrator and timestep.
 - Initial Earth and atmosphere models.

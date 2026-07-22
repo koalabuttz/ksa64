@@ -67,6 +67,7 @@ Rust is provisional rather than predetermined. The experiment in [docs/experimen
 - [Architecture](docs/architecture.md) describes the intended system boundaries and data flow.
 - [Decision record](docs/decisions.md) preserves accepted and provisional choices.
 - [Compiler experiment](docs/experiment.md) defines the rust-mos and Oscar64 comparison.
+- [Phase 0 workspace](phase0/README.md) contains the frozen benchmark contract, independent reference generator, and golden vectors.
 - [Validation strategy](docs/validation.md) explains how numerical and physical correctness will be tested.
 - [Reference software](docs/references.md) records what existing projects can and cannot contribute.
 - [Toolchain setup](toolchains/README.md) pins and verifies rust-mos and Oscar64.

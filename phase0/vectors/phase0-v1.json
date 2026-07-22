@@ -1,0 +1,869 @@
+{
+  "arithmetic": {
+    "divide_scaled": [
+      {
+        "denominator": 65536,
+        "expected": 65536,
+        "name": "q16_identity",
+        "numerator": 65536,
+        "shift": 16
+      },
+      {
+        "denominator": 65536,
+        "expected": 32768,
+        "name": "q16_half",
+        "numerator": 32768,
+        "shift": 16
+      },
+      {
+        "denominator": 65536,
+        "expected": -32768,
+        "name": "q16_negative",
+        "numerator": -32768,
+        "shift": 16
+      },
+      {
+        "denominator": 2,
+        "expected": 1,
+        "name": "integer_half_away_positive",
+        "numerator": 1,
+        "shift": 0
+      },
+      {
+        "denominator": 2,
+        "expected": -1,
+        "name": "integer_half_away_negative",
+        "numerator": -1,
+        "shift": 0
+      },
+      {
+        "denominator": 3,
+        "expected": 0,
+        "name": "integer_below_half",
+        "numerator": 1,
+        "shift": 0
+      },
+      {
+        "denominator": 2048000,
+        "expected": 1449525,
+        "name": "representative_acceleration",
+        "numerator": 11059,
+        "shift": 28
+      },
+      {
+        "denominator": -3,
+        "expected": -37,
+        "name": "negative_denominator",
+        "numerator": 7,
+        "shift": 4
+      },
+      {
+        "denominator": -3,
+        "expected": 37,
+        "name": "double_negative",
+        "numerator": -7,
+        "shift": 4
+      },
+      {
+        "denominator": 1,
+        "expected": 2147483647,
+        "name": "saturate_positive",
+        "numerator": 2147483647,
+        "shift": 31
+      },
+      {
+        "denominator": 1,
+        "expected": -2147483648,
+        "name": "saturate_negative",
+        "numerator": -2147483648,
+        "shift": 31
+      }
+    ],
+    "interpolation": [
+      {
+        "altitude_km": "-1",
+        "altitude_q12": -4096,
+        "density_q28": 328833434,
+        "gravity_q28": 2632453
+      },
+      {
+        "altitude_km": "0",
+        "altitude_q12": 0,
+        "density_q28": 328833434,
+        "gravity_q28": 2632453
+      },
+      {
+        "altitude_km": "1",
+        "altitude_q12": 4096,
+        "density_q28": 299505518,
+        "gravity_q28": 2631627
+      },
+      {
+        "altitude_km": "2",
+        "altitude_q12": 8192,
+        "density_q28": 270177602,
+        "gravity_q28": 2630801
+      },
+      {
+        "altitude_km": "3.5",
+        "altitude_q12": 14336,
+        "density_q28": 233888618,
+        "gravity_q28": 2629563
+      },
+      {
+        "altitude_km": "10",
+        "altitude_q12": 40960,
+        "density_q28": 111000745,
+        "gravity_q28": 2624208
+      },
+      {
+        "altitude_km": "55",
+        "altitude_q12": 225280,
+        "density_q28": 212321,
+        "gravity_q28": 2587597
+      },
+      {
+        "altitude_km": "100",
+        "altitude_q12": 409600,
+        "density_q28": 143,
+        "gravity_q28": 2551720
+      },
+      {
+        "altitude_km": "119.999",
+        "altitude_q12": 491516,
+        "density_q28": 0,
+        "gravity_q28": 2536020
+      },
+      {
+        "altitude_km": "120",
+        "altitude_q12": 491520,
+        "density_q28": 0,
+        "gravity_q28": 2536019
+      },
+      {
+        "altitude_km": "500",
+        "altitude_q12": 2048000,
+        "density_q28": 0,
+        "gravity_q28": 2263267
+      },
+      {
+        "altitude_km": "2500",
+        "altitude_q12": 10240000,
+        "density_q28": 0,
+        "gravity_q28": 1524829
+      }
+    ],
+    "invalid_inputs": {
+      "division_by_zero": "error",
+      "negative_shift": "error"
+    },
+    "multiply_scaled": [
+      {
+        "a": 65536,
+        "b": 65536,
+        "expected": 65536,
+        "name": "q16_identity",
+        "shift": 16
+      },
+      {
+        "a": 98304,
+        "b": 147456,
+        "expected": 221184,
+        "name": "q16_positive",
+        "shift": 16
+      },
+      {
+        "a": -98304,
+        "b": 147456,
+        "expected": -221184,
+        "name": "q16_negative_a",
+        "shift": 16
+      },
+      {
+        "a": 98304,
+        "b": -147456,
+        "expected": -221184,
+        "name": "q16_negative_b",
+        "shift": 16
+      },
+      {
+        "a": -98304,
+        "b": -147456,
+        "expected": 221184,
+        "name": "q16_double_negative",
+        "shift": 16
+      },
+      {
+        "a": 1,
+        "b": 1,
+        "expected": 1,
+        "name": "half_away_positive",
+        "shift": 1
+      },
+      {
+        "a": -1,
+        "b": 1,
+        "expected": -1,
+        "name": "half_away_negative",
+        "shift": 1
+      },
+      {
+        "a": 1,
+        "b": 1,
+        "expected": 0,
+        "name": "below_half_positive",
+        "shift": 2
+      },
+      {
+        "a": 2,
+        "b": 1,
+        "expected": 1,
+        "name": "exact_half_positive",
+        "shift": 2
+      },
+      {
+        "a": -2,
+        "b": 1,
+        "expected": -1,
+        "name": "exact_half_negative",
+        "shift": 2
+      },
+      {
+        "a": 2048000,
+        "b": 2632453,
+        "expected": 20084,
+        "name": "representative_weight",
+        "shift": 28
+      },
+      {
+        "a": 1449551,
+        "b": 512,
+        "expected": 11325,
+        "name": "representative_delta_velocity",
+        "shift": 16
+      },
+      {
+        "a": 2147483647,
+        "b": 2147483647,
+        "expected": 2147483647,
+        "name": "saturate_positive",
+        "shift": 0
+      },
+      {
+        "a": -2147483648,
+        "b": 2147483647,
+        "expected": -2147483648,
+        "name": "saturate_negative",
+        "shift": 0
+      }
+    ]
+  },
+  "constants": {
+    "physical": {
+      "burn_duration_s": "152",
+      "cda_m2": "10",
+      "dry_mass_t": "120",
+      "earth_radius_km": "6371",
+      "g0_km_s2": "0.00980665",
+      "initial_mass_t": "500",
+      "initial_propellant_t": "380",
+      "mass_flow_t_s": "2.5",
+      "thrust_mn": "7.6",
+      "timestep_s": "0.125"
+    },
+    "raw": {
+      "burn_duration_q12": 622592,
+      "cda_q16": 655360,
+      "dry_mass_q12": 491520,
+      "earth_radius_q12": 26095616,
+      "g0_q28": 2632453,
+      "initial_mass_q12": 2048000,
+      "initial_propellant_q12": 1556480,
+      "mass_flow_q12": 10240,
+      "thrust_q12": 31130,
+      "timestep_q12": 512
+    }
+  },
+  "environment": {
+    "altitude_knots_km": [
+      "0",
+      "2",
+      "5",
+      "10",
+      "15",
+      "20",
+      "30",
+      "40",
+      "50",
+      "70",
+      "100",
+      "120",
+      "200",
+      "300",
+      "500",
+      "750",
+      "1000",
+      "1500",
+      "2000"
+    ],
+    "altitude_knots_q12": [
+      0,
+      8192,
+      20480,
+      40960,
+      61440,
+      81920,
+      122880,
+      163840,
+      204800,
+      286720,
+      409600,
+      491520,
+      819200,
+      1228800,
+      2048000,
+      3072000,
+      4096000,
+      6144000,
+      8192000
+    ],
+    "density_kg_m3": [
+      "1.225",
+      "1.00649",
+      "0.736116",
+      "0.41351",
+      "0.194755",
+      "0.08891",
+      "0.01841",
+      "0.003996",
+      "0.001027",
+      "0.00008283",
+      "0.000000532",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0"
+    ],
+    "density_q28": [
+      328833434,
+      270177602,
+      197599634,
+      111000745,
+      52279147,
+      23866596,
+      4941897,
+      1072668,
+      275683,
+      22235,
+      143,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "gravity_km_s2": [
+      "0.009806650000000000",
+      "0.009800495842636619",
+      "0.009791275462895136",
+      "0.009775937052994682",
+      "0.009760634657197926",
+      "0.009745368162846404",
+      "0.009714942430044019",
+      "0.009684658962086275",
+      "0.009654516873416370",
+      "0.009594653326047345",
+      "0.009505896602908962",
+      "0.009447407914760613",
+      "0.009218769395134207",
+      "0.008944457491762044",
+      "0.008431328075224609",
+      "0.007849715454071230",
+      "0.007326272418546129",
+      "0.006425043331286716",
+      "0.005680429862530620"
+    ],
+    "gravity_q28": [
+      2632453,
+      2630801,
+      2628325,
+      2624208,
+      2620100,
+      2616002,
+      2607835,
+      2599706,
+      2591615,
+      2575545,
+      2551720,
+      2536019,
+      2474645,
+      2401010,
+      2263267,
+      2107142,
+      1966631,
+      1724709,
+      1524829
+    ]
+  },
+  "formats": {
+    "acceleration": {
+      "fractional_bits": 28,
+      "scale": 268435456
+    },
+    "altitude": {
+      "fractional_bits": 12,
+      "scale": 4096
+    },
+    "cda": {
+      "fractional_bits": 16,
+      "scale": 65536
+    },
+    "density": {
+      "fractional_bits": 28,
+      "scale": 268435456
+    },
+    "force": {
+      "fractional_bits": 12,
+      "scale": 4096
+    },
+    "fraction": {
+      "fractional_bits": 16,
+      "scale": 65536
+    },
+    "mass": {
+      "fractional_bits": 12,
+      "scale": 4096
+    },
+    "time": {
+      "fractional_bits": 12,
+      "scale": 4096
+    },
+    "velocity": {
+      "fractional_bits": 24,
+      "scale": 16777216
+    }
+  },
+  "metadata": {
+    "contract_version": "phase0-v1",
+    "decimal_precision_digits": 60,
+    "generator": "phase0/reference/generate_vectors.py",
+    "integer_encoding": "signed 32-bit two's complement",
+    "overflow": "saturate final public primitive result to signed 32-bit",
+    "rounding": "nearest, exact halves away from zero"
+  },
+  "vertical": {
+    "checkpoint_steps": [
+      0,
+      1,
+      8,
+      64,
+      128,
+      256,
+      512,
+      1024,
+      1216,
+      1280,
+      1600,
+      2048
+    ],
+    "final_fnv1a32": "0x3a014fa6",
+    "fixed_checkpoints": [
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0",
+          "altitude_km": "0",
+          "mass_t": "500",
+          "propellant_t": "380",
+          "time_s": "0",
+          "velocity_km_s": "0"
+        },
+        "raw": {
+          "acceleration_q28": 0,
+          "altitude_q12": 0,
+          "cutoff_events": 0,
+          "engine_active": 1,
+          "mass_q12": 2048000,
+          "propellant_q12": 1556480,
+          "time_q12": 0,
+          "velocity_q24": 0
+        },
+        "step": 0
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0.0053935535252094268798828125",
+          "altitude_km": "0",
+          "mass_t": "499.6875",
+          "propellant_t": "379.6875",
+          "time_s": "0.125",
+          "velocity_km_s": "0.000674188137054443359375"
+        },
+        "raw": {
+          "acceleration_q28": 1447821,
+          "altitude_q12": 0,
+          "cutoff_events": 0,
+          "engine_active": 1,
+          "mass_q12": 2046720,
+          "propellant_q12": 1555200,
+          "time_q12": 512,
+          "velocity_q24": 11311
+        },
+        "step": 1
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0.0054599232971668243408203125",
+          "altitude_km": "0.0029296875",
+          "mass_t": "497.5",
+          "propellant_t": "377.5",
+          "time_s": "1",
+          "velocity_km_s": "0.00542676448822021484375"
+        },
+        "raw": {
+          "acceleration_q28": 1465637,
+          "altitude_q12": 12,
+          "cutoff_events": 0,
+          "engine_active": 1,
+          "mass_q12": 2037760,
+          "propellant_q12": 1546240,
+          "time_q12": 4096,
+          "velocity_q24": 91046
+        },
+        "step": 8
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0.0059917867183685302734375",
+          "altitude_km": "0.181884765625",
+          "mass_t": "480",
+          "propellant_t": "360",
+          "time_s": "8",
+          "velocity_km_s": "0.045542299747467041015625"
+        },
+        "raw": {
+          "acceleration_q28": 1608408,
+          "altitude_q12": 745,
+          "cutoff_events": 0,
+          "engine_active": 1,
+          "mass_q12": 1966080,
+          "propellant_q12": 1474560,
+          "time_q12": 32768,
+          "velocity_q24": 764073
+        },
+        "step": 64
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0.0065936855971813201904296875",
+          "altitude_km": "0.748291015625",
+          "mass_t": "460",
+          "propellant_t": "340",
+          "time_s": "16",
+          "velocity_km_s": "0.095927298069000244140625"
+        },
+        "raw": {
+          "acceleration_q28": 1769979,
+          "altitude_q12": 3065,
+          "cutoff_events": 0,
+          "engine_active": 1,
+          "mass_q12": 1884160,
+          "propellant_q12": 1392640,
+          "time_q12": 65536,
+          "velocity_q24": 1609393
+        },
+        "step": 128
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0.0078113377094268798828125",
+          "altitude_km": "3.186767578125",
+          "mass_t": "420",
+          "propellant_t": "300",
+          "time_s": "32",
+          "velocity_km_s": "0.211143016815185546875"
+        },
+        "raw": {
+          "acceleration_q28": 2096840,
+          "altitude_q12": 13053,
+          "cutoff_events": 0,
+          "engine_active": 1,
+          "mass_q12": 1720320,
+          "propellant_q12": 1228800,
+          "time_q12": 131072,
+          "velocity_q24": 3542392
+        },
+        "step": 256
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0.0117201842367649078369140625",
+          "altitude_km": "14.486083984375",
+          "mass_t": "340",
+          "propellant_t": "220",
+          "time_s": "64",
+          "velocity_km_s": "0.514113366603851318359375"
+        },
+        "raw": {
+          "acceleration_q28": 3146113,
+          "altitude_q12": 59335,
+          "cutoff_events": 0,
+          "engine_active": 1,
+          "mass_q12": 1392640,
+          "propellant_q12": 901120,
+          "time_q12": 262144,
+          "velocity_q24": 8625391
+        },
+        "step": 512
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0.0325850285589694976806640625",
+          "altitude_km": "82.080078125",
+          "mass_t": "180",
+          "propellant_t": "60",
+          "time_s": "128",
+          "velocity_km_s": "1.81040370464324951171875"
+        },
+        "raw": {
+          "acceleration_q28": 8746977,
+          "altitude_q12": 336200,
+          "cutoff_events": 0,
+          "engine_active": 1,
+          "mass_q12": 737280,
+          "propellant_q12": 245760,
+          "time_q12": 524288,
+          "velocity_q24": 30373534
+        },
+        "step": 1024
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "0.05376826226711273193359375",
+          "altitude_km": "136.635009765625",
+          "mass_t": "120",
+          "propellant_t": "0",
+          "time_s": "152",
+          "velocity_km_s": "2.81404554843902587890625"
+        },
+        "raw": {
+          "acceleration_q28": 14433308,
+          "altitude_q12": 559657,
+          "cutoff_events": 1,
+          "engine_active": 0,
+          "mass_q12": 491520,
+          "propellant_q12": 0,
+          "time_q12": 622592,
+          "velocity_q24": 47211850
+        },
+        "step": 1216
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "-0.00933837890625",
+          "altitude_km": "158.8427734375",
+          "mass_t": "120",
+          "propellant_t": "0",
+          "time_s": "160",
+          "velocity_km_s": "2.73909819126129150390625"
+        },
+        "raw": {
+          "acceleration_q28": -2506752,
+          "altitude_q12": 650620,
+          "cutoff_events": 1,
+          "engine_active": 0,
+          "mass_q12": 491520,
+          "propellant_q12": 0,
+          "time_q12": 655360,
+          "velocity_q24": 45954442
+        },
+        "step": 1280
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "-0.0090515129268169403076171875",
+          "altitude_km": "260.99365234375",
+          "mass_t": "120",
+          "propellant_t": "0",
+          "time_s": "200",
+          "velocity_km_s": "2.371515750885009765625"
+        },
+        "raw": {
+          "acceleration_q28": -2429747,
+          "altitude_q12": 1069030,
+          "cutoff_events": 1,
+          "engine_active": 0,
+          "mass_q12": 491520,
+          "propellant_q12": 0,
+          "time_q12": 819200,
+          "velocity_q24": 39787432
+        },
+        "step": 1600
+      },
+      {
+        "interpreted": {
+          "acceleration_km_s2": "-0.0087402351200580596923828125",
+          "altitude_km": "379.750244140625",
+          "mass_t": "120",
+          "propellant_t": "0",
+          "time_s": "256",
+          "velocity_km_s": "1.873808920383453369140625"
+        },
+        "raw": {
+          "acceleration_q28": -2346189,
+          "altitude_q12": 1555457,
+          "cutoff_events": 1,
+          "engine_active": 0,
+          "mass_q12": 491520,
+          "propellant_q12": 0,
+          "time_q12": 1048576,
+          "velocity_q24": 31437297
+        },
+        "step": 2048
+      }
+    ],
+    "high_precision_checkpoints": [
+      {
+        "acceleration_km_s2": "0.000000000000000000",
+        "altitude_km": "0.000000000000000000",
+        "cutoff_events": 0,
+        "engine_active": 1,
+        "mass_t": "500.000000000000000000",
+        "propellant_t": "380.000000000000000000",
+        "step": 0,
+        "time_s": "0.000000000000000000",
+        "velocity_km_s": "0.000000000000000000"
+      },
+      {
+        "acceleration_km_s2": "0.005393350000000000",
+        "altitude_km": "0.000084271093750000",
+        "cutoff_events": 0,
+        "engine_active": 1,
+        "mass_t": "499.687500000000000000",
+        "propellant_t": "379.687500000000000000",
+        "step": 1,
+        "time_s": "0.125000000000000000",
+        "velocity_km_s": "0.000674168750000000"
+      },
+      {
+        "acceleration_km_s2": "0.005459872641865168",
+        "altitude_km": "0.003046230734232030",
+        "cutoff_events": 0,
+        "engine_active": 1,
+        "mass_t": "497.500000000000000000",
+        "propellant_t": "377.500000000000000000",
+        "step": 8,
+        "time_s": "1.000000000000000000",
+        "velocity_km_s": "0.005426608444868454"
+      },
+      {
+        "acceleration_km_s2": "0.005991739661725950",
+        "altitude_km": "0.181771372973569418",
+        "cutoff_events": 0,
+        "engine_active": 1,
+        "mass_t": "480.000000000000000000",
+        "propellant_t": "360.000000000000000000",
+        "step": 64,
+        "time_s": "8.000000000000000000",
+        "velocity_km_s": "0.045541811088013553"
+      },
+      {
+        "acceleration_km_s2": "0.006593685009481229",
+        "altitude_km": "0.747584048829429492",
+        "cutoff_events": 0,
+        "engine_active": 1,
+        "mass_t": "460.000000000000000000",
+        "propellant_t": "340.000000000000000000",
+        "step": 128,
+        "time_s": "16.000000000000000000",
+        "velocity_km_s": "0.095926367341933190"
+      },
+      {
+        "acceleration_km_s2": "0.007810895275794481",
+        "altitude_km": "3.185429763423898061",
+        "cutoff_events": 0,
+        "engine_active": 1,
+        "mass_t": "420.000000000000000000",
+        "propellant_t": "300.000000000000000000",
+        "step": 256,
+        "time_s": "32.000000000000000000",
+        "velocity_km_s": "0.211140656256558882"
+      },
+      {
+        "acceleration_km_s2": "0.011720002232982708",
+        "altitude_km": "14.483938919039190383",
+        "cutoff_events": 0,
+        "engine_active": 1,
+        "mass_t": "340.000000000000000000",
+        "propellant_t": "220.000000000000000000",
+        "step": 512,
+        "time_s": "64.000000000000000000",
+        "velocity_km_s": "0.514101806856564296"
+      },
+      {
+        "acceleration_km_s2": "0.032584904643172030",
+        "altitude_km": "82.077902957747754105",
+        "cutoff_events": 0,
+        "engine_active": 1,
+        "mass_t": "180.000000000000000000",
+        "propellant_t": "60.000000000000000000",
+        "step": 1024,
+        "time_s": "128.000000000000000000",
+        "velocity_km_s": "1.810376952957578481"
+      },
+      {
+        "acceleration_km_s2": "0.053767948195025980",
+        "altitude_km": "136.630701742645667466",
+        "cutoff_events": 1,
+        "engine_active": 0,
+        "mass_t": "120.000000000000000000",
+        "propellant_t": "0.000000000000000000",
+        "step": 1216,
+        "time_s": "152.000000000000000000",
+        "velocity_km_s": "2.814005286047262843"
+      },
+      {
+        "acceleration_km_s2": "-0.009337388353104838",
+        "altitude_km": "158.837929400854729076",
+        "cutoff_events": 1,
+        "engine_active": 0,
+        "mass_t": "120.000000000000000000",
+        "propellant_t": "0.000000000000000000",
+        "step": 1280,
+        "time_s": "160.000000000000000000",
+        "velocity_km_s": "2.739057311331092320"
+      },
+      {
+        "acceleration_km_s2": "-0.009052286065130403",
+        "altitude_km": "260.987686866121587563",
+        "cutoff_events": 1,
+        "engine_active": 0,
+        "mass_t": "120.000000000000000000",
+        "propellant_t": "0.000000000000000000",
+        "step": 1600,
+        "time_s": "200.000000000000000000",
+        "velocity_km_s": "2.371474664607395471"
+      },
+      {
+        "acceleration_km_s2": "-0.008740467558913744",
+        "altitude_km": "379.742401954191637272",
+        "cutoff_events": 1,
+        "engine_active": 0,
+        "mass_t": "120.000000000000000000",
+        "propellant_t": "0.000000000000000000",
+        "step": 2048,
+        "time_s": "256.000000000000000000",
+        "velocity_km_s": "1.873766960374982941"
+      }
+    ],
+    "saturation_count": 0,
+    "timestep_q12": 512,
+    "total_steps": 2048
+  }
+}
