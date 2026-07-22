@@ -223,17 +223,80 @@ Consequence:
 
 Keep the failing baseline as a regression probe. Reevaluate compiler-provided widening only after a pinned toolchain update passes the complete frozen contract.
 
+## D-016: Adopt the Phase 1 numeric contract
+
+Status: Accepted
+
+Decision:
+
+Use `ksa64.numeric.phase1-v1` from `phase0/numeric/FOUNDATION.md` for the vertical-flight laboratory. Stored quantities use per-field signed `i32` Q formats, interpolation fractions use unsigned Q0.16, and widened products use the accepted explicit two-word implementation.
+
+Rationale:
+
+The generated range analysis covers the declared independent and coupled Phase 1 envelope. Its largest product requires 56 bits including sign, every scaled result fits `i32`, and the selected formats preserve useful physical resolution. Product speed-squared intermediates use Q12.20 rather than inheriting the benchmark Q8.24 fixture.
+
+Consequence:
+
+A scenario outside the declared envelope is rejected or requires a versioned numeric contract. Phase 2 repeats range analysis before inheriting these choices.
+
+## D-017: Treat saturation as an aborting numeric fault
+
+Status: Accepted
+
+Decision:
+
+Validate scenarios before execution and range-prove branch-free hot-path operations. A public arithmetic primitive that escapes its proven result range saturates deterministically, sets a sticky numeric-fault flag, and causes the run to stop at the next step boundary. Division by zero is a fault.
+
+Rationale:
+
+Silent wrapping is unacceptable, while continuing a saturated trajectory can look plausible and hide an invalid model. Sticky containment preserves diagnostics and deterministic cross-target behavior without making saturation a normal physical result.
+
+## D-018: Begin with semi-implicit Euler at 0.125 seconds
+
+Status: Accepted for Phase 1
+
+Decision:
+
+Use one semi-implicit Euler evaluation per fixed 0.125-second physics step. Emit telemetry every eight steps by default. Measure RK2 against the completed Phase 1 model before adopting it.
+
+Rationale:
+
+The selected Rust kernel fits the raw PAL 8 Hz cycle budget. Generated analytic cases demonstrate the expected first-order error trend, signed behavior, exact constant-velocity motion for representable inputs, and exact mass-flow boundary. RK2 would add another force evaluation before measured end-to-end evidence justifies its cost.
+
+## D-019: Version scenario images and exact telemetry records
+
+Status: Accepted
+
+Decision:
+
+Use exact decimal strings in human-authored scenario JSON, then validate and pack a versioned, little-endian C64 scenario image. Use fixed binary telemetry frames containing raw fixed-point values, a rolling exact-state checksum, and record CRCs. CSV is an optional host view, not the canonical regression artifact.
+
+Rationale:
+
+This prevents locale and binary-floating-point parsing from defining C64 inputs, gives host and target byte-for-byte fixtures, and separates human editing from compact runtime storage. The layouts are defined in `docs/data-formats.md`.
+
+## D-020: Use a simple tabulated Earth environment in Phase 1
+
+Status: Accepted for Phase 1
+
+Decision:
+
+Use the existing 19-knot altitude/density table and a gravity table generated from `g(h) = g0 * (R / (R + h))^2`, with `g0 = 0.00980665 km/s^2` and `R = 6371 km`. Identify the table set as `earth.simple-atmosphere.v1`.
+
+Rationale:
+
+This model is deterministic, cheap to interpolate, already covered by exact host/C64 benchmark evidence, and adequate for learning vertical-flight architecture. It is not presented as a standard atmosphere or a real-vehicle prediction.
+
+Consequence:
+
+Any replacement atmosphere or Earth model gets a new identifier and comparison contract.
+
 ## Open decisions
 
 The following remain deliberately unresolved:
 
 - License for KSA64.
-- Final simulator fixed-point format for each physical quantity.
-- Overflow policy: saturation, checked failure, or proven range.
-- Initial integrator and timestep.
-- Initial Earth and atmosphere models.
-- Telemetry file format.
-- Target C64 and REU configurations.
-- Minimum acceptable simulation rate.
-- Whether the host comparison path shares model source through numeric generics or uses a deliberately independent compact implementation.
+- Target C64 and REU configurations beyond the baseline unexpanded C64.
+- Minimum acceptable simulation rate once display and telemetry are included.
+- Whether the high-precision host comparison uses numeric generics or a deliberately independent compact implementation.
 

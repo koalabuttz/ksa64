@@ -22,6 +22,8 @@ The compiler and arithmetic experiment is complete, and Rust/rust-mos is selecte
 - The timed Oscar64 build is 5,865 bytes with no mapped zero-page allocation and a 122-byte static-stack envelope.
 - Compiler-provided Rust `u64` arithmetic remains a reproducible failing baseline; the selected core uses explicit two-word widening.
 
+The product numeric foundation is also accepted: Phase 1 ranges and Q formats are proven, semi-implicit Euler at 0.125 seconds is selected, overflow becomes a sticky aborting fault, and deterministic scenario/telemetry fixtures are checked. No production simulator code exists yet.
+
 See [RESULTS.md](RESULTS.md) for measurements, profile evidence, and the next gate.
 
 ## Layout
@@ -38,6 +40,12 @@ See [RESULTS.md](RESULTS.md) for measurements, profile evidence, and the next ga
         candidates/
             rust/
             oscar64/
+        numeric/
+            FOUNDATION.md
+            numeric-v1.json
+            scenario-v1.schema.json
+            examples/
+            *.bin and *.sha256
         generated/
             phase0_vectors.rs
             phase0_vectors.hpp
@@ -81,15 +89,15 @@ Rust and C++ must consume the same integer data and produce the same exact resul
 
 ## Next implementation slice
 
-Finish the remaining Phase 0 numeric-foundation work:
+Begin Phase 1 by creating the production Rust workspace and implementing only the accepted numeric layer and analytic tests. Vehicle, environment, and display behavior come afterward.
 
-1. Perform range analysis for Phase 1 state, force, environment, and intermediate quantities.
-2. Select production fixed-point formats and overflow behavior.
-3. Choose the initial integrator and timestep from error and cost evidence.
-4. Define deterministic scenario and telemetry formats.
-5. Add the remaining analytic integration cases.
+The governing inputs are:
 
-Reproduce the completed experiment from the project root:
+- `numeric/FOUNDATION.md` for formats, ranges, overflow, and integration.
+- `../docs/data-formats.md` for scenario and telemetry layout.
+- `numeric/numeric-v1.json` and binary fixtures for exact expected results.
+
+Reproduce the completed Phase 0 gates from the project root:
 
     .\phase0\check.ps1
     .\phase0\benchmark.ps1

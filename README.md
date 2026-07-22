@@ -60,7 +60,7 @@ The Phase 0 compiler experiment selected a portable Rust core:
 - Platform-specific display, sound, REU, timing, and user-port code stays outside the core.
 - Oscar64 C++ remains an independent optimization and generated-code reference.
 
-The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). Production simulator implementation remains deferred until the remaining numeric-foundation decisions are complete.
+The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now settles the remaining arithmetic, range, integration, and data-boundary decisions. No simulator has been implemented yet.
 
 ## Documentation
 
@@ -69,6 +69,8 @@ The decision and measurements are recorded in [the Phase 0 results](phase0/RESUL
 - [Compiler experiment](docs/experiment.md) defines the rust-mos and Oscar64 comparison.
 - [Phase 0 workspace](phase0/README.md) contains the frozen benchmark contract, independent reference generator, and golden vectors.
 - [Validation strategy](docs/validation.md) explains how numerical and physical correctness will be tested.
+- [Numeric foundation](phase0/numeric/FOUNDATION.md) selects Phase 1 formats, ranges, overflow behavior, and analytic cases.
+- [Data formats](docs/data-formats.md) defines deterministic scenario and telemetry records.
 - [Reference software](docs/references.md) records what existing projects can and cannot contribute.
 - [Toolchain setup](toolchains/README.md) pins and verifies rust-mos and Oscar64.
 - [Roadmap](ROADMAP.md) divides the project into independently useful phases.
@@ -92,4 +94,4 @@ The compiler and arithmetic experiment is complete. Both candidates passed the f
 - Oscar64: 235,627,088 CIA cycles, or 115,052.29 cycles per step.
 - Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
 
-The next milestone completes Phase 0's product range analysis, numeric formats, overflow policy, integrator choice, and deterministic data formats before the Phase 1 source tree is created.
+Phase 0 is complete. The next milestone is the Phase 1 vertical-flight laboratory: create the production Rust source tree and implement the accepted numeric primitives and analytic tests before adding vehicle dynamics.

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ksa64.invalid/schema/scenario-v1.schema.json",
+  "title": "KSA64 vertical scenario source v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "id",
+    "model",
+    "numeric_contract",
+    "timestep_s",
+    "steps",
+    "telemetry_stride",
+    "seed",
+    "initial",
+    "vehicle",
+    "environment"
+  ],
+  "properties": {
+    "schema": { "const": "ksa64.scenario" },
+    "version": { "const": 1 },
+    "id": { "$ref": "#/$defs/identifier" },
+    "model": { "const": "vertical-v1" },
+    "numeric_contract": { "const": "ksa64.numeric.phase1-v1" },
+    "timestep_s": { "$ref": "#/$defs/decimal" },
+    "steps": { "type": "integer", "minimum": 1, "maximum": 32768 },
+    "telemetry_stride": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "seed": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "initial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["altitude_km", "velocity_km_s", "mass_t", "propellant_t"],
+      "properties": {
+        "altitude_km": { "$ref": "#/$defs/decimal" },
+        "velocity_km_s": { "$ref": "#/$defs/decimal" },
+        "mass_t": { "$ref": "#/$defs/decimal" },
+        "propellant_t": { "$ref": "#/$defs/decimal" }
+      }
+    },
+    "vehicle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dry_mass_t", "thrust_mn", "mass_flow_t_s", "burn_duration_s", "cda_m2"],
+      "properties": {
+        "dry_mass_t": { "$ref": "#/$defs/decimal" },
+        "thrust_mn": { "$ref": "#/$defs/decimal" },
+        "mass_flow_t_s": { "$ref": "#/$defs/decimal" },
+        "burn_duration_s": { "$ref": "#/$defs/decimal" },
+        "cda_m2": { "$ref": "#/$defs/decimal" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/identifier" } }
+    }
+  },
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 63,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    }
+  }
+}

@@ -1,0 +1,612 @@
+{
+  "analytic_cases": {
+    "constant_acceleration": {
+      "acceleration_km_s2": "0.01",
+      "altitude_error_m": "4.951171875000",
+      "checkpoints": [
+        {
+          "altitude_q12": 0,
+          "step": 0,
+          "velocity_q24": 0
+        },
+        {
+          "altitude_q12": 1,
+          "step": 1,
+          "velocity_q24": 20972
+        },
+        {
+          "altitude_q12": 23,
+          "step": 8,
+          "velocity_q24": 167776
+        },
+        {
+          "altitude_q12": 1331,
+          "step": 64,
+          "velocity_q24": 1342208
+        }
+      ],
+      "continuous_solution": {
+        "altitude_km": "0.32000000",
+        "velocity_km_s": "0.08000"
+      },
+      "duration_s": "8.000",
+      "fixed_final": {
+        "altitude_km": "0.324951171875",
+        "velocity_km_s": "0.0800018310546875"
+      },
+      "predicted_semi_implicit_bias_m": "5.00000000",
+      "steps": 64,
+      "timestep_s": "0.125"
+    },
+    "constant_mass_flow": {
+      "checkpoints": [
+        {
+          "mass_q12": 2048000,
+          "propellant_q12": 1556480,
+          "step": 0
+        },
+        {
+          "mass_q12": 2046720,
+          "propellant_q12": 1555200,
+          "step": 1
+        },
+        {
+          "mass_q12": 2037760,
+          "propellant_q12": 1546240,
+          "step": 8
+        },
+        {
+          "mass_q12": 491520,
+          "propellant_q12": 0,
+          "step": 1216
+        }
+      ],
+      "steps": 1216,
+      "timestep_s": "0.125"
+    },
+    "constant_velocity": {
+      "checkpoints": [
+        {
+          "altitude_q12": 1024,
+          "step": 0,
+          "velocity_q24": 2097152
+        },
+        {
+          "altitude_q12": 1088,
+          "step": 1,
+          "velocity_q24": 2097152
+        },
+        {
+          "altitude_q12": 1536,
+          "step": 8,
+          "velocity_q24": 2097152
+        },
+        {
+          "altitude_q12": 5120,
+          "step": 64,
+          "velocity_q24": 2097152
+        }
+      ],
+      "description": "No-force motion must preserve velocity and advance position exactly for this representable case.",
+      "initial_altitude_km": "0.25",
+      "steps": 64,
+      "timestep_s": "0.125",
+      "velocity_km_s": "0.125"
+    },
+    "negative_acceleration": {
+      "acceleration_km_s2": "-0.01",
+      "altitude_error_m": "-4.951171875000",
+      "checkpoints": [
+        {
+          "altitude_q12": 0,
+          "step": 0,
+          "velocity_q24": 0
+        },
+        {
+          "altitude_q12": -1,
+          "step": 1,
+          "velocity_q24": -20972
+        },
+        {
+          "altitude_q12": -23,
+          "step": 8,
+          "velocity_q24": -167776
+        },
+        {
+          "altitude_q12": -1331,
+          "step": 64,
+          "velocity_q24": -1342208
+        }
+      ],
+      "continuous_solution": {
+        "altitude_km": "-0.32000000",
+        "velocity_km_s": "-0.08000"
+      },
+      "duration_s": "8.000",
+      "fixed_final": {
+        "altitude_km": "-0.324951171875",
+        "velocity_km_s": "-0.0800018310546875"
+      },
+      "predicted_semi_implicit_bias_m": "-5.00000000",
+      "steps": 64,
+      "timestep_s": "0.125"
+    },
+    "semi_implicit_convergence": [
+      {
+        "acceleration_km_s2": "0.01",
+        "altitude_error_m": "10.078125000",
+        "checkpoints": [
+          {
+            "altitude_q12": 0,
+            "step": 0,
+            "velocity_q24": 0
+          },
+          {
+            "altitude_q12": 3,
+            "step": 1,
+            "velocity_q24": 41943
+          },
+          {
+            "altitude_q12": 92,
+            "step": 8,
+            "velocity_q24": 335544
+          },
+          {
+            "altitude_q12": 1352,
+            "step": 32,
+            "velocity_q24": 1342176
+          }
+        ],
+        "continuous_solution": {
+          "altitude_km": "0.320000",
+          "velocity_km_s": "0.0800"
+        },
+        "duration_s": "8.00",
+        "fixed_final": {
+          "altitude_km": "0.330078125",
+          "velocity_km_s": "0.0799999237060546875"
+        },
+        "predicted_semi_implicit_bias_m": "10.000000",
+        "steps": 32,
+        "timestep_s": "0.25"
+      },
+      {
+        "acceleration_km_s2": "0.01",
+        "altitude_error_m": "4.951171875000",
+        "checkpoints": [
+          {
+            "altitude_q12": 0,
+            "step": 0,
+            "velocity_q24": 0
+          },
+          {
+            "altitude_q12": 1,
+            "step": 1,
+            "velocity_q24": 20972
+          },
+          {
+            "altitude_q12": 23,
+            "step": 8,
+            "velocity_q24": 167776
+          },
+          {
+            "altitude_q12": 1331,
+            "step": 64,
+            "velocity_q24": 1342208
+          }
+        ],
+        "continuous_solution": {
+          "altitude_km": "0.32000000",
+          "velocity_km_s": "0.08000"
+        },
+        "duration_s": "8.000",
+        "fixed_final": {
+          "altitude_km": "0.324951171875",
+          "velocity_km_s": "0.0800018310546875"
+        },
+        "predicted_semi_implicit_bias_m": "5.00000000",
+        "steps": 64,
+        "timestep_s": "0.125"
+      },
+      {
+        "acceleration_km_s2": "0.01",
+        "altitude_error_m": "2.2656250000",
+        "checkpoints": [
+          {
+            "altitude_q12": 0,
+            "step": 0,
+            "velocity_q24": 0
+          },
+          {
+            "altitude_q12": 0,
+            "step": 1,
+            "velocity_q24": 10486
+          },
+          {
+            "altitude_q12": 5,
+            "step": 8,
+            "velocity_q24": 83888
+          },
+          {
+            "altitude_q12": 1320,
+            "step": 128,
+            "velocity_q24": 1342208
+          }
+        ],
+        "continuous_solution": {
+          "altitude_km": "0.3200000000",
+          "velocity_km_s": "0.080000"
+        },
+        "duration_s": "8.0000",
+        "fixed_final": {
+          "altitude_km": "0.322265625",
+          "velocity_km_s": "0.0800018310546875"
+        },
+        "predicted_semi_implicit_bias_m": "2.5000000000",
+        "steps": 128,
+        "timestep_s": "0.0625"
+      }
+    ]
+  },
+  "artifact_sha256": {
+    "scenario-v1.bin": "18140ba288a5110e3168647182850927ccd96fbf021d4d048a8e31ac22194092",
+    "telemetry-v1.bin": "d6baa959960b6d1d03258d511ef0b180b7f6bbe4dd93ce2e32fe5f6ed407dd80"
+  },
+  "binary_fixtures": {
+    "scenario": {
+      "crc32": "e86a6f11",
+      "hex": "4b53433101004c009f8268b1b20a03ef00200000000800000800000000000000000000000000000000401f0000c01700008007009a790000008002000000980000000a0043b2fe28116f6ae8",
+      "length": 76
+    },
+    "telemetry": {
+      "frame_count": 2,
+      "frame_crc32": [
+        "f08a2c31",
+        "5aa84ed8"
+      ],
+      "frame_length": 40,
+      "header_crc32": "43f5deec",
+      "header_length": 32,
+      "hex": "4b53543101002000280000009f8268b1b20a03ef0020000008000000ecdef543000000000000000000000000000000000000000000401f0000c0170001000000c59d1c81312c8af00800000000000100100000004a0c02009cc4200000181f00009817000100000078563412d84ea85a",
+      "length": 112
+    }
+  },
+  "contract": "ksa64.numeric.phase1-v1",
+  "formats": {
+    "acceleration": {
+      "declared_maximum": "0.1",
+      "declared_minimum": "-0.1",
+      "declared_raw_maximum": 26843546,
+      "declared_raw_minimum": -26843546,
+      "fractional_bits": 28,
+      "positive_headroom_factor": "79.999999963",
+      "resolution": "0.0000000037252902984619140625",
+      "scale": 268435456,
+      "storage": "i32",
+      "storage_maximum": "7.9999999962747097015380859375",
+      "storage_minimum": "-8",
+      "unit": "km/s^2"
+    },
+    "altitude": {
+      "declared_maximum": "2000",
+      "declared_minimum": "-2",
+      "declared_raw_maximum": 8192000,
+      "declared_raw_minimum": -8192,
+      "fractional_bits": 12,
+      "positive_headroom_factor": "262.143999878",
+      "resolution": "0.000244140625",
+      "scale": 4096,
+      "storage": "i32",
+      "storage_maximum": "524287.999755859375",
+      "storage_minimum": "-524288",
+      "unit": "km"
+    },
+    "cda": {
+      "declared_maximum": "2000",
+      "declared_minimum": "0",
+      "declared_raw_maximum": 131072000,
+      "declared_raw_minimum": 0,
+      "fractional_bits": 16,
+      "positive_headroom_factor": "16.383999992",
+      "resolution": "0.0000152587890625",
+      "scale": 65536,
+      "storage": "i32",
+      "storage_maximum": "32767.9999847412109375",
+      "storage_minimum": "-32768",
+      "unit": "m^2"
+    },
+    "density": {
+      "declared_maximum": "1.5",
+      "declared_minimum": "0",
+      "declared_raw_maximum": 402653184,
+      "declared_raw_minimum": 0,
+      "fractional_bits": 28,
+      "positive_headroom_factor": "5.333333331",
+      "resolution": "0.0000000037252902984619140625",
+      "scale": 268435456,
+      "storage": "i32",
+      "storage_maximum": "7.9999999962747097015380859375",
+      "storage_minimum": "-8",
+      "unit": "kg/m^3"
+    },
+    "density_speed_squared": {
+      "declared_maximum": "96",
+      "declared_minimum": "0",
+      "declared_raw_maximum": 100663296,
+      "declared_raw_minimum": 0,
+      "fractional_bits": 20,
+      "positive_headroom_factor": "21.333333323",
+      "resolution": "0.00000095367431640625",
+      "scale": 1048576,
+      "storage": "i32",
+      "storage_maximum": "2047.99999904632568359375",
+      "storage_minimum": "-2048",
+      "unit": "MN/m^2 before CdA"
+    },
+    "force": {
+      "declared_maximum": "200000",
+      "declared_minimum": "-200000",
+      "declared_raw_maximum": 819200000,
+      "declared_raw_minimum": -819200000,
+      "fractional_bits": 12,
+      "positive_headroom_factor": "2.621439999",
+      "resolution": "0.000244140625",
+      "scale": 4096,
+      "storage": "i32",
+      "storage_maximum": "524287.999755859375",
+      "storage_minimum": "-524288",
+      "unit": "MN"
+    },
+    "fraction": {
+      "declared_raw_maximum": 65535,
+      "declared_raw_minimum": 0,
+      "fractional_bits": 16,
+      "resolution": "0.0000152587890625",
+      "scale": 65536,
+      "storage": "u16",
+      "storage_maximum": "0.9999847412109375",
+      "storage_minimum": "0",
+      "unit": "dimensionless"
+    },
+    "mass": {
+      "declared_maximum": "5000",
+      "declared_minimum": "0",
+      "declared_raw_maximum": 20480000,
+      "declared_raw_minimum": 0,
+      "fractional_bits": 12,
+      "positive_headroom_factor": "104.857599951",
+      "resolution": "0.000244140625",
+      "scale": 4096,
+      "storage": "i32",
+      "storage_maximum": "524287.999755859375",
+      "storage_minimum": "-524288",
+      "unit": "t"
+    },
+    "mass_flow": {
+      "declared_maximum": "100",
+      "declared_minimum": "0",
+      "declared_raw_maximum": 6553600,
+      "declared_raw_minimum": 0,
+      "fractional_bits": 16,
+      "positive_headroom_factor": "327.679999847",
+      "resolution": "0.0000152587890625",
+      "scale": 65536,
+      "storage": "i32",
+      "storage_maximum": "32767.9999847412109375",
+      "storage_minimum": "-32768",
+      "unit": "t/s"
+    },
+    "net_force": {
+      "declared_maximum": "500",
+      "declared_minimum": "-500",
+      "declared_raw_maximum": 2048000,
+      "declared_raw_minimum": -2048000,
+      "fractional_bits": 12,
+      "positive_headroom_factor": "1048.575999512",
+      "resolution": "0.000244140625",
+      "scale": 4096,
+      "storage": "i32",
+      "storage_maximum": "524287.999755859375",
+      "storage_minimum": "-524288",
+      "unit": "MN"
+    },
+    "speed_squared": {
+      "declared_maximum": "64",
+      "declared_minimum": "0",
+      "declared_raw_maximum": 67108864,
+      "declared_raw_minimum": 0,
+      "fractional_bits": 20,
+      "positive_headroom_factor": "31.999999985",
+      "resolution": "0.00000095367431640625",
+      "scale": 1048576,
+      "storage": "i32",
+      "storage_maximum": "2047.99999904632568359375",
+      "storage_minimum": "-2048",
+      "unit": "km^2/s^2"
+    },
+    "time": {
+      "declared_maximum": "4096",
+      "declared_minimum": "0",
+      "declared_raw_maximum": 268435456,
+      "declared_raw_minimum": 0,
+      "fractional_bits": 16,
+      "positive_headroom_factor": "7.999999996",
+      "resolution": "0.0000152587890625",
+      "scale": 65536,
+      "storage": "i32",
+      "storage_maximum": "32767.9999847412109375",
+      "storage_minimum": "-32768",
+      "unit": "s"
+    },
+    "velocity": {
+      "declared_maximum": "8",
+      "declared_minimum": "-8",
+      "declared_raw_maximum": 134217728,
+      "declared_raw_minimum": -134217728,
+      "fractional_bits": 24,
+      "positive_headroom_factor": "15.999999993",
+      "resolution": "0.000000059604644775390625",
+      "scale": 16777216,
+      "storage": "i32",
+      "storage_maximum": "127.999999940395355224609375",
+      "storage_minimum": "-128",
+      "unit": "km/s"
+    }
+  },
+  "integrator": {
+    "name": "semi-implicit Euler",
+    "physics_rate_hz": 8,
+    "telemetry_stride": 8,
+    "timestep_s": "0.125"
+  },
+  "overflow_policy": "range-proven hot path; saturating public primitive sets a sticky fault; abort at step boundary",
+  "range_analysis": {
+    "all_scaled_results_fit_i32": true,
+    "all_shifted_division_numerators_fit_signed_64": true,
+    "coupled_constraints": [
+      "density * velocity^2 <= 96 kg/(m*s^2)",
+      "abs(net_force / mass) <= 0.1 km/s^2 while mass > 0",
+      "total_mass >= dry_mass > 0",
+      "0 <= propellant <= total_mass",
+      "0 < timestep <= 0.125 s for the Phase 1 baseline"
+    ],
+    "maximum_required_product_bits_including_sign": 56,
+    "maximum_shifted_division_bits_including_sign": 50,
+    "phase1_envelope": {
+      "acceleration_km_s2": [
+        "-0.1",
+        "0.1"
+      ],
+      "altitude_km": [
+        "-2",
+        "2000"
+      ],
+      "cda_m2": [
+        "0",
+        "2000"
+      ],
+      "component_force_mn": [
+        "-100000",
+        "100000"
+      ],
+      "density_kg_m3": [
+        "0",
+        "1.5"
+      ],
+      "mass_t": [
+        "0",
+        "5000"
+      ],
+      "maximum_duration_s": "4096",
+      "net_force_mn": [
+        "-500",
+        "500"
+      ],
+      "pre_halving_drag_term_mn": [
+        "-200000",
+        "200000"
+      ],
+      "velocity_km_s": [
+        "-8",
+        "8"
+      ]
+    },
+    "widened_divisions": [
+      {
+        "final_result_requires_coupled_acceleration_constraint": true,
+        "name": "net force divided by mass",
+        "shifted_numerator_bits_including_sign": 50,
+        "shifted_numerator_fits_signed_64": true
+      },
+      {
+        "name": "interpolation fraction",
+        "shifted_numerator_bits_including_sign": 40,
+        "shifted_numerator_fits_signed_64": true
+      }
+    ],
+    "widened_products": [
+      {
+        "left": "velocity",
+        "maximum_raw_product": 18014398509481984,
+        "maximum_scaled_raw": 67108864,
+        "name": "velocity squared",
+        "output": "speed_squared",
+        "required_product_bits_including_sign": 56,
+        "right": "velocity",
+        "right_shift": 28,
+        "scaled_result_fits_i32": true
+      },
+      {
+        "left": "density",
+        "maximum_raw_product": 27021597764222976,
+        "maximum_scaled_raw": 100663296,
+        "name": "density times speed squared",
+        "output": "density_speed_squared",
+        "required_product_bits_including_sign": 56,
+        "right": "speed_squared",
+        "right_shift": 28,
+        "scaled_result_fits_i32": true
+      },
+      {
+        "left": "density_speed_squared",
+        "maximum_raw_product": 13194139533312000,
+        "maximum_scaled_raw": 786432000,
+        "name": "density-speed term times CdA",
+        "output": "force",
+        "required_product_bits_including_sign": 55,
+        "right": "cda",
+        "right_shift": 24,
+        "scaled_result_fits_i32": true
+      },
+      {
+        "left": "mass",
+        "maximum_raw_product": 549755822080000,
+        "maximum_scaled_raw": 2048000,
+        "name": "mass times acceleration",
+        "output": "force",
+        "required_product_bits_including_sign": 50,
+        "right": "acceleration",
+        "right_shift": 28,
+        "scaled_result_fits_i32": true
+      },
+      {
+        "left": "acceleration",
+        "maximum_raw_product": 219902328832,
+        "maximum_scaled_raw": 209715,
+        "name": "acceleration times timestep",
+        "output": "velocity",
+        "required_product_bits_including_sign": 39,
+        "right": "time",
+        "right_shift": 20,
+        "scaled_result_fits_i32": true,
+        "time_operand": "fixed timestep 0.125 s"
+      },
+      {
+        "left": "velocity",
+        "maximum_raw_product": 1099511627776,
+        "maximum_scaled_raw": 4096,
+        "name": "velocity times timestep",
+        "output": "altitude",
+        "required_product_bits_including_sign": 42,
+        "right": "time",
+        "right_shift": 28,
+        "scaled_result_fits_i32": true,
+        "time_operand": "fixed timestep 0.125 s"
+      },
+      {
+        "left": "mass_flow",
+        "maximum_raw_product": 53687091200,
+        "maximum_scaled_raw": 51200,
+        "name": "mass flow times timestep",
+        "output": "mass",
+        "required_product_bits_including_sign": 37,
+        "right": "time",
+        "right_shift": 20,
+        "scaled_result_fits_i32": true,
+        "time_operand": "fixed timestep 0.125 s"
+      }
+    ]
+  },
+  "rounding": "nearest, exact halves away from zero",
+  "storage_byte_order": "little-endian"
+}

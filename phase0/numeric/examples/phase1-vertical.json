@@ -1,0 +1,27 @@
+{
+  "schema": "ksa64.scenario",
+  "version": 1,
+  "id": "phase1.vertical.reference",
+  "model": "vertical-v1",
+  "numeric_contract": "ksa64.numeric.phase1-v1",
+  "timestep_s": "0.125",
+  "steps": 2048,
+  "telemetry_stride": 8,
+  "seed": 0,
+  "initial": {
+    "altitude_km": "0",
+    "velocity_km_s": "0",
+    "mass_t": "500",
+    "propellant_t": "380"
+  },
+  "vehicle": {
+    "dry_mass_t": "120",
+    "thrust_mn": "7.6",
+    "mass_flow_t_s": "2.5",
+    "burn_duration_s": "152",
+    "cda_m2": "10"
+  },
+  "environment": {
+    "id": "earth.simple-atmosphere.v1"
+  }
+}

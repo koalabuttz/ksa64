@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the intended architecture before implementation. Choices marked provisional may change after the Phase 0 experiment.
+This document describes the intended architecture before implementation. Accepted choices are recorded in `docs/decisions.md`; later phases may replace a model only through an explicit versioned decision.
 
 ## System qualities
 
@@ -212,7 +212,7 @@ Expensive tables may be generated on the host, checked into the project in a det
 
 ## Numerical integration
 
-The initial candidate is semi-implicit Euler because it is cheap and often behaves better than explicit Euler for dynamic systems. RK2 is the next candidate if its measured error reduction justifies the additional model evaluation.
+Phase 1 uses semi-implicit Euler at a fixed 0.125-second step because it is cheap and its analytic error is now measured. RK2 is the next candidate if the completed vertical model shows enough error reduction to justify the additional model evaluation.
 
 Integrator selection is model- and phase-specific. RK4 or adaptive integration is not automatically better on a machine where each force evaluation is expensive and exact cross-target behavior matters.
 
@@ -236,7 +236,7 @@ The host may provide a separate high-precision comparison path, but that path is
 
 ## Planned source layout
 
-Rust/rust-mos is selected, but the exact production layout will be created only after the remaining Phase 0 numeric decisions. The likely shape is:
+Rust/rust-mos and the Phase 1 numeric foundation are selected. The production layout will be created when Phase 1 implementation begins, with this intended shape:
 
     core/
         numeric
@@ -262,7 +262,7 @@ Rust/rust-mos is selected, but the exact production layout will be created only 
         telemetry comparison
         benchmark automation
 
-No production source directories are created yet because product numeric formats, overflow policy, integrator choice, and data formats remain provisional.
+The numeric contract, overflow policy, baseline integrator, and data formats are now accepted in `phase0/numeric/FOUNDATION.md` and `docs/data-formats.md`. The production directories can be created when Phase 1 implementation begins.
 
 ## Extension path
 

@@ -14,6 +14,8 @@ try {
     Write-Host "== Generated inputs =="
     & python -B phase0/reference/generate_vectors.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 0 JSON vectors are stale." }
+    & python -B phase0/reference/generate_numeric_foundation.py --check
+    if ($LASTEXITCODE -ne 0) { throw "Numeric-foundation artifacts are stale." }
     & python -B phase0/reference/emit_candidate_vectors.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 0 candidate bindings are stale." }
     & python -B phase0/reference/emit_vertical_bindings.py --check

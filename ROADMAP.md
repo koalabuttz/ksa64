@@ -6,7 +6,7 @@ This roadmap orders work by learning value and risk reduction. Each phase should
 
 Purpose: settle the implementation language and demonstrate trustworthy arithmetic before building simulation features.
 
-Current progress: the compiler and arithmetic experiment selected Rust/rust-mos and explicit two-word widening. Range analysis, production numeric formats, overflow policy, data formats, and the remaining analytic cases are still in progress.
+Status: complete. Rust/rust-mos, explicit two-word widening, Phase 1 numeric formats, overflow containment, the baseline integrator/timestep, deterministic data formats, and analytic fixtures are accepted and checked.
 
 Planned work:
 

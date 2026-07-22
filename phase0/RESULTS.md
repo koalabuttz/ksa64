@@ -175,14 +175,16 @@ The check verifies generated artifacts and all host/C64 builds. The benchmark ca
 
 The failing Rust baseline is considered reproduced only when it returns exactly two failures. A changed result forces a fresh investigation rather than turning a known failure into an ignored test.
 
-## Next gate
+## Numeric-foundation handoff
 
-The compiler experiment is complete. Continue Phase 0's numeric foundation before creating the production simulator tree:
+The next gate described by the compiler experiment is now complete in `numeric/FOUNDATION.md`:
 
-1. Perform explicit range analysis for the Phase 1 physical quantities.
-2. Select product fixed-point formats rather than inheriting benchmark formats automatically.
-3. Decide the production overflow policy and initial integrator/timestep.
-4. Define deterministic scenario and telemetry formats.
-5. Add analytic integration cases required by the Phase 0 roadmap exit criteria.
+- Phase 1 field and coupled ranges are explicit and machine-checked.
+- Product Q formats are selected independently of the benchmark fixtures.
+- The maximum widened intermediate requires 56 bits including sign.
+- Saturation sets a sticky numeric fault and stops the run at the next step boundary.
+- Semi-implicit Euler at 0.125 seconds is the accepted initial integrator.
+- Analytic fixed-point checkpoints and convergence evidence are generated.
+- Scenario and telemetry layouts have golden binary fixtures.
 
-Real-hardware timing remains a valuable confirmation when a machine is available, but it is not blocking the toolchain decision because both PRGs use the same target-visible CIA method and stable cycle-accurate environment.
+Real-hardware timing remains a valuable confirmation when a machine is available, but it is not blocking Phase 1 because both PRGs use the same target-visible CIA method and stable cycle-accurate environment.
