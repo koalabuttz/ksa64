@@ -185,6 +185,27 @@ fn divide_unsigned_fraction_q16_integral_q12(
     quotient as i32
 }
 
+fn divide_unsigned_64_by_16_bits(
+    numerator: Unsigned64,
+    denominator: u16,
+    bit_count: u8,
+) -> (Unsigned64, u16) {
+    let divisor = denominator as u32;
+    let mut quotient = Unsigned64 { low: 0, high: 0 };
+    let mut remainder = 0u32;
+    let mut position = bit_count;
+
+    while position != 0 {
+        position -= 1;
+        remainder = (remainder << 1) | bit_at(numerator, position) as u32;
+        if remainder >= divisor {
+            remainder -= divisor;
+            set_bit(&mut quotient, position);
+        }
+    }
+    (quotient, remainder as u16)
+}
+
 fn divide_unsigned_64_by_32(numerator: Unsigned64, denominator: u32) -> (Unsigned64, u32) {
     let mut quotient = Unsigned64 { low: 0, high: 0 };
     let mut remainder = 0u32;
@@ -258,6 +279,59 @@ pub fn divide_scaled(
         increment(&mut quotient);
     }
     signed_from_magnitude(quotient, negative, status)
+}
+
+/// Attempts an exact reduced-denominator division before using the general path.
+///
+/// The fast path is selected only when the denominator has the declared power-of-two
+/// factor, its reduced magnitude fits `u16`, and the numerator fits the declared bit
+/// envelope. All other inputs retain [`divide_scaled`] behavior.
+#[inline]
+pub fn divide_scaled_reduced_u16<
+    const SHIFT: u8,
+    const DENOMINATOR_REDUCTION: u8,
+    const NUMERATOR_BITS: u8,
+>(
+    numerator: i32,
+    denominator: i32,
+    status: &mut NumericStatus,
+) -> i32 {
+    if SHIFT > 31
+        || DENOMINATOR_REDUCTION > SHIFT
+        || NUMERATOR_BITS == 0
+        || NUMERATOR_BITS > 32
+        || NUMERATOR_BITS + SHIFT - DENOMINATOR_REDUCTION > 64
+    {
+        return divide_scaled(numerator, denominator, SHIFT, status);
+    }
+
+    let divisor = magnitude(denominator);
+    let reduction_mask = if DENOMINATOR_REDUCTION == 0 {
+        0
+    } else {
+        (1u32 << DENOMINATOR_REDUCTION) - 1
+    };
+    let reduced_divisor = divisor >> DENOMINATOR_REDUCTION;
+    let numerator_magnitude = magnitude(numerator);
+    let numerator_fits = NUMERATOR_BITS == 32 || numerator_magnitude < (1u32 << NUMERATOR_BITS);
+    if denominator == 0
+        || divisor & reduction_mask != 0
+        || reduced_divisor == 0
+        || reduced_divisor > u16::MAX as u32
+        || !numerator_fits
+    {
+        return divide_scaled(numerator, denominator, SHIFT, status);
+    }
+
+    let reduced_shift = SHIFT - DENOMINATOR_REDUCTION;
+    let shifted = shift_left_32(numerator_magnitude, reduced_shift);
+    let bit_count = NUMERATOR_BITS + reduced_shift;
+    let (mut quotient, remainder) =
+        divide_unsigned_64_by_16_bits(shifted, reduced_divisor as u16, bit_count);
+    if remainder as u32 >= reduced_divisor - remainder as u32 {
+        increment(&mut quotient);
+    }
+    signed_from_magnitude(quotient, (numerator < 0) ^ (denominator < 0), status)
 }
 
 pub fn add(a: i32, b: i32, status: &mut NumericStatus) -> i32 {

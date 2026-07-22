@@ -1,7 +1,9 @@
 //! Pure Phase 1 vertical-force evaluation and checked single-step integration.
 
 use crate::environment::{EnvironmentSample, SimpleEarthEnvironment};
-use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericFault, NumericStatus};
+use crate::numeric::{
+    add, divide_scaled_reduced_u16, multiply_scaled, subtract, NumericFault, NumericStatus,
+};
 use crate::quantities::{Acceleration, Altitude, Force, Mass, NetForce, Time, Velocity};
 use crate::scenario::{Scenario, VehicleConfig};
 use crate::vehicle::VerticalTruthState;
@@ -108,7 +110,8 @@ pub fn evaluate_vertical_forces(
     };
     let thrust_minus_weight = subtract(thrust, weight, status);
     let net_force = add(thrust_minus_weight, drag, status);
-    let acceleration = divide_scaled(net_force, truth.total_mass().raw(), 28, status);
+    let acceleration =
+        divide_scaled_reduced_u16::<28, 7, 21>(net_force, truth.total_mass().raw(), status);
     if !(-MAX_NET_FORCE_Q12..=MAX_NET_FORCE_Q12).contains(&net_force)
         || !(-MAX_ACCELERATION_Q28..=MAX_ACCELERATION_Q28).contains(&acceleration)
     {

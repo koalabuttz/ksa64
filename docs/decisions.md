@@ -425,6 +425,22 @@ Consequence:
 
 Checked dynamics rises from 6.12 Hz to 7.70 Hz but remains 4,776.69 cycles per step, or 3.88 percent, over the provisional 8 Hz budget. The next optimization target is the one remaining general acceleration division per step. Telemetry remains deferred until that measurement closes or deliberately revises the target.
 
+## D-029: Use an exact reduced acceleration divider with general fallback
+
+Status: Accepted
+
+Decision:
+
+For Q12 force divided by Q12 mass into Q28 acceleration, attempt a reduced 64-by-16 path only when force magnitude fits the accepted 21-bit envelope, mass raw units are divisible by 128, and the reduced denominator fits `u16`. Remove that exact power-of-two factor from both denominator and numerator shift, process only the proven occupied bits, and preserve the global rounding and saturation contract. Route every other input through the original general divider.
+
+Rationale:
+
+The golden vehicle's mass sequence satisfies the fast-path contract, while the fallback preserves all other validated scenarios. Direct tests compare specialized and general results for signed values, zero divisors, non-aligned masses, large masses, and out-of-envelope forces. Native and MOS mission results remain bit-exact. Three PAL common-clock runs reduce checked dynamics from 127,932.69 to 114,981.59 cycles per step.
+
+Consequence:
+
+Checked dynamics now reaches 8.57 Hz with 8,174.41 cycles per step, or 6.64 percent, of raw 8 Hz headroom. The arithmetic performance gate is closed. Per-successor rolling checksum validation remains separately measured above budget, so telemetry work must make validation policy and scheduling explicit rather than hiding it inside the physics result.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

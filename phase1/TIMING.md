@@ -2,7 +2,7 @@
 
 Date: 2026-07-22
 
-Status: interpolation optimization verified; exact execution is stable and checked dynamics is 20.49 percent faster, but remains 3.88 percent over the provisional raw PAL 8 Hz budget.
+Status: raw physics-budget gate passed. Exact checked dynamics runs at 8.57 Hz on the PAL common clock with 8,174.41 cycles per step of headroom.
 
 ## Measurement boundary
 
@@ -11,45 +11,53 @@ The dedicated timing PRG parses the golden scenario before timing, disables VIC 
 1. Checked dynamics through `run_vertical_dynamics`, including environment sampling, force evaluation, numeric-status checks, immutable successor construction, cutoff detection, and loop control.
 2. The same checked executor through `run_vertical_mission`, with the rolling exact-state FNV-1a checksum enabled.
 
-The parser, timer setup, final-state validation, and result publication are outside the measured regions. An empty start/stop boundary measurement is subtracted from both totals. Both paths use the same const-generic executor, so the difference isolates rolling checksum work without duplicating the dynamics implementation.
+The parser, timer setup, final-state validation, and result publication are outside the measured regions. An empty start/stop boundary measurement is subtracted from both totals. Both paths use the same const-generic executor, so their difference isolates rolling checksum work without duplicating dynamics.
 
-## Baseline common-clock result
+Every recorded version uses the pinned rust-mos image and cycle-accurate PAL VICE 3.10 `x64sc`. Three sequential runs were identical at each gate and produced the accepted final truth and checksum.
 
-The pinned rust-mos build ran under the pinned cycle-accurate PAL VICE 3.10 `x64sc`. All three sequential baseline runs were identical and produced the accepted final truth and checksum.
+## Optimization progression
 
-| Baseline path | Net cycles | Cycles/step | Maximum rate | Margin at 8 Hz |
+At 985,248 processor clocks per second, the 0.125-second timestep permits 123,156 cycles per step.
+
+| Version | Checked dynamics/step | Maximum rate | 8 Hz margin | Change |
 |---|---:|---:|---:|---:|
-| Checked dynamics | 329,532,711 | 160,904.64 | 6.12 Hz | -37,748.64 |
-| Dynamics plus rolling checksum | 430,920,997 | 210,410.64 | 4.68 Hz | -87,254.64 |
+| v1: general production arithmetic | 160,904.64 | 6.12 Hz | -37,748.64 | baseline |
+| v2: integral-Q12 environment interpolation | 127,932.69 | 7.70 Hz | -4,776.69 | -20.49% |
+| v3: reduced acceleration division | 114,981.59 | 8.57 Hz | +8,174.41 | -10.12% from v2 |
 
-The baseline machine-readable evidence is in `production-timing-v1.json`.
+Together, the two exact specializations remove 45,923.05 cycles per step, or 28.54 percent of the v1 checked-dynamics cost. The final margin is 6.64 percent of the raw 8 Hz budget.
 
-## Integral-Q12 interpolation result
+Machine-readable evidence is retained separately:
 
-The production environment now verifies that every altitude-knot span is a positive integral Q20.12 kilometre count. Its interpolation fraction computes the same rounded Q0.16 result with a checked 32-by-16 divider instead of the general 64-by-32 divider. The generic interpolation primitive remains available for tables that do not satisfy this contract.
+- `production-timing-v1.json`: general production arithmetic.
+- `production-timing-v2.json`: specialized environment interpolation.
+- `production-timing-v3.json`: specialized acceleration division.
 
-All 22 native tests, the rust-mos exact self-test, the C64 build, and three fresh PAL timing runs preserve the accepted final truth and checksum.
+## Exact fast paths
 
-| Optimized path | Net cycles | Cycles/step | Maximum rate | Margin at 8 Hz |
-|---|---:|---:|---:|---:|
-| Checked dynamics | 262,006,151 | 127,932.69 | 7.70 Hz | -4,776.69 |
-| Dynamics plus rolling checksum | 363,838,853 | 177,655.69 | 5.55 Hz | -54,499.69 |
+The environment verifies that every altitude-knot span is a positive integral Q20.12 kilometre count. Its interpolation fraction computes the same rounded Q0.16 result with a checked 32-by-16 divider instead of the general 64-by-32 divider. The generic interpolation primitive remains available for other tables.
 
-At 985,248 processor clocks per second, the 0.125-second timestep permits 123,156 cycles per step. The specialization saves 32,971.95 checked-dynamics cycles per step, a 20.49 percent reduction, and shrinks the budget miss from 30.65 percent to 3.88 percent. The measured saving is smaller than the isolated primitive estimate because production retains contract checks and whole-program code placement differs.
+Acceleration division attempts a narrower path only when all of these facts hold:
 
-Per-successor checksum validation now measures 49,723.00 cycles per step. The small 217-cycle increase from the baseline checksum delta is a whole-program code-generation effect; the checksum algorithm and its exact result did not change.
+- force magnitude fits the accepted 21-bit Phase 1 envelope;
+- mass raw units contain the declared factor of 128;
+- the reduced mass denominator fits 16 bits.
 
-The optimized diagnostic timing PRG is 22,060 bytes, 1,108 bytes larger than the baseline because it contains the specialized divider alongside the general acceleration divider and both executor instantiations. It is not the size of a deployable single-path simulator.
+It removes the same factor from the denominator and Q28 numerator shift, processes only the provably occupied numerator bits, and preserves nearest rounding with exact halves away from zero. Any input outside that envelope automatically uses the original general divider. Tests compare both routes across signed values, zero, out-of-envelope forces, non-aligned masses, and large valid masses.
 
-The optimized machine-readable evidence is in `production-timing-v2.json`.
+The v3 diagnostic timing PRG is 22,973 bytes. This is 913 bytes larger than v2 because it carries both the exact fast path and general fallback, plus both executor instantiations, scenario parsing, result assertions, and timing support. It is not the size of a deployable single-path simulator.
+
+## Validation-policy cost
+
+The v3 mission path with per-successor rolling FNV-1a costs 164,489.59 cycles per step, while checked dynamics alone costs 114,981.59. Full-state hashing therefore adds 49,508.00 cycles per step and does not fit 8 Hz.
+
+This does not invalidate the physics-budget result. The checksum is deterministic validation policy rather than dynamics, and KSA64 does not require all modes to run in real time. The telemetry gate must preserve canonical checksums while keeping validation cadence and interactive scheduling explicit.
 
 ## Finding
 
-The optimization succeeds: it preserves the numeric contract and recovers most of the missing real-time budget. Checked dynamics is now about 7.70 Hz, only 4,776.69 cycles per step short of the provisional 8 Hz target.
+The raw Phase 1 physics loop now fits its provisional cadence without weakening the numeric contract or narrowing accepted scenarios. All 23 native tests, rust-mos exact execution, the C64 correctness build, and three common-clock timing runs pass with the unchanged `0x72bf6e0e` mission checksum.
 
-The next measured target is the remaining general 64-by-32 acceleration division. It runs once per physics step and Phase 0 measured it as the largest individual arithmetic call. A specialization must remain exact, retain the general fallback for arbitrary validated scenarios, and earn acceptance through unchanged golden results plus another common-clock measurement.
-
-The rolling checksum remains a separate validation-policy cost rather than physics. It should remain available for deterministic regression runs, but interactive scheduling should not assume per-successor full-state hashing is free.
+Arithmetic optimization now stops unless a later measured subsystem needs more headroom. The next Phase 1 slice is canonical binary telemetry serialization: first exact 32-byte headers and 40-byte frames against the independent golden fixture, then scheduled stream emission and its separate timing cost.
 
 ## Reproduce
 

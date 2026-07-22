@@ -2,7 +2,7 @@
 
 KSA64 is a proposed aerospace simulation framework for the Commodore 64: a small but technically serious system for simulating launch vehicles, flight software, sensors, guidance, telemetry, failures, and eventually hardware-in-the-loop operation across multiple physical C64s.
 
-> Project status: Phase 1 implementation. The exact core executes a complete deterministic vertical mission; exact interpolation optimization has brought checked dynamics to 7.70 Hz, and one focused numeric optimization remains before telemetry.
+> Project status: Phase 1 implementation. The exact core executes a complete deterministic vertical mission, and checked dynamics now clears the PAL 8 Hz raw physics budget. Canonical binary telemetry is next.
 
 ## The idea
 
@@ -60,7 +60,7 @@ The Phase 0 compiler experiment selected a portable Rust core:
 - Platform-specific display, sound, REU, timing, and user-port code stays outside the core.
 - Oscar64 C++ remains an independent optimization and generated-code reference.
 
-The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now has a production `no_std` Rust implementation with native, MOS-simulator, and C64 self-test paths. Validated scenarios can select the generated Earth environment, initialize private vertical truth, evaluate immutable typed forces, advance through checked semi-implicit-Euler successors, and execute to a deterministic final state and checksum. Exact integral-Q12 interpolation reduces checked dynamics from 160,904.64 to 127,932.69 PAL cycles per step while preserving the golden checksum. That is 7.70 Hz and only 3.88 percent over the provisional 8 Hz budget; the remaining acceleration division is next, and telemetry has not been implemented yet.
+The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now has a production `no_std` Rust implementation with native, MOS-simulator, and C64 self-test paths. Validated scenarios can select the generated Earth environment, initialize private vertical truth, evaluate immutable typed forces, advance through checked semi-implicit-Euler successors, and execute to a deterministic final state and checksum. Exact interpolation and acceleration-division paths reduce checked dynamics from 160,904.64 to 114,981.59 PAL cycles per step while preserving the golden checksum and general fallbacks. That is 8.57 Hz with 8,174.41 cycles per step of raw headroom; canonical telemetry has not been implemented yet.
 
 ## Documentation
 
@@ -96,4 +96,4 @@ The compiler and arithmetic experiment is complete. Both candidates passed the f
 - Oscar64: 235,627,088 CIA cycles, or 115,052.29 cycles per step.
 - Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
 
-Phase 0 is complete, and the Phase 1 exact core executes the full golden vertical mission while preserving the last valid state on faults. Exact environment interpolation saves 32,971.95 cycles per step and three common-clock runs now measure checked dynamics at 127,932.69 PAL cycles per step. The next milestone is an exact fast path for the remaining acceleration division, closing the final 4,776.69-cycle gap before telemetry.
+Phase 0 is complete, and the Phase 1 exact core executes the full golden vertical mission while preserving the last valid state on faults. Two exact fast paths save 45,923.05 cycles per step, and three common-clock runs measure checked dynamics at 114,981.59 PAL cycles per step—8.57 Hz with 6.64 percent raw headroom. The next milestone is canonical binary telemetry serialization.

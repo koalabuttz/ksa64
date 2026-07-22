@@ -1,8 +1,8 @@
 use core::mem::size_of;
 
 use ksa64_core::numeric::{
-    add, divide_scaled, interpolate_clamped, interpolate_clamped_integral_q12, multiply_scaled,
-    subtract, NumericFault, NumericStatus,
+    add, divide_scaled, divide_scaled_reduced_u16, interpolate_clamped,
+    interpolate_clamped_integral_q12, multiply_scaled, subtract, NumericFault, NumericStatus,
 };
 use ksa64_core::quantities::{
     Acceleration, Altitude, Cda, Density, DensitySpeedSquared, Force, Fraction, Mass, MassFlow,
@@ -116,6 +116,49 @@ fn two_word_primitives_match_host_widening_across_boundary_grid() {
                     );
                 }
             }
+        }
+    }
+}
+
+#[test]
+fn reduced_u16_division_matches_general_and_falls_back_exactly() {
+    let numerators = [
+        i32::MIN,
+        -2_097_151,
+        -2_048_000,
+        -1_594_586,
+        -4_820,
+        -1,
+        0,
+        1,
+        11_046,
+        31_130,
+        2_047_999,
+        2_048_000,
+        2_097_151,
+        2_097_152,
+        i32::MAX,
+    ];
+    let denominators = [
+        128, 256, 384, 491_520, 491_521, 1_945_600, 2_048_000, 8_388_480, 8_388_608, 20_480_000,
+        -491_520, 0,
+    ];
+
+    for numerator in numerators {
+        for denominator in denominators {
+            let mut general_status = NumericStatus::CLEAR;
+            let general = divide_scaled(numerator, denominator, 28, &mut general_status);
+            let mut specialized_status = NumericStatus::CLEAR;
+            let specialized = divide_scaled_reduced_u16::<28, 7, 21>(
+                numerator,
+                denominator,
+                &mut specialized_status,
+            );
+            assert_eq!(specialized, general, "{numerator} / {denominator}");
+            assert_eq!(
+                specialized_status, general_status,
+                "{numerator} / {denominator}"
+            );
         }
     }
 }
