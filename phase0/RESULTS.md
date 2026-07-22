@@ -2,11 +2,11 @@
 
 Date: 2026-07-22
 
-Status: correctness, dynamics-performance, and common CIA timing gates complete; primitive attribution and resource review remain.
+Status: Phase 0 compiler and arithmetic experiment complete; Rust/rust-mos selected.
 
 ## Scope
 
-This result covers exact fixed-point arithmetic, the complete vertical workload, dynamics-only timing, the first exact arithmetic optimizations, and a common target-visible timing pass. It does not yet select the final KSA64 language because primitive attribution and the remaining resource review are still required.
+This result covers exact fixed-point arithmetic, the complete vertical workload, dynamics-only timing, exact arithmetic optimizations, common target-visible timing, primitive attribution, and linker-map resource evidence. It selects Rust/rust-mos for the production core while retaining Oscar64 as an independent optimization reference.
 
 ## Correctness results
 
@@ -94,7 +94,7 @@ Every timed run produced the same frozen final state:
 
 At the frozen 0.125-second timestep, a PAL C64 provides roughly 123,000 processor cycles per step. Both common-clock kernels fit that raw 8 Hz budget before display, sensor, guidance, and scheduling costs are added. Rust leaves about 13,700 cycles per step and Oscar64 about 7,900; this makes optimization of the remaining acceleration division materially useful even though the physics kernel is already feasible.
 
-### Exact specializations
+## Exact specializations
 
 The frozen run performs:
 
@@ -121,6 +121,46 @@ Oscar64 attributes 298,091,198 baseline cycles to the 64-by-32 restoring divider
 - The generated optimized PRG grows by 76 bytes, from 4,921 to 4,997 bytes.
 
 The optimized Oscar64 map reports 4,838 bytes of code and data in the main region, no general heap use, 25 bytes for final state in the runner, and 116 bytes of environment tables. Rust's linked `mos-sim` kernel shrinks by 1,165 bytes because LTO removes much of the displaced general-division call path.
+
+## Primitive attribution gate
+
+The isolated runners execute 512 calls per primitive. Operands come from volatile C64 memory to prevent constant folding, while the Q-format shift remains the same compile-time constant used at the flight-dynamics call site. Each loop accumulates and validates its outputs on target. The reported total subtracts the same empty CIA boundary measurement used by the full kernel.
+
+| Primitive | Rust cycles | Rust/call | Oscar64 cycles | Oscar64/call | Oscar64 advantage |
+|---|---:|---:|---:|---:|---:|
+| Scaled 32-by-32 multiply, shift 28 | 2,121,015 | 4,142.61 | 2,115,619 | 4,132.07 | 0.25% |
+| General scaled 64-by-32 divide, shift 28 | 20,699,187 | 40,428.10 | 19,313,692 | 37,722.05 | 6.69% |
+| Specialized Q16 fraction divide | 10,513,986 | 20,535.13 | 7,017,501 | 13,706.06 | 33.26% |
+
+All values were identical across three PAL VICE runs. Both candidates produced the same accumulators for all three operations.
+
+The general acceleration divide remains the highest-cost individual call: one call consumes about 40,428 Rust cycles or 37,722 Oscar64 cycles. Two specialized interpolation divisions occur per step, so their aggregate cost remains comparable in Rust and lower in Oscar64. The isolated totals include volatile loads, loop control, and accumulation and therefore are attribution evidence rather than numbers to add mechanically into the full-kernel total.
+
+Oscar64's stronger isolated division code does not overturn the representative result. Rust's full kernel remains 5.03 percent lower in cycles, indicating that its surrounding state-update and call-site optimization offsets the primitive disadvantage. The next focused optimization target is the remaining acceleration division, not a language rewrite.
+
+## Resource gate
+
+The timed full-kernel builds were relinked with maps and parsed by `resources.ps1`.
+
+| Candidate | Timed PRG | Code | Read-only data | BSS | Zero page | Static stack evidence |
+|---|---:|---:|---:|---:|---:|---:|
+| Rust/rust-mos | 9,026 | 8,784 | 228 | 0 | 17 | 66-byte `.noinit` static stack |
+| Oscar64 C++ | 5,865 | 5,108 | 628 | 0 | 0 | 122-byte map envelope through `$a000` |
+
+Oscar64's PRG is 3,161 bytes smaller. Rust spends 17 bytes of zero page but reserves 56 fewer bytes in the compiler-reported static-stack area. Neither runner allocates BSS or a heap object, and both leave ample conventional RAM for the Phase 1 vertical laboratory.
+
+Generated-code structure explains why isolated primitives are not the whole result. Rust LTO places 6,345 bytes in the inlined `main` path and 2,249 bytes in its remaining interpolation routine. Oscar64 emits smaller, separately named routines, including a 1,047-byte vertical step, a 456-byte restoring divider, and a 378-byte scaled-division wrapper. Oscar64 optimizes for compact modular code; rust-mos spends code size on contextual specialization that wins the complete workload.
+
+## Phase 0 language decision
+
+Rust/rust-mos is selected for the portable KSA64 core.
+
+It passes every correctness gate, is 5.03 percent lower in common-clock cycles on the representative workload, fits the raw 8 Hz physics budget, has acceptable memory use, and reuses an already-proven project workflow. This satisfies every condition in the experiment rubric and provides no material reason to abandon the incumbent.
+
+Oscar64 remains valuable as a comparison oracle and optimization reference. Its compact output and division performance suggest that a future measured Rust hotspot may justify a small assembly or foreign-function helper. They do not justify maintaining the entire simulation in C++.
+
+The fixed-point core will use the explicit two-word widening algorithms. Compiler-provided Rust `u64` remains a failing regression baseline until a future pinned toolchain passes the frozen contract.
+
 ## Reproduce
 
 From the project root in PowerShell:
@@ -128,19 +168,21 @@ From the project root in PowerShell:
     .\phase0\check.ps1
     .\phase0\benchmark.ps1
     .\phase0\timing.ps1
+    .\phase0\primitive_timing.ps1
+    .\phase0\resources.ps1
 
-The check verifies generated artifacts, runs native Rust tests, executes both Rust variants with the simulator bundled in the pinned rust-mos image, builds the C64 Rust artifacts, builds and runs the native C++ candidate, executes the Oscar64 C64 candidate, and reports artifact sizes. The benchmark runs the baseline and optimized dynamics-only kernels, captures both tool-specific profiles, and prints cycle, size, and reduction summaries. The timing script builds both target-visible runners and requires identical results across three sequential PAL VICE runs.
+The check verifies generated artifacts and all host/C64 builds. The benchmark captures tool-specific dynamics profiles. The timing script measures the representative full kernel, the primitive script measures three isolated arithmetic paths, and the resource script rebuilds both timed PRGs with linker maps. Both VICE timing scripts require identical results across three sequential PAL runs by default.
 
 The failing Rust baseline is considered reproduced only when it returns exactly two failures. A changed result forces a fresh investigation rather than turning a known failure into an ignored test.
 
 ## Next gate
 
-Attribute the common-clock result and finish the evidence needed by the language rubric:
+The compiler experiment is complete. Continue Phase 0's numeric foundation before creating the production simulator tree:
 
-1. Measure primitive multiply, general divide, and fast interpolation-divide runners with the same CIA/VICE path.
-2. Confirm that the remaining acceleration division is the next material bottleneck.
-3. Record static RAM, zero-page, stack, and generated-code observations for the timed builds.
-4. Repeat a smaller confirmation on real hardware when available.
-5. Record the Phase 0 language and arithmetic decision.
+1. Perform explicit range analysis for the Phase 1 physical quantities.
+2. Select product fixed-point formats rather than inheriting benchmark formats automatically.
+3. Decide the production overflow policy and initial integrator/timestep.
+4. Define deterministic scenario and telemetry formats.
+5. Add analytic integration cases required by the Phase 0 roadmap exit criteria.
 
-The language decision remains open until that review, but the common timing result favors the Rust incumbent: it is correct, 5.03 percent lower in cycle cost, and still satisfies the experiment's substantial-performance-parity condition.
+Real-hardware timing remains a valuable confirmation when a machine is available, but it is not blocking the toolchain decision because both PRGs use the same target-visible CIA method and stable cycle-accurate environment.

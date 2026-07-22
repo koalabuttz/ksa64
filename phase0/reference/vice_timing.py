@@ -12,6 +12,7 @@ import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Callable, TypeVar
 
 API_VERSION = 0x02
 COMMAND_MEMORY_GET = 0x01
@@ -21,6 +22,12 @@ COMMAND_QUIT = 0xBB
 TIMING_MAGIC = 0x5441534B
 RESULT_START = 0xC000
 RESULT_END = 0xC02C
+
+ResultT = TypeVar("ResultT")
+
+
+class MonitorStartupError(TimeoutError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -117,7 +124,9 @@ def connect_monitor(port: int, timeout: float) -> socket.socket:
             last_error = error
             connection.close()
             time.sleep(0.05)
-    raise TimeoutError(f"VICE binary monitor did not open port {port}: {last_error}")
+    raise MonitorStartupError(
+        f"VICE binary monitor did not open port {port}: {last_error}"
+    )
 
 
 def parse_result(memory: bytes, expected_candidate: int, name: str) -> TimingResult | None:
@@ -153,13 +162,14 @@ def parse_result(memory: bytes, expected_candidate: int, name: str) -> TimingRes
     )
 
 
-def run_once(
+def _run_prg_until_result_once(
     vice: Path,
     prg: Path,
-    candidate_id: int,
-    candidate_name: str,
     timeout: float,
-) -> TimingResult:
+    result_start: int,
+    result_end: int,
+    parser: Callable[[bytes], ResultT | None],
+) -> ResultT:
     port = available_port()
     arguments = [
         str(vice),
@@ -201,8 +211,8 @@ def run_once(
         monitor.command(COMMAND_PING)
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
-            memory = monitor.read_memory(RESULT_START, RESULT_END)
-            result = parse_result(memory, candidate_id, candidate_name)
+            memory = monitor.read_memory(result_start, result_end)
+            result = parser(memory)
             if result is not None:
                 try:
                     monitor.command(COMMAND_QUIT)
@@ -211,7 +221,7 @@ def run_once(
                 return result
             monitor.command(COMMAND_EXIT)
             time.sleep(0.02)
-        raise TimeoutError(f"Timed out waiting for {candidate_name} timing result")
+        raise TimeoutError(f"Timed out waiting for result from {prg.name}")
     finally:
         if connection is not None:
             connection.close()
@@ -224,6 +234,44 @@ def run_once(
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5.0)
+
+
+def run_prg_until_result(
+    vice: Path,
+    prg: Path,
+    timeout: float,
+    result_start: int,
+    result_end: int,
+    parser: Callable[[bytes], ResultT | None],
+) -> ResultT:
+    last_error: MonitorStartupError | None = None
+    for _attempt in range(3):
+        try:
+            return _run_prg_until_result_once(
+                vice, prg, timeout, result_start, result_end, parser
+            )
+        except MonitorStartupError as error:
+            last_error = error
+            time.sleep(0.5)
+    assert last_error is not None
+    raise last_error
+
+
+def run_once(
+    vice: Path,
+    prg: Path,
+    candidate_id: int,
+    candidate_name: str,
+    timeout: float,
+) -> TimingResult:
+    return run_prg_until_result(
+        vice,
+        prg,
+        timeout,
+        RESULT_START,
+        RESULT_END,
+        lambda memory: parse_result(memory, candidate_id, candidate_name),
+    )
 
 
 def main() -> int:

@@ -4,6 +4,8 @@
 
 Can rust-mos support KSA64's representative fixed-point flight-dynamics workload within acceptable performance and memory costs, or does Oscar64 C++ provide a material advantage large enough to justify changing languages?
 
+Result: complete. Rust/rust-mos is selected for the portable core. See [the Phase 0 results](../phase0/RESULTS.md) and decisions D-004 and D-015 in [the decision record](decisions.md).
+
 The experiment is a decision tool, not the beginning of the simulator.
 
 ## Candidates

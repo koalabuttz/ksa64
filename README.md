@@ -52,15 +52,15 @@ The first useful version needs only one C64 and a two-dimensional launch model.
 
 ## Current technical direction
 
-The leading approach is a portable Rust core:
+The Phase 0 compiler experiment selected a portable Rust core:
 
 - Native Rust builds provide rapid testing, logging, and comparison.
 - rust-mos produces the C64 build.
-- The portable core uses the same fixed-point operations on both targets.
+- The portable core uses explicit two-word fixed-point operations on both targets.
 - Platform-specific display, sound, REU, timing, and user-port code stays outside the core.
-- Oscar64 C++ is the principal challenger in a small compiler experiment.
+- Oscar64 C++ remains an independent optimization and generated-code reference.
 
-Rust is provisional rather than predetermined. The experiment in [docs/experiment.md](docs/experiment.md) is the first technical gate.
+The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). Production simulator implementation remains deferred until the remaining numeric-foundation decisions are complete.
 
 ## Documentation
 
@@ -86,9 +86,10 @@ Rust is provisional rather than predetermined. The experiment in [docs/experimen
 
 ## First milestone
 
-The first milestone is not a rocket launch. It is a small, reproducible language and arithmetic experiment that answers:
+The compiler and arithmetic experiment is complete. Both candidates passed the frozen workload, and the common target-visible timing result selected Rust/rust-mos:
 
-> Can rust-mos execute a representative fixed-point flight-dynamics step within acceptable speed and memory costs, and does Oscar64 C++ offer a material advantage?
+- Rust: 223,772,332 CIA cycles, or 109,263.83 cycles per step.
+- Oscar64: 235,627,088 CIA cycles, or 115,052.29 cycles per step.
+- Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
 
-Only after that result will the implementation language, numeric formats, and initial source tree be finalized.
-
+The next milestone completes Phase 0's product range analysis, numeric formats, overflow policy, integrator choice, and deterministic data formats before the Phase 1 source tree is created.

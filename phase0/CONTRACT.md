@@ -282,8 +282,14 @@ The checksum is excluded from the primary dynamics-only timing. A separate valid
 
 ### Primitive timing mode
 
-- Repeats multiplication, division, and interpolation vectors enough times for stable CIA and emulator measurements.
-- Uses a deterministic accumulator outside the primitive under test.
+- Executes 512 calls per primitive and requires identical results across three PAL VICE runs.
+- Loads arithmetic operands from volatile C64 memory so whole-program optimization cannot replace the loop with a constant.
+- Keeps the representative Q-format shift at compile time, matching the flight-dynamics call sites.
+- Measures scaled multiplication with `2,048,000 * 2,632,453`, shift 28.
+- Measures general scaled division with `11,059 / 2,048,000`, shift 28.
+- Measures the specialized fraction path with Q12 values `4,096 / 8,192`.
+- Uses a deterministic 32-bit wrapping accumulator outside the primitive call and validates it after timing.
+- Subtracts the empty synchronized CIA boundary cost but reports loop, volatile-load, and accumulator overhead as part of the isolated runner.
 
 ## Fairness rule
 

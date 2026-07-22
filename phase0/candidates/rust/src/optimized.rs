@@ -17,7 +17,7 @@ fn divide_unsigned_32_by_16(numerator: u32, denominator: u16) -> (u32, u16) {
     (quotient, remainder as u16)
 }
 
-pub(crate) fn divide_fraction_q16(numerator_q12: i32, denominator_q12: i32) -> i32 {
+pub fn divide_fraction_q16(numerator_q12: i32, denominator_q12: i32) -> i32 {
     debug_assert!(numerator_q12 >= 0);
     debug_assert!(denominator_q12 > 0);
     debug_assert!(numerator_q12 < denominator_q12);

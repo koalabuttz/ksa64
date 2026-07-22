@@ -236,7 +236,7 @@ The host may provide a separate high-precision comparison path, but that path is
 
 ## Planned source layout
 
-The exact layout will be created after Phase 0. A likely shape is:
+Rust/rust-mos is selected, but the exact production layout will be created only after the remaining Phase 0 numeric decisions. The likely shape is:
 
     core/
         numeric
@@ -262,7 +262,7 @@ The exact layout will be created after Phase 0. A likely shape is:
         telemetry comparison
         benchmark automation
 
-No source directories are created yet because the language and build system remain provisional.
+No production source directories are created yet because product numeric formats, overflow policy, integrator choice, and data formats remain provisional.
 
 ## Extension path
 

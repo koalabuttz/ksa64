@@ -9,6 +9,8 @@ pub use manual::{
     divide_scaled_manual, interpolate_fixed_manual, multiply_scaled_manual,
     run_manual_arithmetic_vectors,
 };
+pub use optimized::divide_fraction_q16;
+
 pub use vertical::{
     hash_vertical_state, run_vertical_kernel_manual, run_vertical_kernel_optimized,
     run_vertical_manual, run_vertical_optimized, vertical_state_matches_checkpoint,

@@ -6,7 +6,7 @@ This directory is deliberately separate from future production source. Everythin
 
 ## Current status
 
-The arithmetic, vertical-flight correctness, performance, and common timing gates are complete:
+The compiler and arithmetic experiment is complete, and Rust/rust-mos is selected:
 
 - Both candidates pass every arithmetic vector, vertical checkpoint, and checksum.
 - Dynamics-only runners exclude checkpoint and rolling-checksum overhead.
@@ -16,7 +16,11 @@ The arithmetic, vertical-flight correctness, performance, and common timing gate
 - Common PAL VICE 3.10 timing measures 223,772,332 Rust cycles and 235,627,088 Oscar64 cycles.
 - Those measurements are identical across three runs and reproduce the exact final state.
 - Rust uses 5.03% fewer common-clock cycles; both remain below the rough PAL 123,000-cycle 8 Hz budget.
-- Compiler-provided Rust `u64` arithmetic remains a reproducible failing baseline.
+- Oscar64 is essentially tied on isolated multiply, 6.69% faster on general divide, and 33.26% faster on the specialized fraction divider.
+- Rust's complete kernel remains faster, so the primitive results identify optimization targets rather than a reason to change languages.
+- The timed Rust build is 9,026 bytes with 17 zero-page bytes and a 66-byte linker-reserved static stack.
+- The timed Oscar64 build is 5,865 bytes with no mapped zero-page allocation and a 122-byte static-stack envelope.
+- Compiler-provided Rust `u64` arithmetic remains a reproducible failing baseline; the selected core uses explicit two-word widening.
 
 See [RESULTS.md](RESULTS.md) for measurements, profile evidence, and the next gate.
 
@@ -28,6 +32,9 @@ See [RESULTS.md](RESULTS.md) for measurements, profile evidence, and the next ga
         RESULTS.md
         benchmark.ps1
         check.ps1
+        primitive_timing.ps1
+        resources.ps1
+        timing.ps1
         candidates/
             rust/
             oscar64/
@@ -40,6 +47,8 @@ See [RESULTS.md](RESULTS.md) for measurements, profile evidence, and the next ga
             generate_vectors.py
             emit_candidate_vectors.py
             emit_vertical_bindings.py
+            vice_primitive_timing.py
+            vice_timing.py
         vectors/
             phase0-v1.json
             phase0-v1.sha256
@@ -72,15 +81,20 @@ Rust and C++ must consume the same integer data and produce the same exact resul
 
 ## Next implementation slice
 
-1. Add primitive timing for multiply, general divide, and fast interpolation divide.
-2. Confirm that the remaining 2,048 acceleration divisions are the next material bottleneck.
-3. Record static RAM, zero-page, stack, and generated-code evidence for both timed builds.
-4. Confirm the common timing method on real hardware when available.
-5. Apply the language rubric and record the Phase 0 decision.
+Finish the remaining Phase 0 numeric-foundation work:
 
-Reproduce the common timing gate from the project root:
+1. Perform range analysis for Phase 1 state, force, environment, and intermediate quantities.
+2. Select production fixed-point formats and overflow behavior.
+3. Choose the initial integrator and timestep from error and cost evidence.
+4. Define deterministic scenario and telemetry formats.
+5. Add the remaining analytic integration cases.
 
+Reproduce the completed experiment from the project root:
+
+    .\phase0\check.ps1
+    .\phase0\benchmark.ps1
     .\phase0\timing.ps1
+    .\phase0\primitive_timing.ps1
+    .\phase0\resources.ps1
 
-No language wins because it reaches a benchmark result first.
-
+Rust was selected by the frozen rubric and representative full workload, not by reaching the benchmark first.

@@ -48,37 +48,39 @@ Consequence:
 
 Formats will be selected per quantity after range analysis. Overflow, rounding, saturation, and unit conventions must be documented and tested.
 
-## D-004: Treat Rust and rust-mos as the incumbent
+## D-004: Use Rust and rust-mos for the portable core
 
-Status: Provisional
-
-Decision:
-
-Begin the Phase 0 experiment with Rust as the expected project language.
-
-Rationale:
-
-The project owner already has practical rust-mos experience from koalabuttz/roguelike, including no-std design, static data structures, host/target separation, emulator testing, and toolchain management. Rust also provides useful newtypes, enums, exhaustive state handling, and safe core abstractions.
-
-Conditions:
-
-Rust must demonstrate acceptable cycle cost, program size, memory use, arithmetic behavior, and cross-target reproducibility on a representative dynamics workload.
-
-## D-005: Use Oscar64 C++ as the principal challenger
-
-Status: Provisional
+Status: Accepted
 
 Decision:
 
-Implement the same Phase 0 kernels in restrained C++ for Oscar64 and a native compiler.
+Use Rust for the shared host/C64 simulation core and rust-mos for the C64 target. Keep platform-specific hardware code behind explicit modules and preserve the native exact-arithmetic test path.
 
 Rationale:
 
-Oscar64 offers whole-program, 6502-aware optimization and useful zero-cost numeric wrappers. It is the most credible alternative likely to preserve the shared-source strategy.
+Both candidates passed the frozen arithmetic and vertical-flight contract. On the representative 2,048-step kernel under the same PAL VICE 3.10 CIA clock, Rust used 223,772,332 cycles versus Oscar64's 235,627,088, a 5.03 percent cycle reduction. Rust's timed PRG is larger and uses 17 bytes of zero page, but its 9,026-byte image and 66-byte linker-reserved static stack leave credible room for Phase 1.
+
+Oscar64 was faster on isolated general division and fast interpolation division, but that advantage did not survive the representative full workload. The experiment rubric explicitly favors the incumbent when it is correct, feasible, and within 25 percent of the challenger; Rust is instead modestly faster overall and has the lower-risk development workflow for this project.
+
+Consequence:
+
+New production simulation code begins in Rust after the remaining Phase 0 numeric decisions are settled. A measured hotspot may still use an assembly or foreign-function helper without reopening the project-language decision.
+
+## D-005: Retain Oscar64 C++ as a reference challenger
+
+Status: Accepted
+
+Decision:
+
+Keep the Phase 0 Oscar64 implementation as an independent comparison, generated-code reference, and source of optimization ideas. Do not use it as the production-core language.
+
+Rationale:
+
+Oscar64 produced a 35 percent smaller timed PRG and excellent isolated arithmetic code: essentially equal scaled multiplication, 6.69 percent fewer cycles for general scaled division, and 33.26 percent fewer cycles for the specialized fraction divider. Those results are valuable when optimizing Rust kernels, but the complete flight-dynamics workload is the controlling measurement.
 
 Constraints:
 
-The C++ version should use embedded-style features only: static allocation, plain value types, small templates, and no exceptions, RTTI, virtual hierarchies, heavy standard library, or allocation in the simulation loop.
+Oscar64 comparison code remains restrained embedded C++ with static allocation, plain value types, no exceptions or RTTI, and no dependency from the production core.
 
 ## D-006: Defer other language ports
 
@@ -205,11 +207,26 @@ Consequence:
 
 The Phase 0 formats and simplified vehicle model are benchmark fixtures, not final simulator architecture decisions. Results may justify changing the eventual product formats, overflow policy, integrator, or environment models.
 
+## D-015: Use explicit two-word widening arithmetic
+
+Status: Accepted
+
+Decision:
+
+Implement required 64-bit intermediate operations as explicit two-word algorithms in the fixed-point core. Do not use compiler-provided Rust `u64` arithmetic on the pinned rust-mos toolchain for these kernels.
+
+Rationale:
+
+The compiler-provided `u64` baseline produces two reproducible C64-target failures despite passing natively. The explicit four-part 32-by-32 multiplication, two-word shifting, and restoring 64-by-32 division pass every arithmetic vector, vertical checkpoint, and checksum on both targets while reducing the Rust correctness PRG from 14,576 to 6,580 bytes.
+
+Consequence:
+
+Keep the failing baseline as a regression probe. Reevaluate compiler-provided widening only after a pinned toolchain update passes the complete frozen contract.
+
 ## Open decisions
 
 The following remain deliberately unresolved:
 
-- Final language and compiler.
 - License for KSA64.
 - Final simulator fixed-point format for each physical quantity.
 - Overflow policy: saturation, checked failure, or proven range.

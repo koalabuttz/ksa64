@@ -34,6 +34,10 @@ required-features = ["c64"]
 name = "ksa64-phase0-rust-vertical-timed-c64"
 path = "src/vertical_timed_c64_main.rs"
 required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase0-rust-primitive-timed-c64"
+path = "src/primitive_timed_c64_main.rs"
+required-features = ["c64"]
 
 [[bin]]
 name = "ksa64-phase0-rust-sim"
