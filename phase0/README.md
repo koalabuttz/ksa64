@@ -6,26 +6,37 @@ This directory is deliberately separate from future production source. Everythin
 
 ## Current status
 
-The Phase 0 v1 contract is frozen for the first implementation pass:
+The arithmetic correctness slice is complete:
 
-- Physical units and fixed-point formats are defined.
-- Rounding, saturation, division, and interpolation behavior are defined.
-- The representative vertical-flight workload is defined.
-- An independent Python reference generates exact fixed-point vectors and high-precision checkpoints.
-- Neither candidate implementation exists yet.
+- The Phase 0 v1 numeric and vertical-workload contract is frozen.
+- Generated Rust and C++ bindings consume the same checked JSON vectors.
+- Native Rust and native C++ pass the arithmetic vectors.
+- Specialized two-word Rust passes under `mos-sim` and builds for the C64.
+- Oscar64 C++ passes in Oscar64's integrated C64 emulator.
+- Compiler-provided Rust `u64` arithmetic is retained as a reproducible failing baseline.
+- Vertical-flight implementation and cycle measurements have not begun.
+
+See [RESULTS.md](RESULTS.md) for measurements, the rust-mos finding, and the next gate.
 
 ## Layout
 
     phase0/
         CONTRACT.md
         README.md
+        RESULTS.md
+        check.ps1
+        candidates/
+            rust/
+            oscar64/
+        generated/
+            phase0_vectors.rs
+            phase0_vectors.hpp
         reference/
             generate_vectors.py
+            emit_candidate_vectors.py
         vectors/
             phase0-v1.json
             phase0-v1.sha256
-
-Candidate implementations will be added only after the generated vectors pass their self-check.
 
 ## Generate the vectors
 
@@ -55,12 +66,11 @@ Rust and C++ must consume the same integer data and produce the same exact resul
 
 ## Next implementation slice
 
-1. Implement the primitive arithmetic kernels in native Rust.
-2. Run the arithmetic vectors.
-3. Compile the same Rust code with rust-mos.
-4. Implement the same kernels in the Oscar64-compatible C++ subset.
-5. Run the same vectors natively and on the C64 target.
-6. Inspect generated assembly before beginning the vertical-flight loop.
+1. Implement the frozen vertical-flight step with specialized two-word Rust arithmetic.
+2. Implement the same step with Oscar64-compatible C++ arithmetic.
+3. Match all fixed checkpoints and the final FNV-1a checksum.
+4. Inspect generated assembly and isolate kernel sizes.
+5. Add CIA and emulator cycle measurements only after exact agreement.
 
 No language wins because it reaches a benchmark result first.
 
