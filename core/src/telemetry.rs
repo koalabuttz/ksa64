@@ -144,6 +144,46 @@ impl TelemetryFrame {
             state_checksum,
         )
     }
+
+    pub const fn step(self) -> u32 {
+        self.step
+    }
+
+    pub const fn time(self) -> Time {
+        self.time
+    }
+
+    pub const fn altitude(self) -> Altitude {
+        self.altitude
+    }
+
+    pub const fn velocity(self) -> Velocity {
+        self.velocity
+    }
+
+    pub const fn acceleration(self) -> Acceleration {
+        self.acceleration
+    }
+
+    pub const fn total_mass(self) -> Mass {
+        self.total_mass
+    }
+
+    pub const fn propellant(self) -> Mass {
+        self.propellant
+    }
+
+    pub const fn status(self) -> TelemetryStatus {
+        self.status
+    }
+
+    pub const fn events(self) -> TelemetryEvents {
+        self.events
+    }
+
+    pub const fn state_checksum(self) -> u32 {
+        self.state_checksum
+    }
 }
 
 #[inline]
@@ -384,4 +424,153 @@ pub fn run_vertical_mission_with_telemetry<S: TelemetrySink>(
             }
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TelemetryHeader {
+    numeric_contract_id: u32,
+    scenario_id: u32,
+    timestep: Time,
+    telemetry_stride: u16,
+}
+
+impl TelemetryHeader {
+    pub const fn numeric_contract_id(self) -> u32 {
+        self.numeric_contract_id
+    }
+
+    pub const fn scenario_id(self) -> u32 {
+        self.scenario_id
+    }
+
+    pub const fn timestep(self) -> Time {
+        self.timestep
+    }
+
+    pub const fn telemetry_stride(self) -> u16 {
+        self.telemetry_stride
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TelemetryReadError {
+    Length,
+    Magic,
+    Version,
+    HeaderLength,
+    FrameLength,
+    Reserved,
+    NumericContract,
+    ScenarioIdentity,
+    Timestep,
+    TelemetryStride,
+    StatusBits,
+    EventBits,
+    Checksum,
+}
+
+#[inline]
+fn read_u16(input: &[u8], offset: usize) -> u16 {
+    u16::from_le_bytes([input[offset], input[offset + 1]])
+}
+
+#[inline]
+fn read_u32(input: &[u8], offset: usize) -> u32 {
+    u32::from_le_bytes([
+        input[offset],
+        input[offset + 1],
+        input[offset + 2],
+        input[offset + 3],
+    ])
+}
+
+#[inline]
+fn read_i32(input: &[u8], offset: usize) -> i32 {
+    read_u32(input, offset) as i32
+}
+
+/// Decodes one canonical v1 stream header and rejects unknown or noncanonical fields.
+pub fn parse_telemetry_header(input: &[u8]) -> Result<TelemetryHeader, TelemetryReadError> {
+    if input.len() != TELEMETRY_HEADER_LENGTH {
+        return Err(TelemetryReadError::Length);
+    }
+    if input[..4] != HEADER_MAGIC {
+        return Err(TelemetryReadError::Magic);
+    }
+    if read_u16(input, 4) != TELEMETRY_VERSION {
+        return Err(TelemetryReadError::Version);
+    }
+    if read_u16(input, 6) as usize != TELEMETRY_HEADER_LENGTH {
+        return Err(TelemetryReadError::HeaderLength);
+    }
+    if read_u16(input, 8) as usize != TELEMETRY_FRAME_LENGTH {
+        return Err(TelemetryReadError::FrameLength);
+    }
+    if read_u16(input, 10) != 0 || read_u16(input, 26) != 0 {
+        return Err(TelemetryReadError::Reserved);
+    }
+    if read_u32(input, 12) != NUMERIC_CONTRACT_ID {
+        return Err(TelemetryReadError::NumericContract);
+    }
+    if crc32_ieee(&input[..28]) != read_u32(input, 28) {
+        return Err(TelemetryReadError::Checksum);
+    }
+    Ok(TelemetryHeader {
+        numeric_contract_id: read_u32(input, 12),
+        scenario_id: read_u32(input, 16),
+        timestep: Time::from_raw(read_i32(input, 20)),
+        telemetry_stride: read_u16(input, 24),
+    })
+}
+
+/// Decodes and binds one header to the validated scenario that should have produced it.
+pub fn parse_telemetry_header_for_scenario(
+    input: &[u8],
+    scenario: &Scenario,
+) -> Result<TelemetryHeader, TelemetryReadError> {
+    let header = parse_telemetry_header(input)?;
+    if header.scenario_id != scenario.scenario_id() {
+        return Err(TelemetryReadError::ScenarioIdentity);
+    }
+    if header.timestep != scenario.timestep() {
+        return Err(TelemetryReadError::Timestep);
+    }
+    if header.telemetry_stride != scenario.telemetry_stride() {
+        return Err(TelemetryReadError::TelemetryStride);
+    }
+    Ok(header)
+}
+
+/// Decodes one canonical v1 frame after verifying its CRC and reserved flag bits.
+pub fn parse_telemetry_frame(input: &[u8]) -> Result<TelemetryFrame, TelemetryReadError> {
+    if input.len() != TELEMETRY_FRAME_LENGTH {
+        return Err(TelemetryReadError::Length);
+    }
+    if crc32_ieee(&input[..36]) != read_u32(input, 36) {
+        return Err(TelemetryReadError::Checksum);
+    }
+    let status_bits = read_u16(input, 28);
+    if status_bits & !TelemetryStatus::ENGINE_ACTIVE != 0 {
+        return Err(TelemetryReadError::StatusBits);
+    }
+    let event_bits = read_u16(input, 30);
+    let accepted_event_bits = TelemetryEvents::ENGINE_CUTOFF
+        | TelemetryEvents::PROPELLANT_DEPLETED
+        | TelemetryEvents::NUMERIC_FAULT
+        | TelemetryEvents::END_OF_RUN;
+    if event_bits & !accepted_event_bits != 0 {
+        return Err(TelemetryReadError::EventBits);
+    }
+    Ok(TelemetryFrame::new(
+        read_u32(input, 0),
+        Time::from_raw(read_i32(input, 4)),
+        Altitude::from_raw(read_i32(input, 8)),
+        Velocity::from_raw(read_i32(input, 12)),
+        Acceleration::from_raw(read_i32(input, 16)),
+        Mass::from_raw(read_i32(input, 20)),
+        Mass::from_raw(read_i32(input, 24)),
+        TelemetryStatus(status_bits),
+        TelemetryEvents(event_bits),
+        read_u32(input, 32),
+    ))
 }

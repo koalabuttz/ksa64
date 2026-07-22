@@ -474,6 +474,7 @@ One executor prevents dynamics, cutoff counting, checksumming, and fault semanti
 Consequence:
 
 Canonical mission telemetry is now schedulable without choosing RAM, REU, disk, serial, or screen transport. The diagnostic C64 self-test grows to 47,447 bytes. The next gate must measure rolling checksum plus serialization scheduling with a discard sink under the established PAL common clock, separately from the already passing raw dynamics budget.
+
 ## D-032: Measure canonical telemetry separately from validation policy
 
 Status: Accepted
@@ -489,6 +490,25 @@ Three stable runs measure canonical telemetry at an additional 15,309,372 cycles
 Consequence:
 
 The telemetry timing gate is closed without weakening the canonical stream. Recorded validation may run below real time, while future interactive scheduling may select a cheaper checksum cadence and retain the 8.57 Hz raw dynamics path. Transport implementations must be measured separately because this result includes only synchronous volatile discard copies. The next gate is host capture and strict stream inspection through the accepted sink boundary.
+
+## D-033: Decode canonically in the core and inspect streams at the host boundary
+
+Status: Accepted
+
+Decision:
+
+Implement exact-length telemetry header and frame decoders in the portable `no_std` core. Reject unknown versions, declared sizes, numeric contracts, reserved values, status/event bits, and CRC failures. Optionally bind a decoded header to a validated scenario by exact ID, timestep, and stride. Treat nonzero reserved v1 fields as an error rather than silently assigning future meaning to an old version.
+
+Place file I/O, whole-stream validation, and interpreted text presentation in a separate `std` host crate. The host inspector requires the scenario-derived initial frame, valid step order and stride, exact step-derived mission time, fault/end pairing, terminal placement, and a successful final step equal to the scenario limit. It reports raw stream identity and checksums while using scaled decimal values only for presentation.
+
+Rationale:
+
+Keeping record decoding beside serialization creates one portable binary contract and allows MOS self-tests to exercise both directions. Keeping allocation, files, and formatting outside the core preserves the C64 architecture. Stream-level checks catch valid-CRC records assembled into an impossible mission, while acknowledging that skipped successors cannot be reconstructed from stride-sampled telemetry alone.
+
+Consequence:
+
+The host can now capture the golden 257-frame stream to a `.kst` file, read it back, reproduce stream CRC-32 `0xcf56fe65`, and display the final physical state. Corrupt records, bad cadence, terminal misuse, and I/O refusal fail closed. Exact replay remains distinct from structural inspection. The next gate is a C64 text-status sink that stores only the latest accepted frame and renders outside the accepted timing regions.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

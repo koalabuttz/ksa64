@@ -1,0 +1,8 @@
+[package]
+name = "ksa64-host"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+ksa64-core = { path = "../core" }

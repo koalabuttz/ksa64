@@ -5,6 +5,7 @@ use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericFault
 use crate::quantities::{Acceleration, Altitude, Mass, Time, Velocity};
 use crate::scenario::{parse_scenario_image, SCENARIO_IMAGE_LENGTH, SIMPLE_EARTH_ENVIRONMENT_ID};
 use crate::telemetry::{
+    parse_telemetry_frame, parse_telemetry_header_for_scenario,
     run_vertical_mission_with_telemetry, write_telemetry_frame, write_telemetry_header,
     TelemetryEvents, TelemetryFrame, TelemetrySink, TelemetryStatus, TELEMETRY_FRAME_LENGTH,
     TELEMETRY_HEADER_LENGTH,
@@ -385,6 +386,39 @@ fn check_telemetry() -> u16 {
     failures
 }
 
+fn check_telemetry_decode() -> u16 {
+    let scenario = match parse_scenario_image(SCENARIO_IMAGE) {
+        Ok(scenario) => scenario,
+        Err(_) => return 1,
+    };
+    let mut failures = failure_count(
+        parse_telemetry_header_for_scenario(
+            &TELEMETRY_STREAM[..TELEMETRY_HEADER_LENGTH],
+            &scenario,
+        )
+        .is_ok(),
+    );
+    match parse_telemetry_frame(
+        &TELEMETRY_STREAM
+            [TELEMETRY_HEADER_LENGTH..TELEMETRY_HEADER_LENGTH + TELEMETRY_FRAME_LENGTH],
+    ) {
+        Ok(frame) => {
+            failures += failure_count(frame.step() == 0);
+            failures += failure_count(frame.state_checksum() == VERTICAL_CHECKSUM_OFFSET);
+        }
+        Err(_) => failures += 1,
+    }
+    match parse_telemetry_frame(
+        &TELEMETRY_STREAM[TELEMETRY_HEADER_LENGTH + TELEMETRY_FRAME_LENGTH..],
+    ) {
+        Ok(frame) => {
+            failures += failure_count(frame.step() == 8);
+            failures += failure_count(frame.state_checksum() == 0x1234_5678);
+        }
+        Err(_) => failures += 1,
+    }
+    failures
+}
 struct CompactTelemetrySink {
     crc: u32,
     length: usize,
@@ -511,6 +545,7 @@ pub fn run_numeric_self_tests() -> u16 {
     failures += check_transitions();
     failures += check_mission();
     failures += check_telemetry();
+    failures += check_telemetry_decode();
     failures += check_telemetry_mission();
     failures += check_scenario();
     failures

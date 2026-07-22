@@ -7,7 +7,7 @@ This document defines the Phase 1 data boundary. Human-authored configuration is
 - Multibyte integers are little-endian.
 - Signed fields are two's-complement.
 - Numeric scales come from `ksa64.numeric.phase1-v1` in `phase0/numeric/FOUNDATION.md`.
-- Reserved fields and bits are zero when written and ignored when read.
+- Reserved fields and bits are zero when written. The strict v1 reader rejects nonzero reserved values rather than assigning future meaning to an old version.
 - Text is UTF-8 with LF line endings.
 - CRC-32 uses the IEEE reflected polynomial, initial value `0xffffffff`, and final XOR `0xffffffff`, as produced by Python `binascii.crc32`.
 - Stable 32-bit identifiers use FNV-1a over the UTF-8 identifier. A host packer must reject collisions within one build.
@@ -104,6 +104,14 @@ Status bit 0 means engine active. Event bit 0 means engine cutoff, bit 1 means p
 The rolling checksum starts from FNV-1a offset `2166136261` and incorporates each successful successor state, excluding the unadvanced initial state. Every state contributes seven 32-bit words as little-endian bytes in this exact order: completed step index, mission time, altitude, velocity, acceleration, total mass, and propellant. It never hashes Rust memory layout, padding, status flags, or events.
 
 The frame CRC protects framing and storage; the rolling checksum identifies deterministic state divergence. They serve different purposes.
+
+## Strict stream inspection
+
+The portable reader validates canonical records without allocation. It rejects wrong lengths, magic, versions, declared record sizes, numeric-contract identity, reserved values, status/event masks, and record CRCs. A header may additionally be bound to a validated scenario, which requires exact scenario ID, timestep, and telemetry stride.
+
+The host inspector adds stream semantics: an exact scenario-derived initial frame, strictly increasing emitted steps except a repeated last-valid truth on terminal numeric failure, stride alignment for nonterminal successors, `time = step * timestep`, no steps beyond the scenario limit, numeric fault paired with end-of-run, exactly one terminal position at the end of the file, and the declared final step for successful completion. Trailing bytes and partial frames are errors.
+
+These checks establish framing and semantic coherence. A rolling checksum on an emitted frame still represents all successful successors since launch, including states omitted by telemetry stride; a reader cannot independently reconstruct those hidden states from the stream alone. Exact replay verification therefore remains a separate operation that reruns the scenario or compares against an independently produced oracle.
 
 ## Host CSV view
 

@@ -5,3 +5,10 @@ version = 4
 [[package]]
 name = "ksa64-core"
 version = "0.1.0"
+
+[[package]]
+name = "ksa64-host"
+version = "0.1.0"
+dependencies = [
+ "ksa64-core",
+]
