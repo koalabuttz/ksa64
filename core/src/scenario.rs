@@ -68,32 +68,95 @@ pub enum ScenarioError {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InitialConditions {
-    pub altitude: Altitude,
-    pub velocity: Velocity,
-    pub total_mass: Mass,
-    pub propellant: Mass,
+    altitude: Altitude,
+    velocity: Velocity,
+    total_mass: Mass,
+    propellant: Mass,
+}
+
+impl InitialConditions {
+    pub const fn altitude(&self) -> Altitude {
+        self.altitude
+    }
+    pub const fn velocity(&self) -> Velocity {
+        self.velocity
+    }
+    pub const fn total_mass(&self) -> Mass {
+        self.total_mass
+    }
+    pub const fn propellant(&self) -> Mass {
+        self.propellant
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VehicleConfig {
-    pub dry_mass: Mass,
-    pub thrust: Force,
-    pub mass_flow: MassFlow,
-    pub burn_duration: Time,
-    pub cda: Cda,
+    dry_mass: Mass,
+    thrust: Force,
+    mass_flow: MassFlow,
+    burn_duration: Time,
+    cda: Cda,
+}
+
+impl VehicleConfig {
+    pub const fn dry_mass(&self) -> Mass {
+        self.dry_mass
+    }
+    pub const fn thrust(&self) -> Force {
+        self.thrust
+    }
+    pub const fn mass_flow(&self) -> MassFlow {
+        self.mass_flow
+    }
+    pub const fn burn_duration(&self) -> Time {
+        self.burn_duration
+    }
+    pub const fn cda(&self) -> Cda {
+        self.cda
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Scenario {
-    pub scenario_id: u32,
-    pub timestep: Time,
-    pub steps: u32,
-    pub telemetry_stride: u16,
-    pub flags: u16,
-    pub seed: u32,
-    pub initial: InitialConditions,
-    pub vehicle: VehicleConfig,
-    pub environment_id: u32,
+    scenario_id: u32,
+    timestep: Time,
+    steps: u32,
+    telemetry_stride: u16,
+    flags: u16,
+    seed: u32,
+    initial: InitialConditions,
+    vehicle: VehicleConfig,
+    environment_id: u32,
+}
+
+impl Scenario {
+    pub const fn scenario_id(&self) -> u32 {
+        self.scenario_id
+    }
+    pub const fn timestep(&self) -> Time {
+        self.timestep
+    }
+    pub const fn steps(&self) -> u32 {
+        self.steps
+    }
+    pub const fn telemetry_stride(&self) -> u16 {
+        self.telemetry_stride
+    }
+    pub const fn flags(&self) -> u16 {
+        self.flags
+    }
+    pub const fn seed(&self) -> u32 {
+        self.seed
+    }
+    pub const fn initial(&self) -> &InitialConditions {
+        &self.initial
+    }
+    pub const fn vehicle(&self) -> &VehicleConfig {
+        &self.vehicle
+    }
+    pub const fn environment_id(&self) -> u32 {
+        self.environment_id
+    }
 }
 
 #[inline]

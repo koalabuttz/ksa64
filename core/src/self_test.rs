@@ -1,7 +1,8 @@
-use crate::numeric::{
-    add, divide_scaled, interpolate_clamped, multiply_scaled, subtract, NumericFault, NumericStatus,
-};
+use crate::environment::SimpleEarthEnvironment;
+use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericFault, NumericStatus};
+use crate::quantities::Altitude;
 use crate::scenario::{parse_scenario_image, SCENARIO_IMAGE_LENGTH, SIMPLE_EARTH_ENVIRONMENT_ID};
+use crate::vehicle::VerticalTruthState;
 
 const SCENARIO_IMAGE: &[u8; SCENARIO_IMAGE_LENGTH] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -60,25 +61,15 @@ fn check_arithmetic() -> u16 {
 }
 
 fn check_interpolation() -> u16 {
-    let mut failures = 0u16;
+    let environment = SimpleEarthEnvironment::new();
+    let mut failures = failure_count(environment.tables_are_valid());
     let mut index = 0usize;
     while index < vectors::INTERPOLATION_VECTORS.len() {
         let vector = vectors::INTERPOLATION_VECTORS[index];
         let mut status = NumericStatus::CLEAR;
-        let density = interpolate_clamped(
-            vector.altitude_q12,
-            vectors::ALTITUDE_KNOTS_Q12,
-            vectors::DENSITY_Q28,
-            &mut status,
-        );
-        let gravity = interpolate_clamped(
-            vector.altitude_q12,
-            vectors::ALTITUDE_KNOTS_Q12,
-            vectors::GRAVITY_Q28,
-            &mut status,
-        );
-        failures += failure_count(density == vector.density_q28);
-        failures += failure_count(gravity == vector.gravity_q28);
+        let sample = environment.sample(Altitude::from_raw(vector.altitude_q12), &mut status);
+        failures += failure_count(sample.density.raw() == vector.density_q28);
+        failures += failure_count(sample.gravity.raw() == vector.gravity_q28);
         failures += failure_count(status.is_clear());
         index += 1;
     }
@@ -193,12 +184,24 @@ fn check_scenario() -> u16 {
     match parse_scenario_image(SCENARIO_IMAGE) {
         Ok(scenario) => {
             let mut failures = 0u16;
-            failures += failure_count(scenario.scenario_id == 0xef03_0ab2);
-            failures += failure_count(scenario.timestep.raw() == 8_192);
-            failures += failure_count(scenario.steps == 2_048);
-            failures += failure_count(scenario.initial.total_mass.raw() == 2_048_000);
-            failures += failure_count(scenario.vehicle.thrust.raw() == 31_130);
-            failures += failure_count(scenario.environment_id == SIMPLE_EARTH_ENVIRONMENT_ID);
+            failures += failure_count(scenario.scenario_id() == 0xef03_0ab2);
+            failures += failure_count(scenario.timestep().raw() == 8_192);
+            failures += failure_count(scenario.steps() == 2_048);
+            failures += failure_count(scenario.initial().total_mass().raw() == 2_048_000);
+            failures += failure_count(scenario.vehicle().thrust().raw() == 31_130);
+            failures += failure_count(scenario.environment_id() == SIMPLE_EARTH_ENVIRONMENT_ID);
+            let environment = SimpleEarthEnvironment::from_scenario(&scenario);
+            failures += failure_count(environment.tables_are_valid());
+            let truth = VerticalTruthState::initial(&scenario);
+            failures += failure_count(truth.step() == 0);
+            failures += failure_count(truth.time().raw() == 0);
+            failures += failure_count(truth.altitude() == scenario.initial().altitude());
+            failures += failure_count(truth.total_mass() == scenario.initial().total_mass());
+            let mut status = NumericStatus::CLEAR;
+            let sample = environment.sample(truth.altitude(), &mut status);
+            failures += failure_count(sample.density.raw() == 328_833_434);
+            failures += failure_count(sample.gravity.raw() == 2_632_453);
+            failures += failure_count(status.is_clear());
             crc_failures += failures;
             crc_failures
         }

@@ -13,6 +13,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Numeric-foundation artifacts are stale." }
     & python -B phase1/reference/emit_numeric_bindings.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 1 Rust bindings are stale." }
+    & python -B phase1/reference/emit_environment_bindings.py --check
+    if ($LASTEXITCODE -ne 0) { throw "Phase 1 environment bindings are stale." }
 
     Write-Host ""
     Write-Host "== Native production core =="

@@ -29,7 +29,7 @@ Exit criteria:
 
 Purpose: create the smallest end-to-end vehicle simulation.
 
-Current progress: the production `no_std` numeric core and the fail-closed 76-byte scenario parser pass natively, through MOS execution, and as a C64 self-test artifact. Environment bindings and truth-state initialization are next; vehicle dynamics have not begun.
+Current progress: the production `no_std` numeric core, fail-closed 76-byte scenario parser, generated density/gravity environment, and immutable 28-byte initial vertical truth state pass native tests. The complete MOS/C64 gate covers the same exact self-test path. Pure force evaluation is next; truth-state integration has not begun.
 
 Planned capabilities:
 

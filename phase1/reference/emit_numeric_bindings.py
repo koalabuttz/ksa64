@@ -162,10 +162,6 @@ def build_source() -> str:
     ]
     lines.extend(rust_array("INTERPOLATION_VECTORS", "InterpolationVector", interpolation_rows))
     lines.append("")
-    lines.append(f"pub const ALTITUDE_KNOTS_Q12: &[i32] = &{phase0['environment']['altitude_knots_q12']!r};")
-    lines.append(f"pub const DENSITY_Q28: &[i32] = &{phase0['environment']['density_q28']!r};")
-    lines.append(f"pub const GRAVITY_Q28: &[i32] = &{phase0['environment']['gravity_q28']!r};")
-    lines.append("")
 
     constant_velocity = analytic["constant_velocity"]
     lines.append(f"pub const CONSTANT_VELOCITY_TIMESTEP_Q16: i32 = {raw(constant_velocity['timestep_s'], 16)};")

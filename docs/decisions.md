@@ -323,6 +323,22 @@ Consequence:
 
 Vehicle truth state may be created only from a validated `Scenario`. Human-readable JSON remains a host concern; the exact core parses no text and allocates no memory.
 
+## D-023: Generate the environment and keep initial truth immutable
+
+Status: Accepted
+
+Decision:
+
+Generate the production Rust binding for `earth.simple-atmosphere.v1` from the frozen Phase 0 source data and verify the generated digest in the Phase 1 gate. Sample density and gravity through typed, clamped interpolation. Keep `Scenario` fields private and expose read-only accessors so callers cannot fabricate a value that bypasses ingestion checks. Construct the 28-byte initial vertical truth state only from such a validated scenario, with private fields and no dynamics-transition methods.
+
+Rationale:
+
+One canonical generator prevents the benchmark fixture and production environment from drifting while keeping raw source data out of the runtime crate. A private validated scenario makes the construction boundary meaningful rather than conventional. Separating immutable initialization from force evaluation and integration lets each physics boundary acquire exact tests before any method can advance simulated time.
+
+Consequence:
+
+The environment and initial state are production code, but they do not yet constitute a simulator. The next slice will return a typed force or acceleration snapshot without mutating truth; only a later integration gate may create successor truth states.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

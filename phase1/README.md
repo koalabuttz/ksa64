@@ -1,6 +1,6 @@
 # Phase 1: vertical-flight laboratory
 
-Phase 1 now has its production numeric layer and versioned scenario-ingestion boundary. Vehicle dynamics, atmosphere evaluation, telemetry presentation, and C64 UI are not implemented yet.
+Phase 1 now has its production numeric layer, versioned scenario-ingestion boundary, generated Earth-environment bindings, and immutable initial vertical truth state. Force evaluation, state integration, telemetry presentation, and C64 UI are not implemented yet.
 
 ## Current slice
 
@@ -14,6 +14,9 @@ The `ksa64-core` crate provides:
 - Sticky fault bits for saturation, division by zero, invalid shifts, and invalid input.
 - Generated arithmetic, interpolation, constant-motion, acceleration, convergence, and mass-flow fixtures.
 - A fail-closed parser for the 76-byte scenario image, including CRC, identity, range, mass, duration, and acceleration-envelope checks.
+- Generated production bindings for the accepted `earth.simple-atmosphere.v1` density and gravity tables.
+- Typed, clamped environment sampling through the production interpolation primitive.
+- An immutable 28-byte initial vertical truth state that can only be constructed from a validated `Scenario`.
 - Native, `mos-sim-none`, and `mos-c64-none` build paths.
 
 The analytic integration loops exist only as self-tests of the numeric contract. They are not a vehicle simulator.
@@ -27,6 +30,8 @@ The analytic integration loops exist only as self-tests of the numeric contract.
             numeric.rs
             quantities.rs
             scenario.rs
+            environment.rs
+            vehicle.rs
             self_test.rs
             bin/
         tests/
@@ -44,12 +49,13 @@ From the project root:
 
 This verifies the accepted numeric artifacts, regenerates nothing, runs native tests, executes the same exact fixture pack through rust-mos, and builds the physical-C64 PRG.
 
-To regenerate the Rust fixture binding deliberately:
+To regenerate the Rust bindings deliberately:
 
     python -B phase1/reference/emit_numeric_bindings.py
+    python -B phase1/reference/emit_environment_bindings.py
 
 Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Add generated production bindings for `earth.simple-atmosphere.v1`, then initialize an immutable vertical truth state from a validated `Scenario`. Force evaluation and time integration remain the following slice.
+Add a pure vertical force-evaluation boundary that consumes validated vehicle configuration, immutable truth, and an environment sample. It should produce a typed force/acceleration snapshot without mutating truth state. Time integration remains the following slice.

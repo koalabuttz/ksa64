@@ -30,22 +30,22 @@ fn standard_crc_vector_matches_ieee() {
 #[test]
 fn golden_scenario_parses_to_strong_types() {
     let scenario = parse_scenario_image(GOLDEN).unwrap();
-    assert_eq!(scenario.scenario_id, 0xef03_0ab2);
-    assert_eq!(scenario.timestep.raw(), 8_192);
-    assert_eq!(scenario.steps, 2_048);
-    assert_eq!(scenario.telemetry_stride, 8);
-    assert_eq!(scenario.flags, 0);
-    assert_eq!(scenario.seed, 0);
-    assert_eq!(scenario.initial.altitude.raw(), 0);
-    assert_eq!(scenario.initial.velocity.raw(), 0);
-    assert_eq!(scenario.initial.total_mass.raw(), 2_048_000);
-    assert_eq!(scenario.initial.propellant.raw(), 1_556_480);
-    assert_eq!(scenario.vehicle.dry_mass.raw(), 491_520);
-    assert_eq!(scenario.vehicle.thrust.raw(), 31_130);
-    assert_eq!(scenario.vehicle.mass_flow.raw(), 163_840);
-    assert_eq!(scenario.vehicle.burn_duration.raw(), 9_961_472);
-    assert_eq!(scenario.vehicle.cda.raw(), 655_360);
-    assert_eq!(scenario.environment_id, SIMPLE_EARTH_ENVIRONMENT_ID);
+    assert_eq!(scenario.scenario_id(), 0xef03_0ab2);
+    assert_eq!(scenario.timestep().raw(), 8_192);
+    assert_eq!(scenario.steps(), 2_048);
+    assert_eq!(scenario.telemetry_stride(), 8);
+    assert_eq!(scenario.flags(), 0);
+    assert_eq!(scenario.seed(), 0);
+    assert_eq!(scenario.initial().altitude().raw(), 0);
+    assert_eq!(scenario.initial().velocity().raw(), 0);
+    assert_eq!(scenario.initial().total_mass().raw(), 2_048_000);
+    assert_eq!(scenario.initial().propellant().raw(), 1_556_480);
+    assert_eq!(scenario.vehicle().dry_mass().raw(), 491_520);
+    assert_eq!(scenario.vehicle().thrust().raw(), 31_130);
+    assert_eq!(scenario.vehicle().mass_flow().raw(), 163_840);
+    assert_eq!(scenario.vehicle().burn_duration().raw(), 9_961_472);
+    assert_eq!(scenario.vehicle().cda().raw(), 655_360);
+    assert_eq!(scenario.environment_id(), SIMPLE_EARTH_ENVIRONMENT_ID);
     assert_eq!(crc32_ieee(&GOLDEN[..72]), 0xe86a_6f11);
 }
 
@@ -163,5 +163,5 @@ fn reserved_flags_are_preserved_for_forward_compatibility() {
     let mut bytes = *GOLDEN;
     write_u16(&mut bytes, 26, 0xa55a);
     repair_crc(&mut bytes);
-    assert_eq!(parse_scenario_image(&bytes).unwrap().flags, 0xa55a);
+    assert_eq!(parse_scenario_image(&bytes).unwrap().flags(), 0xa55a);
 }

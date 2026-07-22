@@ -1,8 +1,10 @@
 #![no_std]
 
+pub mod environment;
 pub mod numeric;
 pub mod quantities;
 pub mod scenario;
+pub mod vehicle;
 
 #[cfg(feature = "fixtures")]
 mod self_test;
