@@ -291,6 +291,22 @@ Consequence:
 
 Any replacement atmosphere or Earth model gets a new identifier and comparison contract.
 
+## D-021: Keep the production numeric core no_std and fixture-free by default
+
+Status: Accepted
+
+Decision:
+
+Implement Phase 1 numeric behavior in the production `ksa64-core` crate with `#![no_std]`. Represent physical quantities as distinct `repr(transparent)` integer wrappers, pass an explicit sticky `NumericStatus` through fallible arithmetic, and compile golden fixtures and self-test loops only when the `fixtures`, `sim`, or `c64` features request them.
+
+Rationale:
+
+One shared source now runs natively and through rust-mos without allocating, invoking software floating point, or depending on platform services. Strong wrappers reject unit-category mistakes at compile time without increasing storage. Explicit status keeps exceptional behavior deterministic, while feature-gated fixtures prevent the 11,794-byte diagnostic PRG from being mistaken for production runtime cost.
+
+Consequence:
+
+Vehicle and environment code will consume these wrappers and status rules rather than raw unlabelled integers. Host-only high-precision comparisons remain outside the exact product core.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

@@ -236,7 +236,7 @@ The host may provide a separate high-precision comparison path, but that path is
 
 ## Planned source layout
 
-Rust/rust-mos and the Phase 1 numeric foundation are selected. The production layout will be created when Phase 1 implementation begins, with this intended shape:
+Rust/rust-mos and the Phase 1 numeric foundation are selected. Phase 1 now has a production `core/` crate; later subsystems will extend this shape:
 
     core/
         numeric
@@ -262,7 +262,7 @@ Rust/rust-mos and the Phase 1 numeric foundation are selected. The production la
         telemetry comparison
         benchmark automation
 
-The numeric contract, overflow policy, baseline integrator, and data formats are now accepted in `phase0/numeric/FOUNDATION.md` and `docs/data-formats.md`. The production directories can be created when Phase 1 implementation begins.
+The numeric contract, overflow policy, baseline integrator, and data formats are accepted in `phase0/numeric/FOUNDATION.md` and `docs/data-formats.md`. The production `core/` crate implements the numeric layer; scenario, environment, and vehicle modules remain future Phase 1 slices.
 
 ## Extension path
 

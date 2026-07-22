@@ -1,0 +1,53 @@
+# Phase 1: vertical-flight laboratory
+
+Phase 1 has begun with the production numeric layer. Vehicle dynamics, atmosphere evaluation, telemetry presentation, and C64 UI are not implemented yet.
+
+## Current slice
+
+The `ksa64-core` crate provides:
+
+- `no_std` host/MOS-compatible source.
+- Strong one-word types for every accepted Phase 1 Q format.
+- Explicit two-word scaled multiplication and division.
+- Nearest rounding with exact halves away from zero.
+- Checked addition, subtraction, and clamped interpolation.
+- Sticky fault bits for saturation, division by zero, invalid shifts, and invalid input.
+- Generated arithmetic, interpolation, constant-motion, acceleration, convergence, and mass-flow fixtures.
+- Native, `mos-sim-none`, and `mos-c64-none` build paths.
+
+The analytic integration loops exist only as self-tests of the numeric contract. They are not a vehicle simulator.
+
+## Layout
+
+    core/
+        Cargo.toml
+        src/
+            lib.rs
+            numeric.rs
+            quantities.rs
+            self_test.rs
+            bin/
+        tests/
+    phase1/
+        README.md
+        check.ps1
+        generated/
+        reference/
+
+## Reproduce
+
+From the project root:
+
+    .\phase1\check.ps1
+
+This verifies the accepted numeric artifacts, regenerates nothing, runs native tests, executes the same exact fixture pack through rust-mos, and builds the physical-C64 PRG.
+
+To regenerate the Rust fixture binding deliberately:
+
+    python -B phase1/reference/emit_numeric_bindings.py
+
+Generated changes must be reviewed and committed with their SHA-256 digest.
+
+## Next slice
+
+After this numeric gate passes, add the versioned scenario record parser/validator and prove it against `phase0/numeric/scenario-v1.bin`. The first vehicle state and force model should wait until configuration can enter the core through that accepted boundary.

@@ -2,7 +2,7 @@
 
 KSA64 is a proposed aerospace simulation framework for the Commodore 64: a small but technically serious system for simulating launch vehicles, flight software, sensors, guidance, telemetry, failures, and eventually hardware-in-the-loop operation across multiple physical C64s.
 
-> Project status: design and feasibility study. No simulator has been implemented yet.
+> Project status: Phase 1 implementation. The production numeric core exists; vehicle simulation has not begun.
 
 ## The idea
 
@@ -60,7 +60,7 @@ The Phase 0 compiler experiment selected a portable Rust core:
 - Platform-specific display, sound, REU, timing, and user-port code stays outside the core.
 - Oscar64 C++ remains an independent optimization and generated-code reference.
 
-The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now settles the remaining arithmetic, range, integration, and data-boundary decisions. No simulator has been implemented yet.
+The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now has a production `no_std` Rust implementation with native, MOS-simulator, and C64 self-test paths. Vehicle physics has not been implemented yet.
 
 ## Documentation
 
@@ -68,6 +68,7 @@ The decision and measurements are recorded in [the Phase 0 results](phase0/RESUL
 - [Decision record](docs/decisions.md) preserves accepted and provisional choices.
 - [Compiler experiment](docs/experiment.md) defines the rust-mos and Oscar64 comparison.
 - [Phase 0 workspace](phase0/README.md) contains the frozen benchmark contract, independent reference generator, and golden vectors.
+- [Phase 1 workspace](phase1/README.md) contains the production numeric core and cross-target gate.
 - [Validation strategy](docs/validation.md) explains how numerical and physical correctness will be tested.
 - [Numeric foundation](phase0/numeric/FOUNDATION.md) selects Phase 1 formats, ranges, overflow behavior, and analytic cases.
 - [Data formats](docs/data-formats.md) defines deterministic scenario and telemetry records.
@@ -94,4 +95,4 @@ The compiler and arithmetic experiment is complete. Both candidates passed the f
 - Oscar64: 235,627,088 CIA cycles, or 115,052.29 cycles per step.
 - Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
 
-Phase 0 is complete. The next milestone is the Phase 1 vertical-flight laboratory: create the production Rust source tree and implement the accepted numeric primitives and analytic tests before adding vehicle dynamics.
+Phase 0 is complete, and the first Phase 1 production gate passes. The next milestone is the versioned scenario-image parser and validator; vehicle state and forces wait until configuration enters through that accepted boundary.

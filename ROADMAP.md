@@ -29,6 +29,8 @@ Exit criteria:
 
 Purpose: create the smallest end-to-end vehicle simulation.
 
+Current progress: the production `no_std` numeric core, strong Q-format types, sticky fault handling, generated analytic pack, MOS execution, and C64 self-test artifact pass. Scenario ingestion is next; vehicle dynamics have not begun.
+
 Planned capabilities:
 
 - One-dimensional altitude and vertical velocity.

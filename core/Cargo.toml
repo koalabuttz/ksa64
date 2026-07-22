@@ -1,0 +1,20 @@
+[package]
+name = "ksa64-core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+fixtures = []
+sim = ["fixtures"]
+c64 = ["fixtures"]
+
+[[bin]]
+name = "ksa64-phase1-numeric-sim"
+path = "src/bin/numeric_sim.rs"
+required-features = ["sim"]
+
+[[bin]]
+name = "ksa64-phase1-numeric-c64"
+path = "src/bin/numeric_c64.rs"
+required-features = ["c64"]

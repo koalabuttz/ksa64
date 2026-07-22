@@ -13,3 +13,6 @@ build/
 # Python reference-generator caches
 __pycache__/
 *.py[cod]
+
+# Production Rust workspace output
+/target/
