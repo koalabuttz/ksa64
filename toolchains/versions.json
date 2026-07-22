@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "rustMos": {
+    "image": "ghcr.io/koalabuttz/rust-mos:ac2fb2277-4537158-4aaa40e16",
+    "repositoryDigest": "ghcr.io/koalabuttz/rust-mos@sha256:9ddd4ce9502e54409fb56e0a80a2200f1df693a629f2911ff4f1c81303e51271",
+    "rustcVersion": "1.94.0-dev",
+    "llvmVersion": "23.0.0"
+  },
+  "oscar64": {
+    "release": "v1.32.272",
+    "archiveUrl": "https://github.com/drmortalwombat/oscar64/releases/download/v1.32.272/oscar64.zip",
+    "archiveSha256": "36b8ea7bedd79c751117cb6ae0a199037370c36fd29ceda38b08aafa43441fd4",
+    "compilerSha256": "718294db4008e00fcd9f729ac5479f96a8768de21393f89f9e2efa9a6e5134a9",
+    "projectRelativeCompiler": ".toolchains/oscar64/v1.32.272/oscar64/bin/oscar64.exe"
+  }
+}

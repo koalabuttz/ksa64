@@ -1,0 +1,9 @@
+# Project-local third-party toolchains and downloaded installers
+.toolchains/
+
+# Toolchain smoke-test outputs
+toolchains/smoke/rust-mos/target/
+toolchains/smoke/oscar64/out/
+
+# Future local build output
+build/

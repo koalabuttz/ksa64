@@ -1,0 +1,94 @@
+# Reference software and reuse policy
+
+This document records how existing software relates to KSA64. It is a routing guide, not a claim that any one program is an authoritative implementation of the whole project.
+
+Before code or data is reused, verify the current upstream source, version, and license.
+
+## Reference map
+
+| Project | Relevant strength | Intended KSA64 use | Direct core reuse |
+|---|---|---|---|
+| RocketPy | Atmospheric rocket flight and 3-DOF or 6-DOF simulation | Compare compatible early-flight cases | No runtime dependency planned |
+| Tudat | Spaceflight dynamics and numerical propagation | Compare orbital state propagation | No runtime dependency planned |
+| GMAT | Mission analysis and orbit propagation | Compare insertion states, orbits, and mission cases | No runtime dependency planned |
+| PREDICT | SGP4 or SDP4 satellite tracking | Host-side oracle for later tracking work | Avoid direct port initially |
+| QUIKTRAK | Historical C64 satellite tracking | Historical precedent and possible pass-prediction comparison | No core foundation |
+| C64 Apollo Lunar Lander | Compact BASIC physics and telemetry presentation | Study interface and interaction techniques | Avoid copying into the core |
+| Apollo AGC source | Flight-software organization and historical algorithms | Architectural study | No instruction-level port |
+| NASA Trick and JEOD | Professional simulation separation and environment modeling | Architectural inspiration | Far beyond target runtime |
+| NASA cFS and NOS3 | Flight software and simulated-hardware boundaries | Architectural inspiration for later avionics split | No initial dependency |
+| OpenMDAO and Dymos | Trajectory and design optimization | Possible host-side future workflow | Outside initial scope |
+| Space Shuttle: A Journey into Space | Mission displays and operational flow | Presentation study | No known source reuse |
+| Apollo 18: Mission to the Moon | Mission-phase presentation | Presentation study | No known source reuse |
+| Project: Space Station | Mission-control and program UI | Presentation study | No known source reuse |
+
+## Reuse policy
+
+### Ideas
+
+Algorithms, interface patterns, historical architecture, and presentation ideas may inform independent KSA64 designs. Record the source when an idea materially shapes a decision.
+
+### Test oracles
+
+Run external tools on the host and preserve their versioned outputs as validation artifacts. Match assumptions before comparing results.
+
+### Code
+
+Do not copy code into the KSA64 core until:
+
+- Its exact license is verified.
+- Compatibility with the eventual KSA64 license is understood.
+- Attribution and source requirements are documented.
+- Direct reuse is materially better than a small independent implementation.
+- The copied portion is isolated and tested.
+
+Known cautions from the initial research:
+
+- The modern C64 lunar-lander project was reported as CC BY-NC-SA.
+- PREDICT was reported as GPL-2.0.
+- The preserved C64 QUIKTRAK artifact may not include convenient editable C64 source.
+
+These facts must be rechecked at the upstream projects before relying on them.
+
+### Data
+
+Atmosphere, engine, aerodynamic, and orbital data have their own provenance and licensing concerns. Every generated table should record:
+
+- Source.
+- Source version or date.
+- Units and conventions.
+- Transformation or interpolation method.
+- License or public-domain basis.
+
+## Why no existing program is the foundation
+
+The identified projects cover useful pieces:
+
+    QUIKTRAK and PREDICT
+        known-orbit propagation and ground tracking
+
+    C64 lunar lander
+        local descent physics and interaction
+
+    vintage commercial games
+        mission presentation and controls
+
+    RocketPy
+        atmospheric rocket simulation
+
+    Tudat and GMAT
+        orbital propagation and mission analysis
+
+KSA64's defining feature is the combination and separation of powered ascent, orbital dynamics, sensors, flight software, actuators, failure injection, telemetry, and eventually multiple physical computers. Building a new narrow core preserves those boundaries from the beginning.
+
+## Research backlog
+
+Before implementation reaches the relevant phase:
+
+- Pin exact versions of external validation tools.
+- Collect small public reference scenarios.
+- Verify licenses from upstream repositories.
+- Locate machine-readable constants and atmosphere data with clear provenance.
+- Identify published 6-DOF check cases before beginning rigid-body work.
+- Preserve screenshots or manuals from vintage software only where redistribution is allowed.
+
