@@ -1,5 +1,9 @@
 //! Canonical allocation-free Phase 1 telemetry serialization.
 
+use crate::mission::{
+    execute_vertical_mission, ExecutionError, MissionFailure, MissionObservation, MissionObserver,
+    MissionSummary,
+};
 use crate::quantities::{Acceleration, Altitude, Mass, Time, Velocity};
 use crate::scenario::{crc32_ieee, Scenario, NUMERIC_CONTRACT_ID};
 use crate::vehicle::VerticalTruthState;
@@ -72,6 +76,10 @@ impl TelemetryEvents {
 
     pub const fn bits(self) -> u16 {
         self.0
+    }
+
+    const fn union(self, other: Self) -> Self {
+        Self(self.0 | other.0)
     }
 }
 
@@ -197,4 +205,183 @@ pub fn write_telemetry_frame(
     let checksum = crc32_ieee(&output[..36]);
     write_u32(output, 36, checksum);
     Ok(())
+}
+
+/// Receives canonical records without requiring allocation or storage policy in the core.
+pub trait TelemetrySink {
+    type Error;
+
+    fn write_header(&mut self, header: &[u8; TELEMETRY_HEADER_LENGTH]) -> Result<(), Self::Error>;
+
+    fn write_frame(&mut self, frame: &[u8; TELEMETRY_FRAME_LENGTH]) -> Result<(), Self::Error>;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TelemetryMissionSummary {
+    mission: MissionSummary,
+    frames_written: u32,
+}
+
+impl TelemetryMissionSummary {
+    pub const fn mission(self) -> MissionSummary {
+        self.mission
+    }
+
+    pub const fn frames_written(self) -> u32 {
+        self.frames_written
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum TelemetryMissionFailure<E> {
+    Header(E),
+    Frame {
+        error: E,
+        last_truth: VerticalTruthState,
+        checksum: u32,
+        cutoff_events: u16,
+        frames_written: u32,
+    },
+    Simulation {
+        failure: MissionFailure,
+        fault_frame_written: bool,
+        frames_written: u32,
+    },
+    SimulationAndFrame {
+        failure: MissionFailure,
+        error: E,
+        frames_written: u32,
+    },
+}
+
+struct MissionTelemetryEmitter<'a, S: TelemetrySink> {
+    sink: &'a mut S,
+    stride: u32,
+    pending_events: TelemetryEvents,
+    frames_written: u32,
+}
+
+impl<S: TelemetrySink> MissionTelemetryEmitter<'_, S> {
+    fn emit(
+        &mut self,
+        truth: VerticalTruthState,
+        engine_active: bool,
+        events: TelemetryEvents,
+        checksum: u32,
+    ) -> Result<(), S::Error> {
+        let frame = TelemetryFrame::from_truth(
+            truth,
+            TelemetryStatus::from_engine_active(engine_active),
+            events,
+            checksum,
+        );
+        let mut output = [0u8; TELEMETRY_FRAME_LENGTH];
+        let write_result = write_telemetry_frame(&frame, &mut output);
+        debug_assert_eq!(write_result, Ok(()));
+        self.sink.write_frame(&output)?;
+        self.frames_written += 1;
+        Ok(())
+    }
+
+    fn emit_fault(&mut self, scenario: &Scenario, failure: MissionFailure) -> Result<(), S::Error> {
+        let truth = failure.last_truth();
+        let events = self
+            .pending_events
+            .union(TelemetryEvents::new(false, false, true, true));
+        let engine_active =
+            truth.propellant().raw() > 0 && truth.time() < scenario.vehicle().burn_duration();
+        self.emit(truth, engine_active, events, failure.checksum())
+    }
+}
+
+impl<S: TelemetrySink> MissionObserver for MissionTelemetryEmitter<'_, S> {
+    type Error = S::Error;
+
+    fn observe(&mut self, observation: MissionObservation) -> Result<(), Self::Error> {
+        self.pending_events = self.pending_events.union(TelemetryEvents::new(
+            observation.engine_cutoff,
+            observation.propellant_depleted,
+            false,
+            observation.end_of_run,
+        ));
+        let step = observation.truth.step();
+        let stride_boundary = (step / self.stride) * self.stride == step;
+        let should_emit = step == 0 || stride_boundary || observation.end_of_run;
+        if should_emit {
+            self.emit(
+                observation.truth,
+                observation.engine_active,
+                self.pending_events,
+                observation.checksum,
+            )?;
+            self.pending_events = TelemetryEvents::NONE;
+        }
+        Ok(())
+    }
+}
+
+/// Executes one checked mission and emits its canonical telemetry stream.
+///
+/// The initial truth is always emitted. Successors are emitted at the scenario stride,
+/// with a final off-stride frame when needed. Events accumulate until a frame accepts them.
+pub fn run_vertical_mission_with_telemetry<S: TelemetrySink>(
+    scenario: &Scenario,
+    sink: &mut S,
+) -> Result<TelemetryMissionSummary, TelemetryMissionFailure<S::Error>> {
+    let mut header = [0u8; TELEMETRY_HEADER_LENGTH];
+    let write_result = write_telemetry_header(scenario, &mut header);
+    debug_assert_eq!(write_result, Ok(()));
+    sink.write_header(&header)
+        .map_err(TelemetryMissionFailure::Header)?;
+
+    let mut emitter = MissionTelemetryEmitter {
+        sink,
+        stride: scenario.telemetry_stride() as u32,
+        pending_events: TelemetryEvents::NONE,
+        frames_written: 0,
+    };
+
+    match execute_vertical_mission::<true, _>(scenario, &mut emitter) {
+        Ok(summary) => Ok(TelemetryMissionSummary {
+            mission: MissionSummary {
+                final_truth: summary.final_truth,
+                checksum: summary.checksum,
+                cutoff_events: summary.cutoff_events,
+            },
+            frames_written: emitter.frames_written,
+        }),
+        Err(ExecutionError::Observer {
+            error,
+            last_truth,
+            checksum,
+            cutoff_events,
+        }) => Err(TelemetryMissionFailure::Frame {
+            error,
+            last_truth,
+            checksum,
+            cutoff_events,
+            frames_written: emitter.frames_written,
+        }),
+        Err(ExecutionError::Dynamics(failure)) => {
+            let failure = MissionFailure {
+                last_truth: failure.last_truth,
+                checksum: failure.checksum,
+                cutoff_events: failure.cutoff_events,
+                numeric_status: failure.numeric_status,
+                cause: failure.cause,
+            };
+            match emitter.emit_fault(scenario, failure) {
+                Ok(()) => Err(TelemetryMissionFailure::Simulation {
+                    failure,
+                    fault_frame_written: true,
+                    frames_written: emitter.frames_written,
+                }),
+                Err(error) => Err(TelemetryMissionFailure::SimulationAndFrame {
+                    failure,
+                    error,
+                    frames_written: emitter.frames_written,
+                }),
+            }
+        }
+    }
 }

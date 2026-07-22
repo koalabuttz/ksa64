@@ -1,6 +1,6 @@
 # Phase 1: vertical-flight laboratory
 
-Phase 1 has an end-to-end deterministic vertical mission executor, a passing raw physics budget, and canonical telemetry record writers: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, exact summaries, and allocation-free binary serialization. Stream scheduling and C64 UI are not implemented yet.
+Phase 1 has an end-to-end deterministic vertical mission executor, a passing raw physics budget, and canonical stride-aware telemetry emission: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, exact summaries, allocation-free binary serialization, event accumulation, and caller-provided sinks. Telemetry timing and C64 UI are not implemented yet.
 
 ## Current slice
 
@@ -28,9 +28,14 @@ The `ksa64-core` crate provides:
 - A three-run PAL VICE common-clock measurement with target-visible CIA timing.
 - Exact-length writers for canonical 32-byte telemetry headers and 40-byte frames.
 - Private status/event bit types, explicit little-endian fields, rolling-state checksum storage, and per-record CRC-32.
-- Byte-for-byte native, rust-mos, and C64 self-tests against the independent 112-byte golden stream.
+- Byte-for-byte native, rust-mos, and C64 self-tests against the independent 112-byte record fixture.
+- One observer-enabled checked executor shared by dynamics-only, checksum, and telemetry paths.
+- Initial, configured-stride, final off-stride, and terminal numeric-fault emission through a caller-provided allocation-free sink.
+- Sticky cutoff and depletion events that clear only after a sink accepts their frame.
+- Explicit preservation of simulation and sink failures, including simultaneous fault-reporting failures.
+- An independently generated 257-frame, 10,312-byte mission-stream oracle with CRC-32 `0xcf56fe65`.
 
-The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. Exact interpolation and acceleration-division fast paths reduce checked dynamics to 114,981.59 PAL cycles per step, clearing the raw PAL 8 Hz budget with 6.64 percent headroom. Its telemetry record writers are production code, while stride-aware stream emission, storage, and presentation remain separate later boundaries. The diagnostic C64 self-test is 40,766 bytes after embedding the golden telemetry oracle.
+The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. Exact interpolation and acceleration-division fast paths reduce checked dynamics to 114,981.59 PAL cycles per step, clearing the raw PAL 8 Hz budget with 6.64 percent headroom. Its telemetry stream scheduler is production code; storage and presentation remain separate later boundaries. The diagnostic C64 self-test is 47,447 bytes after adding a compact whole-stream checker rather than embedding the 10,312-byte oracle.
 
 ## Golden mission result
 
@@ -86,4 +91,4 @@ Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Add stride-aware mission-stream emission around the checked executor. Emit the initial frame and every configured stride without exposing mutable truth, accumulate cutoff/depletion/end events exactly once, preserve the rolling checksum contract, and deliver records through a caller-supplied sink. Measure checksum plus serialization scheduling separately from raw physics.
+Measure checksum plus serialization scheduling separately from raw physics using a discard sink and the established PAL common clock. Record the total and per-step/per-frame costs, determine whether 8 Hz remains feasible with canonical telemetry enabled, and keep transport or display costs outside that measurement.

@@ -5,8 +5,9 @@ use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericFault
 use crate::quantities::{Acceleration, Altitude, Mass, Time, Velocity};
 use crate::scenario::{parse_scenario_image, SCENARIO_IMAGE_LENGTH, SIMPLE_EARTH_ENVIRONMENT_ID};
 use crate::telemetry::{
-    write_telemetry_frame, write_telemetry_header, TelemetryEvents, TelemetryFrame,
-    TelemetryStatus, TELEMETRY_FRAME_LENGTH, TELEMETRY_HEADER_LENGTH,
+    run_vertical_mission_with_telemetry, write_telemetry_frame, write_telemetry_header,
+    TelemetryEvents, TelemetryFrame, TelemetrySink, TelemetryStatus, TELEMETRY_FRAME_LENGTH,
+    TELEMETRY_HEADER_LENGTH,
 };
 use crate::vehicle::VerticalTruthState;
 
@@ -384,6 +385,90 @@ fn check_telemetry() -> u16 {
     failures
 }
 
+struct CompactTelemetrySink {
+    crc: u32,
+    length: usize,
+    frames: u32,
+    failures: u16,
+}
+
+impl CompactTelemetrySink {
+    const fn new() -> Self {
+        Self {
+            crc: 0xffff_ffff,
+            length: 0,
+            frames: 0,
+            failures: 0,
+        }
+    }
+
+    fn absorb(&mut self, bytes: &[u8]) {
+        let mut index = 0usize;
+        while index < bytes.len() {
+            self.crc ^= bytes[index] as u32;
+            let mut bit = 0u8;
+            while bit < 8 {
+                let mask = 0u32.wrapping_sub(self.crc & 1);
+                self.crc = (self.crc >> 1) ^ (0xedb8_8320 & mask);
+                bit += 1;
+            }
+            index += 1;
+        }
+        self.length += bytes.len();
+    }
+
+    const fn checksum(&self) -> u32 {
+        !self.crc
+    }
+}
+
+impl TelemetrySink for CompactTelemetrySink {
+    type Error = core::convert::Infallible;
+
+    fn write_header(&mut self, header: &[u8; TELEMETRY_HEADER_LENGTH]) -> Result<(), Self::Error> {
+        self.absorb(header);
+        Ok(())
+    }
+
+    fn write_frame(&mut self, frame: &[u8; TELEMETRY_FRAME_LENGTH]) -> Result<(), Self::Error> {
+        let step = u32::from_le_bytes([frame[0], frame[1], frame[2], frame[3]]);
+        let events = u16::from_le_bytes([frame[30], frame[31]]);
+        let checksum = u32::from_le_bytes([frame[32], frame[33], frame[34], frame[35]]);
+        let frame_crc = u32::from_le_bytes([frame[36], frame[37], frame[38], frame[39]]);
+        if events & TelemetryEvents::ENGINE_CUTOFF != 0 {
+            self.failures += failure_count(step == mission_vectors::CUTOFF_FRAME_STEP);
+            self.failures += failure_count(events == mission_vectors::CUTOFF_FRAME_EVENTS);
+            self.failures += failure_count(checksum == mission_vectors::CUTOFF_FRAME_CHECKSUM);
+        }
+        if events & TelemetryEvents::END_OF_RUN != 0 {
+            self.failures += failure_count(events == mission_vectors::FINAL_FRAME_EVENTS);
+            self.failures += failure_count(frame_crc == mission_vectors::FINAL_FRAME_CRC32);
+        }
+        self.absorb(frame);
+        self.frames += 1;
+        Ok(())
+    }
+}
+
+fn check_telemetry_mission() -> u16 {
+    let scenario = match parse_scenario_image(SCENARIO_IMAGE) {
+        Ok(scenario) => scenario,
+        Err(_) => return 1,
+    };
+    let mut sink = CompactTelemetrySink::new();
+    let mut failures = match run_vertical_mission_with_telemetry(&scenario, &mut sink) {
+        Ok(summary) => {
+            failure_count(summary.frames_written() == mission_vectors::TELEMETRY_FRAME_COUNT)
+                + failure_count(summary.mission().checksum() == mission_vectors::FINAL_CHECKSUM)
+        }
+        Err(_) => 1,
+    };
+    failures += sink.failures;
+    failures += failure_count(sink.frames == mission_vectors::TELEMETRY_FRAME_COUNT);
+    failures += failure_count(sink.length == mission_vectors::TELEMETRY_STREAM_LENGTH);
+    failures += failure_count(sink.checksum() == mission_vectors::TELEMETRY_STREAM_CRC32);
+    failures
+}
 fn check_scenario() -> u16 {
     let mut crc_failures = failure_count(crate::scenario::crc32_ieee(b"123456789") == 0xcbf4_3926);
     match parse_scenario_image(SCENARIO_IMAGE) {
@@ -426,6 +511,7 @@ pub fn run_numeric_self_tests() -> u16 {
     failures += check_transitions();
     failures += check_mission();
     failures += check_telemetry();
+    failures += check_telemetry_mission();
     failures += check_scenario();
     failures
 }

@@ -79,9 +79,9 @@ impl DynamicsFailure {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MissionSummary {
-    final_truth: VerticalTruthState,
-    checksum: u32,
-    cutoff_events: u16,
+    pub(crate) final_truth: VerticalTruthState,
+    pub(crate) checksum: u32,
+    pub(crate) cutoff_events: u16,
 }
 
 impl MissionSummary {
@@ -104,11 +104,11 @@ impl MissionSummary {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MissionFailure {
-    last_truth: VerticalTruthState,
-    checksum: u32,
-    cutoff_events: u16,
-    numeric_status: NumericStatus,
-    cause: VerticalStepError,
+    pub(crate) last_truth: VerticalTruthState,
+    pub(crate) checksum: u32,
+    pub(crate) cutoff_events: u16,
+    pub(crate) numeric_status: NumericStatus,
+    pub(crate) cause: VerticalStepError,
 }
 
 impl MissionFailure {
@@ -134,31 +134,91 @@ impl MissionFailure {
 }
 
 #[derive(Clone, Copy)]
-struct ExecutionSummary {
-    final_truth: VerticalTruthState,
-    checksum: u32,
-    cutoff_events: u16,
+pub(crate) struct ExecutionSummary {
+    pub(crate) final_truth: VerticalTruthState,
+    pub(crate) checksum: u32,
+    pub(crate) cutoff_events: u16,
 }
 
 #[derive(Clone, Copy)]
-struct ExecutionFailure {
-    last_truth: VerticalTruthState,
-    checksum: u32,
-    cutoff_events: u16,
-    numeric_status: NumericStatus,
-    cause: VerticalStepError,
+pub(crate) struct ExecutionFailure {
+    pub(crate) last_truth: VerticalTruthState,
+    pub(crate) checksum: u32,
+    pub(crate) cutoff_events: u16,
+    pub(crate) numeric_status: NumericStatus,
+    pub(crate) cause: VerticalStepError,
 }
 
-fn execute_vertical_mission<const CHECKSUM: bool>(
+#[derive(Clone, Copy)]
+pub(crate) struct MissionObservation {
+    pub(crate) truth: VerticalTruthState,
+    pub(crate) checksum: u32,
+    pub(crate) engine_active: bool,
+    pub(crate) engine_cutoff: bool,
+    pub(crate) propellant_depleted: bool,
+    pub(crate) end_of_run: bool,
+}
+
+pub(crate) trait MissionObserver {
+    type Error;
+
+    fn observe(&mut self, observation: MissionObservation) -> Result<(), Self::Error>;
+}
+
+pub(crate) enum ExecutionError<E> {
+    Dynamics(ExecutionFailure),
+    Observer {
+        error: E,
+        last_truth: VerticalTruthState,
+        checksum: u32,
+        cutoff_events: u16,
+    },
+}
+
+struct NoopObserver;
+
+impl MissionObserver for NoopObserver {
+    type Error = core::convert::Infallible;
+
+    #[inline]
+    fn observe(&mut self, _observation: MissionObservation) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+#[inline]
+fn engine_active(scenario: &Scenario, truth: VerticalTruthState) -> bool {
+    truth.propellant().raw() > 0 && truth.time() < scenario.vehicle().burn_duration()
+}
+
+pub(crate) fn execute_vertical_mission<const CHECKSUM: bool, O: MissionObserver>(
     scenario: &Scenario,
-) -> Result<ExecutionSummary, ExecutionFailure> {
+    observer: &mut O,
+) -> Result<ExecutionSummary, ExecutionError<O::Error>> {
     let environment = SimpleEarthEnvironment::from_scenario(scenario);
     let mut truth = VerticalTruthState::initial(scenario);
     let mut checksum = VERTICAL_CHECKSUM_OFFSET;
     let mut cutoff_events = 0u16;
     let mut status = NumericStatus::CLEAR;
 
+    observer
+        .observe(MissionObservation {
+            truth,
+            checksum,
+            engine_active: engine_active(scenario, truth),
+            engine_cutoff: false,
+            propellant_depleted: false,
+            end_of_run: false,
+        })
+        .map_err(|error| ExecutionError::Observer {
+            error,
+            last_truth: truth,
+            checksum,
+            cutoff_events,
+        })?;
+
     while truth.step() < scenario.steps() {
+        let previous_propellant = truth.propellant().raw();
         match advance_vertical_state(scenario, environment, &truth, &mut status) {
             Ok(step) => {
                 truth = step.truth();
@@ -168,15 +228,31 @@ fn execute_vertical_mission<const CHECKSUM: bool>(
                 if step.engine_cutoff() {
                     cutoff_events += 1;
                 }
+                observer
+                    .observe(MissionObservation {
+                        truth,
+                        checksum,
+                        engine_active: engine_active(scenario, truth),
+                        engine_cutoff: step.engine_cutoff(),
+                        propellant_depleted: previous_propellant > 0
+                            && truth.propellant().raw() == 0,
+                        end_of_run: truth.step() == scenario.steps(),
+                    })
+                    .map_err(|error| ExecutionError::Observer {
+                        error,
+                        last_truth: truth,
+                        checksum,
+                        cutoff_events,
+                    })?;
             }
             Err(cause) => {
-                return Err(ExecutionFailure {
+                return Err(ExecutionError::Dynamics(ExecutionFailure {
                     last_truth: truth,
                     checksum,
                     cutoff_events,
                     numeric_status: status,
                     cause,
-                });
+                }));
             }
         }
     }
@@ -192,32 +268,38 @@ fn execute_vertical_mission<const CHECKSUM: bool>(
 ///
 /// This is the baseline for timing simulation cost independently from checksumming.
 pub fn run_vertical_dynamics(scenario: &Scenario) -> Result<DynamicsSummary, DynamicsFailure> {
-    execute_vertical_mission::<false>(scenario)
+    execute_vertical_mission::<false, _>(scenario, &mut NoopObserver)
         .map(|summary| DynamicsSummary {
             final_truth: summary.final_truth,
             cutoff_events: summary.cutoff_events,
         })
-        .map_err(|failure| DynamicsFailure {
-            last_truth: failure.last_truth,
-            cutoff_events: failure.cutoff_events,
-            numeric_status: failure.numeric_status,
-            cause: failure.cause,
+        .map_err(|failure| match failure {
+            ExecutionError::Dynamics(failure) => DynamicsFailure {
+                last_truth: failure.last_truth,
+                cutoff_events: failure.cutoff_events,
+                numeric_status: failure.numeric_status,
+                cause: failure.cause,
+            },
+            ExecutionError::Observer { error, .. } => match error {},
         })
 }
 
 /// Executes the checked production dynamics with a rolling exact-state checksum.
 pub fn run_vertical_mission(scenario: &Scenario) -> Result<MissionSummary, MissionFailure> {
-    execute_vertical_mission::<true>(scenario)
+    execute_vertical_mission::<true, _>(scenario, &mut NoopObserver)
         .map(|summary| MissionSummary {
             final_truth: summary.final_truth,
             checksum: summary.checksum,
             cutoff_events: summary.cutoff_events,
         })
-        .map_err(|failure| MissionFailure {
-            last_truth: failure.last_truth,
-            checksum: failure.checksum,
-            cutoff_events: failure.cutoff_events,
-            numeric_status: failure.numeric_status,
-            cause: failure.cause,
+        .map_err(|failure| match failure {
+            ExecutionError::Dynamics(failure) => MissionFailure {
+                last_truth: failure.last_truth,
+                checksum: failure.checksum,
+                cutoff_events: failure.cutoff_events,
+                numeric_status: failure.numeric_status,
+                cause: failure.cause,
+            },
+            ExecutionError::Observer { error, .. } => match error {},
         })
 }

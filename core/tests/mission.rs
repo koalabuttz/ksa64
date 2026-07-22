@@ -8,6 +8,7 @@ use ksa64_core::vehicle::VerticalTruthState;
 
 const SCENARIO: &[u8; 76] = include_bytes!("../../phase0/numeric/scenario-v1.bin");
 
+#[allow(dead_code)]
 mod expected {
     include!("../../phase1/generated/mission_v1.rs");
 }

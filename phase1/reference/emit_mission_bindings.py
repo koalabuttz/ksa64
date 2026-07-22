@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import binascii
 import hashlib
 import json
+import struct
 import sys
 from pathlib import Path
 
@@ -58,6 +60,63 @@ def build_summary() -> dict[str, int]:
     initial_truth_checksum = hash_state(FNV_OFFSET, state)
     checksum = FNV_OFFSET
     cutoff_events = 0
+    image = (root / "phase0" / "numeric" / "scenario-v1.bin").read_bytes()
+    stride = struct.unpack_from("<H", image, 24)[0]
+    header = bytearray()
+    header.extend(b"KST1")
+    header.extend(struct.pack(
+        "<HHHHIIiHH",
+        1,
+        32,
+        40,
+        0,
+        struct.unpack_from("<I", image, 8)[0],
+        struct.unpack_from("<I", image, 12)[0],
+        scenario["timestep"],
+        stride,
+        0,
+    ))
+    header.extend(struct.pack("<I", binascii.crc32(header) & 0xFFFF_FFFF))
+    stream = bytearray(header)
+    frame_count = 0
+    pending_events = 0
+    cutoff_frame_step = 0
+    cutoff_frame_events = 0
+    cutoff_frame_checksum = 0
+    final_frame_crc32 = 0
+
+    def emit_frame(current: dict[str, int], current_checksum: int, events: int) -> None:
+        nonlocal frame_count, cutoff_frame_step, cutoff_frame_events
+        nonlocal cutoff_frame_checksum, final_frame_crc32
+        engine_active_now = (
+            current["propellant"] > 0
+            and current["time"] < scenario["burn_duration"]
+        )
+        frame = bytearray(struct.pack(
+            "<IiiiiiiHHI",
+            current["step"],
+            current["time"],
+            current["altitude"],
+            current["velocity"],
+            current["acceleration"],
+            current["mass"],
+            current["propellant"],
+            1 if engine_active_now else 0,
+            events,
+            current_checksum,
+        ))
+        frame_crc = binascii.crc32(frame) & 0xFFFF_FFFF
+        frame.extend(struct.pack("<I", frame_crc))
+        stream.extend(frame)
+        frame_count += 1
+        if events & 0x0001:
+            cutoff_frame_step = current["step"]
+            cutoff_frame_events = events
+            cutoff_frame_checksum = current_checksum
+        if events & 0x0008:
+            final_frame_crc32 = frame_crc
+
+    emit_frame(state, checksum, pending_events)
 
     while state["step"] < scenario["steps"]:
         density = interpolate(state["altitude"], altitudes, densities)
@@ -105,6 +164,7 @@ def build_summary() -> dict[str, int]:
         engine_cutoff = engine_active and (
             propellant == 0 or time >= scenario["burn_duration"]
         )
+        previous_propellant = state["propellant"]
         state = {
             "step": state["step"] + 1,
             "time": time,
@@ -116,12 +176,29 @@ def build_summary() -> dict[str, int]:
         }
         cutoff_events += 1 if engine_cutoff else 0
         checksum = hash_state(checksum, state)
+        if engine_cutoff:
+            pending_events |= 0x0001
+        if previous_propellant > 0 and propellant == 0:
+            pending_events |= 0x0002
+        if state["step"] == scenario["steps"]:
+            pending_events |= 0x0008
+        if state["step"] % stride == 0 or state["step"] == scenario["steps"]:
+            emit_frame(state, checksum, pending_events)
+            pending_events = 0
 
     return {
         **state,
         "initial_truth_checksum": initial_truth_checksum,
         "checksum": checksum,
         "cutoff_events": cutoff_events,
+        "telemetry_frame_count": frame_count,
+        "telemetry_stream_length": len(stream),
+        "telemetry_stream_crc32": binascii.crc32(stream) & 0xFFFF_FFFF,
+        "cutoff_frame_step": cutoff_frame_step,
+        "cutoff_frame_events": cutoff_frame_events,
+        "cutoff_frame_checksum": cutoff_frame_checksum,
+        "final_frame_events": 0x0008,
+        "final_frame_crc32": final_frame_crc32,
     }
 
 
@@ -142,6 +219,14 @@ def build_source() -> str:
             f'pub const FINAL_PROPELLANT_Q12: i32 = {summary["propellant"]};',
             f'pub const FINAL_CHECKSUM: u32 = 0x{summary["checksum"]:08x};',
             f'pub const CUTOFF_EVENTS: u16 = {summary["cutoff_events"]};',
+            f'pub const TELEMETRY_FRAME_COUNT: u32 = {summary["telemetry_frame_count"]};',
+            f'pub const TELEMETRY_STREAM_LENGTH: usize = {summary["telemetry_stream_length"]};',
+            f'pub const TELEMETRY_STREAM_CRC32: u32 = 0x{summary["telemetry_stream_crc32"]:08x};',
+            f'pub const CUTOFF_FRAME_STEP: u32 = {summary["cutoff_frame_step"]};',
+            f'pub const CUTOFF_FRAME_EVENTS: u16 = 0x{summary["cutoff_frame_events"]:04x};',
+            f'pub const CUTOFF_FRAME_CHECKSUM: u32 = 0x{summary["cutoff_frame_checksum"]:08x};',
+            f'pub const FINAL_FRAME_EVENTS: u16 = 0x{summary["final_frame_events"]:04x};',
+            f'pub const FINAL_FRAME_CRC32: u32 = 0x{summary["final_frame_crc32"]:08x};',
             "",
         ]
     )

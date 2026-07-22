@@ -2,7 +2,7 @@
 
 KSA64 is a proposed aerospace simulation framework for the Commodore 64: a small but technically serious system for simulating launch vehicles, flight software, sensors, guidance, telemetry, failures, and eventually hardware-in-the-loop operation across multiple physical C64s.
 
-> Project status: Phase 1 implementation. The exact core clears the PAL 8 Hz raw physics budget and now writes canonical telemetry headers and frames. Stride-aware mission emission is next.
+> Project status: Phase 1 implementation. The exact core clears the PAL 8 Hz raw physics budget and now emits canonical stride-aware mission telemetry through caller-provided sinks. Telemetry timing is next.
 
 ## The idea
 
@@ -60,7 +60,7 @@ The Phase 0 compiler experiment selected a portable Rust core:
 - Platform-specific display, sound, REU, timing, and user-port code stays outside the core.
 - Oscar64 C++ remains an independent optimization and generated-code reference.
 
-The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now has a production `no_std` Rust implementation with native, MOS-simulator, and C64 self-test paths. Validated scenarios can select the generated Earth environment, initialize private vertical truth, evaluate immutable typed forces, advance through checked semi-implicit-Euler successors, and execute to a deterministic final state and checksum. Exact interpolation and acceleration-division paths reduce checked dynamics from 160,904.64 to 114,981.59 PAL cycles per step while preserving the golden checksum and general fallbacks. That is 8.57 Hz with 8,174.41 cycles per step of raw headroom. Allocation-free telemetry writers now reproduce the independent 32-byte header and both 40-byte golden frames exactly; mission-stream scheduling is next.
+The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now has a production `no_std` Rust implementation with native, MOS-simulator, and C64 self-test paths. Validated scenarios can select the generated Earth environment, initialize private vertical truth, evaluate immutable typed forces, advance through checked semi-implicit-Euler successors, and execute to a deterministic final state and checksum. Exact interpolation and acceleration-division paths reduce checked dynamics from 160,904.64 to 114,981.59 PAL cycles per step while preserving the golden checksum and general fallbacks. That is 8.57 Hz with 8,174.41 cycles per step of raw headroom. Allocation-free telemetry writers now reproduce the independent records exactly, and the checked executor emits initial, stride, event, terminal, and fault frames through caller-provided sinks without duplicating the physics loop. The golden 257-frame stream matches an independent byte-stream CRC; telemetry timing is next.
 
 ## Documentation
 
@@ -96,4 +96,4 @@ The compiler and arithmetic experiment is complete. Both candidates passed the f
 - Oscar64: 235,627,088 CIA cycles, or 115,052.29 cycles per step.
 - Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
 
-Phase 0 is complete, and the Phase 1 exact core executes the full golden vertical mission while preserving the last valid state on faults. Two exact fast paths save 45,923.05 cycles per step, and three common-clock runs measure checked dynamics at 114,981.59 PAL cycles per step—8.57 Hz with 6.64 percent raw headroom. Canonical header and frame serialization now matches the independent golden stream across native and MOS targets. The next milestone is stride-aware mission-stream emission with explicit checksum and event scheduling.
+Phase 0 is complete, and the Phase 1 exact core executes the full golden vertical mission while preserving the last valid state on faults. Two exact fast paths save 45,923.05 cycles per step, and three common-clock runs measure checked dynamics at 114,981.59 PAL cycles per step—8.57 Hz with 6.64 percent raw headroom. Canonical mission-stream emission now matches the independent 257-frame schedule and byte-stream CRC across native and MOS targets. The next milestone is measuring checksum plus serialization scheduling separately from raw physics.

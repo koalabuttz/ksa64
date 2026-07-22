@@ -457,6 +457,23 @@ Consequence:
 
 Canonical records can now be produced on every target, but the mission executor does not yet schedule or transport them. The next gate will emit initial and stride-aligned frames through a caller-supplied sink, accumulate events between frames, and keep checksum/serialization timing separate from the passing raw physics budget.
 
+## D-031: Schedule telemetry through an observer on the single checked executor
+
+Status: Accepted
+
+Decision:
+
+Extend the checked mission executor with an internal immutable observation boundary rather than creating a second physics loop. A caller-provided telemetry sink receives one canonical header, the initial truth, each configured-stride successor, and a final off-stride successor when required. Rolling exact-state checksums continue to cover every successful successor, not merely emitted states. Cutoff and propellant-depletion events accumulate until a sink accepts a frame; the terminal frame carries end-of-run. A numeric failure emits a terminal fault frame at the last valid truth and checksum when the sink permits it.
+
+Sink rejection stops execution at the observed truth and reports its error with the accepted-frame count. If a sink also rejects a numeric-fault report, preserve both causes. Storage, transport, display, and retry policy remain outside the core.
+
+Rationale:
+
+One executor prevents dynamics, cutoff counting, checksumming, and fault semantics from drifting between ordinary and telemetry runs. Immutable observations preserve the private truth boundary, while fixed arrays and a sink trait keep the core allocation-free. Event accumulation prevents a transition between telemetry strides from disappearing. The independent Python oracle fixes the full golden stream at 257 frames, 10,312 bytes, and CRC-32 `0xcf56fe65`; native and MOS checks agree.
+
+Consequence:
+
+Canonical mission telemetry is now schedulable without choosing RAM, REU, disk, serial, or screen transport. The diagnostic C64 self-test grows to 47,447 bytes. The next gate must measure rolling checksum plus serialization scheduling with a discard sink under the established PAL common clock, separately from the already passing raw dynamics budget.
 ## Open decisions
 
 The following remain deliberately unresolved:
