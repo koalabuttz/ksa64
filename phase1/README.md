@@ -1,6 +1,6 @@
 # Phase 1: vertical-flight laboratory
 
-Phase 1 now has an end-to-end deterministic vertical mission executor: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, and an exact final summary. Telemetry serialization and C64 UI are not implemented yet.
+Phase 1 has an end-to-end deterministic vertical mission executor and a reproducible production timing result: validated scenario ingestion, generated Earth environment, immutable truth, pure force evaluation, checked semi-implicit-Euler transitions, fail-closed execution, and an exact final summary. Telemetry serialization and C64 UI are not implemented yet.
 
 ## Current slice
 
@@ -24,8 +24,10 @@ The `ksa64-core` crate provides:
 - Deterministic execution to the scenario step limit with a compact final truth, cutoff count, and rolling exact-state FNV-1a checksum.
 - A failure result that preserves the last valid truth, checksum, cutoff count, numeric status, and cause.
 - Native, `mos-sim-none`, and `mos-c64-none` build paths.
+- Separate checked-dynamics and rolling-validation paths generated from one executor for controlled timing.
+- A three-run PAL VICE common-clock measurement with target-visible CIA timing.
 
-The production core can now execute the complete golden 2,048-step mission and match an independently generated final state and checksum. It deliberately has no telemetry writer or presentation layer yet.
+The production core executes the complete golden 2,048-step mission and matches an independently generated final state and checksum. The timing gate records 160,904.64 cycles per checked dynamics step and a 49,506.00-cycle per-step checksum delta. It deliberately has no telemetry writer or presentation layer yet.
 
 ## Golden mission result
 
@@ -64,8 +66,9 @@ The production core can now execute the complete golden 2,048-step mission and m
 From the project root:
 
     .\phase1\check.ps1
+    .\phase1\timing.ps1
 
-This verifies the accepted numeric artifacts, regenerates nothing, runs native tests, executes the same exact fixture pack through rust-mos, and builds the physical-C64 PRG.
+The first command verifies the accepted artifacts, runs native tests, executes the exact fixture pack through rust-mos, and builds the physical-C64 PRG. The second builds the dedicated timing PRG and requires three stable measurements under the pinned PAL VICE common clock.
 
 To regenerate the Rust bindings deliberately:
 
@@ -79,4 +82,4 @@ Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Measure the production mission executor on the common C64 clock, separating dynamics-plus-validation cost from optional presentation work. Record cycles per step, available 8 Hz margin, diagnostic PRG size, and any measured hotspot before implementing telemetry.
+Replace the two general 64-by-32 environment interpolation divisions per step with the algebraically exact 32-by-16 specialization proven in Phase 0, then repeat the common-clock gate. Checked dynamics must recover the provisional raw 8 Hz budget before telemetry work begins; rolling checksum policy remains an independently measured validation cost.

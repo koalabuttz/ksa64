@@ -29,7 +29,7 @@ Exit criteria:
 
 Purpose: create the smallest end-to-end vehicle simulation.
 
-Current progress: the production `no_std` core executes the complete validated vertical mission through immutable, fail-closed transitions and returns final truth, cutoff count, and a rolling exact-state checksum. The 2,048-step golden run matches an independent generator, while a failing run preserves its last valid state and checksum. Production timing is next; telemetry serialization has not begun.
+Current progress: the production `no_std` core executes the complete validated vertical mission through immutable, fail-closed transitions. Three stable PAL common-clock runs measure checked dynamics at 160,904.64 cycles per step and per-successor checksum validation at 210,410.64; neither yet fits the provisional 123,156-cycle 8 Hz budget. Exact environment-division specialization is next; telemetry serialization has not begun.
 
 Planned capabilities:
 

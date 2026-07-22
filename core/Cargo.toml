@@ -18,3 +18,8 @@ required-features = ["sim"]
 name = "ksa64-phase1-numeric-c64"
 path = "src/bin/numeric_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase1-production-timed-c64"
+path = "src/bin/production_timed_c64.rs"
+required-features = ["c64"]

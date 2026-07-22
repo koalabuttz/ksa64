@@ -393,6 +393,22 @@ Consequence:
 
 The exact core now performs an end-to-end vertical mission. Its common-clock execution cost must be measured before telemetry and UI are added; the independently generated golden mission fixes the current final state and checksum as regression evidence.
 
+## D-027: Separate production dynamics timing from rolling validation
+
+Status: Accepted
+
+Decision:
+
+Generate checked dynamics-only and rolling-checksum execution from one const-generic mission loop, then measure both regions in one dedicated C64 timing PRG using the established PAL CIA common clock. Treat 8 Hz as a provisional optimization target rather than a correctness requirement. Do not add telemetry until the two general environment interpolation divisions have been replaced with the exact specialized path already proven in Phase 0 and the common-clock measurement has been repeated.
+
+Rationale:
+
+Three identical runs measure checked dynamics at 160,904.64 cycles per step and dynamics with per-successor FNV-1a at 210,410.64, against a raw 123,156-cycle budget. The 49,506-cycle checksum delta is validation policy rather than physics. Phase 0 directly measured enough savings in the exact interpolation specialization to make it the highest-value next change without weakening the numeric contract.
+
+Consequence:
+
+The timing evidence is trustworthy, but the current executor is not yet an 8 Hz real-time core. Validation checksums remain available and deterministic, while interactive scheduling may choose a different validation cadence later. Telemetry and display work remain blocked behind the focused interpolation optimization and fresh measurement.
+
 ## Open decisions
 
 The following remain deliberately unresolved:

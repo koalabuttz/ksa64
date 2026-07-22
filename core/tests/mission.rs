@@ -1,5 +1,7 @@
 use ksa64_core::dynamics::VerticalStepError;
-use ksa64_core::mission::{hash_vertical_truth, run_vertical_mission, VERTICAL_CHECKSUM_OFFSET};
+use ksa64_core::mission::{
+    hash_vertical_truth, run_vertical_dynamics, run_vertical_mission, VERTICAL_CHECKSUM_OFFSET,
+};
 use ksa64_core::numeric::NumericFault;
 use ksa64_core::scenario::{crc32_ieee, parse_scenario_image};
 use ksa64_core::vehicle::VerticalTruthState;
@@ -45,6 +47,34 @@ fn golden_mission_matches_independent_summary_and_checksum() {
     );
     assert_eq!(summary.checksum(), expected::FINAL_CHECKSUM);
     assert_eq!(summary.cutoff_events(), expected::CUTOFF_EVENTS);
+}
+
+#[test]
+fn dynamics_only_execution_matches_checked_mission_truth() {
+    let scenario = parse_scenario_image(SCENARIO).unwrap();
+    let dynamics = run_vertical_dynamics(&scenario).unwrap();
+    let mission = run_vertical_mission(&scenario).unwrap();
+
+    assert_eq!(dynamics.final_truth(), mission.final_truth());
+    assert_eq!(dynamics.completed_steps(), mission.completed_steps());
+    assert_eq!(dynamics.cutoff_events(), mission.cutoff_events());
+}
+
+#[test]
+fn failed_dynamics_preserves_last_valid_truth_without_a_checksum_claim() {
+    let mut image = *SCENARIO;
+    write_i32(&mut image, 36, 134_217_728);
+    repair_crc(&mut image);
+    let scenario = parse_scenario_image(&image).unwrap();
+    let initial = VerticalTruthState::initial(&scenario);
+    let failure = run_vertical_dynamics(&scenario).unwrap_err();
+
+    assert_eq!(failure.last_truth(), initial);
+    assert_eq!(failure.cutoff_events(), 0);
+    assert_eq!(failure.cause(), VerticalStepError::NumericFault);
+    assert!(failure
+        .numeric_status()
+        .contains(NumericFault::InvalidInput));
 }
 
 #[test]
