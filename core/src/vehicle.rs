@@ -1,4 +1,4 @@
-//! Vertical truth-state construction. Dynamics transitions are intentionally absent.
+//! Immutable vertical truth-state construction for validated starts and checked successors.
 
 use crate::quantities::{Acceleration, Altitude, Mass, Time, Velocity};
 use crate::scenario::Scenario;
@@ -55,22 +55,43 @@ impl VerticalTruthState {
         self.propellant
     }
 
+    pub(crate) const fn successor(
+        step: u32,
+        time: Time,
+        altitude: Altitude,
+        velocity: Velocity,
+        acceleration: Acceleration,
+        total_mass: Mass,
+        propellant: Mass,
+    ) -> Self {
+        Self {
+            step,
+            time,
+            altitude,
+            velocity,
+            acceleration,
+            total_mass,
+            propellant,
+        }
+    }
+
     #[cfg(any(test, feature = "fixtures"))]
     pub(crate) const fn fixture(
+        step: u32,
         time: Time,
         altitude: Altitude,
         velocity: Velocity,
         total_mass: Mass,
         propellant: Mass,
     ) -> Self {
-        Self {
-            step: 0,
+        Self::successor(
+            step,
             time,
             altitude,
             velocity,
-            acceleration: Acceleration::ZERO,
+            Acceleration::ZERO,
             total_mass,
             propellant,
-        }
+        )
     }
 }

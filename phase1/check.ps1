@@ -17,6 +17,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Phase 1 environment bindings are stale." }
     & python -B phase1/reference/emit_force_bindings.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 1 force bindings are stale." }
+    & python -B phase1/reference/emit_transition_bindings.py --check
+    if ($LASTEXITCODE -ne 0) { throw "Phase 1 transition bindings are stale." }
 
     Write-Host ""
     Write-Host "== Native production core =="

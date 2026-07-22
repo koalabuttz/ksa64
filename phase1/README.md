@@ -1,6 +1,6 @@
 # Phase 1: vertical-flight laboratory
 
-Phase 1 now has its production numeric layer, versioned scenario-ingestion boundary, generated Earth environment, immutable initial vertical truth state, and pure vertical force evaluation. State integration, telemetry presentation, and C64 UI are not implemented yet.
+Phase 1 now has its production numeric layer, versioned scenario-ingestion boundary, generated Earth environment, immutable vertical truth, pure force evaluation, and one checked semi-implicit-Euler transition. Mission execution, telemetry presentation, and C64 UI are not implemented yet.
 
 ## Current slice
 
@@ -19,9 +19,11 @@ The `ksa64-core` crate provides:
 - An immutable 28-byte initial vertical truth state that can only be constructed from a validated Scenario.
 - Pure typed evaluation of thrust, weight, signed drag, net force, and acceleration without truth mutation.
 - Generated exact cases for powered flight, bidirectional drag, both cutoff conditions, and numeric-envelope containment.
+- A fail-closed single-step transition with semi-implicit Euler, bounded propellant consumption, exact cutoff events, and immutable successor truth.
+- Generated transition cases covering ordinary motion, final partial consumption, burn-boundary cutoff, coast, and refused faults.
 - Native, `mos-sim-none`, and `mos-c64-none` build paths.
 
-The analytic integration loops exist only as self-tests of the numeric contract. They are not a vehicle simulator.
+The production core can now advance exactly one checked physics step. It deliberately has no mission run loop, telemetry writer, or presentation layer yet.
 
 ## Layout
 
@@ -57,9 +59,10 @@ To regenerate the Rust bindings deliberately:
     python -B phase1/reference/emit_numeric_bindings.py
     python -B phase1/reference/emit_environment_bindings.py
     python -B phase1/reference/emit_force_bindings.py
+    python -B phase1/reference/emit_transition_bindings.py
 
 Generated changes must be reviewed and committed with their SHA-256 digest.
 
 ## Next slice
 
-Add one checked semi-implicit-Euler transition that consumes immutable truth, the force snapshot, and the validated timestep, then returns a new truth state. Include bounded propellant consumption and cutoff behavior, but do not add a mission run loop or telemetry yet.
+Add a deterministic mission executor that repeatedly applies the checked transition up to the validated scenario step count, stops on the first fault, and returns a compact final summary and exact-state checksum. Keep telemetry serialization and UI outside this slice.

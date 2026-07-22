@@ -466,7 +466,8 @@
     "coupled_constraints": [
       "density * velocity^2 <= 96 kg/(m*s^2)",
       "abs(net_force / mass) <= 0.1 km/s^2 while mass > 0",
-      "total_mass >= dry_mass > 0",
+      "total_mass - propellant >= dry_mass > 0",
+      "burn_duration is an integer multiple of timestep",
       "0 <= propellant <= total_mass",
       "0 < timestep <= 0.125 s for the Phase 1 baseline"
     ],

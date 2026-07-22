@@ -57,6 +57,8 @@ Magic: ASCII `KSC1`. Total length: 76 bytes.
 | 68 | 4 | u32 | Environment-table ID |
 | 72 | 4 | u32 | CRC-32 of bytes 0 through 71 |
 
+The packed record is accepted only when inert mass (`total mass - propellant`) is at least dry mass, burn duration does not exceed scenario duration, and burn duration is an exact integer multiple of the physics timestep. Step alignment keeps the constant-thrust engine state unambiguous without introducing partial-step event integration.
+
 The fixed record is intentionally narrow. A future variable engine curve, event list, or failure schedule belongs in a new version or separately identified data blocks rather than ambiguous trailing bytes.
 
 ## Telemetry binary stream

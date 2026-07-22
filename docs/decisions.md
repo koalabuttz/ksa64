@@ -313,7 +313,7 @@ Status: Accepted
 
 Decision:
 
-Parse only the exact 76-byte `KSC1` v1 record in the product core. Check framing, CRC-32, numeric-contract ID, environment ID, field envelopes, mass relationships, total duration, burn duration, and conservative thrust acceleration before returning strong configuration types. Preserve reserved flag bits without assigning v1 meaning.
+Parse only the exact 76-byte `KSC1` v1 record in the product core. Check framing, CRC-32, numeric-contract ID, environment ID, field envelopes, inert/dry-mass relationships, total duration, step-aligned burn duration, and conservative thrust acceleration before returning strong configuration types. Preserve reserved flag bits without assigning v1 meaning.
 
 Rationale:
 
@@ -329,7 +329,7 @@ Status: Accepted
 
 Decision:
 
-Generate the production Rust binding for `earth.simple-atmosphere.v1` from the frozen Phase 0 source data and verify the generated digest in the Phase 1 gate. Sample density and gravity through typed, clamped interpolation. Keep `Scenario` fields private and expose read-only accessors so callers cannot fabricate a value that bypasses ingestion checks. Construct the 28-byte initial vertical truth state only from such a validated scenario, with private fields and no dynamics-transition methods.
+Generate the production Rust binding for `earth.simple-atmosphere.v1` from the frozen Phase 0 source data and verify the generated digest in the Phase 1 gate. Sample density and gravity through typed, clamped interpolation. Keep `Scenario` fields private and expose read-only accessors so callers cannot fabricate a value that bypasses ingestion checks. Construct the 28-byte initial vertical truth state only from such a validated scenario, with private fields and no public dynamics-transition methods.
 
 Rationale:
 
@@ -356,6 +356,24 @@ A signed drag component removes ambiguity at negative velocity while preserving 
 Consequence:
 
 Force evaluation is production-ready but simulated time still cannot advance. The next gate may introduce one checked semi-implicit-Euler transition that returns successor truth and performs bounded mass consumption; run loops and telemetry remain later work.
+
+## D-025: Advance truth only through a fail-closed step
+
+Status: Accepted
+
+Decision:
+
+Implement one pure `advance_vertical_state` operation. Reject a pre-existing numeric fault or a completed scenario before evaluation. For a valid step, sample the environment and evaluate forces from the old truth, update velocity before altitude using semi-implicit Euler, advance time, and consume `min(mass_flow * timestep, remaining_propellant)` only while the engine is active. Construct successor truth only after every arithmetic and model-domain check remains clear.
+
+A successful result carries the immutable successor, the force snapshot used for the step, exact propellant consumed, and a boundary cutoff event. A numeric failure or scenario completion returns an error and no successor. Scenario ingestion additionally requires inert mass to cover dry mass and burn duration to align exactly with the fixed timestep.
+
+Rationale:
+
+Semi-implicit Euler matches the accepted Phase 1 numeric foundation and uses one force evaluation. Delaying successor construction prevents partially advanced states from escaping after a fault. Step-aligned constant thrust avoids silently applying a full-step burn past an arbitrary cutoff, while bounded consumption reaches zero propellant exactly without underflow.
+
+Consequence:
+
+The core can advance one trustworthy physics step but does not yet execute a mission. The next gate will repeatedly apply this operation to the validated step limit, stop on the first error, and produce a compact deterministic summary and exact-state checksum; telemetry remains separate.
 
 ## Open decisions
 

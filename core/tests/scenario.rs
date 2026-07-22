@@ -144,9 +144,25 @@ fn field_ranges_and_cross_field_invariants_are_enforced() {
     );
 
     let mut bytes = *GOLDEN;
+    write_i32(&mut bytes, 44, 1_600_000);
+    repair_crc(&mut bytes);
+    assert_eq!(
+        parse_scenario_image(&bytes),
+        Err(ScenarioError::MassInvariant)
+    );
+
+    let mut bytes = *GOLDEN;
     write_i32(&mut bytes, 60, 20_000_000);
     repair_crc(&mut bytes);
     assert_eq!(parse_scenario_image(&bytes), Err(ScenarioError::Duration));
+
+    let mut bytes = *GOLDEN;
+    write_i32(&mut bytes, 60, 9_961_473);
+    repair_crc(&mut bytes);
+    assert_eq!(
+        parse_scenario_image(&bytes),
+        Err(ScenarioError::BurnAlignment)
+    );
 
     let mut bytes = *GOLDEN;
     write_i32(&mut bytes, 48, 4_096);

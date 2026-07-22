@@ -29,7 +29,7 @@ Exit criteria:
 
 Purpose: create the smallest end-to-end vehicle simulation.
 
-Current progress: the production `no_std` numeric core, fail-closed 76-byte scenario parser, generated density/gravity environment, immutable 28-byte initial vertical truth state, and pure typed vertical-force evaluator pass the shared exact test path. Force cases cover powered flight, signed drag in both directions, time and propellant cutoff, and acceleration-envelope containment. One checked truth-state transition is next; a mission run loop has not begun.
+Current progress: the production `no_std` core validates packed scenarios, samples the generated environment, evaluates typed forces, and returns one checked semi-implicit-Euler successor without mutating prior truth. Exact cases cover ordinary motion, signed drag, final partial propellant consumption, burn-boundary cutoff, coast, scenario completion, and fault refusal. A deterministic mission executor is next; telemetry serialization has not begun.
 
 Planned capabilities:
 

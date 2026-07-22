@@ -196,7 +196,8 @@ def range_analysis() -> dict[str, Any]:
         "coupled_constraints": [
             "density * velocity^2 <= 96 kg/(m*s^2)",
             "abs(net_force / mass) <= 0.1 km/s^2 while mass > 0",
-            "total_mass >= dry_mass > 0",
+            "total_mass - propellant >= dry_mass > 0",
+            "burn_duration is an integer multiple of timestep",
             "0 <= propellant <= total_mass",
             "0 < timestep <= 0.125 s for the Phase 1 baseline",
         ],
@@ -344,7 +345,11 @@ def validate_example(data: dict[str, Any]) -> None:
     bounded(data["vehicle"]["mass_flow_t_s"], "mass_flow")
     burn_duration = bounded(data["vehicle"]["burn_duration_s"], "time")
     bounded(data["vehicle"]["cda_m2"], "cda")
-    if not (total_mass >= dry_mass > 0 and 0 <= propellant <= total_mass):
+    if not (
+        total_mass >= dry_mass > 0
+        and 0 <= propellant <= total_mass
+        and total_mass - propellant >= dry_mass
+    ):
         raise ValueError("scenario mass invariants failed")
     if not (0 < timestep <= dec("0.125")):
         raise ValueError("scenario timestep is outside the Phase 1 baseline")
@@ -354,6 +359,8 @@ def validate_example(data: dict[str, Any]) -> None:
         raise ValueError("telemetry stride exceeds scenario length")
     if burn_duration > timestep * data["steps"]:
         raise ValueError("burn duration exceeds scenario duration")
+    if burn_duration % timestep != 0:
+        raise ValueError("burn duration must align to a physics-step boundary")
     if thrust / dry_mass + dec("0.012") > dec("0.1"):
         raise ValueError("conservative powered acceleration bound failed")
     _ = altitude, velocity

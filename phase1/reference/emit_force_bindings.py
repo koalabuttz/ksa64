@@ -63,7 +63,10 @@ def scenario_values(root: Path) -> dict[str, int]:
     if len(image) != 76 or image[:4] != b"KSC1":
         raise ValueError("golden Phase 1 scenario image is invalid")
     return {
+        "timestep": struct.unpack_from("<i", image, 16)[0],
+        "dry_mass": struct.unpack_from("<i", image, 48)[0],
         "thrust": struct.unpack_from("<i", image, 52)[0],
+        "mass_flow": struct.unpack_from("<i", image, 56)[0],
         "burn_duration": struct.unpack_from("<i", image, 60)[0],
         "cda": struct.unpack_from("<i", image, 64)[0],
     }

@@ -62,6 +62,7 @@ pub enum ScenarioError {
     FieldRange(ScenarioField),
     MassInvariant,
     Duration,
+    BurnAlignment,
     AccelerationEnvelope,
     NumericFault,
 }
@@ -278,7 +279,7 @@ pub fn parse_scenario_image(bytes: &[u8]) -> Result<Scenario, ScenarioError> {
     )?;
     in_range(cda, 0, MAX_CDA_Q16, ScenarioField::Cda)?;
 
-    if total_mass < dry_mass || propellant > total_mass {
+    if total_mass < dry_mass || propellant > total_mass || total_mass - propellant < dry_mass {
         return Err(ScenarioError::MassInvariant);
     }
 
@@ -287,6 +288,9 @@ pub fn parse_scenario_image(bytes: &[u8]) -> Result<Scenario, ScenarioError> {
         .ok_or(ScenarioError::Duration)?;
     if duration > MAX_DURATION_Q16 || burn_duration as u32 > duration {
         return Err(ScenarioError::Duration);
+    }
+    if burn_duration % timestep != 0 {
+        return Err(ScenarioError::BurnAlignment);
     }
 
     let mut numeric_status = NumericStatus::CLEAR;

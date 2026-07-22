@@ -1,13 +1,17 @@
-//! Pure Phase 1 vertical-force evaluation. State integration is intentionally absent.
+//! Pure Phase 1 vertical-force evaluation and checked single-step integration.
 
-use crate::environment::EnvironmentSample;
+use crate::environment::{EnvironmentSample, SimpleEarthEnvironment};
 use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericFault, NumericStatus};
-use crate::quantities::{Acceleration, Force, NetForce};
-use crate::scenario::VehicleConfig;
+use crate::quantities::{Acceleration, Altitude, Force, Mass, NetForce, Time, Velocity};
+use crate::scenario::{Scenario, VehicleConfig};
 use crate::vehicle::VerticalTruthState;
 
 const MAX_NET_FORCE_Q12: i32 = 2_048_000;
 const MAX_ACCELERATION_Q28: i32 = 26_843_546;
+const MIN_ALTITUDE_Q12: i32 = -8_192;
+const MAX_ALTITUDE_Q12: i32 = 8_192_000;
+const MIN_VELOCITY_Q24: i32 = -134_217_728;
+const MAX_VELOCITY_Q24: i32 = 134_217_728;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VerticalForceSnapshot {
@@ -119,4 +123,102 @@ pub fn evaluate_vertical_forces(
         net_force: NetForce::from_raw(net_force),
         acceleration: Acceleration::from_raw(acceleration),
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VerticalStepError {
+    NumericFault,
+    ScenarioComplete,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct VerticalStepResult {
+    truth: VerticalTruthState,
+    forces: VerticalForceSnapshot,
+    propellant_consumed: Mass,
+    engine_cutoff: bool,
+}
+
+impl VerticalStepResult {
+    pub const fn truth(self) -> VerticalTruthState {
+        self.truth
+    }
+
+    pub const fn forces(self) -> VerticalForceSnapshot {
+        self.forces
+    }
+
+    pub const fn propellant_consumed(self) -> Mass {
+        self.propellant_consumed
+    }
+
+    pub const fn engine_cutoff(self) -> bool {
+        self.engine_cutoff
+    }
+}
+
+pub fn advance_vertical_state(
+    scenario: &Scenario,
+    environment: SimpleEarthEnvironment,
+    truth: &VerticalTruthState,
+    status: &mut NumericStatus,
+) -> Result<VerticalStepResult, VerticalStepError> {
+    if !status.is_clear() {
+        return Err(VerticalStepError::NumericFault);
+    }
+    if truth.step() >= scenario.steps() {
+        return Err(VerticalStepError::ScenarioComplete);
+    }
+
+    let sample = environment.sample(truth.altitude(), status);
+    let forces = evaluate_vertical_forces(scenario.vehicle(), truth, sample, status);
+    if !status.is_clear() {
+        return Err(VerticalStepError::NumericFault);
+    }
+
+    let timestep = scenario.timestep().raw();
+    let delta_velocity = multiply_scaled(forces.acceleration().raw(), timestep, 20, status);
+    let velocity = add(truth.velocity().raw(), delta_velocity, status);
+    let delta_altitude = multiply_scaled(velocity, timestep, 28, status);
+    let altitude = add(truth.altitude().raw(), delta_altitude, status);
+    let time = add(truth.time().raw(), timestep, status);
+
+    let requested_propellant = if forces.engine_active() {
+        multiply_scaled(scenario.vehicle().mass_flow().raw(), timestep, 20, status)
+    } else {
+        0
+    };
+    let consumed = requested_propellant.min(truth.propellant().raw());
+    let propellant = subtract(truth.propellant().raw(), consumed, status);
+    let total_mass = subtract(truth.total_mass().raw(), consumed, status);
+
+    if !(MIN_ALTITUDE_Q12..=MAX_ALTITUDE_Q12).contains(&altitude)
+        || !(MIN_VELOCITY_Q24..=MAX_VELOCITY_Q24).contains(&velocity)
+        || total_mass < scenario.vehicle().dry_mass().raw()
+        || propellant < 0
+        || propellant > total_mass
+    {
+        status.record(NumericFault::InvalidInput);
+    }
+    if !status.is_clear() {
+        return Err(VerticalStepError::NumericFault);
+    }
+
+    let engine_cutoff = forces.engine_active()
+        && (propellant == 0 || time >= scenario.vehicle().burn_duration().raw());
+    let successor = VerticalTruthState::successor(
+        truth.step() + 1,
+        Time::from_raw(time),
+        Altitude::from_raw(altitude),
+        Velocity::from_raw(velocity),
+        forces.acceleration(),
+        Mass::from_raw(total_mass),
+        Mass::from_raw(propellant),
+    );
+    Ok(VerticalStepResult {
+        truth: successor,
+        forces,
+        propellant_consumed: Mass::from_raw(consumed),
+        engine_cutoff,
+    })
 }

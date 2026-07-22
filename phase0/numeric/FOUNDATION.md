@@ -39,9 +39,10 @@ Independent per-field limits are insufficient for physical expressions. Every ac
 
 - `density * velocity^2 <= 96` in the contract's numeric units.
 - `abs(net_force / mass) <= 0.1 km/s^2` whenever mass is positive.
-- `total_mass >= dry_mass > 0`.
+- `total_mass - propellant >= dry_mass > 0`.
 - `0 <= propellant <= total_mass`.
 - The baseline timestep is positive and no greater than 0.125 seconds.
+- Burn duration is an exact integer multiple of the fixed physics timestep.
 
 The generator evaluates worst-case raw products after these constraints. The largest selected product needs 56 bits including sign, so the accepted explicit two-word widening arithmetic covers every Phase 1 multiplication. Every rounded, scaled result fits `i32`.
 
