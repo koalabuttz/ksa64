@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-3 complete; Gate 4 bending and slosh dynamics are next.
+Status: Gates 1-4 complete; Gate 5 spatial world dynamics are next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -14,6 +14,10 @@ semi-implicit angular rate, and normalized quaternion kinematics at the 32 Hz
 fast cadence. Exact integer and analytic float64 references pass natively, and
 two distinct target cases pass through an explicitly documented rust-mos
 specialization constraint.
+The flexible-body layer adds one lateral bending and one active-stage slosh
+mode on each transverse axis. Driven, damped, undamped, symmetry, and
+fail-closed cases match an independent integer oracle natively and in the
+bounded rust-mos probe.
 
 Phase 4 completed the maturity prerequisites for 3-D work: the 2-D world is deterministic and independently checked, flight software is isolated from truth, campaign variation is reproducible, storage is observational, and stock/REU evidence paths are strict.
 

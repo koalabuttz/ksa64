@@ -3,6 +3,7 @@
 pub mod aerodynamics;
 pub mod dynamics;
 pub mod environment;
+pub mod flexible;
 pub mod guidance;
 pub mod mission;
 pub mod numeric;
@@ -47,6 +48,9 @@ mod phase2_telemetry_self_test;
 mod phase2_mission_self_test;
 
 #[cfg(feature = "fixtures")]
+mod phase5_flexible_self_test;
+
+#[cfg(feature = "fixtures")]
 mod phase5_rigid_self_test;
 
 #[cfg(feature = "fixtures")]
@@ -68,6 +72,8 @@ pub use phase2_scenario_self_test::run_phase2_scenario_self_tests;
 pub use phase2_self_test::run_phase2_contract_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase2_telemetry_self_test::run_phase2_telemetry_self_tests;
+#[cfg(feature = "fixtures")]
+pub use phase5_flexible_self_test::run_phase5_flexible_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase5_rigid_self_test::run_phase5_rigid_self_tests;
 #[cfg(feature = "fixtures")]
