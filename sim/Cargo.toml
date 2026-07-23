@@ -85,3 +85,7 @@ required-features = ["sim"]
 name = "ksa64-phase5-history-reu-c64"
 path = "src/bin/phase5_history_reu_c64.rs"
 required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase5-replay-c64"
+path = "src/bin/phase5_replay_c64.rs"
+required-features = ["c64"]

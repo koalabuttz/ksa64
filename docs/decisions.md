@@ -827,3 +827,9 @@ Simulation-rate requirements remain phase- and evidence-specific rather than one
 **Decision.** Stock hardware retains a streaming aggregate, five deterministic KSR5 summaries, and one stride-32 KPH5 baseline. REU capacity increases summary retention and then stores selected complete KST5 reruns before stride-8 KPH5 reruns. Reuse Phase 4 REU detection and DMA, but use new KPH5 and KRA5 identities. Storage failures may make evidence incomplete but cannot influence mission parameters, execution order, checksums, or later seeds.
 
 **Reason.** A 1.33 MB KST5 mission cannot fit stock RAM and does not fit smaller REUs. A 1.66 KB spatial history preserves useful mission-control presentation on every C64 while a strict capacity ladder consumes whatever optional hardware is actually present. Separate format identities prevent Phase 4 readers from silently accepting spatial data. The first PAL target matrix rejected a quotient-based planner that passed native and `mos-sim`; bounded loops replaced its general divisions and preserve the exact allocation results with a hard 256-iteration ceiling.
+
+## D-062: Replay KPH5 directly for stock Phase 5 presentation
+
+**Decision.** Use the already strict, bounded KPH5 stream as the stock mission-control tape. Add a portable reducer for identity, extrema, events, and cue hashing, then a C64-only VIC-II/SID adapter. Project quantized Y–Z coordinates with fixed shifts and reviewed bounds. Do not derive a second replay format and do not recompute dynamics for display.
+
+**Reason.** The complete KPH5 baseline is only 1,664 bytes and already binds its source run through two CRC layers. Direct replay avoids redundant formats, fits far below stock-RAM limits, and keeps visualization clearly subordinate to KST5 and independent physical analysis.

@@ -170,5 +170,6 @@ if (-not $SkipMos) {
             "mos-sim target/mos-sim-none/c64/ksa64-phase5-history-sim"
     }
     Invoke-Gate { & .\phase5\history-reu.ps1 }
+    Invoke-Gate { & .\phase5\replay.ps1 }
     Invoke-Gate { & .\phase5\timing.ps1 -Runs 3 }
 }

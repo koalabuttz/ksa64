@@ -1,0 +1,10 @@
+{
+  "schema": "KSA64 phase5 replay v1",
+  "replay_prg_bytes": 6252,
+  "replay_prg_sha256": "f0d560a81c318754b630c074dcad6a3e2de2b28b767a030c0315e2a4dbdc563a",
+  "load_end": "0x206b",
+  "tape_sha256": "2b84eae5871dee6967ea63061aefa1c232159e1803507072344866174adacf5f",
+  "screen_sha256": "6047f542adf3a5e83e65fcc16ddb9a8d91c277bcf604e1c88146e4f4ee886d9b",
+  "plot_cells": 85,
+  "cue_hash": "0x3b2fb64b"
+}

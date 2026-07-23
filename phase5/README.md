@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-12 complete; Gate 13 mission-control replay and presentation is next.
+Status: Gates 1-13 complete; Gate 14 completion audit and Phase 6 handoff are next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -84,6 +84,10 @@ a native/MOS-divergent inertia candidate was rejected. See [TIMING.md](TIMING.md
 
 Gate 12 adds strict KPH5 compact spatial histories, deterministic stock retention, capacity-scaled REU plans, and recoverable KRA5 archives. The stock baseline is 1,664 bytes; the finite target probe is 5,917 bytes. See [HISTORY.md](HISTORY.md).
 
+## Mission-control replay evidence
+
+Gate 13 adds strict native KPH5 replay plus a 6,252-byte stock-C64 mission-control page. VICE freezes the complete screen, trajectory plot population, and SID cue schedule. See [REPLAY.md](REPLAY.md).
+
 ## Next gate
 
-Gate 13 adds bounded mission-control replay and presentation over KPH5/KST5 without changing simulator state. A complete target mission still requires a fresh projection and explicit confirmation.
+Gate 14 performs the Phase 5 completion audit and records the Phase 6 handoff. A complete target mission still requires a fresh projection and explicit confirmation.

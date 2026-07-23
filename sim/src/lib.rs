@@ -28,6 +28,7 @@ mod phase5_history_self_test;
 #[cfg(feature = "fixtures")]
 pub use phase5_history_self_test::{phase5_history_probe_signature, run_phase5_history_self_tests};
 pub mod phase5_mission;
+pub mod phase5_replay;
 pub mod phase5_sensors;
 pub mod phase5_telemetry;
 #[cfg(feature = "fixtures")]

@@ -236,3 +236,7 @@ candidate was reverted after a rust-mos-only inertia divergence.
 ## Accepted Phase 5 adaptive-history validation
 
 Gate 12 requires exact equality between recording-disabled and KPH5-observed missions. The strict 1,664-byte stock history has 99 ordered points, two CRC layers, and independently checked campaign/run identity. Stock retention selects runs `[0, 1, 4, 53, 2]` from the frozen 256-run KSR5 stream. Independent Python allocation agrees with Rust for no REU and all eight supported capacities. KRA5 corruption and interrupted writes reject the first bad record while retaining the previously committed prefix. A finite rust-mos codec/allocation probe freezes signature `0xb5783bf2`. PAL VICE additionally caught and rejected a target-only quotient-planner divergence before the accepted bounded-loop planner passed no-REU and every 128 KiB–16 MiB tier. No full C64 mission is required.
+
+## Accepted Phase 5 mission-control replay validation
+
+Gate 13 requires native KPH5 replay to reject corruption and identity substitution and to reproduce the frozen 99-point extrema/event summary. A naturally terminating setup phase in the 6,252-byte stock PRG validates the tape before rendering. PAL VICE checks all 1,000 screen bytes, key rows, plot population, pass marker, and cue hash `0x3b2fb64b`. The PRG loads only through `$206B`; no physics or campaign run is started.

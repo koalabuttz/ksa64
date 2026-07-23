@@ -237,3 +237,5 @@ The ordered campaign chain applies FNV-1a to complete KSR5 records in run-index 
 KPH5 is a presentation-only compact trajectory. Its 80-byte header uses magic `KPH5`, version 5, contract `0x050c0001`, Phase 5 numeric/scenario identities, campaign/run/seed/variation identity, stride, point count, terminal step, payload CRC-32, reserved-zero bytes, and header CRC-32. Its 16-byte points store mission step, three signed quarter-kilometre ECI coordinates, dynamic pressure in one-sixteenth kPa, conservative quarter-kilometre navigation error, events, and alarms.
 
 KRA5 is the append-only Phase 5 archive, with magic `KRA5`, version 5, and contract `0x050c0002`. It retains the KRA4 commit discipline but never accepts a KRA4 superblock. Complete KST5 payloads are embedded unchanged; compact histories remain complete KPH5 streams.
+
+KPH5 is also the direct Phase 5 stock replay tape. Replay adds no new binary format: the portable reader revalidates KPH5 and derives a presentation summary and cue hash in constant memory. The Y–Z projection and SID cues are target presentation outputs and carry no canonical physics authority.
