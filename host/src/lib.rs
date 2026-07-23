@@ -1,3 +1,5 @@
+pub mod phase2;
+
 use std::io::{self, Write};
 
 use ksa64_core::mission::VERTICAL_CHECKSUM_OFFSET;

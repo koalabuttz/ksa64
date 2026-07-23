@@ -10,5 +10,5 @@ fn panic(_info: &PanicInfo) -> ! {
 
 #[no_mangle]
 pub extern "C" fn main() -> isize {
-    ksa64_core::run_phase2_nominal_mission_self_tests() as isize
+    ksa64_core::run_phase2_mission_smoke_self_tests() as isize
 }

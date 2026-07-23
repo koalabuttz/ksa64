@@ -1,0 +1,48 @@
+% KSA64 Phase 2 KSA-2A cutoff-state point-mass validation.
+% Intended for NASA GMAT R2026a. Drag, SRP, third bodies, oblateness, and tides are off.
+
+Create Spacecraft KSA2A;
+GMAT KSA2A.DateFormat = TAIModJulian;
+GMAT KSA2A.Epoch = '21545';
+GMAT KSA2A.CoordinateSystem = EarthMJ2000Eq;
+GMAT KSA2A.DisplayStateType = Cartesian;
+GMAT KSA2A.X = 6578.138939285275;
+GMAT KSA2A.Y = 0.0;
+GMAT KSA2A.Z = 0.0;
+GMAT KSA2A.VX = 0.000015559654399827903;
+GMAT KSA2A.VY = 7.784260629437315;
+GMAT KSA2A.VZ = 0.0;
+GMAT KSA2A.DryMass = 23000;
+
+Create ForceModel EarthPointMass;
+GMAT EarthPointMass.CentralBody = Earth;
+GMAT EarthPointMass.PrimaryBodies = {Earth};
+GMAT EarthPointMass.Drag = None;
+GMAT EarthPointMass.SRP = Off;
+GMAT EarthPointMass.RelativisticCorrection = Off;
+GMAT EarthPointMass.ErrorControl = None;
+GMAT EarthPointMass.GravityField.Earth.Degree = 0;
+GMAT EarthPointMass.GravityField.Earth.Order = 0;
+GMAT EarthPointMass.GravityField.Earth.PotentialFile = 'JGM2.cof';
+GMAT EarthPointMass.GravityField.Earth.TideModel = 'None';
+
+Create Propagator ValidationProp;
+GMAT ValidationProp.FM = EarthPointMass;
+GMAT ValidationProp.Type = PrinceDormand853;
+GMAT ValidationProp.InitialStepSize = 10;
+GMAT ValidationProp.Accuracy = 1.0e-12;
+GMAT ValidationProp.MinStep = 0.0;
+GMAT ValidationProp.MaxStep = 60;
+GMAT ValidationProp.MaxStepAttempts = 1000;
+GMAT ValidationProp.StopIfAccuracyIsViolated = true;
+
+Create ReportFile ValidationReport;
+GMAT ValidationReport.Filename = 'ksa2a_cutoff_report.txt';
+GMAT ValidationReport.Precision = 16;
+GMAT ValidationReport.WriteHeaders = true;
+GMAT ValidationReport.Add = {KSA2A.ElapsedSecs, KSA2A.Earth.RMAG, KSA2A.Earth.RadPer, KSA2A.Earth.RadApo, KSA2A.Earth.ECC};
+
+BeginMissionSequence;
+Report ValidationReport KSA2A.ElapsedSecs KSA2A.Earth.RMAG KSA2A.Earth.RadPer KSA2A.Earth.RadApo KSA2A.Earth.ECC;
+Propagate ValidationProp(KSA2A) {KSA2A.ElapsedSecs = 5309.645771228763};
+Report ValidationReport KSA2A.ElapsedSecs KSA2A.Earth.RMAG KSA2A.Earth.RadPer KSA2A.Earth.RadApo KSA2A.Earth.ECC;

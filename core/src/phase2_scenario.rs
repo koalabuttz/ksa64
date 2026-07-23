@@ -587,10 +587,23 @@ static KSA2A_FAILURE_FIXTURE: Phase2Scenario = fixture_scenario(
 );
 
 #[cfg(feature = "fixtures")]
+static KSA2A_SMOKE_FIXTURE: Phase2Scenario = fixture_scenario(
+    fixture_data::NOMINAL_SCENARIO_ID,
+    0,
+    fixture_data::NOMINAL_BURN_STEPS,
+    1,
+);
+
+#[cfg(feature = "fixtures")]
 pub fn ksa2a_fixture(failure: bool) -> &'static Phase2Scenario {
     if failure {
         &KSA2A_FAILURE_FIXTURE
     } else {
         &KSA2A_NOMINAL_FIXTURE
     }
+}
+
+#[cfg(feature = "fixtures")]
+pub fn ksa2a_smoke_fixture() -> &'static Phase2Scenario {
+    &KSA2A_SMOKE_FIXTURE
 }

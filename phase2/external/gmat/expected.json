@@ -1,0 +1,27 @@
+{
+  "source": "phase2/mission-reference-v1.json nominal cutoff state",
+  "model": "spherical Earth point mass, no perturbations",
+  "earth_radius_km_for_altitude_comparison": 6378.137,
+  "earth_mu_km3_s2": 398600.4418,
+  "state_earthmj2000eq": {
+    "x_km": 6578.138939285275,
+    "y_km": 0.0,
+    "z_km": 0.0,
+    "vx_km_s": 0.000015559654399827903,
+    "vy_km_s": 7.784260629437315,
+    "vz_km_s": 0.0
+  },
+  "analytic_result": {
+    "semi_major_axis_km": 6578.138987144265,
+    "period_s": 5309.645771228763,
+    "perigee_altitude_km": 199.98883827218833,
+    "apogee_altitude_km": 200.0151360163427,
+    "eccentricity": 0.0000019988741652706218
+  },
+  "acceptance": {
+    "radius_difference_km": 0.001,
+    "perigee_difference_km": 0.01,
+    "apogee_difference_km": 0.01,
+    "eccentricity_difference": 0.000001
+  }
+}

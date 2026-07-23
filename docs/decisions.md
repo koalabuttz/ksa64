@@ -608,3 +608,14 @@ Represent Phase 2 inputs as an 884-byte CRC-protected `KSC2` image with fixed ca
 Use the generated KSA-2A schedule as the integrated nominal mission and a five-percent-short upper-stage burn as the deterministic failed-insertion mission. The independent float64 path reaches 199.989 x 200.015 km; the exact fixed-point path reaches 188.169 x 188.169 km, with Max-Q 40.779 kPa and peak proper acceleration 55.283 m/s2. Both satisfy the declared nominal envelope, while both implementations classify the early-cutoff case as impact.
 
 Generate target fixture constants from the packed source rather than maintaining a second handwritten configuration. Split parser/contract and mission acceptance executables so each fits the 64 KB target link region. Run the complete 900-second nominal and failure missions natively, the complete nominal mission under rust-mos, and the target failure path through its exact cutoff; omit only the redundant post-cutoff atmospheric tail from the instruction-level failure check because its variable-time arithmetic is pathologically slow.
+## D-041: Observe one mission executor through canonical KST2 records
+
+Date: 2026-07-22
+
+Status: accepted.
+
+Expose immutable initial/successor observations from the authoritative Phase 2 executor. Compile rolling planar-state checksums only into observed execution, while the raw wrapper uses the same generic path with checksum work removed. Serialize a 40-byte scenario-bound `KST2` header and 64-byte fixed-point frames containing planar truth, command, stage state, Mach, dynamic pressure, pending events, exact-state checksum, and record CRC.
+
+The nominal golden stream contains 901 frames and 57,704 bytes, with stream CRC-32 `0x7d13b2bf` and final state checksum `0xcc57612b`. The host rejects bad framing, CRC, scenario binding, initial truth, cadence, time, numeric ranges, and terminal placement before displaying values. Generated portable fixtures reproduce the header, initial frame, and terminal frame exactly.
+
+Provide a GMAT R2026a point-mass script and report comparator for the independent float64 cutoff state, with Earth radius and force-model assumptions made explicit. Do not make GMAT a build dependency or claim an unexecuted external run as automated evidence. C64 retained-state replay will consume the same sink/decoder contract rather than adding a second mission executor.

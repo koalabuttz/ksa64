@@ -10,6 +10,7 @@ pub mod phase2_mission;
 pub mod phase2_numeric;
 pub mod phase2_quantities;
 pub mod phase2_scenario;
+pub mod phase2_telemetry;
 pub mod planar;
 pub mod planar_dynamics;
 pub mod planar_environment;
@@ -34,6 +35,9 @@ mod phase2_self_test;
 mod phase2_scenario_self_test;
 
 #[cfg(feature = "fixtures")]
+mod phase2_telemetry_self_test;
+
+#[cfg(feature = "fixtures")]
 mod phase2_mission_self_test;
 
 #[cfg(feature = "fixtures")]
@@ -43,11 +47,14 @@ mod self_test;
 pub use phase2_atmosphere_self_test::run_phase2_atmosphere_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase2_mission_self_test::{
-    run_phase2_failure_mission_self_tests, run_phase2_nominal_mission_self_tests,
+    run_phase2_failure_mission_self_tests, run_phase2_mission_smoke_self_tests,
+    run_phase2_nominal_mission_self_tests,
 };
 #[cfg(feature = "fixtures")]
 pub use phase2_scenario_self_test::run_phase2_scenario_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase2_self_test::run_phase2_contract_self_tests;
+#[cfg(feature = "fixtures")]
+pub use phase2_telemetry_self_test::run_phase2_telemetry_self_tests;
 #[cfg(feature = "fixtures")]
 pub use self_test::{run_c64_acceptance_self_tests, run_numeric_self_tests};

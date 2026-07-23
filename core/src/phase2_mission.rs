@@ -40,6 +40,7 @@ pub struct Phase2MissionResult {
     cutoff_step: u32,
     cutoff_orbit: Option<OrbitSolution>,
     terminal_orbit: Option<OrbitSolution>,
+    state_checksum: u32,
 }
 
 impl Phase2MissionResult {
@@ -67,8 +68,81 @@ impl Phase2MissionResult {
     pub const fn terminal_orbit(self) -> Option<OrbitSolution> {
         self.terminal_orbit
     }
+    pub const fn state_checksum(self) -> u32 {
+        self.state_checksum
+    }
 }
 
+pub const PLANAR_CHECKSUM_OFFSET: u32 = 2_166_136_261;
+const FNV_PRIME: u32 = 16_777_619;
+
+#[inline]
+fn hash_word(mut checksum: u32, word: u32) -> u32 {
+    let mut shift = 0u8;
+    while shift < 32 {
+        checksum ^= (word >> shift) & 0xff;
+        checksum = checksum.wrapping_mul(FNV_PRIME);
+        shift += 8;
+    }
+    checksum
+}
+
+pub fn hash_planar_truth(mut checksum: u32, truth: &PlanarTruthState) -> u32 {
+    checksum = hash_word(checksum, truth.step());
+    checksum = hash_word(checksum, truth.time().raw() as u32);
+    checksum = hash_word(checksum, truth.radius().raw() as u32);
+    checksum = hash_word(checksum, truth.downrange().raw() as u32);
+    checksum = hash_word(checksum, truth.radial_velocity().raw() as u32);
+    checksum = hash_word(checksum, truth.specific_angular_momentum().raw() as u32);
+    checksum = hash_word(checksum, truth.radial_acceleration().raw() as u32);
+    checksum = hash_word(checksum, truth.tangential_acceleration().raw() as u32);
+    checksum = hash_word(checksum, truth.total_mass().raw() as u32);
+    checksum = hash_word(checksum, truth.active_propellant().raw() as u32);
+    checksum = hash_word(checksum, truth.active_stage() as u32);
+    hash_word(checksum, truth.stage_phase() as u32)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase2Observation {
+    truth: PlanarTruthState,
+    pitch: crate::phase2_quantities::PitchAngle,
+    mach: crate::phase2_quantities::Mach,
+    dynamic_pressure: DynamicPressure,
+    events: u16,
+    state_checksum: u32,
+}
+
+impl Phase2Observation {
+    pub const fn truth(self) -> PlanarTruthState {
+        self.truth
+    }
+    pub const fn pitch(self) -> crate::phase2_quantities::PitchAngle {
+        self.pitch
+    }
+    pub const fn mach(self) -> crate::phase2_quantities::Mach {
+        self.mach
+    }
+    pub const fn dynamic_pressure(self) -> DynamicPressure {
+        self.dynamic_pressure
+    }
+    pub const fn events(self) -> u16 {
+        self.events
+    }
+    pub const fn state_checksum(self) -> u32 {
+        self.state_checksum
+    }
+}
+
+pub trait Phase2Observer {
+    type Error;
+    fn observe(&mut self, observation: Phase2Observation) -> Result<(), Self::Error>;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Phase2ExecutionError<E> {
+    Mission(Phase2MissionError),
+    Observer(E),
+}
 fn proper_acceleration_q28(
     radial_force_q12: i32,
     tangential_force_q12: i32,
@@ -107,17 +181,22 @@ fn replace_vehicle_state(
     )
 }
 
-pub fn execute_phase2_mission(
+fn execute_phase2_mission_internal<const CHECKSUM: bool, O: Phase2Observer>(
     scenario: &Phase2Scenario,
-) -> Result<Phase2MissionResult, Phase2MissionError> {
+    observer: &mut O,
+) -> Result<Phase2MissionResult, Phase2ExecutionError<O::Error>> {
     let world = PlanarWorld::simple_earth(scenario.timestep());
     let environment = RotatingEarthEnvironment::new();
     let mut status = NumericStatus::CLEAR;
     let mut truth = scenario
         .initial_truth(&mut status)
-        .ok_or(Phase2MissionError::InitialState)?;
+        .ok_or(Phase2ExecutionError::Mission(
+            Phase2MissionError::InitialState,
+        ))?;
     if !scenario.pitch_program().is_valid(scenario.timestep()) {
-        return Err(Phase2MissionError::Configuration);
+        return Err(Phase2ExecutionError::Mission(
+            Phase2MissionError::Configuration,
+        ));
     }
     let mut phase_steps = 0u32;
     let mut burn_steps = 0u32;
@@ -131,23 +210,32 @@ pub fn execute_phase2_mission(
     let mut cutoff_step = 0u32;
     let mut cutoff_orbit = None;
     let mut outcome = Phase2MissionOutcome::DurationComplete;
+    let mut checksum = PLANAR_CHECKSUM_OFFSET;
+    let initial_pitch = scenario.pitch_program().pitch_at(truth.time(), &mut status);
+    observer
+        .observe(Phase2Observation {
+            truth,
+            pitch: initial_pitch,
+            mach: crate::phase2_quantities::Mach::ZERO,
+            dynamic_pressure: DynamicPressure::ZERO,
+            events: 0,
+            state_checksum: checksum,
+        })
+        .map_err(Phase2ExecutionError::Observer)?;
 
     while truth.step() < scenario.steps() {
-        if truth.step() != 0
-            && (truth.radius().raw() < world.radius().raw()
-                || (truth.radius().raw() == world.radius().raw()
-                    && truth.radial_velocity().raw() <= 0))
-        {
-            events |= EVENT_IMPACT;
-            outcome = Phase2MissionOutcome::Impact;
-            break;
-        }
+        let mut step_events = 0u16;
         let stage = scenario
             .stage(truth.active_stage())
-            .ok_or(Phase2MissionError::Configuration)?;
-        let table = scenario
-            .aero_table(stage.aero_table_index())
-            .ok_or(Phase2MissionError::Configuration)?;
+            .ok_or(Phase2ExecutionError::Mission(
+                Phase2MissionError::Configuration,
+            ))?;
+        let table =
+            scenario
+                .aero_table(stage.aero_table_index())
+                .ok_or(Phase2ExecutionError::Mission(
+                    Phase2MissionError::Configuration,
+                ))?;
         let sample = environment.sample(truth.radius(), &mut status);
         let aero = evaluate_aerodynamics(
             world,
@@ -166,8 +254,9 @@ pub fn execute_phase2_mission(
         } else {
             Force::ZERO
         };
-        let forces = evaluate_planar_forces(world, truth, thrust, pitch, aero, &mut status)
-            .ok_or(Phase2MissionError::NumericFault)?;
+        let forces = evaluate_planar_forces(world, truth, thrust, pitch, aero, &mut status).ok_or(
+            Phase2ExecutionError::Mission(Phase2MissionError::NumericFault),
+        )?;
         let radial_force = add(
             forces.radial_thrust().raw(),
             forces.radial_drag().raw(),
@@ -186,7 +275,7 @@ pub fn execute_phase2_mission(
         );
         max_proper = max_proper.max(proper);
         let mut successor = advance_planar_state(world, truth, forces, &mut status)
-            .map_err(|_| Phase2MissionError::NumericFault)?;
+            .map_err(|_| Phase2ExecutionError::Mission(Phase2MissionError::NumericFault))?;
 
         let mut mass = truth.total_mass().raw();
         let mut propellant = truth.active_propellant().raw();
@@ -212,6 +301,7 @@ pub fn execute_phase2_mission(
                     };
                     phase_steps = 0;
                     events |= EVENT_CUTOFF;
+                    step_events |= EVENT_CUTOFF;
                     cutoff_step = successor.step();
                 }
             }
@@ -224,15 +314,20 @@ pub fn execute_phase2_mission(
                         &mut status,
                     );
                     events |= EVENT_SEPARATION;
+                    step_events |= EVENT_SEPARATION;
                     active_stage += 1;
-                    let next = scenario
-                        .stage(active_stage)
-                        .ok_or(Phase2MissionError::Configuration)?;
+                    let next =
+                        scenario
+                            .stage(active_stage)
+                            .ok_or(Phase2ExecutionError::Mission(
+                                Phase2MissionError::Configuration,
+                            ))?;
                     propellant = next.propellant_mass().raw();
                     phase_steps = 0;
                     burn_steps = 0;
                     phase = if next.ignition_delay_steps() == 0 {
                         events |= EVENT_IGNITION;
+                        step_events |= EVENT_IGNITION;
                         StagePhase::Burning
                     } else {
                         StagePhase::CoastBeforeIgnition
@@ -246,6 +341,7 @@ pub fn execute_phase2_mission(
                     phase_steps = 0;
                     burn_steps = 0;
                     events |= EVENT_IGNITION;
+                    step_events |= EVENT_IGNITION;
                 }
             }
             StagePhase::Complete => {}
@@ -261,14 +357,47 @@ pub fn execute_phase2_mission(
             cutoff_orbit = classify_orbit(world, successor, &mut status);
         }
         if !status.is_clear() {
-            return Err(Phase2MissionError::NumericFault);
+            return Err(Phase2ExecutionError::Mission(
+                Phase2MissionError::NumericFault,
+            ));
         }
+        if CHECKSUM {
+            checksum = hash_planar_truth(checksum, &successor);
+        }
+        let impacted = successor.radius().raw() < world.radius().raw()
+            || (successor.radius().raw() == world.radius().raw()
+                && successor.radial_velocity().raw() <= 0);
+        let terminal = impacted || successor.step() >= scenario.steps();
+        if impacted {
+            outcome = Phase2MissionOutcome::Impact;
+            events |= EVENT_IMPACT;
+            step_events |= EVENT_IMPACT;
+        }
+        if terminal {
+            events |= EVENT_END;
+            step_events |= EVENT_END;
+        }
+        observer
+            .observe(Phase2Observation {
+                truth: successor,
+                pitch,
+                mach: aero.mach(),
+                dynamic_pressure: aero.dynamic_pressure(),
+                events: step_events,
+                state_checksum: checksum,
+            })
+            .map_err(Phase2ExecutionError::Observer)?;
         truth = successor;
+        if terminal {
+            break;
+        }
     }
     events |= EVENT_END;
     let terminal_orbit = classify_orbit(world, truth, &mut status);
     if !status.is_clear() {
-        return Err(Phase2MissionError::NumericFault);
+        return Err(Phase2ExecutionError::Mission(
+            Phase2MissionError::NumericFault,
+        ));
     }
     Ok(Phase2MissionResult {
         truth,
@@ -279,5 +408,31 @@ pub fn execute_phase2_mission(
         cutoff_step,
         cutoff_orbit,
         terminal_orbit,
+        state_checksum: if CHECKSUM { checksum } else { 0 },
     })
+}
+pub fn execute_phase2_mission_observed<O: Phase2Observer>(
+    scenario: &Phase2Scenario,
+    observer: &mut O,
+) -> Result<Phase2MissionResult, Phase2ExecutionError<O::Error>> {
+    execute_phase2_mission_internal::<true, _>(scenario, observer)
+}
+struct NullPhase2Observer;
+
+impl Phase2Observer for NullPhase2Observer {
+    type Error = core::convert::Infallible;
+    fn observe(&mut self, _observation: Phase2Observation) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+pub fn execute_phase2_mission(
+    scenario: &Phase2Scenario,
+) -> Result<Phase2MissionResult, Phase2MissionError> {
+    let mut observer = NullPhase2Observer;
+    match execute_phase2_mission_internal::<false, _>(scenario, &mut observer) {
+        Ok(result) => Ok(result),
+        Err(Phase2ExecutionError::Mission(error)) => Err(error),
+        Err(Phase2ExecutionError::Observer(never)) => match never {},
+    }
 }

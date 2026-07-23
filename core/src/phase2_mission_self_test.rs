@@ -1,8 +1,28 @@
 //! Target-executable checks for the generated Phase 2 mission fixtures.
 
-use crate::phase2_mission::{execute_phase2_mission, Phase2MissionOutcome};
-use crate::phase2_scenario::ksa2a_fixture;
-use crate::planar::OrbitClass;
+use crate::phase2_mission::{execute_phase2_mission, Phase2MissionError, Phase2MissionOutcome};
+use crate::phase2_scenario::{ksa2a_fixture, ksa2a_smoke_fixture};
+use crate::planar::{OrbitClass, StagePhase};
+
+pub fn run_phase2_mission_smoke_self_tests() -> u8 {
+    let result = match execute_phase2_mission(ksa2a_smoke_fixture()) {
+        Ok(value) => value,
+        Err(Phase2MissionError::InitialState) => return 11,
+        Err(Phase2MissionError::Configuration) => return 12,
+        Err(Phase2MissionError::NumericFault) => return 13,
+    };
+    if result.outcome() != Phase2MissionOutcome::DurationComplete
+        || result.truth().step() != 1
+        || result.truth().stage_phase() != StagePhase::Burning
+        || result.truth().active_stage() != 0
+        || result.cutoff_step() != 0
+        || result.cutoff_orbit().is_some()
+    {
+        2
+    } else {
+        0
+    }
+}
 
 pub fn run_phase2_nominal_mission_self_tests() -> u8 {
     let result = match execute_phase2_mission(ksa2a_fixture(false)) {

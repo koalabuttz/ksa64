@@ -17,6 +17,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Phase 2 environment evidence is stale." }
     & python -B phase2/reference/generate_mission.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 2 mission evidence is stale." }
+    & python -B phase2/reference/generate_telemetry_fixture.py --check
+    if ($LASTEXITCODE -ne 0) { throw "Phase 2 telemetry fixtures are stale." }
 
     & cargo fmt --all -- --check
     if ($LASTEXITCODE -ne 0) { throw "Rust formatting failed." }

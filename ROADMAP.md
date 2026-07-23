@@ -53,7 +53,7 @@ Exit criteria:
 
 ## Phase 2: two-dimensional multistage ascent
 
-Status: in progress. The rotating-Earth planar model, atmosphere, Mach-dependent drag, guidance, checksummed KSC2 scenarios, bounded staging, and deterministic nominal/failure missions are accepted; Phase 2 telemetry and host/external validation are next.
+Status: in progress. The rotating-Earth model through checksummed KSC2 scenarios, deterministic nominal/failure missions, canonical KST2 telemetry, strict host inspection, and a GMAT coast-validation fixture are accepted; C64 timing and deterministic replay are next.
 
 Purpose: produce a recognizable launch trajectory and orbital-insertion attempt.
 

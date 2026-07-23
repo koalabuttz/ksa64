@@ -45,6 +45,7 @@ fn nominal_mission_reaches_the_declared_orbit_envelope() {
     assert!(result.max_dynamic_pressure().raw() <= 60 * 65_536);
     assert!(result.max_proper_acceleration().raw() <= 16_106_128);
     assert_eq!(result.cutoff_step(), 3_172);
+    assert_eq!(result.state_checksum(), 0);
     assert_eq!(
         result.event_history() & (EVENT_IGNITION | EVENT_CUTOFF | EVENT_SEPARATION | EVENT_END),
         EVENT_IGNITION | EVENT_CUTOFF | EVENT_SEPARATION | EVENT_END
@@ -82,6 +83,7 @@ fn early_cutoff_variant_is_deterministically_not_orbital() {
 }
 #[test]
 fn target_fixture_self_tests_match_native_execution() {
+    assert_eq!(ksa64_core::run_phase2_mission_smoke_self_tests(), 0);
     assert_eq!(ksa64_core::run_phase2_nominal_mission_self_tests(), 0);
     assert_eq!(ksa64_core::run_phase2_failure_mission_self_tests(), 0);
 }
