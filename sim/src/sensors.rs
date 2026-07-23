@@ -47,6 +47,38 @@ pub struct SensorFaults {
     pub gps_outage: Option<StepWindow>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SensorParameters {
+    pub accelerometer_bias_q28: i32,
+    pub gyro_bias_q24: i32,
+    pub altimeter_bias_q12: i32,
+    pub gps_radial_position_bias_q12: i32,
+    pub gps_downrange_bias_q32: i32,
+    pub gps_radial_velocity_bias_q24: i32,
+    pub gps_tangential_velocity_bias_q24: i32,
+    pub noise_scale_ppm: i32,
+}
+impl SensorParameters {
+    pub const DEFAULT: Self = Self {
+        accelerometer_bias_q28: 0,
+        gyro_bias_q24: 0,
+        altimeter_bias_q12: 0,
+        gps_radial_position_bias_q12: 0,
+        gps_downrange_bias_q32: 0,
+        gps_radial_velocity_bias_q24: 0,
+        gps_tangential_velocity_bias_q24: 0,
+        noise_scale_ppm: 0,
+    };
+    pub const fn is_valid(self) -> bool {
+        self.noise_scale_ppm >= -1_000_000 && self.noise_scale_ppm <= 1_000_000
+    }
+}
+impl Default for SensorParameters {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct GpsSample {
     radius: i32,
@@ -84,6 +116,13 @@ fn triangular(prng: &mut XorShift32, amplitude: i32) -> i32 {
     }
     let span = amplitude as u32 + 1;
     (prng.next_u32() % span) as i32 - (prng.next_u32() % span) as i32
+}
+fn scale_ppm(value: i32, delta_ppm: i32) -> i32 {
+    if delta_ppm == 0 {
+        value
+    } else {
+        ((value as i64 * (1_000_000i64 + delta_ppm as i64)) / 1_000_000i64) as i32
+    }
 }
 fn quantize(value: i32, resolution: i32) -> i32 {
     if resolution <= 1 {
@@ -126,10 +165,18 @@ pub struct SensorSuite {
     gps_delay: [Option<GpsSample>; 2],
     gps_was_valid: bool,
     checksum: u32,
+    parameters: SensorParameters,
 }
 
 impl SensorSuite {
     pub const fn new(seed: u32, faults: SensorFaults) -> Self {
+        Self::new_parameterized(seed, faults, SensorParameters::DEFAULT)
+    }
+    pub const fn new_parameterized(
+        seed: u32,
+        faults: SensorFaults,
+        parameters: SensorParameters,
+    ) -> Self {
         Self {
             prng: XorShift32::new(seed),
             faults,
@@ -138,6 +185,7 @@ impl SensorSuite {
             gps_delay: [None, None],
             gps_was_valid: false,
             checksum: 2_166_136_261,
+            parameters,
         }
     }
     pub const fn checksum(&self) -> u32 {
@@ -153,28 +201,44 @@ impl SensorSuite {
         let planar_world = PlanarWorld::simple_earth(ksa64_core::quantities::Time::from_raw(8_192));
         let mut status = ksa64_core::numeric::NumericStatus::CLEAR;
         let vacuum = evaluate_vacuum(planar_world, truth, &mut status);
+        let accel_noise = scale_ppm(ACCEL_NOISE_Q28, self.parameters.noise_scale_ppm);
+        let gyro_noise = scale_ppm(GYRO_NOISE_Q24, self.parameters.noise_scale_ppm);
+        let alt_noise = scale_ppm(ALT_NOISE_Q12, self.parameters.noise_scale_ppm);
+        let gps_position_noise = scale_ppm(GPS_POSITION_NOISE_Q12, self.parameters.noise_scale_ppm);
+        let gps_angle_noise = scale_ppm(GPS_ANGLE_NOISE_Q32, self.parameters.noise_scale_ppm);
+        let gps_velocity_noise = scale_ppm(GPS_VELOCITY_NOISE_Q24, self.parameters.noise_scale_ppm);
         let proper_radial = truth.radial_acceleration().raw() - vacuum.radial_acceleration().raw();
         let accel_radial = quantize(
-            proper_radial + ACCEL_BIAS_Q28 + triangular(&mut self.prng, ACCEL_NOISE_Q28),
+            proper_radial
+                + ACCEL_BIAS_Q28
+                + self.parameters.accelerometer_bias_q28
+                + triangular(&mut self.prng, accel_noise),
             ACCEL_RESOLUTION_Q28,
         );
         let accel_tangential = quantize(
             truth.tangential_acceleration().raw()
                 + ACCEL_BIAS_Q28
-                + triangular(&mut self.prng, ACCEL_NOISE_Q28),
+                + self.parameters.accelerometer_bias_q28
+                + triangular(&mut self.prng, accel_noise),
             ACCEL_RESOLUTION_Q28,
         );
         let pitch_delta = steering.applied as i32 - self.previous_pitch as i32;
         self.previous_pitch = steering.applied;
         let gyro_true_q24 = ((pitch_delta as i64 * 45i64 * (1i64 << 24)) / 1024i64) as i32;
         let gyro = quantize(
-            gyro_true_q24 + GYRO_BIAS_Q24 + triangular(&mut self.prng, GYRO_NOISE_Q24),
+            gyro_true_q24
+                + GYRO_BIAS_Q24
+                + self.parameters.gyro_bias_q24
+                + triangular(&mut self.prng, gyro_noise),
             GYRO_RESOLUTION_Q24,
         );
         let true_altitude = truth.radius().raw() - EARTH_RADIUS_Q12;
         let alt_new = if step & 1 == 0 && true_altitude <= 80 * 4096 {
             Some(quantize(
-                true_altitude + ALT_BIAS_Q12 + triangular(&mut self.prng, ALT_NOISE_Q12),
+                true_altitude
+                    + ALT_BIAS_Q12
+                    + self.parameters.altimeter_bias_q12
+                    + triangular(&mut self.prng, alt_noise),
                 ALT_RESOLUTION_Q12,
             ))
         } else {
@@ -185,21 +249,29 @@ impl SensorSuite {
         let gps_new = if step & 7 == 0 && step >= GPS_ACQUIRE_STEP {
             Some(GpsSample {
                 radius: quantize(
-                    truth.radius().raw() + triangular(&mut self.prng, GPS_POSITION_NOISE_Q12),
+                    truth.radius().raw()
+                        + self.parameters.gps_radial_position_bias_q12
+                        + triangular(&mut self.prng, gps_position_noise),
                     GPS_POSITION_RESOLUTION_Q12,
                 ),
                 downrange: quantize(
-                    truth.downrange().raw() + triangular(&mut self.prng, GPS_ANGLE_NOISE_Q32),
+                    truth
+                        .downrange()
+                        .raw()
+                        .wrapping_add(self.parameters.gps_downrange_bias_q32)
+                        + triangular(&mut self.prng, gps_angle_noise),
                     GPS_ANGLE_RESOLUTION_Q32,
                 ),
                 radial_velocity: quantize(
                     truth.radial_velocity().raw()
-                        + triangular(&mut self.prng, GPS_VELOCITY_NOISE_Q24),
+                        + self.parameters.gps_radial_velocity_bias_q24
+                        + triangular(&mut self.prng, gps_velocity_noise),
                     GPS_VELOCITY_RESOLUTION_Q24,
                 ),
                 tangential_velocity: quantize(
                     vacuum.tangential_velocity().raw()
-                        + triangular(&mut self.prng, GPS_VELOCITY_NOISE_Q24),
+                        + self.parameters.gps_tangential_velocity_bias_q24
+                        + triangular(&mut self.prng, gps_velocity_noise),
                     GPS_VELOCITY_RESOLUTION_Q24,
                 ),
             })

@@ -5,8 +5,8 @@ use ksa64_interface::crc32_ieee;
 use super::contracts::{MAX_DISTRIBUTIONS, REFERENCE_MASTER_SEED};
 
 pub const PARAMETER_COUNT: usize = 15;
-pub const MAX_ABSOLUTE_SAMPLE: i32 = 2_000_000;
-pub const MAX_SAMPLE_SPAN: i32 = 1_000_000;
+pub const MAX_ABSOLUTE_SAMPLE: i32 = 16_777_216;
+pub const MAX_SAMPLE_SPAN: i32 = 33_554_432;
 pub const PROBABILITY_SCALE: i32 = 1_000_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -339,11 +339,12 @@ pub fn sample_distribution(
                 draw += 1;
             }
             let centered = total - 1_530;
-            let delta = if centered >= 0 {
-                centered * (spec.maximum - spec.baseline) / 768
+            let span = if centered >= 0 {
+                spec.maximum - spec.baseline
             } else {
-                centered * (spec.baseline - spec.minimum) / 768
+                spec.baseline - spec.minimum
             };
+            let delta = ((centered as i64 * span as i64) / 768) as i32;
             (spec.baseline + delta).clamp(spec.minimum, spec.maximum)
         }
     };
@@ -392,6 +393,151 @@ pub fn derive_run(config: &CampaignConfig, index: u32) -> Result<RunSpec, Campai
     })
 }
 
+pub const fn reviewed_campaign_config(run_count: u32) -> CampaignConfig {
+    let clt = DistributionKind::CltNormal3Sigma;
+    let mut records = [DistributionSpec::EMPTY; MAX_DISTRIBUTIONS];
+    records[0] = DistributionSpec {
+        parameter: ParameterId::PayloadMassPpm,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -5_000,
+        baseline: 0,
+        maximum: 5_000,
+        shape: 0,
+    };
+    records[1] = DistributionSpec {
+        parameter: ParameterId::Stage1ThrustPpm,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -10_000,
+        baseline: 0,
+        maximum: 10_000,
+        shape: 0,
+    };
+    records[2] = DistributionSpec {
+        parameter: ParameterId::Stage2ThrustPpm,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -10_000,
+        baseline: 0,
+        maximum: 10_000,
+        shape: 0,
+    };
+    records[3] = DistributionSpec {
+        parameter: ParameterId::AtmosphereDensityPpm,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -50_000,
+        baseline: 0,
+        maximum: 50_000,
+        shape: 0,
+    };
+    records[4] = DistributionSpec {
+        parameter: ParameterId::DragPpm,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -50_000,
+        baseline: 0,
+        maximum: 50_000,
+        shape: 0,
+    };
+    records[5] = DistributionSpec {
+        parameter: ParameterId::AccelerometerBiasQ28,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -1_342,
+        baseline: 0,
+        maximum: 1_342,
+        shape: 0,
+    };
+    records[6] = DistributionSpec {
+        parameter: ParameterId::GyroBiasQ24,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -83_886,
+        baseline: 0,
+        maximum: 83_886,
+        shape: 0,
+    };
+    records[7] = DistributionSpec {
+        parameter: ParameterId::AltimeterBiasQ12,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -102,
+        baseline: 0,
+        maximum: 102,
+        shape: 0,
+    };
+    records[8] = DistributionSpec {
+        parameter: ParameterId::GpsRadialPositionQ12,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -205,
+        baseline: 0,
+        maximum: 205,
+        shape: 0,
+    };
+    records[9] = DistributionSpec {
+        parameter: ParameterId::GpsDownrangeQ32,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -5_362,
+        baseline: 0,
+        maximum: 5_362,
+        shape: 0,
+    };
+    records[10] = DistributionSpec {
+        parameter: ParameterId::GpsRadialVelocityQ24,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -8_389,
+        baseline: 0,
+        maximum: 8_389,
+        shape: 0,
+    };
+    records[11] = DistributionSpec {
+        parameter: ParameterId::GpsTangentialVelocityQ24,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -8_389,
+        baseline: 0,
+        maximum: 8_389,
+        shape: 0,
+    };
+    records[12] = DistributionSpec {
+        parameter: ParameterId::SensorNoisePpm,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -250_000,
+        baseline: 0,
+        maximum: 250_000,
+        shape: 0,
+    };
+    records[13] = DistributionSpec {
+        parameter: ParameterId::ActuatorLagSteps,
+        kind: DistributionKind::Triangular,
+        correlation_group: 0,
+        minimum: 2,
+        baseline: 4,
+        maximum: 6,
+        shape: 0,
+    };
+    records[14] = DistributionSpec {
+        parameter: ParameterId::ActuatorSlewPpm,
+        kind: clt,
+        correlation_group: 0,
+        minimum: -100_000,
+        baseline: 0,
+        maximum: 100_000,
+        shape: 0,
+    };
+    CampaignConfig {
+        master_seed: REFERENCE_MASTER_SEED,
+        run_count,
+        distribution_count: PARAMETER_COUNT as u8,
+        distributions: records,
+    }
+}
 #[cfg(feature = "fixtures")]
 pub fn distribution_fixture_config() -> CampaignConfig {
     let mut config = CampaignConfig::empty(1_024);

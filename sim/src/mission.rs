@@ -1,8 +1,8 @@
 //! Six-step closed-loop Phase 3 mission composition.
 
-use crate::actuator::{SteeringActuator, SteeringSnapshot};
-use crate::sensors::{SensorFaults, SensorSuite, StepWindow};
-use crate::world::{WorldCommand, WorldError, WorldMachine, WorldSnapshot};
+use crate::actuator::{ActuatorParameters, SteeringActuator, SteeringSnapshot};
+use crate::sensors::{SensorFaults, SensorParameters, SensorSuite, StepWindow};
+use crate::world::{WorldCommand, WorldError, WorldMachine, WorldParameters, WorldSnapshot};
 use ksa64_core::numeric::{add, multiply_scaled, NumericStatus};
 use ksa64_core::phase2_numeric::{sqrt_floor_u32, EARTH_RADIUS_Q12};
 use ksa64_core::phase2_quantities::{DynamicPressure, PitchAngle, PlanarAcceleration};
@@ -60,6 +60,30 @@ impl MissionCase {
         }
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MissionParameters {
+    pub world: WorldParameters,
+    pub sensors: SensorParameters,
+    pub actuator: ActuatorParameters,
+    pub sensor_seed: u32,
+}
+impl MissionParameters {
+    pub const fn phase3(case: MissionCase) -> Self {
+        Self {
+            world: WorldParameters::DEFAULT,
+            sensors: SensorParameters::DEFAULT,
+            actuator: ActuatorParameters::DEFAULT,
+            sensor_seed: case.seed(),
+        }
+    }
+    pub const fn is_valid(self) -> bool {
+        self.sensor_seed != 0
+            && self.world.is_valid()
+            && self.sensors.is_valid()
+            && self.actuator.is_valid()
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MissionOutcome {
     DurationComplete,
@@ -133,10 +157,42 @@ pub fn run_phase3_mission_observed<O: MissionObserver>(
     case: MissionCase,
     observer: &mut O,
 ) -> Result<MissionResult, MissionRunError<O::Error>> {
-    let mut world = WorldMachine::new_commanded(scenario)
+    run_parameterized_mission_observed(scenario, case, MissionParameters::phase3(case), observer)
+}
+
+pub fn run_parameterized_mission(
+    scenario: &Phase2Scenario,
+    case: MissionCase,
+    parameters: MissionParameters,
+) -> Result<MissionResult, MissionError> {
+    let mut observer = NullObserver;
+    match run_parameterized_mission_observed(scenario, case, parameters, &mut observer) {
+        Ok(result) => Ok(result),
+        Err(MissionRunError::Mission(error)) => Err(error),
+        Err(MissionRunError::Observer(never)) => match never {},
+    }
+}
+
+pub fn run_parameterized_mission_observed<O: MissionObserver>(
+    scenario: &Phase2Scenario,
+    case: MissionCase,
+    parameters: MissionParameters,
+    observer: &mut O,
+) -> Result<MissionResult, MissionRunError<O::Error>> {
+    if !parameters.is_valid() {
+        return Err(MissionRunError::Mission(MissionError::World {
+            step: 0,
+            error: WorldError::Configuration,
+        }));
+    }
+    let mut world = WorldMachine::new_commanded_parameterized(scenario, parameters.world)
         .map_err(|e| MissionRunError::Mission(MissionError::World { step: 0, error: e }))?;
-    let mut actuator = SteeringActuator::new(0);
-    let mut sensors = SensorSuite::new(case.seed(), case.sensor_faults());
+    let mut actuator = SteeringActuator::new_parameterized(0, parameters.actuator);
+    let mut sensors = SensorSuite::new_parameterized(
+        parameters.sensor_seed,
+        case.sensor_faults(),
+        parameters.sensors,
+    );
     let mut flight = FlightComputer::new();
     let bootstrap_world = WorldSnapshot {
         truth: world.truth(),

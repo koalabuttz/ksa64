@@ -26,6 +26,9 @@ impl PlanarEnvironmentSample {
     pub const fn sound_speed(self) -> PlanarVelocity {
         self.sound_speed
     }
+    pub const fn with_density(self, density: Density) -> Self {
+        Self { density, ..self }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

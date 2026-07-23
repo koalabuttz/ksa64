@@ -53,6 +53,15 @@ fn get_i32(input: &[u8], at: usize) -> i32 {
     get_u32(input, at) as i32
 }
 
+pub fn campaign_config_identity(bytes: &[u8]) -> Result<u32, CampaignConfigError> {
+    if bytes.len() != CAMPAIGN_CONFIG_LENGTH {
+        return Err(CampaignConfigError::Length);
+    }
+    let mut canonical = [0u8; CAMPAIGN_CONFIG_LENGTH];
+    canonical.copy_from_slice(bytes);
+    canonical[120..128].fill(0);
+    Ok(crc32_ieee(&canonical))
+}
 pub fn write_campaign_config(
     base: &[u8; PHASE2_SCENARIO_IMAGE_LENGTH],
     phase3: &[u8; PHASE3_CONFIG_LENGTH],

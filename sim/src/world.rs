@@ -5,12 +5,12 @@ use ksa64_core::numeric::{add, multiply_scaled, subtract, NumericStatus};
 use ksa64_core::phase2_mission::{
     hash_planar_truth, EVENT_CUTOFF, EVENT_IGNITION, EVENT_SEPARATION, PLANAR_CHECKSUM_OFFSET,
 };
-use ksa64_core::phase2_quantities::{DynamicPressure, Mach, PitchAngle};
+use ksa64_core::phase2_quantities::{DynamicPressure, Mach, PitchAngle, ReferenceArea};
 use ksa64_core::phase2_scenario::Phase2Scenario;
 use ksa64_core::planar::{PlanarTruthState, PlanarWorld, StagePhase};
 use ksa64_core::planar_dynamics::{advance_planar_state, evaluate_planar_forces_phase3};
 use ksa64_core::planar_environment::RotatingEarthEnvironment;
-use ksa64_core::quantities::{Force, Mass};
+use ksa64_core::quantities::{Density, Force, Mass};
 use ksa64_interface::EngineAction;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,6 +38,46 @@ pub struct WorldSnapshot {
     pub truth_checksum: u32,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WorldParameters {
+    pub payload_mass_ppm: i32,
+    pub stage_thrust_ppm: [i32; 2],
+    pub atmosphere_density_ppm: i32,
+    pub drag_ppm: i32,
+}
+impl WorldParameters {
+    pub const DEFAULT: Self = Self {
+        payload_mass_ppm: 0,
+        stage_thrust_ppm: [0, 0],
+        atmosphere_density_ppm: 0,
+        drag_ppm: 0,
+    };
+    pub const fn is_valid(self) -> bool {
+        self.payload_mass_ppm >= -500_000
+            && self.payload_mass_ppm <= 500_000
+            && self.stage_thrust_ppm[0] >= -500_000
+            && self.stage_thrust_ppm[0] <= 500_000
+            && self.stage_thrust_ppm[1] >= -500_000
+            && self.stage_thrust_ppm[1] <= 500_000
+            && self.atmosphere_density_ppm >= -500_000
+            && self.atmosphere_density_ppm <= 500_000
+            && self.drag_ppm >= -500_000
+            && self.drag_ppm <= 500_000
+    }
+}
+
+fn scale_ppm(value: i32, delta_ppm: i32) -> Option<i32> {
+    if delta_ppm == 0 {
+        return Some(value);
+    }
+    let scaled = (value as i64 * (1_000_000i64 + delta_ppm as i64)) / 1_000_000i64;
+    if scaled < i32::MIN as i64 || scaled > i32::MAX as i64 {
+        None
+    } else {
+        Some(scaled as i32)
+    }
+}
+
 pub struct WorldMachine<'a> {
     scenario: &'a Phase2Scenario,
     world: PlanarWorld,
@@ -46,14 +86,41 @@ pub struct WorldMachine<'a> {
     phase_steps: u32,
     burn_steps: u32,
     truth_checksum: u32,
+    parameters: WorldParameters,
 }
 
 impl<'a> WorldMachine<'a> {
     pub fn new_compatibility(scenario: &'a Phase2Scenario) -> Result<Self, WorldError> {
+        Self::new_compatibility_parameterized(scenario, WorldParameters::DEFAULT)
+    }
+
+    pub fn new_compatibility_parameterized(
+        scenario: &'a Phase2Scenario,
+        parameters: WorldParameters,
+    ) -> Result<Self, WorldError> {
+        if !parameters.is_valid() {
+            return Err(WorldError::Configuration);
+        }
         let mut status = NumericStatus::CLEAR;
-        let truth = scenario
+        let mut truth = scenario
             .initial_truth(&mut status)
             .ok_or(WorldError::NumericFault)?;
+        if parameters.payload_mass_ppm != 0 {
+            let nominal_payload = scenario.payload_mass().raw();
+            let varied_payload = scale_ppm(nominal_payload, parameters.payload_mass_ppm)
+                .ok_or(WorldError::NumericFault)?;
+            let varied_mass = add(
+                truth.total_mass().raw(),
+                varied_payload - nominal_payload,
+                &mut status,
+            );
+            truth = truth.with_vehicle_state(
+                Mass::from_raw(varied_mass),
+                truth.active_propellant(),
+                truth.active_stage(),
+                truth.stage_phase(),
+            );
+        }
         if !status.is_clear() {
             return Err(WorldError::NumericFault);
         }
@@ -65,11 +132,19 @@ impl<'a> WorldMachine<'a> {
             phase_steps: 0,
             burn_steps: 0,
             truth_checksum: PLANAR_CHECKSUM_OFFSET,
+            parameters,
         })
     }
 
     pub fn new_commanded(scenario: &'a Phase2Scenario) -> Result<Self, WorldError> {
-        let mut machine = Self::new_compatibility(scenario)?;
+        Self::new_commanded_parameterized(scenario, WorldParameters::DEFAULT)
+    }
+
+    pub fn new_commanded_parameterized(
+        scenario: &'a Phase2Scenario,
+        parameters: WorldParameters,
+    ) -> Result<Self, WorldError> {
+        let mut machine = Self::new_compatibility_parameterized(scenario, parameters)?;
         machine.truth = machine.truth.with_vehicle_state(
             machine.truth.total_mass(),
             machine.truth.active_propellant(),
@@ -99,16 +174,33 @@ impl<'a> WorldMachine<'a> {
             .scenario
             .aero_table(stage.aero_table_index())
             .ok_or(WorldError::Configuration)?;
-        let sample = self.environment.sample(self.truth.radius(), &mut status);
+        let mut sample = self.environment.sample(self.truth.radius(), &mut status);
+        if self.parameters.atmosphere_density_ppm != 0 {
+            let density = scale_ppm(
+                sample.density().raw(),
+                self.parameters.atmosphere_density_ppm,
+            )
+            .ok_or(WorldError::NumericFault)?;
+            sample = sample.with_density(Density::from_raw(density));
+        }
+        let area = scale_ppm(stage.reference_area().raw(), self.parameters.drag_ppm)
+            .map(ReferenceArea::from_raw)
+            .ok_or(WorldError::NumericFault)?;
         let aero = evaluate_aerodynamics(
             self.world,
             self.truth,
             sample,
-            AeroConfig::new(stage.reference_area(), table),
+            AeroConfig::new(area, table),
             &mut status,
         );
         let thrust = if self.truth.stage_phase() == StagePhase::Burning {
-            stage.thrust()
+            let stage_index = self.truth.active_stage() as usize;
+            let ppm = if stage_index < self.parameters.stage_thrust_ppm.len() {
+                self.parameters.stage_thrust_ppm[stage_index]
+            } else {
+                0
+            };
+            Force::from_raw(scale_ppm(stage.thrust().raw(), ppm).ok_or(WorldError::NumericFault)?)
         } else {
             Force::ZERO
         };

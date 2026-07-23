@@ -2,7 +2,7 @@ use ksa64_core::phase2_scenario::PHASE2_SCENARIO_IMAGE_LENGTH;
 use ksa64_sim::config::PHASE3_CONFIG_LENGTH;
 use ksa64_sim::phase4::campaign::distribution_fixture_config;
 use ksa64_sim::phase4::config::{
-    parse_campaign_config, write_campaign_config, CampaignConfigError,
+    campaign_config_identity, parse_campaign_config, write_campaign_config, CampaignConfigError,
 };
 use ksa64_sim::phase4::contracts::CAMPAIGN_CONFIG_LENGTH;
 
@@ -37,6 +37,22 @@ fn ksc4_corruption_reserved_and_identity_fail_closed() {
     }
     assert_eq!(
         parse_campaign_config(&bytes[..511], BASE, PHASE3),
+        Err(CampaignConfigError::Length)
+    );
+}
+
+#[test]
+fn campaign_identity_changes_with_canonical_content() {
+    let mut a = [0u8; CAMPAIGN_CONFIG_LENGTH];
+    let mut b = [0u8; CAMPAIGN_CONFIG_LENGTH];
+    let first = distribution_fixture_config();
+    let mut second = first;
+    second.run_count -= 1;
+    write_campaign_config(BASE, PHASE3, &first, &mut a).unwrap();
+    write_campaign_config(BASE, PHASE3, &second, &mut b).unwrap();
+    assert_ne!(campaign_config_identity(&a), campaign_config_identity(&b));
+    assert_eq!(
+        campaign_config_identity(&a[..511]),
         Err(CampaignConfigError::Length)
     );
 }
