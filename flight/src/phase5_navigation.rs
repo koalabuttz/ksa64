@@ -103,8 +103,12 @@ impl SpatialNavigation {
             self.state.gps_aided = true;
         }
         if frame.validity & SENSOR_VALID_STAR_TRACKER != 0 {
-            self.state.attitude_q30 = normalize_quaternion(frame.star_attitude_q30)
-                .ok_or(SpatialNavigationError::Numeric)?;
+            // The star tracker is transported with one 0.125 s frame of
+            // latency. Project its attitude to the current epoch with the
+            // current gyro sample before applying the absolute correction.
+            self.state.attitude_q30 =
+                integrate_quaternion(frame.star_attitude_q30, frame.gyro_body_q24, 8_192)
+                    .ok_or(SpatialNavigationError::Numeric)?;
             self.state.star_aided = true;
         }
         self.initialized = true;

@@ -1,0 +1,226 @@
+{
+  "model": "independent Python float64 orbit audit of frozen Phase 5 raw mission summaries",
+  "constants": {
+    "earth_radius_km": 6378.137,
+    "mu_km3_s2": 398600.4418,
+    "target_inclination_deg": 51.6
+  },
+  "cases": {
+    "nominal": {
+      "raw": {
+        "outcome": "stable-orbit",
+        "steps": 3133,
+        "position_q12": [
+          21468577,
+          3871182,
+          15698368
+        ],
+        "velocity_q24": [
+          -66327286,
+          89767125,
+          68337641
+        ],
+        "max_q_q16": 2861000,
+        "max_aoa_sine_q16": 13229,
+        "max_flexible_q24": 52314,
+        "max_nav_position_error_q12": 2781,
+        "events": 7,
+        "sensor_checksum": 1741708362,
+        "navigation_checksum": 2996014246,
+        "flight_checksum": 4068248986,
+        "summary_checksum": 557491580
+      },
+      "max_dynamic_pressure_kpa": 43.6553955078125,
+      "max_angle_of_attack_deg": 11.645661333549182,
+      "max_flexible_state": 0.003118157386779785,
+      "max_navigation_position_error_km": 0.678955078125,
+      "independent_float64_orbit": {
+        "terminal_altitude_km": 183.41019359283655,
+        "radial_velocity_km_s": -0.008112845698396286,
+        "eccentricity": 0.0019624047990873415,
+        "perigee_km": 181.44986979238456,
+        "apogee_km": 207.24562100498224,
+        "inclination_deg": 51.617502344320265
+      }
+    },
+    "gust-and-slosh": {
+      "raw": {
+        "outcome": "stable-orbit",
+        "steps": 3133,
+        "position_q12": [
+          21468593,
+          3872784,
+          15697224
+        ],
+        "velocity_q24": [
+          -66330099,
+          89790871,
+          68316698
+        ],
+        "max_q_q16": 2861000,
+        "max_aoa_sine_q16": 13237,
+        "max_flexible_q24": 82713,
+        "max_nav_position_error_q12": 2784,
+        "events": 7,
+        "sensor_checksum": 3542390402,
+        "navigation_checksum": 1337884635,
+        "flight_checksum": 2646335657,
+        "summary_checksum": 977608682
+      },
+      "max_dynamic_pressure_kpa": 43.6553955078125,
+      "max_angle_of_attack_deg": 11.652802541071507,
+      "max_flexible_state": 0.004930078983306885,
+      "max_navigation_position_error_km": 0.6796875,
+      "independent_float64_orbit": {
+        "terminal_altitude_km": 183.30652817935697,
+        "radial_velocity_km_s": -0.008628848974664143,
+        "eccentricity": 0.002072061514731807,
+        "perigee_km": 181.2035830188879,
+        "apogee_km": 208.4427385930312,
+        "inclination_deg": 51.60607504799794
+      }
+    },
+    "star-outage-gyro-bias": {
+      "raw": {
+        "outcome": "stable-orbit",
+        "steps": 3133,
+        "position_q12": [
+          21439624,
+          3874063,
+          15696788
+        ],
+        "velocity_q24": [
+          -66856332,
+          89792380,
+          68257395
+        ],
+        "max_q_q16": 2863250,
+        "max_aoa_sine_q16": 12892,
+        "max_flexible_q24": 89293,
+        "max_nav_position_error_q12": 2797,
+        "events": 7,
+        "sensor_checksum": 3286636991,
+        "navigation_checksum": 3622018424,
+        "flight_checksum": 2619625099,
+        "summary_checksum": 1801330793
+      },
+      "max_dynamic_pressure_kpa": 43.689727783203125,
+      "max_angle_of_attack_deg": 11.345003033690075,
+      "max_flexible_state": 0.005322277545928955,
+      "max_navigation_position_error_km": 0.682861328125,
+      "independent_float64_orbit": {
+        "terminal_altitude_km": 177.64112581469635,
+        "radial_velocity_km_s": -0.03127885173954438,
+        "eccentricity": 0.0060410603019197175,
+        "perigee_km": 167.65729142186046,
+        "apogee_km": 247.22504107247005,
+        "inclination_deg": 51.65808839701843
+      }
+    },
+    "gimbal-jam": {
+      "raw": {
+        "outcome": "aborted",
+        "steps": 1103,
+        "position_q12": [
+          23048344,
+          447218,
+          12786253
+        ],
+        "velocity_q24": [
+          3694929,
+          27797600,
+          28827133
+        ],
+        "max_q_q16": 2861000,
+        "max_aoa_sine_q16": 18126,
+        "max_flexible_q24": 52627,
+        "max_nav_position_error_q12": 1055,
+        "events": 515,
+        "sensor_checksum": 176115100,
+        "navigation_checksum": 4084006702,
+        "flight_checksum": 478568845,
+        "summary_checksum": 3230120338
+      },
+      "max_dynamic_pressure_kpa": 43.6553955078125,
+      "max_angle_of_attack_deg": 16.05624232383329,
+      "max_flexible_state": 0.0031368136405944824,
+      "max_navigation_position_error_km": 0.257568359375
+    },
+    "damping-loss": {
+      "raw": {
+        "outcome": "aborted",
+        "steps": 958,
+        "position_q12": [
+          23031841,
+          337557,
+          12677055
+        ],
+        "velocity_q24": [
+          3409638,
+          21993631,
+          20807948
+        ],
+        "max_q_q16": 2861750,
+        "max_aoa_sine_q16": 12795,
+        "max_flexible_q24": 5278534,
+        "max_nav_position_error_q12": 785,
+        "events": 3,
+        "sensor_checksum": 1291516690,
+        "navigation_checksum": 182194722,
+        "flight_checksum": 1987933410,
+        "summary_checksum": 3522370491
+      },
+      "max_dynamic_pressure_kpa": 43.666839599609375,
+      "max_angle_of_attack_deg": 11.258522419289735,
+      "max_flexible_state": 0.3146251440048218,
+      "max_navigation_position_error_km": 0.191650390625
+    },
+    "rcs-leak-depletion": {
+      "raw": {
+        "outcome": "stable-orbit",
+        "steps": 3133,
+        "position_q12": [
+          21500608,
+          3882452,
+          15708085
+        ],
+        "velocity_q24": [
+          -65365693,
+          90145430,
+          68829367
+        ],
+        "max_q_q16": 2861000,
+        "max_aoa_sine_q16": 13995,
+        "max_flexible_q24": 52494,
+        "max_nav_position_error_q12": 2799,
+        "events": 263,
+        "sensor_checksum": 3836379467,
+        "navigation_checksum": 181928900,
+        "flight_checksum": 791787182,
+        "summary_checksum": 2173775322
+      },
+      "max_dynamic_pressure_kpa": 43.6553955078125,
+      "max_angle_of_attack_deg": 12.330282452465209,
+      "max_flexible_state": 0.0031288862228393555,
+      "max_navigation_position_error_km": 0.683349609375,
+      "independent_float64_orbit": {
+        "terminal_altitude_km": 191.43959084436028,
+        "radial_velocity_km_s": 0.05706116216465503,
+        "eccentricity": 0.008068826470238783,
+        "perigee_km": 160.72556222446383,
+        "apogee_km": 267.1058207248225,
+        "inclination_deg": 51.51696675276438
+      }
+    }
+  },
+  "acceptance": {
+    "nominal_and_gust_apses_180_to_220_km": true,
+    "nominal_and_gust_inclination_within_0_2_deg": true,
+    "sensor_outage_remains_stable": true,
+    "reviewed_faults_abort": true,
+    "rcs_leak_depletes_and_remains_stable": true,
+    "loads_bounded": true,
+    "navigation_position_error_below_1_km": true
+  },
+  "all_acceptance_passed": true
+}

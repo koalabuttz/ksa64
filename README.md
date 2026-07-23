@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–4 are complete. Phase 5 is in progress: Gates 1–7 now provide the frozen 3-D numeric, world, vehicle, and avionics foundation; integrated reference and failure missions are next.
+> **Project status:** Phases 0–4 are complete. Phase 5 is in progress: Gates 1–8 now provide the frozen 3-D numeric, world, vehicle, avionics, guidance, and integrated mission foundation; KST5 telemetry is next.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -81,7 +81,7 @@ That future Commodore-in-the-loop arrangement is Phase 6 work. The current porta
 | 2 — Planar ascent | Rotating-Earth KSA-2A multistage ascent, atmosphere and drag, orbital insertion/failure cases, KST2 evidence, and PETSCII/SID replay. |
 | 3 — Closed-loop avionics | Truth-isolated sensors, navigation, guidance, sequencing, actuator feedback, deterministic faults, KST3/KRP3, and bounded C64 probes. |
 | 4 — Statistical analysis | Deterministic campaigns, KSR4 summaries, independent float64 analysis, stock/REU storage, interactive UI, KRA4 archives, and KXV4 disk export. |
-| 5 — 3-D dynamics (in progress) | Gates 1–7: spatial numeric/world models, rigid and flexible dynamics, multirate KSA-5A vehicle, strict spatial avionics, aided navigation, and attitude control. |
+| 5 — 3-D dynamics (in progress) | Gates 1–8: spatial numeric/world models, rigid and flexible dynamics, multirate KSA-5A vehicle, strict spatial avionics, local-horizontal guidance, and six reviewed integrated missions. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 
@@ -142,15 +142,15 @@ powershell -File phase4/export-c64.ps1
 
 These commands validate checked-in artifacts; normal checks do not silently regenerate or replace frozen evidence.
 
-Phase 5 Gates 1–7 are checked with:
+Phase 5 Gates 1–8 are checked with:
 
 ```powershell
 powershell -File phase5/check.ps1
 ```
 
-## Next: Phase 5 Gate 8
+## Next: Phase 5 Gate 9
 
-The next gate supplies and tunes complete launch-plane, ascent, and insertion guidance, then freezes six integrated mission outcomes. KST5 telemetry, campaign integration, REU history, and optimization remain later gates. Long C64 missions still require a measured projection and explicit confirmation; routine evidence uses native missions and bounded MOS/VICE probes.
+The next gate adds strict KST5 telemetry and host decoding for the integrated spatial mission. Campaign integration, REU history, target timing, and optimization remain later gates. Long C64 missions still require a measured projection and explicit confirmation; routine evidence uses native missions and bounded MOS/VICE probes.
 
 ## Guiding principles
 

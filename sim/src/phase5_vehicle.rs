@@ -503,6 +503,8 @@ pub struct Phase5VehicleMachine {
     engine_residual_q24: i32,
     burn_fast_steps: u32,
     phase_steps: u32,
+    disturbance_body_q12: ForceVec,
+    damping_scale_q16: i32,
 }
 
 impl Phase5VehicleMachine {
@@ -560,6 +562,8 @@ impl Phase5VehicleMachine {
             engine_residual_q24: 0,
             burn_fast_steps: 0,
             phase_steps: 0,
+            disturbance_body_q12: ForceVec::ZERO,
+            damping_scale_q16: 65_536,
         })
     }
 
@@ -608,6 +612,14 @@ impl Phase5VehicleMachine {
 
     pub fn set_rcs_leak_q15(&mut self, leak: FixedVec3<15>) {
         self.rcs.set_leak_q15(leak);
+    }
+
+    pub fn set_disturbance_body_q12(&mut self, force: ForceVec) {
+        self.disturbance_body_q12 = force;
+    }
+
+    pub fn set_damping_scale_q16(&mut self, scale_q16: i32) {
+        self.damping_scale_q16 = scale_q16.clamp(0, 65_536);
     }
 
     fn stage(&self) -> Result<Phase5StageConfig, Phase5VehicleError> {
@@ -743,7 +755,15 @@ impl Phase5VehicleMachine {
             (ForceVec::ZERO, TorqueVec::ZERO)
         };
         let engine_eci = self.truth.rigid.attitude().rotate(engine_body, status);
-        let total_force_eci = aero.force_eci().checked_add(engine_eci, status);
+        let disturbance_eci = self
+            .truth
+            .rigid
+            .attitude()
+            .rotate(self.disturbance_body_q12, status);
+        let total_force_eci = aero
+            .force_eci()
+            .checked_add(engine_eci, status)
+            .checked_add(disturbance_eci, status);
         let prior_rcs = self.rcs.propellant_q12();
         let (rcs_torque, rcs_consumed, rcs_depleted) = self.rcs.step(
             command.rcs_q15,
@@ -757,9 +777,11 @@ impl Phase5VehicleMachine {
         if rcs_depleted && prior_rcs > 0 {
             *events |= EVENT_RCS_DEPLETED;
         }
+        let effective_rate_damping =
+            multiply_scaled(stage.rate_damping_q16, self.damping_scale_q16, 16, status);
         let damping = rate_damping_torque(
             self.truth.rigid.angular_rate(),
-            stage.rate_damping_q16,
+            effective_rate_damping,
             status,
         );
         let total_torque = aero
@@ -780,7 +802,9 @@ impl Phase5VehicleMachine {
             .attitude()
             .conjugate()
             .rotate(aero.force_eci(), status);
-        let body_force = aero_body.checked_add(engine_body, status);
+        let body_force = aero_body
+            .checked_add(engine_body, status)
+            .checked_add(self.disturbance_body_q12, status);
         let imu_accel_body_q28 = [
             divide_scaled(body_force.x(), self.truth.total_mass_q12, 28, status),
             divide_scaled(body_force.y(), self.truth.total_mass_q12, 28, status),
@@ -790,9 +814,23 @@ impl Phase5VehicleMachine {
         let lateral_z_km_q24 = divide_scaled(body_force.z(), self.truth.total_mass_q12, 24, status);
         let lateral_y_ms_q24 = multiply_scaled(lateral_y_km_q24, 1_000, 0, status);
         let lateral_z_ms_q24 = multiply_scaled(lateral_z_km_q24, 1_000, 0, status);
+        let bend = stage.flexible.bending();
+        let slosh = stage.flexible.slosh();
+        let flexible_parameters = FlexibleParametersQ16::new(
+            ModalParametersQ16::new(
+                bend.natural_frequency(),
+                multiply_scaled(bend.damping_ratio(), self.damping_scale_q16, 16, status),
+                bend.drive_gain(),
+            ),
+            ModalParametersQ16::new(
+                slosh.natural_frequency(),
+                multiply_scaled(slosh.damping_ratio(), self.damping_scale_q16, 16, status),
+                slosh.drive_gain(),
+            ),
+        );
         self.truth.flexible = step_flexible_modes(
             self.truth.flexible,
-            stage.flexible,
+            flexible_parameters,
             FlexibleDriveQ24::new(
                 lateral_y_ms_q24,
                 lateral_z_ms_q24,

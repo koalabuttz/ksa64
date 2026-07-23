@@ -6,7 +6,9 @@ use crate::phase5_vehicle::{
     Phase5VehicleSnapshot,
 };
 use ksa64_core::spatial_numeric::FixedVec3;
-use ksa64_flight::phase5_gnc::{SpatialFlightComputer, SpatialFlightOutput, SpatialGuidanceTarget};
+use ksa64_flight::phase5_gnc::{
+    AttitudeControllerGains, SpatialFlightComputer, SpatialFlightOutput, SpatialGuidanceTarget,
+};
 use ksa64_interface::phase5::{
     parse_spatial_actuator_command, write_spatial_actuator_command, write_spatial_sensor_frame,
     SpatialActuatorCommand, SpatialSensorFrame, SPATIAL_ACTUATOR_COMMAND_LENGTH,
@@ -67,16 +69,29 @@ impl Phase5ClosedLoop {
     pub const fn vehicle(&self) -> &Phase5VehicleMachine {
         &self.vehicle
     }
+    pub fn vehicle_mut(&mut self) -> &mut Phase5VehicleMachine {
+        &mut self.vehicle
+    }
 
     pub fn step(
         &mut self,
         target: SpatialGuidanceTarget,
     ) -> Result<Phase5ClosedLoopStep, Phase5ClosedLoopError> {
+        self.step_with_gains(target, AttitudeControllerGains::GATE7)
+    }
+
+    pub fn step_with_gains(
+        &mut self,
+        target: SpatialGuidanceTarget,
+        gains: AttitudeControllerGains,
+    ) -> Result<Phase5ClosedLoopStep, Phase5ClosedLoopError> {
         let sensor = self.sensors.sample(self.latest);
         let mut sensor_bytes = [0u8; SPATIAL_SENSOR_FRAME_LENGTH];
         write_spatial_sensor_frame(&sensor, &mut sensor_bytes)
             .map_err(Phase5ClosedLoopError::SensorCodec)?;
-        let flight = self.flight.step_serialized(&sensor_bytes, target);
+        let flight = self
+            .flight
+            .step_serialized_with_gains(&sensor_bytes, target, gains);
         let mut command_bytes = [0u8; SPATIAL_ACTUATOR_COMMAND_LENGTH];
         write_spatial_actuator_command(&flight.command, &mut command_bytes)
             .map_err(Phase5ClosedLoopError::CommandCodec)?;

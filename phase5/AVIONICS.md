@@ -43,7 +43,7 @@ The `ksa64-flight` crate still depends only on `ksa64-interface`; it cannot acce
 
 The attitude controller uses the shortest quaternion error, rate damping, two-axis gimbal authority, and bounded three-axis RCS authority. Sequencing owns ignition, cutoff, and separation. Missing actuator feedback, persistent gimbal tracking error, corrupt transport, or navigation failure latches an irreversible cutoff/safeing response.
 
-Gate 8 will supply and tune the complete launch-plane/ascent/insertion guidance target generator. Gate 7 deliberately validates the truth boundary, estimator, controller, sequencer, and wire loop against explicit attitude targets first.
+Gate 8 now supplies the complete local-horizontal launch-plane/ascent/insertion guidance target generator. It uses body-frame error for the reviewed mission gains and projects one-frame-late star fixes to the current gyro epoch; the Gate 7 explicit-target path and frozen signature remain unchanged.
 
 ## Evidence
 

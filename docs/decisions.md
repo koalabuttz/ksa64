@@ -740,12 +740,34 @@ Use native execution for the 64-run routine campaign and 1,024-run reviewed camp
 
 The accepted composed path projects one C64 mission at 243.7 minutes, 64 runs at approximately 10.8 days, and 1,024 runs at approximately 173.3 days. Start any long target run only after a current projection and explicit user confirmation; never cancel a run merely to obtain timing evidence.
 
+## D-055: Guide KSA-5A in the local launch plane
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Generate a bounded quaternion table whose inertial tilt includes both the reviewed local pitch schedule and reference downrange rotation. Use a 42.4-degree east-of-north launch azimuth so the final inertial plane accounts for the launch site's eastward rotational velocity. Command stage-two cutoff at step 3132. The independent float64 audit, not the compact fixed-point orbit classifier, decides compliance with the 180-220 km and inclination envelopes.
+
+## D-056: Use body-frame attitude error without breaking Gate 7
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Compute the reviewed mission controller's quaternion error as current-conjugate times desired so its error vector is expressed in body axes. Project the one-frame-late star-tracker attitude to the current gyro epoch before aiding. Keep the Gate 7 legacy exact path selectable through its frozen gain profile; its transport/controller signature remains `0xaa0a0b0e`.
+
+## D-057: Freeze six integrated Phase 5 missions before telemetry
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Freeze nominal, gust/slosh, star-outage/gyro-bias, gimbal-jam, damping-loss, and RCS-leak/depletion outcomes and checksum summaries. Nominal and gust must meet the reviewed targeting envelope. Sensor outage and RCS depletion may be stable degraded orbits; jam and damping loss must latch irreversible abort. A finite rust-mos guidance probe is required, but a complete C64 mission remains subject to projection and explicit confirmation.
 ## Open decisions
 
 The following remain deliberately unresolved:
 
 - License for KSA64.
-- The Phase 5 frame, quaternion, inertia, torque, cadence, and three-dimensional telemetry contracts.
 - The Phase 6 physical transport and multi-C64 deployment details.
 - The Phase 7 mission set and data-driven configuration scope.
 

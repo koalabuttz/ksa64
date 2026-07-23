@@ -307,3 +307,18 @@ Phase 4 adds an allocation-free campaign layer without changing the Phase 3 miss
 Storage is observational. Stock mode keeps streaming aggregates, five deterministic interesting-run summaries, and one sparse KPH4 trajectory. The REU transport uses preserving capacity probes and explicit DMA; a deterministic `StoragePlan` turns detected or user-capped capacity into additional summaries, full KST4 histories, and compact KPH4 histories. Detection, DMA, archive, UI, or disk failures cannot change physics, later seeds, or aggregate results.
 
 KRA4 is an append-only committed archive with independently protected records. KXV4 divides a selected logical archive into identity-bound numbered volumes. The same bounded four-page UI works on stock and expanded systems; an REU changes retention capacity, not controls or simulation behavior. IEC export occurs after simulation in a separate target utility when full archive support would otherwise consume simulation RAM.
+
+## Accepted Phase 5 foundation and missions
+
+Phase 5 extends the planar stack additively with ECI translation, scalar-first
+quaternions, diagonal rigid-body dynamics, transverse bending/slosh modes, four
+32 Hz fast substeps, two-axis gimbal actuation, bounded upper-stage RCS, and
+strict spatial avionics. Flight code still receives transported measurements
+only.
+
+The reviewed guidance is a compact host-generated quaternion reference that
+follows local horizontal through the launch plane. The mission controller uses
+body-frame quaternion error and stage-specific static gains; no heap,
+floating-point runtime, or truth access is introduced. Six deterministic
+integrated missions now form the input to KST5 telemetry and later Phase 5
+campaign work.

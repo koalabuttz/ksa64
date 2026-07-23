@@ -185,3 +185,25 @@ Archive and export corruption tests reject the first invalid record, truncation,
 The full target campaign is not an acceptance requirement. The measured closed-loop path projects one C64 mission at 243.7 minutes, 64 runs at approximately 10.8 days, and 1,024 runs at approximately 173.3 days. No long run is started without a current projection and explicit confirmation, and no run is canceled to manufacture timing evidence.
 
 The frozen audit and measurements are in `phase4/COMPLETION.md`.
+
+## Accepted Phase 5 integrated-mission validation
+
+Phase 5 Gates 1-8 separately verify fixed-point spatial arithmetic, rigid-body
+Euler coupling, flexible modes, the rotating-Earth world, multirate vehicle,
+strict spatial transports, aided navigation, and the complete guidance loop.
+The Gate 8 mission layer freezes six outcomes only after the unchanged Phase 3
+and Phase 4 paths continue to pass.
+
+An independent Python audit converts raw ECI terminal position and velocity to
+float64 orbital elements without using the Rust orbit classifier. Nominal and
+gust missions remain inside 180-220 km and within 0.2 degree of 51.6 degrees.
+The star-outage and RCS-depletion cases remain stable degraded orbits; gimbal
+jam and damping loss abort irreversibly. Sampled nominal Max-Q remains below
+60 kPa, angle of attack below 15 degrees, and navigation position error below
+1 km.
+
+Native tests freeze ordered outcome, step, event, and checksum evidence. A
+bounded rust-mos probe verifies the generated guidance signature. Full target
+missions are still excluded from routine validation until Gate 11 produces a
+fresh linked-size and elapsed-time projection and the user explicitly approves
+the run.

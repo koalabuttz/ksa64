@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-7 complete; Gate 8 integrated reference and failure missions is next.
+Status: Gates 1-8 complete; Gate 9 KST5 telemetry is next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -48,6 +48,17 @@ The existing target evidence also sets expectations:
 - a long C64 run requires a fresh projection and explicit confirmation;
 - optimization begins only after representative 3-D kernels are measured.
 
+## Integrated mission evidence
+
+Gate 8 adds local-horizontal launch-plane guidance and freezes six complete
+missions. Nominal and gust cases meet the 180-220 km target envelope; sensor
+outage and RCS depletion remain stable degraded orbits; gimbal jam and damping
+loss abort irreversibly. See [MISSIONS.md](MISSIONS.md). Independent float64
+analysis verifies the raw terminal vectors, while a finite rust-mos probe
+freezes guidance signature `0xada003ef` without starting a full target mission.
+
 ## Next gate
 
-Gate 8 composes the complete KSA-5A ascent guidance target generator and the six reviewed missions: nominal; gust plus slosh; star outage plus gyro bias; gimbal-jam abort; damping-loss abort; and RCS leak/depletion. Their exact native outcomes must be frozen before KST5 telemetry, campaign storage, or optimization work begins.
+Gate 9 adds strict KST5 telemetry and host decoding for the integrated spatial
+mission. Campaign variation, adaptive storage, target timing, and measured
+optimization remain later gates.

@@ -10,11 +10,48 @@ use ksa64_interface::{
 };
 
 pub const STAGE1_CUTOFF_STEP: u32 = 1240;
-pub const STAGE2_FLIGHT_CUTOFF_STEP: u32 = 3171;
+pub const STAGE2_FLIGHT_CUTOFF_STEP: u32 = 3132;
 pub const GIMBAL_LIMIT_Q16: i32 = 6_863;
 pub const RCS_LIMIT_Q15: i32 = 32_767;
 pub const TRACKING_LIMIT_Q16: i32 = 2_288;
 pub const TRACKING_LIMIT_STEPS: u8 = 16;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AttitudeControllerGains {
+    pub gimbal_error_shift: u8,
+    pub gimbal_rate_shift: u8,
+    pub rcs_error_shift: u8,
+    pub rcs_rate_shift: u8,
+    pub rcs_deadband_q15: i32,
+    pub body_frame_error: bool,
+}
+impl AttitudeControllerGains {
+    pub const GATE7: Self = Self {
+        gimbal_error_shift: 13,
+        gimbal_rate_shift: 9,
+        rcs_error_shift: 14,
+        rcs_rate_shift: 9,
+        rcs_deadband_q15: 0,
+        body_frame_error: false,
+    };
+    pub const REFERENCE_STAGE1: Self = Self {
+        gimbal_error_shift: 16,
+        gimbal_rate_shift: 10,
+        rcs_error_shift: 18,
+        rcs_rate_shift: 15,
+        rcs_deadband_q15: 64,
+        body_frame_error: true,
+    };
+    pub const REFERENCE_STAGE2: Self = Self {
+        gimbal_error_shift: 17,
+        gimbal_rate_shift: 9,
+        rcs_error_shift: 18,
+        rcs_rate_shift: 8,
+        rcs_deadband_q15: 64,
+        body_frame_error: true,
+    };
+    pub const REFERENCE_MISSION: Self = Self::REFERENCE_STAGE1;
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(C)]
@@ -84,6 +121,15 @@ impl SpatialFlightComputer {
         frame: &SpatialSensorFrame,
         target: SpatialGuidanceTarget,
     ) -> SpatialFlightOutput {
+        self.step_with_gains(frame, target, AttitudeControllerGains::GATE7)
+    }
+
+    pub fn step_with_gains(
+        &mut self,
+        frame: &SpatialSensorFrame,
+        target: SpatialGuidanceTarget,
+        gains: AttitudeControllerGains,
+    ) -> SpatialFlightOutput {
         let navigation = match self.navigation.update(frame) {
             Ok(value) => value,
             Err(_) => {
@@ -99,7 +145,13 @@ impl SpatialFlightComputer {
         if self.status.abort_latched {
             return self.safe_output(frame.sequence);
         }
-        let mut command = attitude_command(frame.sequence, navigation, target);
+        let mut command = attitude_command_with_gains(frame.sequence, navigation, target, gains);
+        // Engine gimbal owns powered pitch/yaw. Preserve scarce RCS for roll
+        // while burning; three-axis RCS authority remains available in coast.
+        if frame.engine_on {
+            command.rcs_q15[1] = 0;
+            command.rcs_q15[2] = 0;
+        }
         self.apply_sequencer(frame, &mut command);
         self.previous_command = command;
         self.make_output(frame.sequence, navigation, command)
@@ -110,8 +162,17 @@ impl SpatialFlightComputer {
         bytes: &[u8],
         target: SpatialGuidanceTarget,
     ) -> SpatialFlightOutput {
+        self.step_serialized_with_gains(bytes, target, AttitudeControllerGains::GATE7)
+    }
+
+    pub fn step_serialized_with_gains(
+        &mut self,
+        bytes: &[u8],
+        target: SpatialGuidanceTarget,
+        gains: AttitudeControllerGains,
+    ) -> SpatialFlightOutput {
         match parse_spatial_sensor_frame(bytes) {
-            Ok(frame) => self.step(&frame, target),
+            Ok(frame) => self.step_with_gains(&frame, target, gains),
             Err(_) => {
                 self.latch_abort(ALARM_SENSOR_FRAME);
                 self.safe_output(self.navigation.state().sequence)
@@ -229,7 +290,20 @@ pub fn attitude_command(
     navigation: SpatialNavigationState,
     target: SpatialGuidanceTarget,
 ) -> SpatialActuatorCommand {
-    let mut error = quaternion_error(target.attitude_q30, navigation.attitude_q30);
+    attitude_command_with_gains(sequence, navigation, target, AttitudeControllerGains::GATE7)
+}
+
+pub fn attitude_command_with_gains(
+    sequence: u32,
+    navigation: SpatialNavigationState,
+    target: SpatialGuidanceTarget,
+    gains: AttitudeControllerGains,
+) -> SpatialActuatorCommand {
+    let mut error = if gains.body_frame_error {
+        quaternion_error_body(target.attitude_q30, navigation.attitude_q30)
+    } else {
+        quaternion_error(target.attitude_q30, navigation.attitude_q30)
+    };
     if error[0] < 0 {
         let mut component = 0;
         while component < 4 {
@@ -242,16 +316,29 @@ pub fn attitude_command(
         target.angular_rate_q24[1].saturating_sub(navigation.angular_rate_q24[1]);
     let yaw_rate_error = target.angular_rate_q24[2].saturating_sub(navigation.angular_rate_q24[2]);
     // Positive pitch/yaw gimbal produces negative body Y/Z torque in KSA-5A.
-    let pitch_raw = -(error[2] >> 13) - (pitch_rate_error >> 9);
-    let yaw_raw = -(error[3] >> 13) - (yaw_rate_error >> 9);
+    let pitch_raw =
+        -(error[2] >> gains.gimbal_error_shift) - (pitch_rate_error >> gains.gimbal_rate_shift);
+    let yaw_raw =
+        -(error[3] >> gains.gimbal_error_shift) - (yaw_rate_error >> gains.gimbal_rate_shift);
     let pitch =
         if pitch_raw.abs() <= 1 { 0 } else { pitch_raw }.clamp(-GIMBAL_LIMIT_Q16, GIMBAL_LIMIT_Q16);
     let yaw =
         if yaw_raw.abs() <= 1 { 0 } else { yaw_raw }.clamp(-GIMBAL_LIMIT_Q16, GIMBAL_LIMIT_Q16);
-    let roll_rcs = ((error[1] >> 14) + (roll_rate_error >> 9)).clamp(-RCS_LIMIT_Q15, RCS_LIMIT_Q15);
-    let pitch_rcs =
-        ((error[2] >> 14) + (pitch_rate_error >> 9)).clamp(-RCS_LIMIT_Q15, RCS_LIMIT_Q15);
-    let yaw_rcs = ((error[3] >> 14) + (yaw_rate_error >> 9)).clamp(-RCS_LIMIT_Q15, RCS_LIMIT_Q15);
+    let roll_rcs = apply_deadband(
+        ((error[1] >> gains.rcs_error_shift) + (roll_rate_error >> gains.rcs_rate_shift))
+            .clamp(-RCS_LIMIT_Q15, RCS_LIMIT_Q15),
+        gains.rcs_deadband_q15,
+    );
+    let pitch_rcs = apply_deadband(
+        ((error[2] >> gains.rcs_error_shift) + (pitch_rate_error >> gains.rcs_rate_shift))
+            .clamp(-RCS_LIMIT_Q15, RCS_LIMIT_Q15),
+        gains.rcs_deadband_q15,
+    );
+    let yaw_rcs = apply_deadband(
+        ((error[3] >> gains.rcs_error_shift) + (yaw_rate_error >> gains.rcs_rate_shift))
+            .clamp(-RCS_LIMIT_Q15, RCS_LIMIT_Q15),
+        gains.rcs_deadband_q15,
+    );
     SpatialActuatorCommand {
         sequence,
         gimbal_q16: [pitch, yaw],
@@ -262,6 +349,32 @@ pub fn attitude_command(
     }
 }
 
+fn apply_deadband(value: i32, deadband: i32) -> i32 {
+    if value.saturating_abs() <= deadband {
+        0
+    } else {
+        value
+    }
+}
+fn quaternion_error_body(desired: [i32; 4], current: [i32; 4]) -> [i32; 4] {
+    let conjugate = [current[0], -current[1], -current[2], -current[3]];
+    [
+        product(conjugate[0], desired[0])
+            - product(conjugate[1], desired[1])
+            - product(conjugate[2], desired[2])
+            - product(conjugate[3], desired[3]),
+        product(conjugate[0], desired[1])
+            + product(conjugate[1], desired[0])
+            + product(conjugate[2], desired[3])
+            - product(conjugate[3], desired[2]),
+        product(conjugate[0], desired[2]) - product(conjugate[1], desired[3])
+            + product(conjugate[2], desired[0])
+            + product(conjugate[3], desired[1]),
+        product(conjugate[0], desired[3]) + product(conjugate[1], desired[2])
+            - product(conjugate[2], desired[1])
+            + product(conjugate[3], desired[0]),
+    ]
+}
 fn quaternion_error(desired: [i32; 4], current: [i32; 4]) -> [i32; 4] {
     let conjugate = [current[0], -current[1], -current[2], -current[3]];
     [
