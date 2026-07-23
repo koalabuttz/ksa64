@@ -101,7 +101,7 @@ Exit criteria:
 
 ## Phase 4: REU telemetry and statistical analysis
 
-Status: planned. Phase 3 mission outputs are the frozen behavioral baseline; Phase 4 recording must be observational and must not change results when disabled.
+Status: complete. Deterministic campaigns, independent float64 analysis, stock streaming retention, preserving adaptive REU archives, interactive UI, and strict host/C64 disk export pass the completion audit. Phase 3 run-zero behavior and artifacts remain exact; see `phase4/COMPLETION.md`.
 
 Purpose: use expanded storage without pretending the REU is ordinary addressable RAM.
 

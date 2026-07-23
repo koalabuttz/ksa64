@@ -1,6 +1,6 @@
 # Phase 4: adaptive storage and statistical analysis
 
-Status: implementation in progress.
+Status: complete. See `COMPLETION.md` for the final audit and `../phase5/README.md` for the handoff.
 
 Phase 4 adds deterministic parameter campaigns, streaming statistics, compact stock-C64 analysis, optional capacity-scaled REU archives, and configurable disk export. An REU is never required for simulation or aggregate results.
 
