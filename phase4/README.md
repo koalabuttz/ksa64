@@ -12,4 +12,4 @@ Completed implementation gates:
 - parameterized missions, KSR4, and the frozen 64-run smoke campaign;
 - ordered native execution and the independently analyzed 1,024-run reference campaign.
 
-See `DISTRIBUTIONS.md`, `CAMPAIGNS.md`, `FORMATS.md`, `HOST_ANALYSIS.md`, and `STOCK_STORAGE.md` for the frozen evidence and reproduction commands.
+See `DISTRIBUTIONS.md`, `CAMPAIGNS.md`, `FORMATS.md`, `HOST_ANALYSIS.md`, `STOCK_STORAGE.md`, and `REU_STORAGE.md` for the frozen evidence and reproduction commands.

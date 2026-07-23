@@ -34,3 +34,7 @@ required-features = ["sim"]
 name = "ksa64-phase4-stock-c64"
 path = "src/bin/phase4_stock_c64.rs"
 required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase4-reu-probe-c64"
+path = "src/bin/phase4_reu_probe_c64.rs"
+required-features = ["c64"]
