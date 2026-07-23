@@ -570,4 +570,12 @@ The following remain deliberately unresolved:
 - License for KSA64.
 - Target C64 and REU configurations beyond the baseline unexpanded C64.
 - Minimum acceptable simulation rate once display and telemetry are included.
+## D-037: Represent Phase 2 in rotating equatorial polar coordinates
 
+Date: 2026-07-22
+
+Status: accepted.
+
+Use radius, Earth-relative downrange angle, radial velocity, and inertial specific angular momentum as the planar truth variables. Derive tangential velocity from angular momentum and radius. Use a rotating spherical Earth, a co-rotating atmosphere, fixed-capacity constant-engine stages, and step-aligned time/pitch guidance. Preserve Phase 1 contracts and add versioned Phase 2 records.
+
+This representation makes torque-free angular momentum a state invariant, avoids absolute Cartesian position transforms in the hot path, and still supports genuine energy, apogee, perigee, and orbit classification. The generated Phase 2 contract proves the declared field and intermediate envelopes and supplies target-executable trig and square-root checks.

@@ -10,6 +10,11 @@ sim = ["fixtures"]
 c64 = ["fixtures"]
 
 [[bin]]
+name = "ksa64-phase2-contract-sim"
+path = "src/bin/phase2_contract_sim.rs"
+required-features = ["sim"]
+
+[[bin]]
 name = "ksa64-phase1-numeric-sim"
 path = "src/bin/numeric_sim.rs"
 required-features = ["sim"]

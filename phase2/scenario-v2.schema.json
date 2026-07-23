@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ksa64.scenario.phase2-v2",
+  "type": "object",
+  "required": [
+    "schema",
+    "scenario_id",
+    "numeric_contract",
+    "environment",
+    "timestep_s",
+    "duration_s",
+    "telemetry_stride_steps",
+    "payload_mass_t",
+    "initial",
+    "stages",
+    "pitch_program",
+    "aerodynamics"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ksa64.scenario.phase2-v2"
+    },
+    "scenario_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "numeric_contract": {
+      "const": "ksa64.numeric.phase2-v1"
+    },
+    "environment": {
+      "const": "earth.rotating-equatorial-simple-atmosphere.v1"
+    },
+    "timestep_s": {
+      "type": "string"
+    },
+    "duration_s": {
+      "type": "string"
+    },
+    "telemetry_stride_steps": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "payload_mass_t": {
+      "type": "string"
+    },
+    "initial": {
+      "type": "object"
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4
+    },
+    "pitch_program": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 16
+    },
+    "aerodynamics": {
+      "type": "object",
+      "maxProperties": 4
+    }
+  },
+  "additionalProperties": false
+}

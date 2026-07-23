@@ -1,0 +1,131 @@
+{
+  "schema": "ksa64.scenario.phase2-v2",
+  "scenario_id": "ksa64.phase2.ksa2a-200km.v1",
+  "numeric_contract": "ksa64.numeric.phase2-v1",
+  "environment": "earth.rotating-equatorial-simple-atmosphere.v1",
+  "timestep_s": "0.125",
+  "duration_s": "900",
+  "telemetry_stride_steps": 8,
+  "payload_mass_t": "15",
+  "initial": {
+    "altitude_km": "0",
+    "radial_velocity_km_s": "0",
+    "surface_relative_velocity_km_s": "0"
+  },
+  "stages": [
+    {
+      "id": "s1",
+      "dry_mass_t": "30",
+      "propellant_mass_t": "400",
+      "thrust_mn": "7.6",
+      "mass_flow_t_s": "2.58",
+      "max_burn_s": "155",
+      "separation_delay_s": "1",
+      "ignition_delay_s": "0",
+      "reference_area_m2": "28",
+      "aero_table": "booster.simple.v1",
+      "separate": true
+    },
+    {
+      "id": "s2",
+      "dry_mass_t": "8",
+      "propellant_mass_t": "84",
+      "thrust_mn": "1.1",
+      "mass_flow_t_s": "0.35",
+      "max_burn_s": "240",
+      "separation_delay_s": "0",
+      "ignition_delay_s": "0.5",
+      "reference_area_m2": "10",
+      "aero_table": "upper.simple.v1",
+      "separate": false
+    }
+  ],
+  "pitch_program": [
+    {
+      "time_s": "0",
+      "degrees_from_vertical": "0"
+    },
+    {
+      "time_s": "10",
+      "degrees_from_vertical": "0"
+    },
+    {
+      "time_s": "30",
+      "degrees_from_vertical": "8"
+    },
+    {
+      "time_s": "70",
+      "degrees_from_vertical": "32"
+    },
+    {
+      "time_s": "120",
+      "degrees_from_vertical": "65"
+    },
+    {
+      "time_s": "155",
+      "degrees_from_vertical": "82"
+    },
+    {
+      "time_s": "220",
+      "degrees_from_vertical": "88"
+    },
+    {
+      "time_s": "400",
+      "degrees_from_vertical": "90"
+    }
+  ],
+  "aerodynamics": {
+    "booster.simple.v1": [
+      {
+        "mach": "0",
+        "cd": "0.30"
+      },
+      {
+        "mach": "0.8",
+        "cd": "0.36"
+      },
+      {
+        "mach": "1",
+        "cd": "0.55"
+      },
+      {
+        "mach": "1.2",
+        "cd": "0.62"
+      },
+      {
+        "mach": "2",
+        "cd": "0.40"
+      },
+      {
+        "mach": "5",
+        "cd": "0.25"
+      },
+      {
+        "mach": "25",
+        "cd": "0.20"
+      }
+    ],
+    "upper.simple.v1": [
+      {
+        "mach": "0",
+        "cd": "0.25"
+      },
+      {
+        "mach": "1",
+        "cd": "0.45"
+      },
+      {
+        "mach": "2",
+        "cd": "0.30"
+      },
+      {
+        "mach": "5",
+        "cd": "0.20"
+      },
+      {
+        "mach": "25",
+        "cd": "0.18"
+      }
+    ]
+  }
+}

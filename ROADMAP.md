@@ -53,6 +53,8 @@ Exit criteria:
 
 ## Phase 2: two-dimensional multistage ascent
 
+Status: in progress. The rotating-Earth planar numeric and source-data contract is accepted; vacuum coast and integrator selection are next.
+
 Purpose: produce a recognizable launch trajectory and orbital-insertion attempt.
 
 Planned capabilities:
