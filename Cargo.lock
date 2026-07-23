@@ -7,8 +7,28 @@ name = "ksa64-core"
 version = "0.1.0"
 
 [[package]]
+name = "ksa64-flight"
+version = "0.1.0"
+dependencies = [
+ "ksa64-interface",
+]
+
+[[package]]
 name = "ksa64-host"
 version = "0.1.0"
 dependencies = [
  "ksa64-core",
+]
+
+[[package]]
+name = "ksa64-interface"
+version = "0.1.0"
+
+[[package]]
+name = "ksa64-sim"
+version = "0.1.0"
+dependencies = [
+ "ksa64-core",
+ "ksa64-flight",
+ "ksa64-interface",
 ]

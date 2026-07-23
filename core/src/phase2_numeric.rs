@@ -33,6 +33,23 @@ pub fn sin_cos_pitch_q15(angle: PitchAngle) -> Option<(i16, i16)> {
         quarter_wave_q15(PitchAngle::PROGRADE.raw() - raw),
     ))
 }
+/// Phase 3 steering trigonometry over the frozen 0-110 degree actuator range.
+/// Phase 2 keeps using `sin_cos_pitch_q15`, so its accepted range and results
+/// remain byte-for-byte unchanged.
+pub fn sin_cos_phase3_pitch_q15(angle: PitchAngle) -> Option<(i16, i16)> {
+    if !angle.is_phase3_valid() {
+        return None;
+    }
+    let raw = angle.raw();
+    if raw <= PitchAngle::PROGRADE.raw() {
+        return sin_cos_pitch_q15(angle);
+    }
+    let supplementary = 32_768u16 - raw;
+    Some((
+        quarter_wave_q15(supplementary),
+        -quarter_wave_q15(raw - PitchAngle::PROGRADE.raw()),
+    ))
+}
 
 fn quarter_wave_q15(raw: u16) -> i16 {
     let index = (raw >> 6) as usize;

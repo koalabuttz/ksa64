@@ -69,4 +69,7 @@ impl PitchAngle {
     pub const fn is_phase2_valid(self) -> bool {
         self.0 <= Self::PROGRADE.0
     }
+    pub const fn is_phase3_valid(self) -> bool {
+        self.0 <= 20_025
+    }
 }

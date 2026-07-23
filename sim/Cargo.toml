@@ -1,0 +1,14 @@
+[package]
+name = "ksa64-sim"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+fixtures = ["ksa64-core/fixtures"]
+c64 = ["fixtures", "ksa64-core/c64"]
+
+[dependencies]
+ksa64-core = { path = "../core" }
+ksa64-flight = { path = "../flight" }
+ksa64-interface = { path = "../interface" }
