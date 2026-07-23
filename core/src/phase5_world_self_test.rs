@@ -52,6 +52,13 @@ pub fn phase5_world_signature() -> u32 {
         None => return 0,
     };
     let advanced = advance_spatial_state(circular, ForceVec::ZERO, 100 << 12, 8_192, &mut status);
+    let forced = advance_spatial_state(
+        circular,
+        ForceVec::new(1 << 12, 0, 0),
+        100 << 12,
+        8_192,
+        &mut status,
+    );
     if !status.is_clear() {
         return 0;
     }
@@ -74,7 +81,11 @@ pub fn phase5_world_signature() -> u32 {
     signature = hash(signature, position.z() as u32);
     signature = hash(signature, velocity.x() as u32);
     signature = hash(signature, velocity.y() as u32);
-    hash(signature, velocity.z() as u32)
+    signature = hash(signature, velocity.z() as u32);
+    let acceleration = forced.acceleration();
+    signature = hash(signature, acceleration.x() as u32);
+    signature = hash(signature, acceleration.y() as u32);
+    hash(signature, acceleration.z() as u32)
 }
 
 pub fn run_phase5_world_self_tests() -> u32 {

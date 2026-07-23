@@ -49,5 +49,11 @@ Native tests cover the Cape-like launch site, exact co-rotation, surface
 gravity, axial and lateral aerodynamics, inclined circular-orbit classification,
 and 16 seconds of vacuum propagation. The independent generator supplies the
 launch and circular states plus the acos table. A portable exact signature over
-environment, orbit, and successor raw values is frozen as `0xcef89def`; native
+environment, orbit, and successor raw values is frozen as `0x650d5aa7`; native
 Rust and the pinned rust-mos instruction-level probe agree exactly.
+
+The rust-mos build requires `advance_spatial_state` to remain `#[inline(always)]`
+when more than one distinct call site appears in an exactness probe. This is the
+same bounded code-generation safeguard recorded for the rigid-body step;
+removing it is an explicit cross-target revalidation task, not a cosmetic
+cleanup.

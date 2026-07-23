@@ -114,5 +114,24 @@ fn vacuum_translation_preserves_a_short_circular_arc() {
 
 #[test]
 fn exact_world_signature_is_frozen_for_target_comparison() {
-    assert_eq!(ksa64_core::phase5_world_signature(), 0xcef8_9def);
+    assert_eq!(ksa64_core::phase5_world_signature(), 0x650d_5aa7);
+}
+
+#[test]
+fn inherited_meganewton_per_tonne_force_scale_is_preserved() {
+    let state = SpatialState::new(
+        position(vectors::CIRCULAR_POSITION_Q12),
+        velocity(vectors::CIRCULAR_VELOCITY_Q24),
+    );
+    let mut status = NumericStatus::CLEAR;
+    let accelerated = advance_spatial_state(
+        state,
+        ForceVec::new(1 << 12, 0, 0),
+        100 << 12,
+        8_192,
+        &mut status,
+    );
+    // 1 MN / 100 t = +0.01 km/s^2, slightly exceeding gravity at 200 km.
+    assert!(accelerated.acceleration().x() > 0);
+    assert!(status.is_clear());
 }

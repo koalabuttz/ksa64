@@ -21,7 +21,7 @@ bounded rust-mos probe.
 The spatial world now adds ECI translation, spherical gravity, atmosphere
 co-rotation, 3-D axial/normal aerodynamics, body aerodynamic torque, and orbit
 analysis with inclination. Native and rust-mos agree on the frozen exact world
-signature `0xcef89def`.
+signature `0x650d5aa7`.
 
 Phase 4 completed the maturity prerequisites for 3-D work: the 2-D world is deterministic and independently checked, flight software is isolated from truth, campaign variation is reproducible, storage is observational, and stock/REU evidence paths are strict.
 

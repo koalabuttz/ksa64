@@ -327,28 +327,30 @@ pub fn evaluate_spatial_aerodynamics(
     } else {
         divide_scaled(body_air.z(), environment.air_speed_q24, 16, status)
     };
+    let normal_y_kn_q12 = subtract(
+        0,
+        multiply_scaled(normal_per_alpha_q12, alpha_y_q16, 16, status),
+        status,
+    );
+    let normal_z_kn_q12 = subtract(
+        0,
+        multiply_scaled(normal_per_alpha_q12, alpha_z_q16, 16, status),
+        status,
+    );
     let normal_body = ForceVec::new(
         0,
-        subtract(
-            0,
-            multiply_scaled(normal_per_alpha_q12, alpha_y_q16, 16, status),
-            status,
-        ),
-        subtract(
-            0,
-            multiply_scaled(normal_per_alpha_q12, alpha_z_q16, 16, status),
-            status,
-        ),
+        divide_scaled(normal_y_kn_q12, 1_000, 0, status),
+        divide_scaled(normal_z_kn_q12, 1_000, 0, status),
     );
     let normal_eci = attitude.rotate(normal_body, status);
     let force_eci = drag.checked_add(normal_eci, status);
-    let torque_y_knm_q16 = multiply_scaled(
+    let torque_y_q16 = multiply_scaled(
         config.center_of_pressure_aft_q16,
         normal_body.z(),
         12,
         status,
     );
-    let torque_z_knm_q16 = subtract(
+    let torque_z_q16 = subtract(
         0,
         multiply_scaled(
             config.center_of_pressure_aft_q16,
@@ -358,11 +360,7 @@ pub fn evaluate_spatial_aerodynamics(
         ),
         status,
     );
-    let torque_body = TorqueVec::new(
-        0,
-        divide_scaled(torque_y_knm_q16, 1_000, 0, status),
-        divide_scaled(torque_z_knm_q16, 1_000, 0, status),
-    );
+    let torque_body = TorqueVec::new(0, torque_y_q16, torque_z_q16);
     let mach_q16 = if environment.sound_speed_q24 == 0 {
         0
     } else {
@@ -382,6 +380,7 @@ pub fn evaluate_spatial_aerodynamics(
     }
 }
 
+#[inline(always)]
 pub fn advance_spatial_state(
     state: SpatialState,
     non_gravity_force_eci: ForceVec,
@@ -396,15 +395,11 @@ pub fn advance_spatial_state(
         return state;
     }
     let environment = evaluate_spatial_environment(state, status);
-    let acceleration_ms_q28 = AccelerationVec::new(
+    // The inherited force unit is MN: 1 MN / 1 tonne = 1 km/s^2.
+    let non_gravity = AccelerationVec::new(
         divide_scaled(non_gravity_force_eci.x(), mass_q12, 28, status),
         divide_scaled(non_gravity_force_eci.y(), mass_q12, 28, status),
         divide_scaled(non_gravity_force_eci.z(), mass_q12, 28, status),
-    );
-    let non_gravity = AccelerationVec::new(
-        divide_scaled(acceleration_ms_q28.x(), 1_000, 0, status),
-        divide_scaled(acceleration_ms_q28.y(), 1_000, 0, status),
-        divide_scaled(acceleration_ms_q28.z(), 1_000, 0, status),
     );
     let acceleration = environment.gravity.checked_add(non_gravity, status);
     let velocity = state.velocity.checked_add(
