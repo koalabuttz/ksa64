@@ -1,0 +1,214 @@
+{
+  "contract": "ksa64.numeric.phase5-v1",
+  "contract_id": 1560508115,
+  "environment": "earth.eci-rotating-spherical-flex.v1",
+  "environment_id": 2082184392,
+  "scenario": "ksa64.phase5.ksa5a-200km-51.6.v1",
+  "scenario_id": 4178197782,
+  "base_ksc2_crc32": 1563829522,
+  "frames": {
+    "eci": "right-handed; +Z north; +X longitude zero at epoch; +Y completes",
+    "body": "+X nose; +Y vehicle right; +Z completes",
+    "quaternion": "scalar-first Hamilton body-to-ECI active rotation",
+    "local_guidance": "up/east/north"
+  },
+  "cadence": {
+    "mission_step_s": "0.125",
+    "attitude_substeps": 4,
+    "fast_step_s": "0.03125"
+  },
+  "mission": {
+    "launch_latitude_deg": "28.5",
+    "launch_longitude_deg": "0",
+    "target_altitude_km": "200",
+    "target_inclination_deg": "51.6",
+    "payload_mass_t": "12",
+    "duration_s": "900"
+  },
+  "formats": {
+    "position": {
+      "storage": "i32",
+      "unit": "km",
+      "fractional_bits": 12,
+      "minimum": "-8379",
+      "maximum": "8379",
+      "raw_minimum": -34320384,
+      "raw_maximum": 34320384
+    },
+    "velocity": {
+      "storage": "i32",
+      "unit": "km/s",
+      "fractional_bits": 24,
+      "minimum": "-16",
+      "maximum": "16",
+      "raw_minimum": -268435456,
+      "raw_maximum": 268435456
+    },
+    "acceleration": {
+      "storage": "i32",
+      "unit": "km/s^2",
+      "fractional_bits": 28,
+      "minimum": "-0.2",
+      "maximum": "0.2",
+      "raw_minimum": -53687091,
+      "raw_maximum": 53687091
+    },
+    "quaternion": {
+      "storage": "i32",
+      "unit": "dimensionless",
+      "fractional_bits": 30,
+      "minimum": "-1",
+      "maximum": "1",
+      "raw_minimum": -1073741824,
+      "raw_maximum": 1073741824
+    },
+    "angular_rate": {
+      "storage": "i32",
+      "unit": "rad/s",
+      "fractional_bits": 24,
+      "minimum": "-8",
+      "maximum": "8",
+      "raw_minimum": -134217728,
+      "raw_maximum": 134217728
+    },
+    "angular_acceleration": {
+      "storage": "i32",
+      "unit": "rad/s^2",
+      "fractional_bits": 24,
+      "minimum": "-64",
+      "maximum": "64",
+      "raw_minimum": -1073741824,
+      "raw_maximum": 1073741824
+    },
+    "inertia": {
+      "storage": "i32",
+      "unit": "t*m^2",
+      "fractional_bits": 12,
+      "minimum": "0",
+      "maximum": "500000",
+      "raw_minimum": 0,
+      "raw_maximum": 2048000000
+    },
+    "torque": {
+      "storage": "i32",
+      "unit": "MN*m",
+      "fractional_bits": 16,
+      "minimum": "-1000",
+      "maximum": "1000",
+      "raw_minimum": -65536000,
+      "raw_maximum": 65536000
+    },
+    "geometry": {
+      "storage": "i32",
+      "unit": "m",
+      "fractional_bits": 16,
+      "minimum": "-128",
+      "maximum": "128",
+      "raw_minimum": -8388608,
+      "raw_maximum": 8388608
+    },
+    "modal_state": {
+      "storage": "i32",
+      "unit": "rad or m",
+      "fractional_bits": 24,
+      "minimum": "-8",
+      "maximum": "8",
+      "raw_minimum": -134217728,
+      "raw_maximum": 134217728
+    },
+    "frequency": {
+      "storage": "i32",
+      "unit": "rad/s",
+      "fractional_bits": 16,
+      "minimum": "0",
+      "maximum": "64",
+      "raw_minimum": 0,
+      "raw_maximum": 4194304
+    },
+    "damping": {
+      "storage": "i32",
+      "unit": "dimensionless",
+      "fractional_bits": 16,
+      "minimum": "0",
+      "maximum": "1",
+      "raw_minimum": 0,
+      "raw_maximum": 65536
+    }
+  },
+  "range_proof": {
+    "widened_products": [
+      {
+        "name": "quaternion product",
+        "operands": [
+          "quaternion",
+          "quaternion"
+        ],
+        "maximum_raw_product": 1152921504606846976,
+        "required_bits_including_sign": 62
+      },
+      {
+        "name": "position velocity cross",
+        "operands": [
+          "position",
+          "velocity"
+        ],
+        "maximum_raw_product": 9212807929135104,
+        "required_bits_including_sign": 55
+      },
+      {
+        "name": "inertia angular rate",
+        "operands": [
+          "inertia",
+          "angular_rate"
+        ],
+        "maximum_raw_product": 274877906944000000,
+        "required_bits_including_sign": 59
+      },
+      {
+        "name": "angular momentum rate cross",
+        "operands": [
+          "angular_rate",
+          "inertia"
+        ],
+        "maximum_raw_product": 274877906944000000,
+        "required_bits_including_sign": 59
+      },
+      {
+        "name": "torque lever coupling",
+        "operands": [
+          "torque",
+          "geometry"
+        ],
+        "maximum_raw_product": 549755813888000,
+        "required_bits_including_sign": 50
+      },
+      {
+        "name": "modal frequency state",
+        "operands": [
+          "frequency",
+          "modal_state"
+        ],
+        "maximum_raw_product": 562949953421312,
+        "required_bits_including_sign": 51
+      }
+    ],
+    "maximum_required_bits_including_sign": 62,
+    "explicit_two_word_intermediate_required": true
+  },
+  "limits": {
+    "maximum_stages": 4,
+    "bending_modes_per_transverse_axis": 1,
+    "slosh_modes_per_transverse_axis": 1,
+    "maximum_distributions": 24,
+    "maximum_angle_of_attack_deg": "15"
+  },
+  "frozen_planar": {
+    "truth_checksum": "0xc86045a0",
+    "sensor_checksum": "0x47d11fb0",
+    "navigation_checksum": "0xc6f9da7b",
+    "flight_checksum": "0x02ce28ef",
+    "kst3_crc32": "0xaf79b36e",
+    "phase2_compatibility": "0xcc57612b"
+  },
+  "source_sha256": "7139993d5b315950da6a1384a85493f627b0acff74b304b00dce6bb9e56709bb"
+}

@@ -1,0 +1,78 @@
+{
+  "schema": "ksa64.scenario.phase5-v1",
+  "scenario_id": "ksa64.phase5.ksa5a-200km-51.6.v1",
+  "numeric_contract": "ksa64.numeric.phase5-v1",
+  "environment": "earth.eci-rotating-spherical-flex.v1",
+  "base_ksc2_crc32": "0x5d362512",
+  "timestep_s": "0.125",
+  "attitude_substeps": 4,
+  "duration_s": "900",
+  "telemetry_stride_steps": 1,
+  "launch": {
+    "geocentric_latitude_deg": "28.5",
+    "longitude_deg": "0",
+    "altitude_km": "0"
+  },
+  "target": {
+    "circular_altitude_km": "200",
+    "inclination_deg": "51.6",
+    "apsis_min_km": "180",
+    "apsis_max_km": "220",
+    "inclination_tolerance_deg": "0.2",
+    "plane_tolerance_deg": "0.2"
+  },
+  "payload_mass_t": "12",
+  "rcs": {
+    "upper_stage_propellant_t": "0.10",
+    "specific_impulse_s": "220",
+    "lever_arm_m": "4",
+    "max_axis_force_kn": "20"
+  },
+  "stages": [
+    {
+      "id": "s1",
+      "length_m": "40",
+      "radius_m": "2.985",
+      "gimbal_arm_m": "20",
+      "gimbal_limit_deg": "6",
+      "gimbal_slew_deg_s": "8",
+      "center_of_pressure_aft_m": "6",
+      "normal_force_slope": "2.0",
+      "pitch_yaw_damping": "0.18",
+      "bending_frequency_hz": "1.2",
+      "bending_damping_ratio": "0.015",
+      "slosh_frequency_hz": "0.45",
+      "slosh_damping_ratio": "0.03",
+      "effective_slosh_fraction": "0.05"
+    },
+    {
+      "id": "s2",
+      "length_m": "20",
+      "radius_m": "1.784",
+      "gimbal_arm_m": "9",
+      "gimbal_limit_deg": "6",
+      "gimbal_slew_deg_s": "8",
+      "center_of_pressure_aft_m": "3",
+      "normal_force_slope": "1.6",
+      "pitch_yaw_damping": "0.12",
+      "bending_frequency_hz": "1.8",
+      "bending_damping_ratio": "0.02",
+      "slosh_frequency_hz": "0.70",
+      "slosh_damping_ratio": "0.04",
+      "effective_slosh_fraction": "0.05"
+    }
+  ],
+  "sensor_rates_hz": {
+    "imu": 32,
+    "clock": 8,
+    "barometer": 4,
+    "gps": 1,
+    "star_tracker": 2
+  },
+  "campaign": {
+    "routine_runs": 32,
+    "reference_runs": 256,
+    "master_seed": "0x4b534135",
+    "maximum_distributions": 24
+  }
+}

@@ -1,6 +1,10 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: ready for planning; no Phase 5 simulator implementation exists yet.
+Status: Gate 1 complete; Gate 2 spatial numeric work is next.
+
+The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
+under `phase5/`. Generated Rust constants bind the new work to the accepted
+Phase 2/3 checksums without changing any inherited format or entry point.
 
 Phase 4 completed the maturity prerequisites for 3-D work: the 2-D world is deterministic and independently checked, flight software is isolated from truth, campaign variation is reproducible, storage is observational, and stock/REU evidence paths are strict.
 

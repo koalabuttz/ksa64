@@ -11,6 +11,7 @@ pub mod phase2_numeric;
 pub mod phase2_quantities;
 pub mod phase2_scenario;
 pub mod phase2_telemetry;
+pub mod phase5_contract;
 pub mod planar;
 pub mod planar_dynamics;
 pub mod planar_environment;

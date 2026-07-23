@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ksa64.scenario.phase5-v1",
+  "type": "object",
+  "required": [
+    "schema", "scenario_id", "numeric_contract", "environment",
+    "base_ksc2_crc32", "timestep_s", "attitude_substeps", "duration_s",
+    "telemetry_stride_steps", "launch", "target", "payload_mass_t",
+    "rcs", "stages", "sensor_rates_hz", "campaign"
+  ],
+  "properties": {
+    "schema": {"const": "ksa64.scenario.phase5-v1"},
+    "scenario_id": {"const": "ksa64.phase5.ksa5a-200km-51.6.v1"},
+    "numeric_contract": {"const": "ksa64.numeric.phase5-v1"},
+    "environment": {"const": "earth.eci-rotating-spherical-flex.v1"},
+    "base_ksc2_crc32": {"const": "0x5d362512"},
+    "timestep_s": {"const": "0.125"},
+    "attitude_substeps": {"const": 4},
+    "duration_s": {"const": "900"},
+    "telemetry_stride_steps": {"const": 1},
+    "launch": {"type": "object"},
+    "target": {"type": "object"},
+    "payload_mass_t": {"const": "12"},
+    "rcs": {"type": "object"},
+    "stages": {"type": "array", "minItems": 2, "maxItems": 2},
+    "sensor_rates_hz": {"type": "object"},
+    "campaign": {"type": "object"}
+  },
+  "additionalProperties": false
+}
