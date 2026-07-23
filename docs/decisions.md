@@ -630,3 +630,53 @@ Build Phase 2 C64 artifacts with a dedicated size-optimized Cargo profile while 
 Do not recompute all 7,200 physics steps merely to paint the post-run display. Generate a compact `KRP2` presentation tape only from the host-validated canonical KST2 stream. Bind it to the source stream CRC, scenario, terminal checksum, full-mission Max-Q, orbit, its own CRCs, and a reviewed SHA-256. Preserve the canonical KST2 header and terminal frame inside the tape and decode them on the C64 through the portable contract. Use a generated table-driven CRC only for the cold replay-tape integrity check.
 
 Replay the 901 compact points into a 40x25 altitude/downrange plot and drive bounded SID cues for ignition, cutoff, separation, end, and impact alarm events. Verify the final page directly from VIC-II screen memory and freeze the event-schedule hash. `KRP2` is a derived display index, never an alternative physics or regression record; a physical C64 run would transport its canonical KST2 output to replay storage rather than retaining the 57,704-byte stream in main RAM.
+
+## D-043: Make the flight computer truth-blind by construction
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Put sensor, actuator, and flight-output records in `ksa64-interface`; allow `ksa64-flight` to depend only on that crate; and make `ksa64-sim` the sole composition root. Use fixed-width little-endian records with CRC-32, explicit enum validation, reserved-byte checks, sequence checks, and fail-closed parsing. This turns truth isolation and transportability into compile-time and binary contracts instead of naming conventions.
+
+## D-044: Preserve KSA-2A and add only kinematic closed-loop steering
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Do not change Phase 2 vehicle physics, introduce rigid-body dynamics, or model recovery in Phase 3. Retain the trusted early pitch program, transition to closed-loop upper-stage insertion, and represent the actuator as bounded pitch motion with command feedback. Flight software owns requests; world rules retain physical authority. The recovery bit is transport-visible but has no Phase 3 force model.
+
+## D-045: Use deterministic aided inertial navigation with declared sensor failures
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Model quantized accelerometer, gyro, clock, limited altimeter, and delayed GPS-like PVT measurements with deterministic bias/noise/fault schedules. Use allocation-free inertial propagation plus bounded alpha/beta-like corrections rather than an EKF. Freeze gains through a deterministic bounded host search and compensate the declared two-step GPS latency before correction. This is sufficient for the selected recoverable outages and remains inspectable on a 6510.
+
+## D-046: Validate closed-loop missions independently from canonical bytes
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Record KST3 as a scenario/config-bound stream containing truth, measurements, estimates, commands, actuator feedback, events, alarms, record CRCs, and four rolling checksum chains. Require the Rust host inspector to reject the first structural or semantic fault. Separately parse those bytes in Python and compute float64 orbit, coast, load, and navigation evidence. Generate KRP3 only through the strict host inspection path.
+
+The independent audit is authoritative for Phase 3 orbit acceptance. It exposed a coarse fixed-point orbit-classification overstatement and delayed-GPS navigation lag before completion; both were corrected without changing the Phase 2 vehicle.
+
+## D-047: Abort fail closed on sustained actuator disagreement
+
+Date: 2026-07-23
+
+Status: accepted.
+
+During insertion, latch abort when commanded-versus-applied pitch error exceeds two degrees for 16 consecutive steps. Abort requests cutoff, inhibits subsequent ignition and separation, sets safeing and the transport-only recovery request, and continues the world ballistically. Invalid sensor transport uses the same latched fail-closed state.
+
+## D-048: Gate full C64 missions before starting them
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Measure naturally terminating 64-step PAL probes for representative composed, guidance, fault, coast, and actuator paths. Start a full nominal target mission only if the linked program fits stock RAM and the conservative pre-run projection is no more than 30 minutes. The accepted program fits, but its 243.7-minute projection exceeds the threshold, so no full mission is started. Verify presentation separately with strict KRP3 parsing, PETSCII rendering, SID cues, and screen-memory inspection. Never cancel a run to manufacture timing evidence.

@@ -157,3 +157,12 @@ KSA64 is a learning simulator, not a certified vehicle model. Even so, the proje
 
 Without wind-tunnel, engine, structural, or flight-test data, KSA64 can be internally rigorous while still making only limited claims about real vehicles.
 
+## Accepted Phase 3 validation
+
+Phase 3 freezes four deterministic closed-loop cases: nominal, a 15-second altimeter dropout, a 60-second GPS outage, and a stuck steering actuator. Native tests cover transport rejection, truth isolation, world authority, sensor scheduling, navigation, sequencing, abort behavior, KST3 inspection, KRP3 derivation, and exact Phase 2 compatibility.
+
+An independent Python reader validates KST3 framing and CRCs without using the Rust codec, then computes float64 orbital elements, post-cutoff coast propagation, load extrema, cutoff navigation error, and GPS-outage bridge error. The accepted orbital cases remain between 180 and 220 km at both apsides, below 0.01 eccentricity, 60 kPa Max-Q, and 60 m/s^2 acceleration. Cutoff navigation remains within 1 km and 10 m/s; outage bridging remains within 5 km and 30 m/s. The stuck case must latch abort and propulsion safeing.
+
+Exact native/MOS agreement is checked with finite C64 probes that compare every named state field plus truth, sensor, navigation, and flight checksum chains. Three stable PAL runs freeze the target measurements. The target presentation path independently validates all KRP3 records and is accepted only when final VIC-II screen memory and event cue counts match the reviewed evidence.
+
+`phase3/check.ps1` validates generated evidence, every SHA-256 sidecar, formatting, `no_std` compilation, lints, and all native tests. `phase3/complete.ps1` also runs the Phase 2 compatibility audit and both naturally terminating C64 gates.

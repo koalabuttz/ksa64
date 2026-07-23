@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Deterministic bounded shift-gain search for the Phase 3 aided navigator."""
 from __future__ import annotations
+import argparse
 import json
+import sys
 from itertools import product
 from pathlib import Path
 
@@ -47,7 +49,10 @@ def run(gains: tuple[int, int, int, int], seed: int) -> tuple[float, float]:
     return abs(x - truth_x), abs(v - truth_v)
 
 
-def main() -> None:
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
     candidates = []
     for gains in product(range(1, 4), range(1, 5), range(1, 4), range(1, 6)):
         errors = [run(gains, seed) for seed in SEEDS]
@@ -75,8 +80,16 @@ def main() -> None:
         },
     }
     out = Path(__file__).resolve().parents[1] / "navigation-gains-v1.json"
-    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    data = json.dumps(payload, indent=2) + "\n"
+    if args.check:
+        if not out.exists() or out.read_text(encoding="utf-8") != data:
+            print("Phase 3 navigation evidence is stale", file=sys.stderr)
+            return 1
+        print("Phase 3 navigation evidence is current")
+        return 0
+    out.write_text(data, encoding="utf-8")
     print(json.dumps(payload, indent=2))
+    return 0
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

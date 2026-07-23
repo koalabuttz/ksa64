@@ -137,3 +137,15 @@ The canonical `KST2` stream uses a 40-byte header and 64-byte frames. The header
 `KRP2` is a derived C64 presentation index, not canonical telemetry. Its header binds compact plot/event records to the source `KST2` stream CRC, scenario, terminal checksum, accepted Max-Q and orbit. It embeds the canonical KST2 header and final frame so the portable decoder revalidates source identity on target. Its own CRCs and reviewed SHA-256 protect the cold display path. Physics regression and replay truth remain `KST2`.
 
 The exact Phase 2 layouts, field offsets, masks, golden identities, and generation rules live in `phase2/scenario-v2.schema.json`, `phase2/TELEMETRY.md`, `phase2/REPLAY.md`, and their checked generators. An incompatible meaning requires a new magic/version rather than silently extending `KSC2`, `KST2`, or `KRP2`.
+
+## Phase 3 closed-loop formats
+
+Phase 3 adds three stable transport messages and three artifact families. `SensorFrame` is 56 bytes, `ActuatorCommand` is 16 bytes, and `FlightOutput` is 52 bytes. All are fixed-width little-endian records with CRC-32 and fail-closed validation of sizes, enums, flags, reserved fields, checksums, and sequence relationships.
+
+KSC3 is a 96-byte case configuration bound to the unchanged KSC2 base scenario. It identifies the deterministic sensor seed and selected fault schedule while recording both its own content identity and the KSC2 content identity. Embedded trailing CRC fields are excluded when computing the bound content CRC, avoiding self-referential identity.
+
+KST3 has a 64-byte header and 160-byte frames. Its header binds scenario identity, exact KSC3/KSC2 content CRCs, case, seed, timestep, stride, and mission length. Each frame carries the coherent world truth, projected sensor frame, navigation estimate, flight mode and commands, applied steering feedback, events, alarms, four rolling checksum chains, the embedded sensor-frame CRC, and its own record CRC. The host additionally enforces initial projection, cadence, time, terminal placement, event/mode/engine consistency, and exact scenario/config binding, reporting the first bad frame.
+
+KRP3 is a validated presentation index created only after strict KST3 inspection. It binds the source stream CRC, configuration CRC, terminal step and checksums, carries compact plot/event records with individual CRCs, and ends with its own terminal integrity record. C64 replay reparses every record, enforces order and terminal semantics, and accumulates PETSCII/SID presentation cues. KRP3 is not canonical simulation telemetry and cannot replace KST3 for regression.
+
+Exact layouts, masks, identities, and accepted artifacts are documented in `phase3/CONTRACT.md`, `phase3/TELEMETRY.md`, and `phase3/examples/`.

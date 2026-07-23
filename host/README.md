@@ -32,3 +32,13 @@ Inspection rejects:
 - successful terminal frames that do not reach the scenario step limit.
 
 The writer adapter propagates I/O errors through the existing mission failure type. File format, scheduling, dynamics, and checksumming remain owned by `ksa64-core`.
+
+## Phase 3 host validation
+
+Phase 3 host support lives in `ksa64_host::phase3`. It captures each closed-loop case through the canonical KST3 sink, strictly inspects an existing stream against the unchanged KSC2 scenario plus its exact KSC3 image, and derives KRP3 only from an accepted stream. The library reports the first bad frame and rejects framing, identity, CRC, reserved-field, cadence, time, terminal, sensor-projection, and engine/phase inconsistencies.
+
+The checked example regenerates all four reviewed case sets during development:
+
+    cargo run -p ksa64-host --example generate_phase3_artifacts
+
+Normal completion uses `phase3/check.ps1`, which validates frozen artifact hashes and tests inspection/derivation without silently updating golden files. Independent physical acceptance comes from `phase3/reference/verify_missions.py`; it parses KST3 separately rather than treating the host inspector as its oracle.

@@ -79,6 +79,8 @@ Exit criteria:
 
 ## Phase 3: simulated avionics and closed-loop flight
 
+Status: complete. Transport-isolated sensors, aided navigation, flight phases, closed-loop insertion, actuator monitoring, four deterministic mission cases, KST3/KRP3 validation, and bounded PAL target evidence pass the completion audit.
+
 Purpose: turn the trajectory program into an aerospace simulation architecture.
 
 Planned capabilities:
@@ -98,6 +100,8 @@ Exit criteria:
 - Control performance is measured against declared stability and tracking criteria.
 
 ## Phase 4: REU telemetry and statistical analysis
+
+Status: planned. Phase 3 mission outputs are the frozen behavioral baseline; Phase 4 recording must be observational and must not change results when disabled.
 
 Purpose: use expanded storage without pretending the REU is ordinary addressable RAM.
 
