@@ -2,7 +2,8 @@
 
 use crate::actuator::{ActuatorParameters, DEFAULT_LAG_STEPS, MAX_SLEW_PER_STEP};
 use crate::mission::{
-    run_parameterized_mission, MissionCase, MissionError, MissionParameters, MissionResult,
+    run_parameterized_mission, run_parameterized_mission_observed, MissionCase, MissionError,
+    MissionObserver, MissionParameters, MissionResult, MissionRunError,
 };
 use crate::sensors::SensorParameters;
 use crate::world::WorldParameters;
@@ -64,4 +65,14 @@ pub fn run_phase4_mission(
 ) -> Result<MissionResult, MissionError> {
     let parameters = mission_parameters(run).ok_or(MissionError::Numeric)?;
     run_parameterized_mission(scenario, MissionCase::Nominal, parameters)
+}
+
+pub fn run_phase4_mission_observed<O: MissionObserver>(
+    scenario: &Phase2Scenario,
+    run: RunSpec,
+    observer: &mut O,
+) -> Result<MissionResult, MissionRunError<O::Error>> {
+    let parameters =
+        mission_parameters(run).ok_or(MissionRunError::Mission(MissionError::Numeric))?;
+    run_parameterized_mission_observed(scenario, MissionCase::Nominal, parameters, observer)
 }

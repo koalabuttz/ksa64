@@ -7,7 +7,10 @@ pub mod contracts;
 #[cfg(feature = "fixtures")]
 pub mod generated_distribution_vectors;
 pub mod mission;
+pub mod plot;
 pub mod runner;
+pub mod stock;
+pub mod stock_ui;
 pub mod summary;
 
 pub const PHASE4_CONTRACT_ID: u32 = 0x0400_0001;

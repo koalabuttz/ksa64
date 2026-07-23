@@ -30,3 +30,7 @@ required-features = ["sim"]
 name = "ksa64-phase4-campaign-sim"
 path = "src/bin/phase4_campaign_sim.rs"
 required-features = ["sim"]
+[[bin]]
+name = "ksa64-phase4-stock-c64"
+path = "src/bin/phase4_stock_c64.rs"
+required-features = ["c64"]
