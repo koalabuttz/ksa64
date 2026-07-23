@@ -3,7 +3,8 @@ use ksa64_sim::phase4::contracts::{REFERENCE_RUNS, RUN_SUMMARY_LENGTH};
 use ksa64_sim::phase4::plot::parse_kph4;
 use ksa64_sim::phase4::stock::StockRetention;
 use ksa64_sim::phase4::stock_ui::{
-    render_stock_page, StockPage, StockUiData, REFERENCE_STOCK_UI, SCREEN_BYTES,
+    render_stock_page, InteractiveStockUi, StockPage, StockUiData, UiKey, REFERENCE_STOCK_UI,
+    SCREEN_BYTES,
 };
 use ksa64_sim::phase4::summary::parse_ksr4;
 
@@ -44,4 +45,28 @@ fn all_stock_pages_render_inside_fixed_screen() {
         assert!(screen.iter().all(|byte| byte.is_ascii()));
         assert_eq!(&screen[24 * 40..24 * 40 + 11], b"F1 CAMPAIGN");
     }
+}
+
+#[test]
+fn interactive_browser_wraps_retained_runs_and_opens_drilldown() {
+    let plot = parse_kph4(BASELINE_KPH4).unwrap();
+    let mut ui = InteractiveStockUi::new();
+    assert_eq!(ui.page(), StockPage::Campaign);
+    ui.handle(UiKey::Previous);
+    assert_eq!(ui.page(), StockPage::Trajectory);
+    assert_eq!(ui.selected_index(), 4);
+    ui.handle(UiKey::Next);
+    assert_eq!(ui.selected_index(), 0);
+    ui.handle(UiKey::Next);
+    assert_eq!(ui.selected_index(), 1);
+    ui.handle(UiKey::Return);
+    assert!(ui.drilldown());
+    let mut screen = [0u8; SCREEN_BYTES];
+    ui.render(&REFERENCE_STOCK_UI, &plot, &mut screen);
+    assert!(screen.windows(10).any(|window| window == b"RUN DETAIL"));
+    assert!(screen.windows(9).any(|window| window == b"INSERTION"));
+    ui.handle(UiKey::Return);
+    assert!(!ui.drilldown());
+    ui.handle(UiKey::F7);
+    assert_eq!(ui.page(), StockPage::Storage);
 }

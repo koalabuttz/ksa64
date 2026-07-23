@@ -4,18 +4,15 @@
 use core::panic::PanicInfo;
 
 use ksa64_sim::phase4::plot::parse_kph4;
-use ksa64_sim::phase4::stock_ui::{render_stock_page, StockPage, REFERENCE_STOCK_UI, SCREEN_BYTES};
+use ksa64_sim::phase4::stock_ui::{InteractiveStockUi, UiKey, REFERENCE_STOCK_UI, SCREEN_BYTES};
 
 const SCREEN: *mut u8 = 0x0400 as *mut u8;
-const PAGE_BASES: [*mut u8; 4] = [
-    0xc000 as *mut u8,
-    0xc400 as *mut u8,
-    0xc800 as *mut u8,
-    0xcc00 as *mut u8,
-];
+
 const STATUS: *mut u8 = 0xcff0 as *mut u8;
 const BORDER: *mut u8 = 0xd020 as *mut u8;
 const BACKGROUND: *mut u8 = 0xd021 as *mut u8;
+const KEYBOARD_COUNT: *mut u8 = 0x00c6 as *mut u8;
+const KEYBOARD_BUFFER: *const u8 = 0x0277 as *const u8;
 const PLOT: &[u8; 1_872] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../phase4/examples/ksa4-baseline.kph4"
@@ -42,6 +39,23 @@ unsafe fn copy_page(target: *mut u8) {
     }
 }
 
+unsafe fn poll_ui_key() -> Option<UiKey> {
+    if core::ptr::read_volatile(KEYBOARD_COUNT) == 0 {
+        return None;
+    }
+    let key = core::ptr::read_volatile(KEYBOARD_BUFFER);
+    core::ptr::write_volatile(KEYBOARD_COUNT, 0);
+    match key {
+        133 => Some(UiKey::F1),
+        134 => Some(UiKey::F3),
+        135 => Some(UiKey::F5),
+        136 => Some(UiKey::F7),
+        145 | 157 => Some(UiKey::Previous),
+        17 | 29 => Some(UiKey::Next),
+        13 => Some(UiKey::Return),
+        _ => None,
+    }
+}
 unsafe fn fail(code: u8) -> ! {
     core::ptr::write_volatile(STATUS, b'E');
     core::ptr::write_volatile(STATUS.add(1), code);
@@ -60,25 +74,14 @@ pub extern "C" fn main() -> isize {
         Ok(plot) => plot,
         Err(_) => unsafe { fail(1) },
     };
-    let pages = [
-        StockPage::Campaign,
-        StockPage::Histogram,
-        StockPage::Trajectory,
-        StockPage::Storage,
-    ];
-    for index in 0..pages.len() {
-        unsafe {
-            render_stock_page(
-                pages[index],
-                &REFERENCE_STOCK_UI,
-                &plot,
-                &mut *core::ptr::addr_of_mut!(BUFFER),
-            );
-            copy_page(PAGE_BASES[index]);
-            if index == 0 {
-                copy_page(SCREEN);
-            }
-        }
+    let mut ui = InteractiveStockUi::new();
+    unsafe {
+        ui.render(
+            &REFERENCE_STOCK_UI,
+            &plot,
+            &mut *core::ptr::addr_of_mut!(BUFFER),
+        );
+        copy_page(SCREEN);
     }
     unsafe {
         core::ptr::write_volatile(STATUS, b'K');
@@ -88,5 +91,17 @@ pub extern "C" fn main() -> isize {
         core::ptr::write_volatile(BORDER, 5);
         core::ptr::write_volatile(BACKGROUND, 0);
     }
-    loop {}
+    loop {
+        if let Some(key) = unsafe { poll_ui_key() } {
+            ui.handle(key);
+            unsafe {
+                ui.render(
+                    &REFERENCE_STOCK_UI,
+                    &plot,
+                    &mut *core::ptr::addr_of_mut!(BUFFER),
+                );
+                copy_page(SCREEN);
+            }
+        }
+    }
 }

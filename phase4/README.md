@@ -10,6 +10,9 @@ Completed implementation gates:
 - contracts and exact Phase 3 compatibility;
 - deterministic distributions and independent vectors;
 - parameterized missions, KSR4, and the frozen 64-run smoke campaign;
-- ordered native execution and the independently analyzed 1,024-run reference campaign.
+- ordered native execution and the independently analyzed 1,024-run reference campaign;
+- stock streaming retention, sparse KPH4 plotting, and the bounded mission-control UI;
+- preserving REU detection, adaptive KRA4 archives, and the full VICE capacity matrix;
+- strict KST4 detailed histories, configurable KXV4 report packs, multi-volume joins, and actual C64 IEC export.
 
-See `DISTRIBUTIONS.md`, `CAMPAIGNS.md`, `FORMATS.md`, `HOST_ANALYSIS.md`, `STOCK_STORAGE.md`, and `REU_STORAGE.md` for the frozen evidence and reproduction commands.
+See `DISTRIBUTIONS.md`, `CAMPAIGNS.md`, `FORMATS.md`, `HOST_ANALYSIS.md`, `STOCK_STORAGE.md`, `REU_STORAGE.md`, and `EXPORT.md` for the frozen evidence and reproduction commands.

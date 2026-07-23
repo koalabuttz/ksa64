@@ -16,6 +16,7 @@ from typing import Callable, TypeVar
 
 API_VERSION = 0x02
 COMMAND_MEMORY_GET = 0x01
+COMMAND_MEMORY_SET = 0x02
 COMMAND_PING = 0x81
 COMMAND_EXIT = 0xAA
 COMMAND_QUIT = 0xBB
@@ -103,6 +104,13 @@ class ViceMonitor:
         if length != len(memory) or length != end - start + 1:
             raise RuntimeError("VICE returned an unexpected memory segment length")
         return memory
+
+    def write_memory(self, start: int, data: bytes) -> None:
+        if not data or start + len(data) > 0x10000:
+            raise ValueError("invalid VICE memory write")
+        end = start + len(data) - 1
+        body = struct.pack("<BHHBH", 0, start, end, 0, 0) + data
+        self.command(COMMAND_MEMORY_SET, body)
 
 
 def available_port() -> int:

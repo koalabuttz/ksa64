@@ -8,3 +8,5 @@
 - `KXV4`: a 64-byte volume header plus a selected archive byte range. Volume identity, selection identity, index/count, logical offset, length, and CRC prevent missing, duplicate, reordered, or mixed-volume joins.
 
 All integers are little-endian. CRC-32 uses the existing IEEE reflected implementation. Canonical records carry raw fixed-point values; decimal formatting belongs to host and C64 presentation adapters.
+
+KST4 validates every inherited KST3 frame and binds the final checksum chains. KXV4 logical payloads are KRA4 archives; the host joiner requires exact consecutive offsets and verifies the reconstructed archive CRC before returning bytes.

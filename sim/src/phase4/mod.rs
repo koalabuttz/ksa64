@@ -5,6 +5,8 @@ pub mod archive;
 pub mod campaign;
 pub mod config;
 pub mod contracts;
+pub mod detail;
+pub mod export;
 #[cfg(feature = "fixtures")]
 pub mod generated_distribution_vectors;
 pub mod mission;

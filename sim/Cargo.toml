@@ -38,3 +38,8 @@ required-features = ["c64"]
 name = "ksa64-phase4-reu-probe-c64"
 path = "src/bin/phase4_reu_probe_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase4-export-c64"
+path = "src/bin/phase4_export_c64.rs"
+required-features = ["c64"]

@@ -19,6 +19,96 @@ pub enum StockPage {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UiKey {
+    F1,
+    F3,
+    F5,
+    F7,
+    Previous,
+    Next,
+    Return,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InteractiveStockUi {
+    page: StockPage,
+    selected_index: u8,
+    drilldown: bool,
+}
+
+impl InteractiveStockUi {
+    pub const fn new() -> Self {
+        Self {
+            page: StockPage::Campaign,
+            selected_index: 0,
+            drilldown: false,
+        }
+    }
+
+    pub const fn page(self) -> StockPage {
+        self.page
+    }
+
+    pub const fn selected_index(self) -> usize {
+        self.selected_index as usize
+    }
+
+    pub const fn drilldown(self) -> bool {
+        self.drilldown
+    }
+
+    pub fn handle(&mut self, key: UiKey) {
+        match key {
+            UiKey::F1 => self.page = StockPage::Campaign,
+            UiKey::F3 => self.page = StockPage::Histogram,
+            UiKey::F5 => self.page = StockPage::Trajectory,
+            UiKey::F7 => self.page = StockPage::Storage,
+            UiKey::Previous => {
+                self.page = StockPage::Trajectory;
+                self.selected_index = if self.selected_index == 0 {
+                    STOCK_INTERESTING_SUMMARIES as u8 - 1
+                } else {
+                    self.selected_index - 1
+                };
+            }
+            UiKey::Next => {
+                self.page = StockPage::Trajectory;
+                self.selected_index = (self.selected_index + 1) % STOCK_INTERESTING_SUMMARIES as u8;
+            }
+            UiKey::Return => {
+                self.page = StockPage::Trajectory;
+                self.drilldown = !self.drilldown;
+            }
+        }
+        if !matches!(key, UiKey::Return) {
+            self.drilldown = false;
+        }
+    }
+
+    pub fn render(
+        self,
+        data: &StockUiData,
+        plot: &PlotArchive<'_>,
+        screen: &mut [u8; SCREEN_BYTES],
+    ) {
+        render_interactive_stock_page(
+            self.page,
+            data,
+            plot,
+            self.selected_index(),
+            self.drilldown,
+            screen,
+        );
+    }
+}
+
+impl Default for InteractiveStockUi {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StockUiData {
     pub campaign_crc32: u32,
     pub run_count: u32,
@@ -145,25 +235,31 @@ pub fn render_stock_page(
     plot: &PlotArchive<'_>,
     screen: &mut [u8; SCREEN_BYTES],
 ) {
+    render_interactive_stock_page(page, data, plot, 0, false, screen);
+}
+
+pub fn render_interactive_stock_page(
+    page: StockPage,
+    data: &StockUiData,
+    plot: &PlotArchive<'_>,
+    selected_index: usize,
+    drilldown: bool,
+    screen: &mut [u8; SCREEN_BYTES],
+) {
     let mut canvas = Canvas { bytes: screen };
     canvas.clear();
     match page {
         StockPage::Campaign => render_campaign(&mut canvas, data),
         StockPage::Histogram => render_histogram(&mut canvas, data),
-        StockPage::Trajectory => render_trajectory(&mut canvas, data, plot),
+        StockPage::Trajectory => {
+            render_trajectory(&mut canvas, data, plot, selected_index, drilldown)
+        }
         StockPage::Storage => render_storage(&mut canvas, data),
     }
 }
 
-fn title(canvas: &mut Canvas<'_>, value: &[u8], key: u8) {
-    canvas.text(0, 0, b"KSA64 PHASE 4 ");
-    canvas.text(0, 14, value);
-    canvas.text(0, 37, b"F");
-    canvas.character(0, 38, key);
-}
-
 fn render_campaign(canvas: &mut Canvas<'_>, data: &StockUiData) {
-    title(canvas, b"CAMPAIGN", b'1');
+    canvas.text(0, 0, b"KSA64 PHASE 4 CAMPAIGN             F1");
     canvas.text(2, 0, b"RUNS");
     canvas.unsigned(2, 6, 4, data.run_count);
     canvas.text(2, 13, b"SUCCESS");
@@ -200,7 +296,7 @@ fn metric_row(canvas: &mut Canvas<'_>, row: usize, label: &[u8], values: [i32; 4
 }
 
 fn render_histogram(canvas: &mut Canvas<'_>, data: &StockUiData) {
-    title(canvas, b"OUTCOME HISTOGRAM", b'3');
+    canvas.text(0, 0, b"KSA64 PHASE 4 OUTCOME HISTOGRAM    F3");
     let maximum = data.outcomes.iter().copied().max().unwrap_or(1).max(1);
     let labels: [&[u8]; 6] = [
         b"STABLE", b"SUBORB", b"IMPACT", b"ESCAPE", b"ABORT ", b"ERROR ",
@@ -218,8 +314,14 @@ fn render_histogram(canvas: &mut Canvas<'_>, data: &StockUiData) {
     canvas.text(24, 0, b"F1 CAMPAIGN F3 HIST F5 PLOT F7 STORAGE");
 }
 
-fn render_trajectory(canvas: &mut Canvas<'_>, data: &StockUiData, plot: &PlotArchive<'_>) {
-    title(canvas, b"BASELINE TRAJECTORY", b'5');
+fn render_trajectory(
+    canvas: &mut Canvas<'_>,
+    data: &StockUiData,
+    plot: &PlotArchive<'_>,
+    selected_index: usize,
+    drilldown: bool,
+) {
+    canvas.text(0, 0, b"KSA64 PHASE 4 BASELINE TRAJECTORY  F5");
     canvas.text(2, 0, b"ALTITUDE VS SAMPLE");
     let graph_top = 4usize;
     let graph_height = 14usize;
@@ -240,14 +342,42 @@ fn render_trajectory(canvas: &mut Canvas<'_>, data: &StockUiData, plot: &PlotArc
     }
     canvas.text(20, 0, b"RETAINED RUNS");
     for (index, run) in data.retained_runs.iter().enumerate() {
-        canvas.unsigned(21, index * 8, 4, *run);
+        if index == selected_index {
+            canvas.character(21, index * 8, b'>');
+            canvas.unsigned(21, index * 8 + 1, 4, *run);
+        } else {
+            canvas.unsigned(21, index * 8, 4, *run);
+        }
     }
     canvas.text(22, 0, b"BASE WORST-INS LOAD NAV FIRST-FAIL");
+    if drilldown {
+        for row in 2..9 {
+            canvas.text(row, 0, b"                                        ");
+        }
+        canvas.text(2, 0, b"RUN DETAIL");
+        canvas.text(3, 0, b"RUN");
+        canvas.unsigned(3, 5, 4, data.retained_runs[selected_index]);
+        canvas.text(4, 0, b"RETAINED FOR");
+        canvas.text(4, 13, retention_label(selected_index));
+        canvas.text(5, 0, b"SUMMARY          AVAILABLE");
+        canvas.text(6, 0, b"COMPACT HISTORY  AVAILABLE");
+        canvas.text(8, 0, b"RETURN CLOSES  CURSOR BROWSES RUNS");
+    }
     canvas.text(24, 0, b"F1 CAMPAIGN F3 HIST F5 PLOT F7 STORAGE");
 }
 
+fn retention_label(index: usize) -> &'static [u8] {
+    match index {
+        0 => b"BASELINE",
+        1 => b"INSERTION",
+        2 => b"LOAD",
+        3 => b"NAV ERROR",
+        _ => b"FIRST FAIL",
+    }
+}
+
 fn render_storage(canvas: &mut Canvas<'_>, data: &StockUiData) {
-    title(canvas, b"STORAGE", b'7');
+    canvas.text(0, 0, b"KSA64 PHASE 4 STORAGE              F7");
     canvas.text(3, 0, b"MODE             STOCK C64");
     canvas.text(5, 0, b"REU REQUIRED     NO");
     canvas.text(7, 0, b"SUMMARY SLOTS");

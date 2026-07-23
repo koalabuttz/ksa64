@@ -16,6 +16,6 @@ The stock plot records every 32nd simulation step. The accepted baseline contain
 
 ## Mission-control pages
 
-The target program renders fixed 40 by 25 pages for F1 campaign status, F3 outcome histogram, F5 trajectory and retained-run summary, and F7 storage integrity. A VICE acceptance probe reads all four rendered pages from C64 memory and checks their titles, values, and navigation footer.
+The target program renders fixed 40 by 25 pages for F1 campaign status, F3 outcome histogram, F5 trajectory and retained-run summary, and F7 storage integrity. A VICE acceptance probe drives the actual keyboard path through F3, F5, cursor selection, Return drill-down, and F7, then checks each visible page title, value set, selection marker, and navigation footer.
 
-The accepted stock PRG is 11,595 bytes and loads through `$354A`, comfortably below the `$C000` stock-RAM link gate. No REU is required to compute aggregates, retain the five summaries, show the UI, or prepare the stock report.
+The accepted interactive stock PRG is 12,864 bytes and loads through `$3A3F`, comfortably below the `$C000` stock-RAM link gate. No REU is required to compute aggregates, retain the five summaries, show the UI, or prepare the stock report.
