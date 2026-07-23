@@ -1,108 +1,164 @@
 # KSA64
 
-KSA64 is a proposed aerospace simulation framework for the Commodore 64: a small but technically serious system for simulating launch vehicles, flight software, sensors, guidance, telemetry, failures, and eventually hardware-in-the-loop operation across multiple physical C64s.
+KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> Project status: Phase 3 complete. KSA64 now flies the unchanged KSA-2A vehicle through transport-isolated sensors, aided navigation, closed-loop insertion guidance, sequencing, actuator feedback, deterministic failures, canonical KST3 telemetry, and strict C64 replay.
-
-## The idea
+> **Project status:** Phases 0–4 are complete. Phase 5—three-dimensional rigid-body dynamics—is ready for planning; no Phase 5 simulator code exists yet.
 
 KSA64 asks a deliberately unreasonable question:
 
 > What would a modern aerospace simulation architecture look like if its target computer were a Commodore 64?
 
-The answer is not a simplified arcade game and not an attempt to squeeze a modern desktop package unchanged into 64 KB. The project will use the same strategy that made early aerospace computing possible: choose the smallest model that answers the current engineering question, precompute expensive data, separate vehicle truth from flight software, validate relentlessly, and increase fidelity only when justified.
+The answer is not an arcade game and not a desktop simulator squeezed unchanged into 64 KB. KSA64 uses the strategy that made early aerospace computing practical: select the smallest model that answers the current question, use explicit numeric representations, isolate vehicle truth from flight software, validate independently, and spend memory and CPU only where measurements justify it.
 
-The long-term vision has three independently meaningful computers:
+## What works today
 
-    C64 #1: flight computer
-        navigation, guidance, control, sequencing
-                         |
-                         | sensor data and commands
-                         |
-    C64 #2: vehicle simulator
-        dynamics, environment, engines, sensors
-                         |
-                         | telemetry
-                         |
-    C64 #3: mission control
-        displays, tracking, independent predictions, failures
+KSA64 currently provides:
 
-The first useful version needs only one C64 and a two-dimensional launch model.
+- a portable `no_std` Rust core compiled natively and through David's rust-mos fork;
+- deterministic fixed-point arithmetic with declared range, rounding, overflow, and fail-closed behavior;
+- one-dimensional vertical flight and a rotating-Earth planar multistage ascent model;
+- the fictional KSA-2A launch vehicle, atmosphere, Mach-dependent drag, staging, pitch guidance, and orbital classification;
+- transport-isolated accelerometer, gyro, altimeter, and GPS-like sensors;
+- truth-blind aided navigation, closed-loop insertion guidance, sequencing, actuator feedback, alarms, and abort logic;
+- canonical KST1/KST2/KST3 telemetry and strict derived replay formats;
+- deterministic Phase 4 parameter campaigns and streaming statistics;
+- stock-C64 campaign analysis with five retained interesting runs and a sparse trajectory history;
+- optional REU detection and adaptive archives from 128 KiB through 16 MiB;
+- interactive PETSCII campaign pages and strict one- or multi-volume IEC disk export;
+- independent Python/float64 analysis, host/C64 exactness probes, and frozen regression artifacts.
 
-## Project goals
+An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
-- Produce a physically coherent multistage ascent and orbital-flight simulation.
-- Run the same deterministic simulation core on a modern host and a C64.
-- Use fixed-point arithmetic and table-driven models suitable for a 6510.
-- Keep simulated vehicle truth separate from sensors and flight software.
-- Validate the implementation with analytic cases and independent external tools.
-- Make performance, precision, and memory tradeoffs visible and documented.
-- Use the VIC-II, SID, REU, and user port as purposeful parts of the system.
-- Progress from a useful one-machine simulator toward genuine Commodore-in-the-loop operation.
+## Architecture
 
-## Non-goals
+The implemented single-machine system is:
 
-- Reproducing NASA, RocketPy, GMAT, or Kerbal Space Program feature for feature.
-- Claiming engineering-grade predictions for a real launch vehicle.
-- Running computational fluid dynamics or finite-element analysis on the C64.
-- Beginning with six-degree-of-freedom dynamics.
-- Requiring the simulation to run in real time.
-- Copying vintage or modern programs wholesale into the core.
-- Optimizing before correctness and representative measurements exist.
+```text
+scenario and campaign inputs
+             |
+             v
+    +-------------------+
+    | simulated world   |  private truth, environment, vehicle
+    +---------+---------+
+              |
+       sensor transports
+              v
+    +-------------------+
+    | flight software   |  navigation, guidance, sequencing
+    +---------+---------+
+              |
+      actuator commands
+              v
+    +-------------------+
+    | world authority   |  validates and applies physical effects
+    +---------+---------+
+              |
+       canonical evidence
+              v
+    +-------------------+
+    | host / C64 tools  |  inspection, analysis, UI, REU, disk export
+    +-------------------+
+```
 
-## Current technical direction
+The long-term deployment can split those boundaries across physical machines:
 
-The Phase 0 compiler experiment selected a portable Rust core:
+```text
+C64 #1  flight computer
+C64 #2  vehicle simulator
+C64 #3  mission control
+```
 
-- Native Rust builds provide rapid testing, logging, and comparison.
-- rust-mos produces the C64 build.
-- The portable core uses explicit two-word fixed-point operations on both targets.
-- Platform-specific display, sound, REU, timing, and user-port code stays outside the core.
-- Oscar64 C++ remains an independent optimization and generated-code reference.
+That future Commodore-in-the-loop arrangement is Phase 6 work. The current portable core and fixed-width transports are designed so the split does not require a second physics implementation.
 
-The decision and measurements are recorded in [the Phase 0 results](phase0/RESULTS.md). The checked [Phase 1 numeric foundation](phase0/numeric/FOUNDATION.md) now has a production `no_std` Rust implementation with native, MOS-simulator, and C64 self-test paths. Validated scenarios can select the generated Earth environment, initialize private vertical truth, evaluate immutable typed forces, advance through checked semi-implicit-Euler successors, and execute to a deterministic final state and checksum. Exact interpolation and acceleration-division paths preserve the golden checksum and general fallbacks. The final linked Phase 1 binary measures 118,111.48 PAL cycles per step: 8.34 Hz with 5,044.52 cycles per step of raw headroom. Allocation-free telemetry writers now reproduce the independent records exactly, and the checked executor emits initial, stride, event, terminal, and fault frames through caller-provided sinks without duplicating the physics loop. The golden 257-frame stream matches an independent byte-stream CRC. Three stable final PAL runs measure checksum plus canonical telemetry at 175,307.68 cycles per step (5.62 Hz); telemetry adds 7,504.00 cycles per step over checksum mode. A separate host crate captures this same stream, decodes records with the portable core, rejects framing and semantic faults, and renders a compact engineering summary. A C64 adapter retains only the latest frame plus accumulated events and renders a post-run 40x25 status page outside the accepted timing regions; VICE screen-memory inspection verifies every reported field. An independent 80-digit Decimal calculation separates fixed-point error from timestep bias and confirms the refined RK4 result before its accumulated deltas reach the C64 display.
+## Completed phases
 
-## Documentation
+| Phase | Result |
+|---|---|
+| 0 — Feasibility | Rust/rust-mos selected over the Oscar64 C++ challenger for the frozen arithmetic workload; numeric behavior and toolchains pinned. |
+| 1 — Vertical laboratory | Checked variable-mass vertical flight, canonical telemetry, host/C64 exactness, timing, and independent high-precision error attribution. |
+| 2 — Planar ascent | Rotating-Earth KSA-2A multistage ascent, atmosphere and drag, orbital insertion/failure cases, KST2 evidence, and PETSCII/SID replay. |
+| 3 — Closed-loop avionics | Truth-isolated sensors, navigation, guidance, sequencing, actuator feedback, deterministic faults, KST3/KRP3, and bounded C64 probes. |
+| 4 — Statistical analysis | Deterministic campaigns, KSR4 summaries, independent float64 analysis, stock/REU storage, interactive UI, KRA4 archives, and KXV4 disk export. |
 
-- [Architecture](docs/architecture.md) describes the intended system boundaries and data flow.
-- [Decision record](docs/decisions.md) preserves accepted and provisional choices.
-- [Compiler experiment](docs/experiment.md) defines the rust-mos and Oscar64 comparison.
-- [Phase 0 workspace](phase0/README.md) contains the frozen benchmark contract, independent reference generator, and golden vectors.
-- [Phase 1 workspace](phase1/README.md) contains the vertical-flight production core and cross-target gate.
-- [Phase 2 workspace](phase2/README.md) contains the planar ascent contracts, mission, validation, timing, and replay evidence.
-- [Phase 3 workspace](phase3/README.md) contains the avionics contract, sensors, navigation, flight software, missions, telemetry, target probes, and replay evidence.
-- [Host telemetry tools](host/README.md) capture, validate, and summarize canonical mission streams.
-- [Phase 1 timing result](phase1/TIMING.md) records the optimization history, passing raw physics budget, and canonical telemetry cost.
-- [Phase 1 high-precision result](phase1/HIGH-PRECISION.md) separates fixed-point error from integrator error and records convergence evidence.
-- [Phase 1 completion record](phase1/COMPLETION.md) maps every Phase 1 exit criterion to accepted evidence.
-- [Phase 2 completion record](phase2/COMPLETION.md) records the planar ascent results, target measurements, accepted limits, and reproducible audit.
-- [Phase 3 completion record](phase3/COMPLETION.md) maps every avionics exit criterion to independent host and bounded C64 evidence.
-- [Validation strategy](docs/validation.md) explains how numerical and physical correctness will be tested.
-- [Numeric foundation](phase0/numeric/FOUNDATION.md) selects Phase 1 formats, ranges, overflow behavior, and analytic cases.
-- [Data formats](docs/data-formats.md) defines deterministic scenario and telemetry records.
-- [Reference software](docs/references.md) records what existing projects can and cannot contribute.
-- [Toolchain setup](toolchains/README.md) pins and verifies rust-mos and Oscar64.
-- [Roadmap](ROADMAP.md) divides the project into independently useful phases.
+The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
+
+The C64 accuracy-first closed-loop path is intentionally slower than real time. The accepted projection for one complete target mission is 243.7 minutes, so full target campaigns are not started as routine validation. Native runs provide campaign breadth; finite MOS/VICE probes provide target exactness, storage, UI, and transport evidence. Long C64 runs require a fresh projection and explicit user confirmation and are never canceled merely to obtain timing evidence.
+
+## Repository guide
+
+### Start here
+
+- [Roadmap](ROADMAP.md) — phase boundaries, entry criteria, and future direction.
+- [Architecture](docs/architecture.md) — system layers, ownership, storage, and portable-core boundaries.
+- [Decision record](docs/decisions.md) — accepted architectural and numerical choices.
+- [Validation strategy](docs/validation.md) — analytic, exact, high-precision, independent, and target evidence.
+- [Data formats](docs/data-formats.md) — versioned scenario, telemetry, campaign, archive, and export families.
+- [Toolchains](toolchains/README.md) — pinned rust-mos, Oscar64, and VICE setup.
+
+### Phase records
+
+- [Phase 0](phase0/README.md) and [compiler results](phase0/RESULTS.md)
+- [Phase 1](phase1/README.md) and [completion audit](phase1/COMPLETION.md)
+- [Phase 2](phase2/README.md) and [completion audit](phase2/COMPLETION.md)
+- [Phase 3](phase3/README.md) and [completion audit](phase3/COMPLETION.md)
+- [Phase 4](phase4/README.md) and [completion audit](phase4/COMPLETION.md)
+- [Phase 5 handoff](phase5/README.md)
+
+### Phase 4 detail
+
+- [Campaign contract](phase4/CONTRACT.md)
+- [Distributions](phase4/DISTRIBUTIONS.md)
+- [Campaign execution](phase4/CAMPAIGNS.md)
+- [Formats](phase4/FORMATS.md)
+- [Independent host analysis](phase4/HOST_ANALYSIS.md)
+- [Stock storage and UI](phase4/STOCK_STORAGE.md)
+- [Adaptive REU storage](phase4/REU_STORAGE.md)
+- [Browsing and export](phase4/EXPORT.md)
+
+The [host tools](host/README.md) capture, inspect, analyze, and package canonical evidence. Files under `sources/` are synced reference material and must remain read-only.
+
+## Building and checking
+
+Prerequisites and immutable toolchain pins are documented in [toolchains/README.md](toolchains/README.md). From the repository root:
+
+```powershell
+powershell -File tools/toolchains/verify.ps1
+cargo test --workspace --features fixtures
+```
+
+The complete Phase 4 audit is intentionally decomposed:
+
+```powershell
+python -B phase4/reference/generate_distributions.py --check
+python -B phase4/reference/analyze_campaign.py --ksc phase4/examples/ksa4-reference.ksc4 --ksr phase4/examples/ksa4-reference.ksr4 --output phase4/reference-campaign-analysis.json --check
+powershell -File phase4/stock.ps1
+powershell -File phase4/reu.ps1
+powershell -File phase4/export.ps1
+powershell -File phase4/export-c64.ps1
+```
+
+These commands validate checked-in artifacts; normal checks do not silently regenerate or replace frozen evidence.
+
+## Next: Phase 5
+
+Phase 5 will be planned before implementation. Its first decisions must freeze:
+
+1. frames, axes, handedness, units, and quaternion convention;
+2. three-dimensional truth and ownership boundaries;
+3. ranges for quaternion, angular rate, inertia, torque, and cross products;
+4. analytic and independent float64 rigid-body reference cases;
+5. an exact planar-reduction gate that preserves the accepted Phase 3/4 path;
+6. representative host, MOS, and PAL VICE measurements before cadence or optimization choices.
+
+REU support will remain optional and observational. Optimization will target measured three-dimensional kernels only after the exact numeric foundation exists.
 
 ## Guiding principles
 
-1. Use the simplest model that can answer the question.
-2. Build one portable core, not parallel simulators that can drift apart.
-3. Agreement between host and C64 proves consistency, not physical correctness.
-4. Every fidelity increase must earn its CPU, memory, and complexity cost.
-5. Data tables belong off the hot path; hot state belongs in ordinary C64 RAM.
-6. Flight software should see sensors and commands, not omniscient simulator state.
-7. A slower correct result is more valuable than a real-time decorative one.
-8. Optimize measured kernels, and keep the rest readable.
-
-## Current milestones
-
-The compiler and arithmetic experiment is complete. Both candidates passed the frozen workload, and the common target-visible timing result selected Rust/rust-mos:
-
-- Rust: 223,772,332 CIA cycles, or 109,263.83 cycles per step.
-- Oscar64: 235,627,088 CIA cycles, or 115,052.29 cycles per step.
-- Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
-
-Phase 0 is complete, and the Phase 1 exact core executes the full golden vertical mission while preserving the last valid state on faults. Two exact fast paths remain responsible for bringing the model inside budget; three final-layout common-clock runs measure checked dynamics at 118,111.48 PAL cycles per step—8.34 Hz with 4.10 percent raw headroom. Canonical mission-stream emission matches the independent 257-frame schedule and byte-stream CRC across native and MOS targets. Three stable PAL measurements show telemetry serialization and discard delivery add 7,504.00 cycles per step over checksum mode; the complete recorded-validation path reaches 5.62 Hz. The host adapter now captures and strictly validates that stream through the same sink boundary. The C64 adapter retains an 80-byte mission status and renders a 28,353-byte post-run display whose actual screen memory is checked under PAL VICE. Independent Decimal evidence shows +7.842 m altitude error from fixed-point/table quantization versus the same algorithm, and a total -279.355 m delta versus confirmed RK4. Phase 1 is complete; new vehicle dynamics begin at the Phase 2 boundary.
-
-Phase 2 is now complete. The shared fixed-point core models rotating-Earth planar ascent, atmosphere and Mach-dependent drag, pitch guidance, and bounded multistage events. KSA-2A reaches a 188.169 x 188.169 km exact orbit while the early-cutoff case is classified as impact. The canonical 901-frame KST2 stream is captured and strictly inspected on the host; PAL C64 measurements show that the accuracy-first powered path is intentionally slower than real time. A source-bound compact replay renders the accepted trajectory and deterministic SID cues without becoming a second physics implementation. Phase 3 is complete. Flight software has no dependency on private truth; fixed-width CRC-protected interfaces connect deterministic accelerometer, gyro, altimeter, GPS-like PVT, navigation, guidance, sequencing, and a bounded kinematic steering actuator. Nominal, altimeter-dropout, and GPS-outage cases reach independently verified 180-191 km-class orbits, while a stuck steering fault latches abort and safes propulsion. Canonical KST3 records carry truth, measurements, estimates, commands, alarms, and four rolling checksum chains; compact KRP3 replay is derived only after strict inspection. Finite PAL probes fit stock RAM and project a full target mission at 243.7 minutes, so the locked 30-minute eligibility rule correctly prevents starting that run. Phase 4 begins at explicit REU telemetry and seeded statistical analysis.
+1. Use the simplest model that answers the question.
+2. Maintain one portable core, not parallel simulators that can drift.
+3. Host/C64 agreement proves consistency, not physical correctness.
+4. Keep vehicle truth inaccessible to flight software.
+5. Make every format, approximation, resource cost, and failure mode explicit.
+6. Preserve frozen evidence unless a versioned model decision deliberately replaces it.
+7. Prefer a slower correct result to a real-time decorative one.
+8. Optimize measured kernels and keep everything else readable.

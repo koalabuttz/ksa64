@@ -1,6 +1,6 @@
 # Deterministic scenario and telemetry formats
 
-This document defines the deterministic Phase 1 and Phase 2 data boundaries. Human-authored configuration is separate from compact C64 representations, and canonical telemetry carries exact raw integers so host/C64 comparison never depends on decimal formatting.
+This document indexes the deterministic data boundaries accepted through Phase 4. Human-authored configuration is separate from compact C64 representations, and canonical evidence carries exact raw integers so host/C64 comparison never depends on decimal formatting.
 
 ## Common rules
 
@@ -149,3 +149,18 @@ KST3 has a 64-byte header and 160-byte frames. Its header binds scenario identit
 KRP3 is a validated presentation index created only after strict KST3 inspection. It binds the source stream CRC, configuration CRC, terminal step and checksums, carries compact plot/event records with individual CRCs, and ends with its own terminal integrity record. C64 replay reparses every record, enforces order and terminal semantics, and accumulates PETSCII/SID presentation cues. KRP3 is not canonical simulation telemetry and cannot replace KST3 for regression.
 
 Exact layouts, masks, identities, and accepted artifacts are documented in `phase3/CONTRACT.md`, `phase3/TELEMETRY.md`, and `phase3/examples/`.
+
+## Phase 4 campaign, archive, and export formats
+
+Phase 4 preserves KSC2, KSC3, KST3, and KRP3 unchanged and adds six separately versioned families:
+
+- `KSC4` is a fixed 512-byte campaign configuration. It binds the exact Phase 2/3 inputs, master seed, run count, and up to sixteen reviewed distribution records.
+- `KSR4` is a fixed 128-byte run summary containing run identity, variation checksum, outcome, cutoff/terminal raw state, load extrema, navigation error, inherited checksum chains, and CRC.
+- `KPH4` is a presentation-only compact history with a 64-byte header and eight-byte plot points.
+- `KST4` is canonical detailed telemetry for one campaign run. Its 96-byte header binds campaign/run/seed/variation identity; its 160-byte frames preserve KST3 frame semantics.
+- `KRA4` is an append-only archive with a 256-byte superblock, independently protected 32-byte record headers, committed payloads, and a completion footer.
+- `KXV4` is a numbered export volume with a 64-byte header binding archive identity, selection identity, volume order, logical offset, length, and CRC.
+
+Strict readers reject unknown versions and enums, nonzero reserved data, invalid lengths, CRC failures, mismatched identities, incomplete committed records, corrupt archive chains, and missing, duplicate, reordered, or mixed export volumes. KPH4 and the compact C64 outcome classifier exist for bounded presentation and selection; independent float64 analysis remains authoritative for physical campaign acceptance.
+
+Exact layouts and generation rules live in `phase4/CONTRACT.md`, `phase4/FORMATS.md`, `phase4/CAMPAIGNS.md`, and `phase4/EXPORT.md`.

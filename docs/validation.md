@@ -166,3 +166,22 @@ An independent Python reader validates KST3 framing and CRCs without using the R
 Exact native/MOS agreement is checked with finite C64 probes that compare every named state field plus truth, sensor, navigation, and flight checksum chains. Three stable PAL runs freeze the target measurements. The target presentation path independently validates all KRP3 records and is accepted only when final VIC-II screen memory and event cue counts match the reviewed evidence.
 
 `phase3/check.ps1` validates generated evidence, every SHA-256 sidecar, formatting, `no_std` compilation, lints, and all native tests. `phase3/complete.ps1` also runs the Phase 2 compatibility audit and both naturally terminating C64 gates.
+
+## Accepted Phase 4 validation
+
+Phase 4 adds statistical breadth without treating repetition as independent physical validation. The portable campaign engine is checked against an independently implemented distribution generator, and the frozen 1,024-run campaign is parsed and analyzed by Python without using the Rust codecs or orbit classifier. Serial, 5-worker, and 12-worker executions produce identical ordered KSC4/KSR4 artifacts.
+
+Run zero is the primary compatibility gate: it must reproduce the accepted Phase 3 truth, sensor, navigation, flight, and KST3 checksum chains exactly. Recording-disabled, stock-retention, and every supported REU plan must produce identical mission and aggregate checksums.
+
+Target acceptance is split into finite bounded probes:
+
+- MOS and native vectors establish exact distribution, configuration, summary, and aggregate behavior.
+- PAL VICE verifies the stock UI directly from screen memory.
+- Preserving REU probes cover no REU and 128 KiB through 16 MiB, including explicit DMA ordering, archive commits, and recovery.
+- IEC probes compare all exported bytes with the host source and require visible failure on disk-full conditions.
+
+Archive and export corruption tests reject the first invalid record, truncation, identity mismatch, incomplete archive, missing/duplicate/reordered volume, oversize selection, and disk error. Storage failure may make evidence incomplete but cannot alter simulation state or later random draws.
+
+The full target campaign is not an acceptance requirement. The measured closed-loop path projects one C64 mission at 243.7 minutes, 64 runs at approximately 10.8 days, and 1,024 runs at approximately 173.3 days. No long run is started without a current projection and explicit confirmation, and no run is canceled to manufacture timing evidence.
+
+The frozen audit and measurements are in `phase4/COMPLETION.md`.

@@ -5,6 +5,7 @@ Status: complete. See `COMPLETION.md` for the final audit and `../phase5/README.
 Phase 4 adds deterministic parameter campaigns, streaming statistics, compact stock-C64 analysis, optional capacity-scaled REU archives, and configurable disk export. An REU is never required for simulation or aggregate results.
 
 The accepted plan freezes a 64-run smoke campaign and a 1,024-run reference campaign with master seed `0x4b534134`. Run zero remains the exact Phase 3 nominal baseline.
+
 Completed implementation gates:
 
 - contracts and exact Phase 3 compatibility;
@@ -14,5 +15,7 @@ Completed implementation gates:
 - stock streaming retention, sparse KPH4 plotting, and the bounded mission-control UI;
 - preserving REU detection, adaptive KRA4 archives, and the full VICE capacity matrix;
 - strict KST4 detailed histories, configurable KXV4 report packs, multi-volume joins, and actual C64 IEC export.
+
+The reviewed campaign identity is `0xa2e9e9d5`; its ordered KSR4 summary chain is `0x813ce420`. Stock mode retains five summaries and one 1,872-byte KPH4 history. Supported REU tiers range from 128 KiB through 16 MiB and increase retention without changing simulation or campaign checksums.
 
 See `DISTRIBUTIONS.md`, `CAMPAIGNS.md`, `FORMATS.md`, `HOST_ANALYSIS.md`, `STOCK_STORAGE.md`, `REU_STORAGE.md`, and `EXPORT.md` for the frozen evidence and reproduction commands.

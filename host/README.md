@@ -42,3 +42,15 @@ The checked example regenerates all four reviewed case sets during development:
     cargo run -p ksa64-host --example generate_phase3_artifacts
 
 Normal completion uses `phase3/check.ps1`, which validates frozen artifact hashes and tests inspection/derivation without silently updating golden files. Independent physical acceptance comes from `phase3/reference/verify_missions.py`; it parses KST3 separately rather than treating the host inspector as its oracle.
+
+## Phase 4 campaigns and exports
+
+Phase 4 host support executes parameterized closed-loop missions, emits KSC4/KSR4 evidence, folds summaries in run-index order, prepares stock- or REU-neutral archives, and joins strict KXV4 volumes. Parallel workers affect elapsed time only; configuration, summaries, aggregates, archive selection, and output bytes remain deterministic.
+
+The reviewed smoke campaign contains 64 runs. The frozen reference campaign contains 1,024 runs with master seed `0x4b534134`. Its independent analyzer reconstructs every variation without Rust and computes authoritative float64 orbital, load, and navigation results:
+
+    python -B phase4/reference/analyze_campaign.py --ksc phase4/examples/ksa4-reference.ksc4 --ksr phase4/examples/ksa4-reference.ksr4 --output phase4/reference-campaign-analysis.json --check
+
+Host archive/export tests build a one-volume stock report and a synthetic three-volume selection, then require the joiner to reject corruption, missing, duplicate, reordered, or mismatched volumes. The actual C64 IEC utility is validated separately by `phase4/export-c64.ps1`.
+
+See `phase4/HOST_ANALYSIS.md`, `phase4/FORMATS.md`, and `phase4/EXPORT.md` for commands, frozen identities, and accepted evidence.

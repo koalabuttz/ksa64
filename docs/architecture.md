@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the intended architecture before implementation. Accepted choices are recorded in `docs/decisions.md`; later phases may replace a model only through an explicit versioned decision.
+This document describes both the implemented architecture through Phase 4 and the extension boundaries for later phases. Accepted choices are recorded in `docs/decisions.md`; later phases may replace a model only through an explicit versioned decision.
 
 ## System qualities
 
@@ -234,33 +234,17 @@ The core should avoid:
 
 The host may provide a separate high-precision comparison path, but that path is a test aid rather than the product core.
 
-## Planned source layout
+## Source layout
 
-Rust/rust-mos and the Phase 1 numeric foundation are selected. Phase 1 now has a production `core/` crate; later subsystems will extend this shape:
+Rust/rust-mos and the Phase 1 numeric foundation are selected. The workspace now separates portable physics, stable transports, truth-blind flight software, host adapters, and the composition root:
 
-    core/
-        numeric
-        environment
-        vehicle
-        dynamics
-        avionics
-        scenario
-        telemetry schema
-
-    platform/
-        host
-        c64
-
-    tests/
-        analytic
-        regression
-        cross-target
-        external reference
-
-    tools/
-        table generation
-        telemetry comparison
-        benchmark automation
+    core/       portable fixed-point physics, formats, campaigns, storage contracts
+    interface/  fixed-width sensor, actuator, and flight-output transports
+    flight/     truth-blind navigation, guidance, sequencing, and abort logic
+    sim/        world/sensor/flight composition and parameterized mission execution
+    host/       capture, inspection, independent-analysis support, and export adapters
+    phase*/     phase contracts, reference tools, target probes, and frozen evidence
+    toolchains/ pinned compiler and emulator configuration
 
 The numeric contract, overflow policy, baseline integrator, and data formats are accepted in `phase0/numeric/FOUNDATION.md` and `docs/data-formats.md`. The production `core/` crate implements the numeric layer, scenario parser, generated environment sampler, immutable vertical truth, pure force evaluation, fail-closed semi-implicit-Euler transitions, and deterministic mission execution with a compact summary. Common-clock production timing is recorded in `phase1/TIMING.md`. Exact interpolation and acceleration-division fast paths put checked dynamics inside the raw PAL 8 Hz budget. Canonical allocation-free telemetry records are now scheduled by an observer on the single checked executor and delivered through caller-provided sinks. Initial, stride, terminal, accumulated-event, and numeric-fault behavior matches an independent 257-frame stream oracle. A volatile discard sink forces every canonical byte to materialize during target timing: final-layout telemetry adds 7,504.00 cycles per physics step over checksum mode, while the complete path reaches 5.62 Hz. The host adapter captures canonical files, uses the portable record decoder, enforces stream-level cadence and terminal semantics, and renders a compact summary. The C64 adapter stores one canonical header, the latest frame, a frame count, and accumulated event bits in an 80-byte sink, then renders a direct 40x25 post-run page. Display rendering occurs after the measured mission, and a VICE screen-memory oracle verifies its final contents. A separate 80-digit Decimal model preserves the accepted operation order for fixed-point attribution and uses two refined RK4 runs for integrator attribution. Only generated final-error constants cross into the C64 presentation adapter; they never affect dynamics.
 
@@ -313,3 +297,13 @@ Phase 3 makes the truth boundary structural. `ksa64-interface` owns stable fixed
 Each 0.125-second step applies the prior actuator command, advances world truth, derives imperfect measurements, advances navigation and flight software, validates the next command, and emits one coherent observation. This creates one-step command latency without exposing successor truth to the controller. Engine and staging requests belong to flight software, while the world retains physical authority to reject impossible operations.
 
 KST3 is the canonical closed-loop regression stream. It records truth, sensor projection, navigation state, guidance/actuator state, events, alarms, and independent rolling checksum chains. KRP3 is produced only after strict whole-stream inspection and is a constant-memory presentation index, never another dynamics implementation. The C64 target uses finite representative probes for exactness and timing; a full target mission is conditional on a pre-run time and memory decision.
+
+## Accepted Phase 4 implementation
+
+Phase 4 adds an allocation-free campaign layer without changing the Phase 3 mission path. Every run variation is keyed by master seed, run index, parameter identity, correlation group, and draw index, so results are independent of execution order and worker count. Run zero bypasses variation and reproduces the frozen Phase 3 nominal checksums exactly.
+
+`CampaignAggregate` folds fixed 128-byte KSR4 summaries strictly in run-index order. Native workers may execute simulations in parallel, but ordered merging preserves one canonical result. An independent Python implementation reconstructs distributions from KSC4 and computes authoritative float64 orbit, load, and navigation evidence from raw KSR4 cutoff states.
+
+Storage is observational. Stock mode keeps streaming aggregates, five deterministic interesting-run summaries, and one sparse KPH4 trajectory. The REU transport uses preserving capacity probes and explicit DMA; a deterministic `StoragePlan` turns detected or user-capped capacity into additional summaries, full KST4 histories, and compact KPH4 histories. Detection, DMA, archive, UI, or disk failures cannot change physics, later seeds, or aggregate results.
+
+KRA4 is an append-only committed archive with independently protected records. KXV4 divides a selected logical archive into identity-bound numbered volumes. The same bounded four-page UI works on stock and expanded systems; an REU changes retention capacity, not controls or simulation behavior. IEC export occurs after simulation in a separate target utility when full archive support would otherwise consume simulation RAM.

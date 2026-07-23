@@ -99,19 +99,20 @@ Exit criteria:
 - Nominal and selected failure scenarios are repeatable.
 - Control performance is measured against declared stability and tracking criteria.
 
-## Phase 4: REU telemetry and statistical analysis
+## Phase 4: adaptive storage and statistical analysis
 
 Status: complete. Deterministic campaigns, independent float64 analysis, stock streaming retention, preserving adaptive REU archives, interactive UI, and strict host/C64 disk export pass the completion audit. Phase 3 run-zero behavior and artifacts remain exact; see `phase4/COMPLETION.md`.
 
-Purpose: use expanded storage without pretending the REU is ordinary addressable RAM.
+Purpose: add reproducible statistical analysis and capacity-scaled storage while keeping stock C64 operation complete and treating the REU as explicit optional storage rather than ordinary addressable RAM.
 
-Planned capabilities:
+Accepted capabilities:
 
-- Buffered transfer between main RAM and REU.
-- Telemetry histories and post-flight plots.
-- Scenario tables and aerodynamic databases stored outside hot memory.
-- Seeded parameter variation.
-- Batch execution and compact Monte Carlo summaries.
+- Keyed deterministic parameter variation and ordered campaign aggregation.
+- A 64-run routine campaign and frozen 1,024-run native reference campaign.
+- Streaming statistics, five retained stock summaries, and a sparse stock trajectory.
+- Preserving REU detection, explicit DMA, and adaptive histories from 128 KiB through 16 MiB.
+- Four bounded analysis pages with retained-run browsing and drill-down.
+- Strict KSC4/KSR4/KPH4/KST4/KRA4/KXV4 evidence and post-run IEC export.
 
 Exit criteria:
 
@@ -121,6 +122,8 @@ Exit criteria:
 - Statistical results can be independently analyzed on the host.
 
 ## Phase 5: three-dimensional rigid-body dynamics
+
+Status: ready for planning. Phase 4 satisfies the maturity prerequisites, but no Phase 5 simulator implementation exists yet.
 
 Purpose: add attitude dynamics only after the translational architecture is stable.
 
@@ -177,4 +180,3 @@ Candidate capabilities:
 - Shareable validation packs.
 
 This phase is intentionally open-ended. It should not distort the earlier architecture until concrete missions require it.
-

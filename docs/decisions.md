@@ -563,13 +563,7 @@ Consequence:
 
 All Phase 1 exit criteria pass. The C64 reports cycle rates, an 80-byte retained-sink footprint, and accumulated high-precision deltas on its verified post-run page. The accepted final artifacts are 49,773 bytes for the exhaustive diagnostic build, 38,519 bytes for C64 acceptance, and 28,353 bytes for the status program. Further vehicle dynamics begin in Phase 2.
 
-## Open decisions
 
-The following remain deliberately unresolved:
-
-- License for KSA64.
-- Target C64 and REU configurations beyond the baseline unexpanded C64.
-- Minimum acceptable simulation rate once display and telemetry are included.
 ## D-037: Represent Phase 2 in rotating equatorial polar coordinates
 
 Date: 2026-07-22
@@ -579,6 +573,7 @@ Status: accepted.
 Use radius, Earth-relative downrange angle, radial velocity, and inertial specific angular momentum as the planar truth variables. Derive tangential velocity from angular momentum and radius. Use a rotating spherical Earth, a co-rotating atmosphere, fixed-capacity constant-engine stages, and step-aligned time/pitch guidance. Preserve Phase 1 contracts and add versioned Phase 2 records.
 
 This representation makes torque-free angular momentum a state invariant, avoids absolute Cartesian position transforms in the hot path, and still supports genuine energy, apogee, perigee, and orbit classification. The generated Phase 2 contract proves the declared field and intermediate envelopes and supplies target-executable trig and square-root checks.
+
 ## D-038: Retain semi-implicit Euler for the initial planar production path
 
 Date: 2026-07-22
@@ -588,6 +583,7 @@ Status: accepted; the powered KSA-2A mission satisfies the declared insertion en
 Implement both semi-implicit Euler and midpoint RK2 at 0.125 seconds. The fixed-point circular-orbit acceptance case produces identical raw states after one orbit, and the changing-radius C64 fixture produces identical terminal radius and radial velocity. The final linked snapshot measures midpoint at 452,574.37 cycles per step versus 451,562.59 for semi-implicit Euler in three stable PAL VICE runs; the earlier snapshot remains layout-history evidence. Refined RK4 coast evidence converges far inside the declared threshold.
 
 Use semi-implicit Euler because midpoint's correction quantizes away at the accepted field resolution while adding structure and target cost. Reopen the decision if the powered KSA-2A mission misses its insertion-error thresholds.
+
 ## D-039: Model aerodynamic flight in the co-rotating local frame
 
 Date: 2026-07-22
@@ -597,6 +593,7 @@ Status: accepted.
 Use a generated altitude table for atmospheric density and speed of sound, with the air mass co-rotating at the declared spherical-Earth rate. Derive radial and tangential air-relative velocity from planar truth, interpolate a Mach-dependent drag coefficient, and apply drag opposite that relative-velocity vector. Express commanded pitch as step-aligned binary-turn knots measured from local radial toward prograde, then resolve thrust with the generated Q1.15 trigonometric table.
 
 This makes surface co-rotation an exact zero-dynamic-pressure fixture, keeps the environment and guidance deterministic and allocation-free, and lets one pure force evaluator expose Max-Q, Mach, thrust, drag, and acceleration without leaking mutable truth. Native and rust-mos self-tests exercise the generated environment identity, interpolation, drag direction, physical dynamic-pressure scale, pitch endpoints, thrust axes, and angular-momentum response. The table is a compact Phase 2 learning model rather than a named standard atmosphere; higher-fidelity atmosphere and winds remain future model choices.
+
 ## D-040: Freeze KSA-2A as a generated packed multistage mission
 
 Date: 2026-07-22
@@ -608,6 +605,7 @@ Represent Phase 2 inputs as an 884-byte CRC-protected `KSC2` image with fixed ca
 Use the generated KSA-2A schedule as the integrated nominal mission and a five-percent-short upper-stage burn as the deterministic failed-insertion mission. The independent float64 path reaches 199.989 x 200.015 km; the exact fixed-point path reaches 188.169 x 188.169 km, with Max-Q 40.779 kPa and peak proper acceleration 55.283 m/s2. Both satisfy the declared nominal envelope, while both implementations classify the early-cutoff case as impact.
 
 Generate target fixture constants from the packed source rather than maintaining a second handwritten configuration. Split parser/contract and mission acceptance executables so each fits the 64 KB target link region. Run the complete 900-second nominal and failure missions natively, the complete nominal mission under rust-mos, and the target failure path through its exact cutoff; omit only the redundant post-cutoff atmospheric tail from the instruction-level failure check because its variable-time arithmetic is pathologically slow.
+
 ## D-041: Observe one mission executor through canonical KST2 records
 
 Date: 2026-07-22
@@ -619,6 +617,7 @@ Expose immutable initial/successor observations from the authoritative Phase 2 e
 The nominal golden stream contains 901 frames and 57,704 bytes, with stream CRC-32 `0x7d13b2bf` and final state checksum `0xcc57612b`. The host rejects bad framing, CRC, scenario binding, initial truth, cadence, time, numeric ranges, and terminal placement before displaying values. Generated portable fixtures reproduce the header, initial frame, and terminal frame exactly.
 
 Provide a GMAT R2026a point-mass script and report comparator for the independent float64 cutoff state, with Earth radius and force-model assumptions made explicit. Do not make GMAT a build dependency or claim an unexecuted external run as automated evidence. C64 retained-state replay will consume the same sink/decoder contract rather than adding a second mission executor.
+
 ## D-042: Measure slow target execution and replay compact presentation data
 
 Date: 2026-07-22
@@ -680,3 +679,74 @@ Date: 2026-07-23
 Status: accepted.
 
 Measure naturally terminating 64-step PAL probes for representative composed, guidance, fault, coast, and actuator paths. Start a full nominal target mission only if the linked program fits stock RAM and the conservative pre-run projection is no more than 30 minutes. The accepted program fits, but its 243.7-minute projection exceeds the threshold, so no full mission is started. Verify presentation separately with strict KRP3 parsing, PETSCII rendering, SID cues, and screen-memory inspection. Never cancel a run to manufacture timing evidence.
+
+## D-049: Make campaign variation keyed and order-independent
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Derive every sampled value from the master seed, run index, parameter identity, correlation group, and draw index. Run zero is always the unmodified Phase 3 nominal case. Catalog order, worker count, and execution order therefore cannot change a run's inputs.
+
+Use bounded uniform, triangular, Bernoulli, and clamped 12-draw CLT-normal distributions with explicit physical bounds. Keep controller gains, vehicle topology, event sequencing, and probabilistic fault topology outside the reviewed Phase 4 catalog until they receive coupled-invariant tests.
+
+## D-050: Aggregate campaigns in canonical run order
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Allow native workers to execute runs in parallel, but sort results and fold fixed 128-byte KSR4 summaries strictly by run index. Keep streaming count, extrema, mean, variance, histogram, and ordered summary-chain state allocation-free. Treat the independently reconstructed Python/float64 campaign analysis—not the compact C64 classifier—as physical acceptance evidence.
+
+The frozen 1,024-run campaign has identity `0xa2e9e9d5` and ordered summary chain `0x813ce420` across serial, 5-worker, and 12-worker execution.
+
+## D-051: Keep the REU optional and storage observational
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Support stock C64 operation with streaming aggregates, five deterministic interesting-run summaries, and one sparse KPH4 history. Detect REU capacity with preserving DMA probes; permit users to disable or cap detected storage but never claim more capacity than observed. Convert available capacity into summaries, full KST4 histories, and compact KPH4 histories through one deterministic `StoragePlan`.
+
+No simulation state, random draw, flight checksum, or campaign aggregate may depend on recording mode, detected capacity, DMA timing, archive success, or storage failure.
+
+## D-052: Version Phase 4 evidence independently
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Preserve KSC2, KSC3, KST3, and KRP3 unchanged. Add separate strict KSC4 campaign configurations, KSR4 summaries, KPH4 presentation histories, run-bound KST4 detailed streams, committed KRA4 archives, and numbered KXV4 export volumes. Reject unknown meanings, nonzero reserved data, corruption, truncation, identity mismatch, and incomplete record chains rather than guessing.
+
+KPH4 and the compact fixed-point orbit outcome are presentation and selection aids. They do not replace canonical detailed telemetry or independent float64 analysis.
+
+## D-053: Keep IEC export post-run and separable
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Build exports from an explicit manifest, reject oversized one-volume selections before writing, and bind multi-volume order and logical offsets in KXV4 headers. Require the host joiner to reject missing, duplicate, reordered, mixed, truncated, or corrupt volumes.
+
+Keep a small stock report path in the campaign application and place full archive IEC writing in a separate utility PRG. Disk commands, retries, or failures must never enter the simulation loop or consume its state budget.
+
+## D-054: Validate large campaigns natively and probe the target finitely
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Use native execution for the 64-run routine campaign and 1,024-run reviewed campaign. Use bounded MOS/VICE probes for exact arithmetic, storage, DMA, UI, archive recovery, and IEC export. A complete target campaign is not a completion requirement.
+
+The accepted composed path projects one C64 mission at 243.7 minutes, 64 runs at approximately 10.8 days, and 1,024 runs at approximately 173.3 days. Start any long target run only after a current projection and explicit user confirmation; never cancel a run merely to obtain timing evidence.
+
+## Open decisions
+
+The following remain deliberately unresolved:
+
+- License for KSA64.
+- The Phase 5 frame, quaternion, inertia, torque, cadence, and three-dimensional telemetry contracts.
+- The Phase 6 physical transport and multi-C64 deployment details.
+- The Phase 7 mission set and data-driven configuration scope.
+
+Simulation-rate requirements remain phase- and evidence-specific rather than one global threshold. Stock and 128 KiB through 16 MiB REU storage configurations are accepted Phase 4 decisions, not open architecture questions.
