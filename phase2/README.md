@@ -1,6 +1,6 @@
 # Phase 2: planar multistage ascent
 
-Status: numeric contract, vacuum geometry, atmosphere, aerodynamics, and open-loop guidance accepted; bounded staging and complete missions are next.
+Status: numeric contract, planar dynamics, atmosphere, aerodynamics, guidance, packed scenarios, bounded staging, and nominal/failure missions accepted; Phase 2 telemetry and host validation are next.
 
 Phase 2 extends the accepted vertical laboratory into an equatorial, rotating-Earth, multistage launch and orbital-insertion simulation. Its integrated demonstration is a fictional two-stage KSA-2A mission targeting a 180–220 km near-circular orbit, plus a deterministic failed-insertion variant.
 

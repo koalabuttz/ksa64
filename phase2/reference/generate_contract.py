@@ -169,11 +169,11 @@ def scenario_source() -> dict[str, Any]:
         "pitch_program": [
             {"time_s": "0", "degrees_from_vertical": "0"},
             {"time_s": "10", "degrees_from_vertical": "0"},
-            {"time_s": "30", "degrees_from_vertical": "8"},
-            {"time_s": "70", "degrees_from_vertical": "32"},
-            {"time_s": "120", "degrees_from_vertical": "65"},
-            {"time_s": "155", "degrees_from_vertical": "82"},
-            {"time_s": "220", "degrees_from_vertical": "88"},
+            {"time_s": "30", "degrees_from_vertical": "17.357"},
+            {"time_s": "70", "degrees_from_vertical": "39.181"},
+            {"time_s": "120", "degrees_from_vertical": "49.798"},
+            {"time_s": "155", "degrees_from_vertical": "72.872"},
+            {"time_s": "220", "degrees_from_vertical": "89.100"},
             {"time_s": "400", "degrees_from_vertical": "90"},
         ],
         "aerodynamics": {

@@ -15,6 +15,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Phase 2 integrator evidence is stale." }
     & python -B phase2/reference/generate_environment.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 2 environment evidence is stale." }
+    & python -B phase2/reference/generate_mission.py --check
+    if ($LASTEXITCODE -ne 0) { throw "Phase 2 mission evidence is stale." }
 
     & cargo fmt --all -- --check
     if ($LASTEXITCODE -ne 0) { throw "Rust formatting failed." }
@@ -35,6 +37,15 @@ try {
         & $rustWrapper -WorkingDirectory . sh -lc `
             "mos-sim target/mos-sim-none/release/ksa64-phase2-contract-sim"
         if ($LASTEXITCODE -ne 0) { throw "rust-mos Phase 2 contract checks failed." }
+        & $rustWrapper -WorkingDirectory . cargo build --release `
+            --target mos-sim-none --features sim `
+            -Z build-std=core `
+            -Z build-std-features=compiler-builtins-mem `
+            --bin ksa64-phase2-mission-sim
+        if ($LASTEXITCODE -ne 0) { throw "rust-mos nominal mission build failed." }
+        & $rustWrapper -WorkingDirectory . sh -lc `
+            "mos-sim target/mos-sim-none/release/ksa64-phase2-mission-sim"
+        if ($LASTEXITCODE -ne 0) { throw "rust-mos nominal mission checks failed." }
     }
 
     Write-Host "PHASE 2 CURRENT GATES: PASS"

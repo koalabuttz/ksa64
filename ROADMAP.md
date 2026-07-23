@@ -53,7 +53,7 @@ Exit criteria:
 
 ## Phase 2: two-dimensional multistage ascent
 
-Status: in progress. The rotating-Earth planar contract, vacuum coast, orbital classification, provisional semi-implicit integrator selection, co-rotating atmosphere, Mach-dependent drag, and open-loop pitch guidance are accepted; bounded staging and complete missions are next.
+Status: in progress. The rotating-Earth planar model, atmosphere, Mach-dependent drag, guidance, checksummed KSC2 scenarios, bounded staging, and deterministic nominal/failure missions are accepted; Phase 2 telemetry and host/external validation are next.
 
 Purpose: produce a recognizable launch trajectory and orbital-insertion attempt.
 

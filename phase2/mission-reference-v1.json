@@ -1,0 +1,155 @@
+{
+  "model": "independent float64 semi-implicit polar reference",
+  "timestep_s": "0.125",
+  "nominal_scenario_id": "ksa64.phase2.ksa2a-200km.v1",
+  "failure_scenario_id": "ksa64.phase2.ksa2a-early-cutoff.v1",
+  "nominal": {
+    "pitch_degrees": [
+      0.0,
+      0.0,
+      17.357,
+      39.181,
+      49.798,
+      72.872,
+      89.1,
+      90.0
+    ],
+    "failure_stage2_scale": 1.0,
+    "final": {
+      "time_s": 900.0,
+      "radius_km": 6578.146326446741,
+      "altitude_km": 200.0093264467414,
+      "radial_velocity_km_s": 1.2910980503269278e-05,
+      "specific_angular_momentum_km2_s": 51205.94796004691,
+      "mass_t": 23.000000000002775
+    },
+    "orbit": {
+      "class": "stable",
+      "energy": -30.297356332770512,
+      "eccentricity": 1.9989431723962826e-06,
+      "perigee_km": 199.98883781825225,
+      "apogee_km": 200.01513647028332
+    },
+    "cutoff": {
+      "time_s": 396.5,
+      "radius_km": 6578.138939285275,
+      "radial_velocity_km_s": 1.5559654399827903e-05,
+      "specific_angular_momentum_km2_s": 51205.94796004691
+    },
+    "cutoff_orbit": {
+      "class": "stable",
+      "energy": -30.297356332770523,
+      "eccentricity": 1.9988741652706218e-06,
+      "perigee_km": 199.98883827218833,
+      "apogee_km": 200.0151360163427
+    },
+    "max_q_kpa": 40.77749128193384,
+    "max_proper_acceleration_m_s2": 55.2923179256298,
+    "events": [
+      {
+        "time_s": 155.0,
+        "event": "cutoff",
+        "stage": 1
+      },
+      {
+        "time_s": 156.0,
+        "event": "separation",
+        "stage": 1
+      },
+      {
+        "time_s": 156.5,
+        "event": "ignition",
+        "stage": 2
+      },
+      {
+        "time_s": 396.5,
+        "event": "cutoff",
+        "stage": 2
+      }
+    ]
+  },
+  "early_cutoff": {
+    "pitch_degrees": [
+      0.0,
+      0.0,
+      17.357,
+      39.181,
+      49.798,
+      72.872,
+      89.1,
+      90.0
+    ],
+    "failure_stage2_scale": 0.95,
+    "final": {
+      "time_s": 900.0,
+      "radius_km": 6424.7485447816625,
+      "altitude_km": 46.611544781662815,
+      "radial_velocity_km_s": -0.5879746236929824,
+      "specific_angular_momentum_km2_s": 47422.45219841185,
+      "mass_t": 27.199999999999697
+    },
+    "orbit": {
+      "class": "impact",
+      "energy": -34.62738071921267,
+      "eccentricity": 0.14049252648740146,
+      "perigee_km": -1431.1838727824506,
+      "apogee_km": 186.04451597654042
+    },
+    "cutoff": {
+      "time_s": 384.5,
+      "radius_km": 6578.110199794578,
+      "radial_velocity_km_s": 0.0071707208521130045,
+      "specific_angular_momentum_km2_s": 47741.461634444444
+    },
+    "cutoff_orbit": {
+      "class": "impact",
+      "energy": -34.25838674186369,
+      "eccentricity": 0.13073720441521666,
+      "perigee_km": -1321.1485175711214,
+      "apogee_km": 199.9945482791327
+    },
+    "max_q_kpa": 48.40542965545108,
+    "max_proper_acceleration_m_s2": 55.2923179256298,
+    "events": [
+      {
+        "time_s": 155.0,
+        "event": "cutoff",
+        "stage": 1
+      },
+      {
+        "time_s": 156.0,
+        "event": "separation",
+        "stage": 1
+      },
+      {
+        "time_s": 156.5,
+        "event": "ignition",
+        "stage": 2
+      },
+      {
+        "time_s": 384.5,
+        "event": "cutoff",
+        "stage": 2
+      }
+    ]
+  },
+  "acceptance": {
+    "nominal_perigee_km": [
+      180,
+      220
+    ],
+    "nominal_apogee_km": [
+      180,
+      220
+    ],
+    "nominal_max_eccentricity": 0.01,
+    "nominal_max_q_kpa": 60,
+    "nominal_max_proper_acceleration_m_s2": 60,
+    "failure_must_not_be_stable": true
+  },
+  "packed": {
+    "nominal_crc32": "0x5d362512",
+    "failure_crc32": "0x679ad4c7",
+    "image_length": 884
+  }
+}

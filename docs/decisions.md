@@ -597,3 +597,14 @@ Status: accepted.
 Use a generated altitude table for atmospheric density and speed of sound, with the air mass co-rotating at the declared spherical-Earth rate. Derive radial and tangential air-relative velocity from planar truth, interpolate a Mach-dependent drag coefficient, and apply drag opposite that relative-velocity vector. Express commanded pitch as step-aligned binary-turn knots measured from local radial toward prograde, then resolve thrust with the generated Q1.15 trigonometric table.
 
 This makes surface co-rotation an exact zero-dynamic-pressure fixture, keeps the environment and guidance deterministic and allocation-free, and lets one pure force evaluator expose Max-Q, Mach, thrust, drag, and acceleration without leaking mutable truth. Native and rust-mos self-tests exercise the generated environment identity, interpolation, drag direction, physical dynamic-pressure scale, pitch endpoints, thrust axes, and angular-momentum response. The table is a compact Phase 2 learning model rather than a named standard atmosphere; higher-fidelity atmosphere and winds remain future model choices.
+## D-040: Freeze KSA-2A as a generated packed multistage mission
+
+Date: 2026-07-22
+
+Status: accepted.
+
+Represent Phase 2 inputs as an 884-byte CRC-protected `KSC2` image with fixed capacities for four stages, sixteen pitch knots, four aerodynamic tables, and sixteen Mach knots per table. Validate framing, identities, reserved fields, ranges, event alignment, mass invariants, stage topology, guidance, and aerodynamics before constructing truth. Execute ignition delay, burn, cutoff, separation delay, residual-propellant disposal, and stage activation only on 0.125-second boundaries.
+
+Use the generated KSA-2A schedule as the integrated nominal mission and a five-percent-short upper-stage burn as the deterministic failed-insertion mission. The independent float64 path reaches 199.989 x 200.015 km; the exact fixed-point path reaches 188.169 x 188.169 km, with Max-Q 40.779 kPa and peak proper acceleration 55.283 m/s2. Both satisfy the declared nominal envelope, while both implementations classify the early-cutoff case as impact.
+
+Generate target fixture constants from the packed source rather than maintaining a second handwritten configuration. Split parser/contract and mission acceptance executables so each fits the 64 KB target link region. Run the complete 900-second nominal and failure missions natively, the complete nominal mission under rust-mos, and the target failure path through its exact cutoff; omit only the redundant post-cutoff atmospheric tail from the instruction-level failure check because its variable-time arithmetic is pathologically slow.
