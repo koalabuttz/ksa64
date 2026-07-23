@@ -16,6 +16,7 @@ pub mod planar;
 pub mod planar_dynamics;
 pub mod planar_environment;
 pub mod quantities;
+pub mod rigid_body;
 pub mod scenario;
 pub mod spatial_numeric;
 pub mod telemetry;
@@ -46,6 +47,9 @@ mod phase2_telemetry_self_test;
 mod phase2_mission_self_test;
 
 #[cfg(feature = "fixtures")]
+mod phase5_rigid_self_test;
+
+#[cfg(feature = "fixtures")]
 mod phase5_spatial_self_test;
 
 #[cfg(feature = "fixtures")]
@@ -64,6 +68,8 @@ pub use phase2_scenario_self_test::run_phase2_scenario_self_tests;
 pub use phase2_self_test::run_phase2_contract_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase2_telemetry_self_test::run_phase2_telemetry_self_tests;
+#[cfg(feature = "fixtures")]
+pub use phase5_rigid_self_test::run_phase5_rigid_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase5_spatial_self_test::run_phase5_spatial_self_tests;
 #[cfg(feature = "fixtures")]

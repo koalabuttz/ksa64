@@ -20,6 +20,10 @@ path = "src/bin/phase2_contract_sim.rs"
 required-features = ["sim"]
 
 [[bin]]
+name = "ksa64-phase5-rigid-sim"
+path = "src/bin/phase5_rigid_sim.rs"
+required-features = ["sim"]
+[[bin]]
 name = "ksa64-phase5-spatial-sim"
 path = "src/bin/phase5_spatial_sim.rs"
 required-features = ["sim"]

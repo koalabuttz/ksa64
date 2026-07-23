@@ -1,0 +1,99 @@
+{
+  "contract": "ksa64.rigid-body-vectors.phase5-v1",
+  "dt_q16": 2048,
+  "spherical_inertia_q12": [
+    4096000,
+    4096000,
+    4096000
+  ],
+  "asymmetric_inertia_q12": [
+    4096000,
+    4915200,
+    6144000
+  ],
+  "torque_x_q16": [
+    32768,
+    0,
+    0
+  ],
+  "asymmetric_initial": {
+    "attitude": [
+      1073741824,
+      0,
+      0,
+      0
+    ],
+    "rate": [
+      1677722,
+      3355443,
+      -2516582
+    ]
+  },
+  "spherical_one_step": {
+    "attitude": [
+      1073741793,
+      262144,
+      0,
+      0
+    ],
+    "rate": [
+      262144,
+      0,
+      0
+    ]
+  },
+  "spherical_alpha_q24": [
+    8388608,
+    0,
+    0
+  ],
+  "asymmetric_one_step": {
+    "attitude": [
+      1073732322,
+      1682426,
+      3352136,
+      -2517958
+    ],
+    "rate": [
+      1682441,
+      3352166,
+      -2517980
+    ]
+  },
+  "asymmetric_alpha_q24": [
+    150995,
+    -104858,
+    -44739
+  ],
+  "constant_torque_64": {
+    "attitude": [
+      938257627,
+      522105479,
+      0,
+      0
+    ],
+    "rate": [
+      16777216,
+      0,
+      0
+    ]
+  },
+  "constant_rate_64": {
+    "attitude": [
+      1040362130,
+      0,
+      0,
+      265646654
+    ],
+    "rate": [
+      0,
+      0,
+      4194304
+    ]
+  },
+  "float64": {
+    "constant_torque_final_rate_x": 1.0,
+    "constant_torque_final_angle_x": 1.0,
+    "constant_rate_final_angle_z": 0.5
+  }
+}

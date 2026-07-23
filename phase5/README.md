@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-2 complete; Gate 3 rigid-body propagation is next.
+Status: Gates 1-3 complete; Gate 4 bending and slosh dynamics are next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -9,6 +9,11 @@ Phase 2/3 checksums without changing any inherited format or entry point.
 The spatial foundation now supplies checked fixed-point vectors, scalar-first
 Hamilton quaternions, deterministic normalization, and body-to-ECI rotation.
 Independent vectors pass both native Rust and the pinned rust-mos target.
+Rigid-body propagation now evaluates diagonal Euler coupling, applied torque,
+semi-implicit angular rate, and normalized quaternion kinematics at the 32 Hz
+fast cadence. Exact integer and analytic float64 references pass natively, and
+two distinct target cases pass through an explicitly documented rust-mos
+specialization constraint.
 
 Phase 4 completed the maturity prerequisites for 3-D work: the 2-D world is deterministic and independently checked, flight software is isolated from truth, campaign variation is reproducible, storage is observational, and stock/REU evidence paths are strict.
 
