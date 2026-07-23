@@ -35,7 +35,7 @@ Run from a project subdirectory:
 
     powershell -File tools/toolchains/rust-mos.ps1 -WorkingDirectory toolchains/smoke/rust-mos cargo build --release
 
-The wrapper mounts the repository at /workspace, uses the pinned image, supplies the fork's toolchain path, and keeps Cargo's package cache inside the disposable container.
+The wrapper mounts the repository at /workspace, uses the pinned image, supplies the fork's toolchain path, and keeps Cargo's package cache under the ignored `.toolchains/cache/rust-mos-cargo` directory. The cache survives disposable containers but is never a source or evidence input.
 
 ### Oscar64
 

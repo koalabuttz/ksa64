@@ -13,8 +13,11 @@ function Assert-ExitCode([string]$label) { if ($LASTEXITCODE -ne 0) { throw "$la
 function Assert-BytesEqual([string]$left, [string]$right) {
     $a = [IO.File]::ReadAllBytes($left)
     $b = [IO.File]::ReadAllBytes($right)
-    if ($a.Length -ne $b.Length -or -not [Linq.Enumerable]::SequenceEqual[byte]($a, $b)) {
+    if ($a.Length -ne $b.Length) {
         throw "C64 IEC readback differs from KXV4 source."
+    }
+    for ($index = 0; $index -lt $a.Length; $index++) {
+        if ($a[$index] -ne $b[$index]) { throw "C64 IEC readback differs from KXV4 source." }
     }
 }
 New-Item -ItemType Directory -Path $tempRoot | Out-Null

@@ -35,10 +35,9 @@ unsafe fn finish(
     plan: Option<StoragePlan>,
     timings: [u16; 3],
 ) -> ! {
-    core::ptr::write_volatile(RESULT, b'R');
-    core::ptr::write_volatile(RESULT.add(1), b'4');
-    core::ptr::write_volatile(RESULT.add(2), b'P');
-    core::ptr::write_volatile(RESULT.add(3), b'0');
+    for offset in 0..4 {
+        core::ptr::write_volatile(RESULT.add(offset), 0);
+    }
     put_u16(4, 1);
     put_u16(6, status);
     put_u32(8, capacity_kib);
@@ -55,6 +54,10 @@ unsafe fn finish(
     put_u16(34, timings[1]);
     put_u16(36, timings[2]);
     put_u16(38, REPETITIONS);
+    core::ptr::write_volatile(RESULT, b'R');
+    core::ptr::write_volatile(RESULT.add(1), b'4');
+    core::ptr::write_volatile(RESULT.add(2), b'P');
+    core::ptr::write_volatile(RESULT.add(3), b'0');
     core::ptr::write_volatile(BORDER, if status == 0 { 5 } else { 2 });
     loop {}
 }

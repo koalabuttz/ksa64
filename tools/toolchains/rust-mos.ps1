@@ -44,12 +44,14 @@ $containerDirectory = if ($relativeDirectory -eq ".") {
 } else {
     "/workspace/$relativeDirectory"
 }
+$cargoCache = Join-Path $projectRoot ".toolchains\cache\rust-mos-cargo"
+New-Item -ItemType Directory -Path $cargoCache -Force | Out-Null
 
 $dockerArguments = @(
     "run",
     "--rm",
     "-e", "PATH=/usr/local/rust-mos/bin:/usr/local/bin:/usr/bin:/bin",
-    "-e", "CARGO_HOME=/tmp/cargo",
+    "-e", "CARGO_HOME=/workspace/.toolchains/cache/rust-mos-cargo",
     "-v", "$($projectRoot):/workspace",
     "-w", $containerDirectory,
     $image

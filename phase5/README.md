@@ -99,3 +99,9 @@ powershell -File phase5/complete.ps1
 
 A complete target mission still requires a fresh projection and explicit
 confirmation. The completion runner never starts one.
+
+## Post-completion hygiene
+
+The bounded [Phase 5.1 hygiene pass](HYGIENE.md) strengthens target-probe
+publication, cross-shell checks, canonical line endings, and toolchain caching
+without changing any accepted simulation result.

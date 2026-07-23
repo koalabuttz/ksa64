@@ -55,7 +55,7 @@ Linked writable-section figures exclude the hardware stack and include initializ
 | C64 program | PRG bytes | Loaded end exclusive | Writable static | Zero page |
 |---|---:|---:|---:|---:|
 | Interactive stock UI | 12,864 | `$3A3F` | 1,490 bytes | 17 bytes |
-| REU/DMA probe | 4,461 | `$196C` | 897 bytes | 17 bytes |
+| REU/DMA probe | 4,470 | `$1975` | 897 bytes | 17 bytes |
 | IEC export utility | 4,280 | `$18B7` | 0 bytes | 0 bytes |
 
 All three fit stock RAM. The stock program's no-init end is `$3C21`, still far below the `$C000` gate.

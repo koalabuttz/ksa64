@@ -256,3 +256,11 @@ KSA-5A uses simplified gravity/environment, aerodynamic, flexible-body,
 actuator, sensor, and guidance models. Campaign frequencies are results under
 reviewed synthetic distributions rather than real-world probability claims.
 `phase5/COMPLETION.md` freezes the accepted measurements and limitations.
+## Target probe publication discipline
+
+A target probe's completion magic is a commit marker. The probe must clear the
+marker before work, write every result field with bounded volatile stores, and
+publish the magic only after the complete result is visible. Monitors must
+ignore records without the exact final marker. Publishing magic first creates a
+race in which VICE or physical monitoring hardware can accept a partially
+written record.

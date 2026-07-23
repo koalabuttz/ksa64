@@ -20,8 +20,11 @@ function Invoke-ExpectedFailure([string]$label, [scriptblock]$action) {
 function Assert-BytesEqual([string]$label, [string]$left, [string]$right) {
     $a = [IO.File]::ReadAllBytes($left)
     $b = [IO.File]::ReadAllBytes($right)
-    if ($a.Length -ne $b.Length -or -not [Linq.Enumerable]::SequenceEqual[byte]($a, $b)) {
+    if ($a.Length -ne $b.Length) {
         throw "$label byte comparison failed."
+    }
+    for ($index = 0; $index -lt $a.Length; $index++) {
+        if ($a[$index] -ne $b[$index]) { throw "$label byte comparison failed." }
     }
 }
 function Write-HashSidecar([string]$artifact) {

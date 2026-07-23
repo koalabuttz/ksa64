@@ -1,12 +1,13 @@
 [CmdletBinding()]
-param()
+param([switch]$Update)
 $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $versions = Get-Content -Raw -LiteralPath (Join-Path $projectRoot "toolchains\versions.json") | ConvertFrom-Json
 $rustWrapper = Join-Path $projectRoot "tools\toolchains\rust-mos.ps1"
 $vice = Join-Path $projectRoot $versions.vice.projectRelativeExecutable.Replace("/", "\")
 $artifact = Join-Path $projectRoot "target\mos-c64-none\c64\ksa64-phase4-reu-probe-c64"
-$output = Join-Path $projectRoot "phase4\reu-matrix-v1.json"
+$frozenOutput = Join-Path $projectRoot "phase4\reu-matrix-v1.json"
+$output = if ($Update) { $frozenOutput } else { Join-Path $projectRoot "target\phase4-reu-matrix-v1.json" }
 function Assert-ExitCode([string]$label) { if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE." } }
 Push-Location $projectRoot
 try {

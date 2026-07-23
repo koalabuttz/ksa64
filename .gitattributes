@@ -1,0 +1,4 @@
+# Canonical source and generated evidence use LF on every host.
+*.json text eol=lf
+*.rs text eol=lf
+*.sha256 text eol=lf
