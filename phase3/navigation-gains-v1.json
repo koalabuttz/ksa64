@@ -1,0 +1,24 @@
+{
+  "schema": "ksa64.phase3.navigation-gains-v1",
+  "objective": "lexicographic worst cutoff position error then velocity error",
+  "cases": 16,
+  "candidate_count": 108,
+  "selected": {
+    "alt_alpha_shift": 1,
+    "alt_beta_shift": 1,
+    "gps_position_shift": 3,
+    "gps_velocity_shift": 1
+  },
+  "worst_cutoff_position_error_km": 0.0038583497762374463,
+  "worst_cutoff_velocity_error_km_s": 9.77185589530194e-05,
+  "runner_up": {
+    "shifts": [
+      1,
+      2,
+      3,
+      1
+    ],
+    "position_error_km": 0.0038583497762374463,
+    "velocity_error_km_s": 9.77185589530194e-05
+  }
+}
