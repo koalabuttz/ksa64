@@ -12,3 +12,12 @@ c64 = ["fixtures", "ksa64-core/c64"]
 ksa64-core = { path = "../core" }
 ksa64-flight = { path = "../flight" }
 ksa64-interface = { path = "../interface" }
+
+[[bin]]
+name = "ksa64-phase3-probes-c64"
+path = "src/bin/phase3_probes_c64.rs"
+required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase3-replay-c64"
+path = "src/bin/phase3_replay_c64.rs"
+required-features = ["c64"]

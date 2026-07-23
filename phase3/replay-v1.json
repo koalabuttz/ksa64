@@ -1,0 +1,23 @@
+{
+  "schema": "ksa64.phase3.c64-replay-v1",
+  "target": "PAL C64 via pinned x64sc 3.10",
+  "replay_prg_bytes": 26841,
+  "replay_prg_sha256": "0026019ad9ddd76898d64a74f1f20fdcbe465230e0c3cf043acbd578850b0968",
+  "load_end_exclusive": "0x70d8",
+  "static_noinit_bytes": 175,
+  "zero_page_bytes": 17,
+  "tape_bytes": 21776,
+  "tape_sha256": "bd4cb1e714ef04995afe27a2ffa4ac6ad7496d53140c2db91caa1b0544386e61",
+  "frames": 906,
+  "final_step": 7200,
+  "source_stream_crc32": "0xaf79b36e",
+  "config_crc32": "0x2815ea66",
+  "cue_counts": {
+    "ignition": 2,
+    "cutoff": 2,
+    "separation": 1,
+    "end": 1,
+    "abort": 0
+  },
+  "screen_pass": "PHASE 3 REPLAY PASS"
+}
