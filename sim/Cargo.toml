@@ -6,6 +6,7 @@ publish = false
 
 [features]
 fixtures = ["ksa64-core/fixtures"]
+sim = ["fixtures"]
 c64 = ["fixtures", "ksa64-core/c64"]
 
 [dependencies]
@@ -21,3 +22,7 @@ required-features = ["c64"]
 name = "ksa64-phase3-replay-c64"
 path = "src/bin/phase3_replay_c64.rs"
 required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase4-distribution-sim"
+path = "src/bin/phase4_distribution_sim.rs"
+required-features = ["sim"]
