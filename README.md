@@ -2,7 +2,7 @@
 
 KSA64 is a proposed aerospace simulation framework for the Commodore 64: a small but technically serious system for simulating launch vehicles, flight software, sensors, guidance, telemetry, failures, and eventually hardware-in-the-loop operation across multiple physical C64s.
 
-> Project status: Phase 1 complete. Final linked raw physics reaches 8.34 Hz; canonical recorded mode reaches 5.62 Hz. Host capture, C64 acceptance, PETSCII status, memory reporting, and high-precision accumulated-error evidence all pass their completion gates.
+> Project status: Phase 2 complete. KSA-2A reaches a validated 188.169 x 188.169 km fixed-point orbit, its early-cutoff variant fails deterministically, canonical KST2 telemetry passes strict host inspection, and the measured C64 path plus PETSCII/SID replay pass their completion gates.
 
 ## The idea
 
@@ -68,11 +68,13 @@ The decision and measurements are recorded in [the Phase 0 results](phase0/RESUL
 - [Decision record](docs/decisions.md) preserves accepted and provisional choices.
 - [Compiler experiment](docs/experiment.md) defines the rust-mos and Oscar64 comparison.
 - [Phase 0 workspace](phase0/README.md) contains the frozen benchmark contract, independent reference generator, and golden vectors.
-- [Phase 1 workspace](phase1/README.md) contains the production core and cross-target gate.
+- [Phase 1 workspace](phase1/README.md) contains the vertical-flight production core and cross-target gate.
+- [Phase 2 workspace](phase2/README.md) contains the planar ascent contracts, mission, validation, timing, and replay evidence.
 - [Host telemetry tools](host/README.md) capture, validate, and summarize canonical mission streams.
 - [Phase 1 timing result](phase1/TIMING.md) records the optimization history, passing raw physics budget, and canonical telemetry cost.
 - [Phase 1 high-precision result](phase1/HIGH-PRECISION.md) separates fixed-point error from integrator error and records convergence evidence.
-- [Phase 1 completion record](phase1/COMPLETION.md) maps every exit criterion to the final accepted evidence.
+- [Phase 1 completion record](phase1/COMPLETION.md) maps every Phase 1 exit criterion to accepted evidence.
+- [Phase 2 completion record](phase2/COMPLETION.md) records the planar ascent results, target measurements, accepted limits, and reproducible audit.
 - [Validation strategy](docs/validation.md) explains how numerical and physical correctness will be tested.
 - [Numeric foundation](phase0/numeric/FOUNDATION.md) selects Phase 1 formats, ranges, overflow behavior, and analytic cases.
 - [Data formats](docs/data-formats.md) defines deterministic scenario and telemetry records.
@@ -91,7 +93,7 @@ The decision and measurements are recorded in [the Phase 0 results](phase0/RESUL
 7. A slower correct result is more valuable than a real-time decorative one.
 8. Optimize measured kernels, and keep the rest readable.
 
-## First milestone
+## Current milestones
 
 The compiler and arithmetic experiment is complete. Both candidates passed the frozen workload, and the common target-visible timing result selected Rust/rust-mos:
 
@@ -100,3 +102,5 @@ The compiler and arithmetic experiment is complete. Both candidates passed the f
 - Rust used 5.03 percent fewer cycles while remaining within credible C64 memory limits.
 
 Phase 0 is complete, and the Phase 1 exact core executes the full golden vertical mission while preserving the last valid state on faults. Two exact fast paths remain responsible for bringing the model inside budget; three final-layout common-clock runs measure checked dynamics at 118,111.48 PAL cycles per step—8.34 Hz with 4.10 percent raw headroom. Canonical mission-stream emission matches the independent 257-frame schedule and byte-stream CRC across native and MOS targets. Three stable PAL measurements show telemetry serialization and discard delivery add 7,504.00 cycles per step over checksum mode; the complete recorded-validation path reaches 5.62 Hz. The host adapter now captures and strictly validates that stream through the same sink boundary. The C64 adapter retains an 80-byte mission status and renders a 28,353-byte post-run display whose actual screen memory is checked under PAL VICE. Independent Decimal evidence shows +7.842 m altitude error from fixed-point/table quantization versus the same algorithm, and a total -279.355 m delta versus confirmed RK4. Phase 1 is complete; new vehicle dynamics begin at the Phase 2 boundary.
+
+Phase 2 is now complete. The shared fixed-point core models rotating-Earth planar ascent, atmosphere and Mach-dependent drag, pitch guidance, and bounded multistage events. KSA-2A reaches a 188.169 x 188.169 km exact orbit while the early-cutoff case is classified as impact. The canonical 901-frame KST2 stream is captured and strictly inspected on the host; PAL C64 measurements show that the accuracy-first powered path is intentionally slower than real time. A source-bound compact replay renders the accepted trajectory and deterministic SID cues without becoming a second physics implementation. Phase 3 begins at the sensors, navigation, control, and actuator boundary.

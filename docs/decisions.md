@@ -583,9 +583,9 @@ This representation makes torque-free angular momentum a state invariant, avoids
 
 Date: 2026-07-22
 
-Status: accepted provisionally; powered-ascent confirmation remains required.
+Status: accepted; the powered KSA-2A mission satisfies the declared insertion envelope.
 
-Implement both semi-implicit Euler and midpoint RK2 at 0.125 seconds. The fixed-point circular-orbit acceptance case produces identical raw states after one orbit, and the changing-radius C64 fixture produces identical terminal radius and radial velocity. Midpoint costs 452,754.37 cycles per step versus 451,742.59 for semi-implicit Euler in three stable PAL VICE runs. Refined RK4 coast evidence converges far inside the declared threshold.
+Implement both semi-implicit Euler and midpoint RK2 at 0.125 seconds. The fixed-point circular-orbit acceptance case produces identical raw states after one orbit, and the changing-radius C64 fixture produces identical terminal radius and radial velocity. The final linked snapshot measures midpoint at 452,574.37 cycles per step versus 451,562.59 for semi-implicit Euler in three stable PAL VICE runs; the earlier snapshot remains layout-history evidence. Refined RK4 coast evidence converges far inside the declared threshold.
 
 Use semi-implicit Euler because midpoint's correction quantizes away at the accepted field resolution while adding structure and target cost. Reopen the decision if the powered KSA-2A mission misses its insertion-error thresholds.
 ## D-039: Model aerodynamic flight in the co-rotating local frame

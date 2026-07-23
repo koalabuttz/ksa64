@@ -299,3 +299,9 @@ The interfaces should allow these replacements without forcing all later complex
 
 The experiment and validation documents address these risks directly.
 
+
+## Accepted Phase 2 implementation
+
+The production core now extends the vertical laboratory with equatorial polar truth: radius, Earth-relative downrange, radial velocity, and inertial specific angular momentum. Pure model layers supply point-mass gravity, co-rotating atmosphere, Mach-dependent drag, and step-aligned open-loop pitch. A bounded executor owns ignition, burn, cutoff, separation, and coast transitions; raw execution, checksummed observation, and canonical KST2 recording all use that one executor.
+
+The host runs complete nominal and failed-insertion missions, independent float64/RK4 comparisons, capture, and strict stream inspection. The C64 timing adapter measures representative exact raw and recorded paths without display work. Because a complete accuracy-first run takes hours on a PAL machine, the presentation adapter consumes a compact KRP2 index generated only from host-validated KST2, retaining constant memory while drawing PETSCII and scheduling SID cues. This keeps physics, validation, and presentation separate and preserves the truth/sensor boundary that Phase 3 will require.

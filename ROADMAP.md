@@ -53,7 +53,7 @@ Exit criteria:
 
 ## Phase 2: two-dimensional multistage ascent
 
-Status: implementation complete; final audit in progress. The rotating-Earth model, nominal/failure missions, KST2 validation, measured C64 target path, and PETSCII/SID replay are accepted.
+Status: complete. The rotating-Earth planar model, nominal/failure missions, KST2 validation, measured C64 target path, and PETSCII/SID replay pass the completion audit.
 
 Purpose: produce a recognizable launch trajectory and orbital-insertion attempt.
 

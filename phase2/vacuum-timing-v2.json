@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "target": "PAL C64 via pinned x64sc 3.10",
+  "profile": "release",
+  "fixture_steps": 256,
+  "boundary_overhead_cycles": 4,
+  "semi_implicit": {
+    "net_cycles": 115600024,
+    "cycles_per_step": 451562.59375,
+    "final": [26862129, 15104]
+  },
+  "midpoint": {
+    "net_cycles": 115859039,
+    "cycles_per_step": 452574.37109375,
+    "cost_ratio": 1.002240613721672,
+    "final": [26862129, 15104]
+  },
+  "timed_prg_bytes": 10309
+}

@@ -1,12 +1,13 @@
 # Deterministic scenario and telemetry formats
 
-This document defines the Phase 1 data boundary. Human-authored configuration is separate from the compact C64 representation, and telemetry carries exact raw integers so host/C64 comparison never depends on decimal formatting.
+This document defines the deterministic Phase 1 and Phase 2 data boundaries. Human-authored configuration is separate from compact C64 representations, and canonical telemetry carries exact raw integers so host/C64 comparison never depends on decimal formatting.
 
 ## Common rules
 
 - Multibyte integers are little-endian.
 - Signed fields are two's-complement.
-- Numeric scales come from `ksa64.numeric.phase1-v1` in `phase0/numeric/FOUNDATION.md`.
+- Phase 1 numeric scales come from `ksa64.numeric.phase1-v1` in `phase0/numeric/FOUNDATION.md`.
+- Phase 2 numeric scales and bounds come from `ksa64.numeric.phase2-v1` in `phase2/contract-v1.json`.
 - Reserved fields and bits are zero when written. The strict v1 reader rejects nonzero reserved values rather than assigning future meaning to an old version.
 - Text is UTF-8 with LF line endings.
 - CRC-32 uses the IEEE reflected polynomial, initial value `0xffffffff`, and final XOR `0xffffffff`, as produced by Python `binascii.crc32`.
@@ -126,3 +127,13 @@ Optional interpreted columns may follow, but regression tools compare raw column
 `phase0/reference/generate_numeric_foundation.py` packs the checked-in example scenario and a two-frame telemetry fixture. It records complete hexadecimal encodings, CRCs, lengths, and SHA-256 digests in `phase0/numeric/numeric-v1.json`.
 
 The production Rust telemetry writers match this independent fixture byte for byte on native, rust-mos, and C64 targets. The mission emitter writes the initial state, configured-stride states, an off-stride final state when required, and a terminal fault frame at the last valid truth. Cutoff and depletion flags accumulate until a sink accepts a frame; end-of-run accompanies the final frame. The golden mission produces 257 frames and a 10,312-byte stream whose independently generated CRC-32 is `0xcf56fe65`. A future reader must meet the same rule: matching a structure in memory is not enough; emitted or accepted bytes must match exactly.
+
+## Phase 2 planar formats
+
+Phase 2 is deliberately versioned separately from the vertical laboratory. Its checked source is exact decimal JSON; the host generator emits a fixed 884-byte `KSC2` scenario image containing the planar initial state, bounded stage records, pitch knots, aerodynamic tables, model identities, and a final CRC-32. The portable parser validates counts, reserved fields, ranges, mass relationships, stage topology, guidance, event alignment, and table ordering before constructing truth.
+
+The canonical `KST2` stream uses a 40-byte header and 64-byte frames. The header binds the stream to its numeric, environment, scenario, timestep, stride, and mission identities. Frames carry raw radius, downrange, radial velocity, specific angular momentum, mass, propellant, command and stage state, Mach, dynamic pressure, event bits, rolling exact-state checksum, and record CRC. The nominal stream contains 901 frames and 57,704 bytes; strict host validation owns cadence, time, range, event, and terminal semantics.
+
+`KRP2` is a derived C64 presentation index, not canonical telemetry. Its header binds compact plot/event records to the source `KST2` stream CRC, scenario, terminal checksum, accepted Max-Q and orbit. It embeds the canonical KST2 header and final frame so the portable decoder revalidates source identity on target. Its own CRCs and reviewed SHA-256 protect the cold display path. Physics regression and replay truth remain `KST2`.
+
+The exact Phase 2 layouts, field offsets, masks, golden identities, and generation rules live in `phase2/scenario-v2.schema.json`, `phase2/TELEMETRY.md`, `phase2/REPLAY.md`, and their checked generators. An incompatible meaning requires a new magic/version rather than silently extending `KSC2`, `KST2`, or `KRP2`.

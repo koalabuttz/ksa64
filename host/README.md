@@ -8,8 +8,12 @@ From the project root:
 
     cargo run -p ksa64-host -- capture target/phase1-vertical.kst
     cargo run -p ksa64-host -- inspect target/phase1-vertical.kst
+    cargo run -p ksa64-host -- phase2-capture target/phase2-ascent.kst2
+    cargo run -p ksa64-host -- phase2-inspect target/phase2-ascent.kst2
 
-`capture` executes the checked golden mission, writes one 32-byte header and 257 40-byte frames, then immediately reads and validates the resulting file. `inspect` performs the same validation without running the mission.
+`capture` executes the checked Phase 1 mission, writes one 32-byte header and 257 40-byte frames, then immediately reads and validates the resulting file. `inspect` performs the same validation without running the mission.
+
+`phase2-capture` executes KSA-2A, writes one 40-byte header and 901 64-byte frames, and strictly validates the 57,704-byte result. `phase2-inspect` validates an existing canonical `KST2` stream without rerunning physics.
 
 The compact text view reports scenario identity, timestep and stride, stream length and CRC, final physical state, rolling state checksum, and frames carrying cutoff, depletion, or numeric-fault events. Decimal values are presentation only; validation uses canonical raw integers.
 
