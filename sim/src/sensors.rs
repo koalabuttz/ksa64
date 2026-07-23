@@ -14,21 +14,21 @@ use ksa64_interface::{
     SENSOR_VALID_GPS, SENSOR_VALID_GYRO, SENSOR_VALID_STEERING,
 };
 
-pub const ACCEL_RESOLUTION_Q28: i32 = 2_684_355;
-pub const ACCEL_BIAS_Q28: i32 = 536_871;
-pub const ACCEL_NOISE_Q28: i32 = 2_684_355;
+pub const ACCEL_RESOLUTION_Q28: i32 = 2_684;
+pub const ACCEL_BIAS_Q28: i32 = 537;
+pub const ACCEL_NOISE_Q28: i32 = 2_684;
 pub const GYRO_RESOLUTION_Q24: i32 = 167_772; // 0.01 degree/s.
 pub const GYRO_BIAS_Q24: i32 = 33_554;
 pub const GYRO_NOISE_Q24: i32 = 83_886;
-pub const ALT_RESOLUTION_Q12: i32 = 40_960;
-pub const ALT_BIAS_Q12: i32 = 81_920;
-pub const ALT_NOISE_Q12: i32 = 40_960;
-pub const GPS_POSITION_RESOLUTION_Q12: i32 = 40_960;
-pub const GPS_POSITION_NOISE_Q12: i32 = 81_920;
+pub const ALT_RESOLUTION_Q12: i32 = 41;
+pub const ALT_BIAS_Q12: i32 = 82;
+pub const ALT_NOISE_Q12: i32 = 41;
+pub const GPS_POSITION_RESOLUTION_Q12: i32 = 41;
+pub const GPS_POSITION_NOISE_Q12: i32 = 82;
 pub const GPS_ANGLE_RESOLUTION_Q32: i32 = 1_073; // about 10 m at the equator.
 pub const GPS_ANGLE_NOISE_Q32: i32 = 2_146;
-pub const GPS_VELOCITY_RESOLUTION_Q24: i32 = 1_677_722;
-pub const GPS_VELOCITY_NOISE_Q24: i32 = 3_355_443;
+pub const GPS_VELOCITY_RESOLUTION_Q24: i32 = 1_678;
+pub const GPS_VELOCITY_NOISE_Q24: i32 = 3_355;
 pub const GPS_ACQUIRE_STEP: u32 = 960;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -173,7 +173,7 @@ impl SensorSuite {
             GYRO_RESOLUTION_Q24,
         );
         let true_altitude = truth.radius().raw() - EARTH_RADIUS_Q12;
-        let alt_new = if step & 1 == 0 && true_altitude <= 80_000 * 4096 {
+        let alt_new = if step & 1 == 0 && true_altitude <= 80 * 4096 {
             Some(quantize(
                 true_altitude + ALT_BIAS_Q12 + triangular(&mut self.prng, ALT_NOISE_Q12),
                 ALT_RESOLUTION_Q12,
