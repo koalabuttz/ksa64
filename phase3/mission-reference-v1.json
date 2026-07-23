@@ -1,0 +1,184 @@
+{
+  "model": "independent Python float64 orbital, coast, load, navigation, and binary audit of KST3",
+  "constants": {
+    "earth_radius_km": 6378.137,
+    "mu_km3_s2": 398600.4418,
+    "timestep_s": 0.125
+  },
+  "cases": {
+    "nominal": {
+      "header": {
+        "scenario_id": 2512163859,
+        "scenario_crc32": 1563829522,
+        "config_crc32": 672524902,
+        "seed": 1263747379,
+        "case": 0,
+        "timestep_s": 0.125,
+        "mission_steps": 7200,
+        "stream_crc32": "0xaf79b36e",
+        "sha256": "972bd56e39d3fe96260b646fd60ec19e4b2555e07b36d9975c6ab3e8a886383b"
+      },
+      "frame_count": 906,
+      "terminal_step": 7200,
+      "terminal_altitude_km": 186.13936718750028,
+      "max_sampled_dynamic_pressure_kpa": 41.797637939453125,
+      "max_sampled_proper_acceleration_m_s2": 54.27314364639922,
+      "terminal_checksums": {
+        "truth_checksum": "0xc86045a0",
+        "sensor_checksum": "0x47d11fb0",
+        "nav_checksum": "0xc6f9da7b",
+        "flight_checksum": "0x02ce28ef"
+      },
+      "abort": false,
+      "cutoff": {
+        "step": 3171,
+        "navigation_position_error_km": 0.012309932982422117,
+        "navigation_velocity_error_km_s": 0.008661615979114893
+      },
+      "independent_float64_coast": {
+        "radius_km": 6564.350815062934,
+        "radial_velocity_km_s": -0.006016878176307752,
+        "terminal_radius_difference_km": -0.07444787543408893,
+        "terminal_radial_velocity_difference_km_s": 3.126053867347472e-05
+      },
+      "terminal_orbit": {
+        "eccentricity": 0.000771206106103254,
+        "perigee_km": 180.62740549049704,
+        "apogee_km": 190.75153159438105
+      }
+    },
+    "altimeter-dropout": {
+      "header": {
+        "scenario_id": 2512163859,
+        "scenario_crc32": 1563829522,
+        "config_crc32": 1620957331,
+        "seed": 1263747380,
+        "case": 1,
+        "timestep_s": 0.125,
+        "mission_steps": 7200,
+        "stream_crc32": "0xaf79b36e",
+        "sha256": "00d3ce9805c85ea20d14445984c2a06e5b5416cab0f5bf93ef5e0dc71475e13f"
+      },
+      "frame_count": 906,
+      "terminal_step": 7200,
+      "terminal_altitude_km": 186.14400585937528,
+      "max_sampled_dynamic_pressure_kpa": 41.797637939453125,
+      "max_sampled_proper_acceleration_m_s2": 54.27314364639922,
+      "terminal_checksums": {
+        "truth_checksum": "0xdbbf66d4",
+        "sensor_checksum": "0x5abb6519",
+        "nav_checksum": "0x420467e8",
+        "flight_checksum": "0x214b647f"
+      },
+      "abort": false,
+      "cutoff": {
+        "step": 3171,
+        "navigation_position_error_km": 0.013719403457358158,
+        "navigation_velocity_error_km_s": 0.00866009609198801
+      },
+      "independent_float64_coast": {
+        "radius_km": 6564.3551375545885,
+        "radial_velocity_km_s": -0.006011134045927654,
+        "terminal_radius_difference_km": -0.07413169521350937,
+        "terminal_radial_velocity_difference_km_s": 2.9688733427653616e-05
+      },
+      "terminal_orbit": {
+        "eccentricity": 0.0007708043124560477,
+        "perigee_km": 180.6251394850251,
+        "apogee_km": 190.7439834165416
+      }
+    },
+    "gps-outage": {
+      "header": {
+        "scenario_id": 2512163859,
+        "scenario_crc32": 1563829522,
+        "config_crc32": 166841102,
+        "seed": 1263747381,
+        "case": 2,
+        "timestep_s": 0.125,
+        "mission_steps": 7200,
+        "stream_crc32": "0xaf79b36e",
+        "sha256": "4958a1805a129aeec923e80ff274dab00c47c0386380c78934cb67aae91267c6"
+      },
+      "frame_count": 906,
+      "terminal_step": 7200,
+      "terminal_altitude_km": 186.52266796875028,
+      "max_sampled_dynamic_pressure_kpa": 41.797637939453125,
+      "max_sampled_proper_acceleration_m_s2": 54.27314364639922,
+      "terminal_checksums": {
+        "truth_checksum": "0xf36848ce",
+        "sensor_checksum": "0xca35c917",
+        "nav_checksum": "0x03700c4f",
+        "flight_checksum": "0x42c7914f"
+      },
+      "abort": false,
+      "cutoff": {
+        "step": 3171,
+        "navigation_position_error_km": 0.015671996065941763,
+        "navigation_velocity_error_km_s": 0.008502482951161686
+      },
+      "independent_float64_coast": {
+        "radius_km": 6564.715064784461,
+        "radial_velocity_km_s": -0.005493127637824731,
+        "terminal_radius_difference_km": -0.05539681571099209,
+        "terminal_radial_velocity_difference_km_s": -2.083844570188037e-05
+      },
+      "terminal_orbit": {
+        "eccentricity": 0.0007167830390140049,
+        "perigee_km": 181.06959698864375,
+        "apogee_km": 190.47939785052222
+      },
+      "gps_outage_bridge": {
+        "max_position_error_km": 0.25423454613948315,
+        "max_velocity_error_km_s": 0.003496065878333362
+      }
+    },
+    "steering-stuck": {
+      "header": {
+        "scenario_id": 2512163859,
+        "scenario_crc32": 1563829522,
+        "config_crc32": 4148200997,
+        "seed": 1263747382,
+        "case": 3,
+        "timestep_s": 0.125,
+        "mission_steps": 7200,
+        "stream_crc32": "0x91b807ac",
+        "sha256": "0cf97c18ce4de9b8ca75c537b5304d110266a20cc4873478c05a364444b943e4"
+      },
+      "frame_count": 590,
+      "terminal_step": 4677,
+      "terminal_altitude_km": -0.13407031249971624,
+      "max_sampled_dynamic_pressure_kpa": 5064.453125,
+      "max_sampled_proper_acceleration_m_s2": 142.0445261910003,
+      "terminal_checksums": {
+        "truth_checksum": "0x9b40e277",
+        "sensor_checksum": "0x67dbf95d",
+        "nav_checksum": "0x37c54191",
+        "flight_checksum": "0x435fa989"
+      },
+      "abort": true,
+      "cutoff": {
+        "step": 2097,
+        "navigation_position_error_km": 0.014309951500039367,
+        "navigation_velocity_error_km_s": 0.003489410012844721
+      },
+      "independent_float64_coast": {
+        "radius_km": 6374.626507525535,
+        "radial_velocity_km_s": -1.5891390817124262,
+        "terminal_radius_difference_km": 3.3764221619649106,
+        "terminal_radial_velocity_difference_km_s": 0.5084343330819026
+      }
+    }
+  },
+  "acceptance": {
+    "orbit_180_to_220_km": true,
+    "eccentricity_at_most_0_01": true,
+    "max_q_at_most_60_kpa": true,
+    "max_acceleration_at_most_60_m_s2": true,
+    "cutoff_navigation_within_1_km_and_10_m_s": true,
+    "gps_bridge_within_5_km_and_30_m_s": true,
+    "stuck_case_aborts": true,
+    "float64_coast_agrees_with_fixed_point_terminal": true
+  },
+  "all_acceptance_passed": true
+}

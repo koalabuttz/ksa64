@@ -6,19 +6,19 @@
   "selected": {
     "alt_alpha_shift": 3,
     "alt_beta_shift": 1,
-    "gps_position_shift": 3,
+    "gps_position_shift": 1,
     "gps_velocity_shift": 5
   },
-  "worst_cutoff_position_error_km": 1.3033746947903637,
+  "worst_cutoff_position_error_km": 0.013061064831390468,
   "worst_cutoff_velocity_error_km_s": 0.0025179763233822428,
   "runner_up": {
     "shifts": [
       2,
       1,
-      3,
+      1,
       5
     ],
-    "position_error_km": 1.3034114158874672,
+    "position_error_km": 0.013066097553064537,
     "velocity_error_km_s": 0.0025153696615927146
   }
 }

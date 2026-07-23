@@ -93,7 +93,11 @@ pub fn write_phase3_config(
     put_u16(out, 6, PHASE3_CONFIG_LENGTH as u16);
     put_u32(out, 8, PHASE3_CONFIG_CONTRACT_ID);
     put_u32(out, 12, scenario.scenario_id());
-    put_u32(out, 16, crc32_ieee(base));
+    put_u32(
+        out,
+        16,
+        crc32_ieee(&base[..PHASE2_SCENARIO_IMAGE_LENGTH - 4]),
+    );
     put_u32(out, 20, case.seed());
     out[24] = case_byte(case);
     put_u16(out, 28, 4);
@@ -142,7 +146,7 @@ pub fn parse_phase3_config(
     if get_u32(bytes, 12) != scenario.scenario_id() {
         return Err(ConfigError::BaseScenario);
     }
-    if get_u32(bytes, 16) != crc32_ieee(base) {
+    if get_u32(bytes, 16) != crc32_ieee(&base[..PHASE2_SCENARIO_IMAGE_LENGTH - 4]) {
         return Err(ConfigError::BaseChecksum);
     }
     if bytes[25] != 0

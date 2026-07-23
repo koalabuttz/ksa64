@@ -40,8 +40,8 @@ def run(gains: tuple[int, int, int, int], seed: int) -> tuple[float, float]:
             v += (error / 0.25) / (1 << (beta_shift + 2))
         if step >= 962 and step % 8 == 2 and not (260.0 <= t < 320.0):
             delayed_x, delayed_v = truth_history[step - 2]
-            measured_x = delayed_x + noise(seed, step, 0.020)
             measured_v = delayed_v + noise(seed + 31, step, 0.0002)
+            measured_x = delayed_x + noise(seed, step, 0.020) + measured_v * (2 * DT)
             x += (measured_x - x) / (1 << gps_pos_shift)
             v += (measured_v - v) / (1 << gps_vel_shift)
     return abs(x - truth_x), abs(v - truth_v)

@@ -101,6 +101,7 @@ pub struct MissionRecord {
     pub steering: SteeringSnapshot,
     pub sensors: SensorFrame,
     pub flight: FlightOutput,
+    pub sensor_checksum: u32,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MissionRunError<E> {
@@ -154,6 +155,7 @@ pub fn run_phase3_mission_observed<O: MissionObserver>(
             steering: bootstrap_steering,
             sensors: bootstrap_sensor,
             flight: output,
+            sensor_checksum: sensors.checksum(),
         })
         .map_err(MissionRunError::Observer)?;
     let mut max_q = 0;
@@ -208,6 +210,7 @@ pub fn run_phase3_mission_observed<O: MissionObserver>(
                 steering,
                 sensors: sensor,
                 flight: output,
+                sensor_checksum: sensors.checksum(),
             })
             .map_err(MissionRunError::Observer)?;
         if snapshot.truth.radius().raw() < EARTH_RADIUS_Q12 {

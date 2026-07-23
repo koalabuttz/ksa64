@@ -11,7 +11,7 @@ pub const EARTH_ROTATION_RAD_Q30: i32 = 78_298;
 pub const INITIAL_TANGENTIAL_VELOCITY_Q24: i32 = 7_803_689;
 pub const ALT_ALPHA_SHIFT: u8 = 3;
 pub const ALT_BETA_SHIFT: u8 = 1;
-pub const GPS_POSITION_SHIFT: u8 = 3;
+pub const GPS_POSITION_SHIFT: u8 = 1;
 pub const GPS_VELOCITY_SHIFT: u8 = 5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -149,13 +149,23 @@ impl Navigation {
             .saturating_add((error << 12) >> (ALT_BETA_SHIFT + 2));
     }
     fn apply_gps(&mut self, frame: &SensorFrame) {
+        // GPS PVT is delivered through a fixed two-step (0.25 s) transport
+        // delay. Project the position components to the current measurement
+        // epoch before applying the aiding correction.
+        let measured_radius = frame
+            .gps_radius_q12
+            .saturating_add(frame.gps_radial_velocity_q24 >> 14);
+        let radius = frame.gps_radius_q12 as i64;
+        let atmosphere_vt = (EARTH_ROTATION_RAD_Q30 as i64 * radius) >> 18;
+        let relative_vt = frame.gps_tangential_velocity_q24 as i64 - atmosphere_vt;
+        let angle_rad_q28 = (relative_vt * 16_384i64) / radius;
+        let delayed_turns = ((angle_rad_q28 * 170_891_319i64) >> 26) as i32;
+        let measured_downrange = frame.gps_downrange_q32.wrapping_add(delayed_turns);
         self.state.radius_q12 = self
             .state
             .radius_q12
-            .saturating_add((frame.gps_radius_q12 - self.state.radius_q12) >> GPS_POSITION_SHIFT);
-        let angle_error = frame
-            .gps_downrange_q32
-            .wrapping_sub(self.state.downrange_q32);
+            .saturating_add((measured_radius - self.state.radius_q12) >> GPS_POSITION_SHIFT);
+        let angle_error = measured_downrange.wrapping_sub(self.state.downrange_q32);
         self.state.downrange_q32 = self
             .state
             .downrange_q32

@@ -12,8 +12,8 @@ pub const INSERTION_FEEDBACK_STEP: u32 = 1760; // T+220 s.
 pub const STAGE2_FLIGHT_CUTOFF_STEP: u32 = 3171;
 pub const TRACKING_LIMIT: u16 = 364; // 2 degrees.
 pub const TRACKING_LIMIT_STEPS: u8 = 16;
-pub const TARGET_RADIUS_Q12: i32 = 26_944_049;
-pub const TARGET_TANGENTIAL_VELOCITY_Q24: i32 = 130_598_222;
+pub const TARGET_RADIUS_Q12: i32 = 26_950_193;
+pub const TARGET_TANGENTIAL_VELOCITY_Q24: i32 = 130_711_290;
 const MIN_ORBIT_RADIUS_Q12: i32 = 26_862_129; // 180 km.
 const PITCH_STEPS: [u32; 8] = [0, 80, 240, 560, 960, 1240, 1760, 3200];
 const PITCH_ANGLES: [u16; 8] = [0, 0, 3160, 7133, 9065, 13266, 16220, 16384];
@@ -253,7 +253,7 @@ fn insertion_pitch(sequence: u32, nav: NavigationState) -> u16 {
 }
 fn should_cutoff(sequence: u32, nav: NavigationState) -> bool {
     let in_radius = (MIN_ORBIT_RADIUS_Q12..=27_025_969).contains(&nav.radius_q12);
-    let velocity_ready = nav.tangential_velocity_q24 >= TARGET_TANGENTIAL_VELOCITY_Q24 - 100_000;
+    let velocity_ready = nav.tangential_velocity_q24 >= TARGET_TANGENTIAL_VELOCITY_Q24 - 10_000;
     let radial_settled = nav.radial_velocity_q24.abs() <= 838_861;
     (in_radius && velocity_ready && radial_settled)
         || sequence.saturating_add(1) >= STAGE2_FLIGHT_CUTOFF_STEP

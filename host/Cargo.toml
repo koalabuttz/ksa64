@@ -6,3 +6,5 @@ publish = false
 
 [dependencies]
 ksa64-core = { path = "../core" }
+ksa64-interface = { path = "../interface" }
+ksa64-sim = { path = "../sim" }

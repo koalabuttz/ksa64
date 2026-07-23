@@ -13,6 +13,7 @@ pub mod actuator;
 pub mod config;
 pub mod mission;
 pub mod sensors;
+pub mod telemetry;
 pub mod world;
 
 pub const PHASE3_SIM_CONTRACT_ID: u32 = 0x0300_0001;
