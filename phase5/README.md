@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-4 complete; Gate 5 spatial world dynamics are next.
+Status: Gates 1-5 complete; Gate 6 multirate vehicle coupling is next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -18,6 +18,10 @@ The flexible-body layer adds one lateral bending and one active-stage slosh
 mode on each transverse axis. Driven, damped, undamped, symmetry, and
 fail-closed cases match an independent integer oracle natively and in the
 bounded rust-mos probe.
+The spatial world now adds ECI translation, spherical gravity, atmosphere
+co-rotation, 3-D axial/normal aerodynamics, body aerodynamic torque, and orbit
+analysis with inclination. Native and rust-mos agree on the frozen exact world
+signature `0xcef89def`.
 
 Phase 4 completed the maturity prerequisites for 3-D work: the 2-D world is deterministic and independently checked, flight software is isolated from truth, campaign variation is reproducible, storage is observational, and stock/REU evidence paths are strict.
 

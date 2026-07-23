@@ -334,16 +334,7 @@ pub fn divide_scaled_reduced_u16<
     signed_from_magnitude(quotient, (numerator < 0) ^ (denominator < 0), status)
 }
 
-/// Returns `floor(sqrt(value * 2^shift))` without relying on a target `u64` type.
-///
-/// The shifted radicand and trial squares are represented as two explicit
-/// 32-bit words. This keeps native and MOS behavior identical.
-pub fn sqrt_floor_scaled_u32(value: u32, shift: u8, status: &mut NumericStatus) -> u32 {
-    if shift > 31 {
-        status.record(NumericFault::InvalidShift);
-        return 0;
-    }
-    let target = shift_left_32(value, shift);
+fn sqrt_floor_unsigned_64(target: Unsigned64) -> u32 {
     let mut low = 0u32;
     let mut high = u32::MAX;
     let mut answer = 0u32;
@@ -369,6 +360,47 @@ pub fn sqrt_floor_scaled_u32(value: u32, shift: u8, status: &mut NumericStatus) 
         }
     }
     answer
+}
+
+/// Returns `floor(sqrt(value * 2^shift))` without relying on a target `u64` type.
+///
+/// The shifted radicand and trial squares are represented as two explicit
+/// 32-bit words. This keeps native and MOS behavior identical.
+pub fn sqrt_floor_scaled_u32(value: u32, shift: u8, status: &mut NumericStatus) -> u32 {
+    if shift > 31 {
+        status.record(NumericFault::InvalidShift);
+        return 0;
+    }
+    sqrt_floor_unsigned_64(shift_left_32(value, shift))
+}
+
+fn add_unsigned_64_checked(value: &mut Unsigned64, addend: Unsigned64, status: &mut NumericStatus) {
+    let (low, carry) = value.low.overflowing_add(addend.low);
+    let (high, overflow_high) = value.high.overflowing_add(addend.high);
+    let (high, overflow_carry) = high.overflowing_add(carry as u32);
+    value.low = low;
+    value.high = high;
+    if overflow_high || overflow_carry {
+        status.record(NumericFault::Saturation);
+        value.low = u32::MAX;
+        value.high = u32::MAX;
+    }
+}
+
+/// Returns the floor of `sqrt(x*x + y*y + z*z)` using explicit two-word sums.
+pub fn magnitude3_floor(x: i32, y: i32, z: i32, status: &mut NumericStatus) -> u32 {
+    let mut squared = multiply_unsigned_32(magnitude(x), magnitude(x));
+    add_unsigned_64_checked(
+        &mut squared,
+        multiply_unsigned_32(magnitude(y), magnitude(y)),
+        status,
+    );
+    add_unsigned_64_checked(
+        &mut squared,
+        multiply_unsigned_32(magnitude(z), magnitude(z)),
+        status,
+    );
+    sqrt_floor_unsigned_64(squared)
 }
 pub fn add(a: i32, b: i32, status: &mut NumericStatus) -> i32 {
     if b > 0 && a > i32::MAX - b {

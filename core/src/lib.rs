@@ -20,6 +20,7 @@ pub mod quantities;
 pub mod rigid_body;
 pub mod scenario;
 pub mod spatial_numeric;
+pub mod spatial_world;
 pub mod telemetry;
 pub mod vehicle;
 
@@ -54,6 +55,9 @@ mod phase5_flexible_self_test;
 mod phase5_rigid_self_test;
 
 #[cfg(feature = "fixtures")]
+mod phase5_world_self_test;
+
+#[cfg(feature = "fixtures")]
 mod phase5_spatial_self_test;
 
 #[cfg(feature = "fixtures")]
@@ -78,5 +82,7 @@ pub use phase5_flexible_self_test::run_phase5_flexible_self_tests;
 pub use phase5_rigid_self_test::run_phase5_rigid_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase5_spatial_self_test::run_phase5_spatial_self_tests;
+#[cfg(feature = "fixtures")]
+pub use phase5_world_self_test::{phase5_world_signature, run_phase5_world_self_tests};
 #[cfg(feature = "fixtures")]
 pub use self_test::{run_c64_acceptance_self_tests, run_numeric_self_tests};

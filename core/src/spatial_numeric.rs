@@ -127,6 +127,7 @@ pub fn cross_mixed_scaled<
 pub type PositionVec = FixedVec3<12>;
 pub type VelocityVec = FixedVec3<24>;
 pub type AccelerationVec = FixedVec3<28>;
+pub type ForceVec = FixedVec3<12>;
 pub type AngularRateVec = FixedVec3<24>;
 pub type TorqueVec = FixedVec3<16>;
 pub type ModalVec = FixedVec3<24>;
