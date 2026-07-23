@@ -108,6 +108,24 @@ impl PlanarTruthState {
         self.stage_phase
     }
 
+    /// Replace only the discrete vehicle bookkeeping while preserving the
+    /// continuous successor state and its acceleration snapshot.
+    pub const fn with_vehicle_state(
+        self,
+        total_mass: Mass,
+        active_propellant: Mass,
+        active_stage: u8,
+        stage_phase: StagePhase,
+    ) -> Self {
+        Self {
+            total_mass,
+            active_propellant,
+            active_stage,
+            stage_phase,
+            ..self
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) const fn successor(
         self,
