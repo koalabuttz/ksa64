@@ -334,6 +334,42 @@ pub fn divide_scaled_reduced_u16<
     signed_from_magnitude(quotient, (numerator < 0) ^ (denominator < 0), status)
 }
 
+/// Returns `floor(sqrt(value * 2^shift))` without relying on a target `u64` type.
+///
+/// The shifted radicand and trial squares are represented as two explicit
+/// 32-bit words. This keeps native and MOS behavior identical.
+pub fn sqrt_floor_scaled_u32(value: u32, shift: u8, status: &mut NumericStatus) -> u32 {
+    if shift > 31 {
+        status.record(NumericFault::InvalidShift);
+        return 0;
+    }
+    let target = shift_left_32(value, shift);
+    let mut low = 0u32;
+    let mut high = u32::MAX;
+    let mut answer = 0u32;
+    loop {
+        let middle = low.wrapping_add((high.wrapping_sub(low)) >> 1);
+        let square = multiply_unsigned_32(middle, middle);
+        let fits =
+            square.high < target.high || (square.high == target.high && square.low <= target.low);
+        if fits {
+            answer = middle;
+            if middle == u32::MAX {
+                break;
+            }
+            low = middle + 1;
+        } else {
+            if middle == 0 {
+                break;
+            }
+            high = middle - 1;
+        }
+        if low > high {
+            break;
+        }
+    }
+    answer
+}
 pub fn add(a: i32, b: i32, status: &mut NumericStatus) -> i32 {
     if b > 0 && a > i32::MAX - b {
         status.record(NumericFault::Saturation);
