@@ -12,6 +12,7 @@ pub use ksa64_interface as interface;
 pub mod actuator;
 pub mod config;
 pub mod mission;
+pub mod phase4;
 pub mod probe;
 pub mod replay;
 pub mod sensors;
