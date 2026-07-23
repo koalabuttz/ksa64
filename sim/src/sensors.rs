@@ -150,8 +150,7 @@ impl SensorSuite {
     pub fn sample(&mut self, world: WorldSnapshot, steering: SteeringSnapshot) -> SensorFrame {
         let truth = world.truth;
         let step = truth.step();
-        let planar_world =
-            PlanarWorld::simple_earth(ksa64_core::quantities::Time::from_raw(131_072));
+        let planar_world = PlanarWorld::simple_earth(ksa64_core::quantities::Time::from_raw(8_192));
         let mut status = ksa64_core::numeric::NumericStatus::CLEAR;
         let vacuum = evaluate_vacuum(planar_world, truth, &mut status);
         let proper_radial = truth.radial_acceleration().raw() - vacuum.radial_acceleration().raw();
@@ -234,7 +233,7 @@ impl SensorSuite {
         let clock_drift = ((truth.time().raw() as i64 * 20) / 1_000_000) as i32;
         let frame = SensorFrame {
             sequence: step,
-            onboard_time_q20: truth.time().raw() + clock_drift,
+            onboard_time_q16: truth.time().raw() + clock_drift,
             accel_radial_q28: accel_radial,
             accel_tangential_q28: accel_tangential,
             gyro_rate_q24: gyro,

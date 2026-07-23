@@ -124,7 +124,7 @@ impl FlightComputer {
         let sequence = frame.sequence;
         let mut command = ActuatorCommand {
             sequence,
-            desired_pitch: pitch_program(sequence),
+            desired_pitch: pitch_program(sequence.saturating_add(11)),
             engine_action: EngineAction::Hold,
             separate: false,
             abort_safeing: false,
@@ -147,7 +147,7 @@ impl FlightComputer {
                 command.engine_action = EngineAction::Ignite
             }
             if self.status.mode == FlightMode::Insertion && sequence >= INSERTION_FEEDBACK_STEP {
-                command.desired_pitch = insertion_pitch(nav)
+                command.desired_pitch = insertion_pitch(sequence, nav)
             }
             if frame.stage_phase == StagePhase::Burning && should_cutoff(sequence, nav) {
                 command.engine_action = EngineAction::Cutoff;
@@ -194,7 +194,7 @@ impl FlightComputer {
         self.status.checksum = hash_flight(self.status.checksum, self.status, command);
         FlightOutput {
             sequence,
-            nav_time_q20: nav.time_q20,
+            nav_time_q16: nav.time_q16,
             nav_radius_q12: nav.radius_q12,
             nav_downrange_q32: nav.downrange_q32,
             nav_radial_velocity_q24: nav.radial_velocity_q24,
@@ -236,12 +236,20 @@ fn pitch_program(step: u32) -> u16 {
     }
     PITCH_ANGLES[last]
 }
-fn insertion_pitch(nav: NavigationState) -> u16 {
-    let altitude_error = (nav.radius_q12 - TARGET_RADIUS_Q12) >> 6;
-    let radial_damping = nav.radial_velocity_q24 >> 10;
-    let energy_error = (TARGET_TANGENTIAL_VELOCITY_Q24 - nav.tangential_velocity_q24) >> 14;
-    let correction = (altitude_error + radial_damping - (energy_error >> 3)).clamp(-3641, 3641);
-    (16_384i32 + correction).clamp(12_743, 20_025) as u16
+fn insertion_pitch(sequence: u32, nav: NavigationState) -> u16 {
+    let base = pitch_program(sequence.saturating_add(11)) as i32;
+    // Energy error biases the trusted program toward prograde without crossing
+    // it. Near target altitude, a smaller radial term damps residual climb.
+    let prograde_margin = (16_384 - base).max(0);
+    let energy = ((TARGET_TANGENTIAL_VELOCITY_Q24 - nav.tangential_velocity_q24) >> 13)
+        .clamp(0, 546)
+        .min(prograde_margin);
+    let radial_raw = ((nav.radial_velocity_q24 >> 10)
+        + ((nav.radius_q12 - TARGET_RADIUS_Q12) >> 7))
+        .clamp(-910, 910);
+    let radial_ramp = (nav.radius_q12 - (TARGET_RADIUS_Q12 - 81_920)).clamp(0, 40_960);
+    let radial_damping = (radial_raw * radial_ramp) / 40_960;
+    (base + energy + radial_damping).clamp(12_743, 20_025) as u16
 }
 fn should_cutoff(sequence: u32, nav: NavigationState) -> bool {
     let in_radius = (MIN_ORBIT_RADIUS_Q12..=27_025_969).contains(&nav.radius_q12);

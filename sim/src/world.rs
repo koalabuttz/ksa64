@@ -8,7 +8,7 @@ use ksa64_core::phase2_mission::{
 use ksa64_core::phase2_quantities::{DynamicPressure, Mach, PitchAngle};
 use ksa64_core::phase2_scenario::Phase2Scenario;
 use ksa64_core::planar::{PlanarTruthState, PlanarWorld, StagePhase};
-use ksa64_core::planar_dynamics::{advance_planar_state, evaluate_planar_forces};
+use ksa64_core::planar_dynamics::{advance_planar_state, evaluate_planar_forces_phase3};
 use ksa64_core::planar_environment::RotatingEarthEnvironment;
 use ksa64_core::quantities::{Force, Mass};
 use ksa64_interface::EngineAction;
@@ -113,7 +113,7 @@ impl<'a> WorldMachine<'a> {
             Force::ZERO
         };
         let forces =
-            evaluate_planar_forces(self.world, self.truth, thrust, pitch, aero, &mut status)
+            evaluate_planar_forces_phase3(self.world, self.truth, thrust, pitch, aero, &mut status)
                 .ok_or(WorldError::NumericFault)?;
         let successor = advance_planar_state(self.world, self.truth, forces, &mut status)
             .map_err(|_| WorldError::NumericFault)?;

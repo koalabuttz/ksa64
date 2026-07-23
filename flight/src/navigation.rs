@@ -9,10 +9,10 @@ pub const EARTH_RADIUS_Q12: i32 = 26_124_849;
 pub const EARTH_MU_Q12: i32 = 1_632_667_410;
 pub const EARTH_ROTATION_RAD_Q30: i32 = 78_298;
 pub const INITIAL_TANGENTIAL_VELOCITY_Q24: i32 = 7_803_689;
-pub const ALT_ALPHA_SHIFT: u8 = 1;
+pub const ALT_ALPHA_SHIFT: u8 = 3;
 pub const ALT_BETA_SHIFT: u8 = 1;
 pub const GPS_POSITION_SHIFT: u8 = 3;
-pub const GPS_VELOCITY_SHIFT: u8 = 1;
+pub const GPS_VELOCITY_SHIFT: u8 = 5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavigationError {
@@ -23,7 +23,7 @@ pub enum NavigationError {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NavigationState {
     pub sequence: u32,
-    pub time_q20: i32,
+    pub time_q16: i32,
     pub radius_q12: i32,
     pub downrange_q32: i32,
     pub radial_velocity_q24: i32,
@@ -43,7 +43,7 @@ impl Navigation {
         Self {
             state: NavigationState {
                 sequence: 0,
-                time_q20: 0,
+                time_q16: 0,
                 radius_q12: EARTH_RADIUS_Q12,
                 downrange_q32: 0,
                 radial_velocity_q24: 0,
@@ -69,18 +69,18 @@ impl Navigation {
             return Err(NavigationError::Sequence);
         }
         let dt = if self.initialized {
-            frame.onboard_time_q20 - self.state.time_q20
+            frame.onboard_time_q16 - self.state.time_q16
         } else {
-            frame.onboard_time_q20
+            frame.onboard_time_q16
         };
-        if !(0..=262_144).contains(&dt) {
+        if !(0..=16_384).contains(&dt) {
             return Err(NavigationError::Numeric);
         }
         if self.initialized && dt > 0 {
             self.propagate(frame, dt)?
         }
         self.state.sequence = frame.sequence;
-        self.state.time_q20 = frame.onboard_time_q20;
+        self.state.time_q16 = frame.onboard_time_q16;
         self.state.pitch = frame.steering_pitch;
         self.state.altitude_aided = false;
         self.state.gps_aided = false;
@@ -110,14 +110,14 @@ impl Navigation {
         let tangential_accel = frame.accel_tangential_q28 as i64;
         let vr = self.state.radial_velocity_q24 as i64;
         let geometry_accel_q28 = -(((vr * vt) >> 8) / radius);
-        let new_vr = vr + ((radial_accel * dt as i64) >> 24);
-        let new_vt = vt + (((tangential_accel + geometry_accel_q28) * dt as i64) >> 24);
-        let new_radius = radius + ((new_vr * dt as i64) >> 32);
+        let new_vr = vr + ((radial_accel * dt as i64) >> 20);
+        let new_vt = vt + (((tangential_accel + geometry_accel_q28) * dt as i64) >> 20);
+        let new_radius = radius + ((new_vr * dt as i64) >> 28);
         let atmosphere_vt = (EARTH_ROTATION_RAD_Q30 as i64 * new_radius) >> 18;
         let relative_vt = new_vt - atmosphere_vt;
-        let angle_rad_q32 = (relative_vt * dt as i64) / new_radius;
-        let delta_turns_q32 = (angle_rad_q32 * 170_891_319i64) >> 30;
-        let gyro_delta = (((frame.gyro_rate_q24 as i64 * dt as i64) >> 28) / 360) as i32;
+        let angle_rad_q28 = (relative_vt * dt as i64) / new_radius;
+        let delta_turns_q32 = (angle_rad_q28 * 170_891_319i64) >> 26;
+        let gyro_delta = (((frame.gyro_rate_q24 as i64 * dt as i64) >> 24) / 360) as i32;
         if new_radius <= 0
             || new_vr < i32::MIN as i64
             || new_vr > i32::MAX as i64
@@ -185,7 +185,7 @@ fn hash_word(mut h: u32, w: u32) -> u32 {
 }
 fn hash_state(mut h: u32, s: NavigationState) -> u32 {
     h = hash_word(h, s.sequence);
-    h = hash_word(h, s.time_q20 as u32);
+    h = hash_word(h, s.time_q16 as u32);
     h = hash_word(h, s.radius_q12 as u32);
     h = hash_word(h, s.downrange_q32 as u32);
     h = hash_word(h, s.radial_velocity_q24 as u32);

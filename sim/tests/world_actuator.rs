@@ -103,4 +103,8 @@ fn actuator_has_lag_slew_limits_clamps_and_stuck_feedback() {
     let frozen = actuator.advance(0);
     assert_eq!(frozen.applied, first.applied);
     assert!(frozen.stuck);
+    actuator.jam_at(14_564);
+    let jammed = actuator.advance(20_000);
+    assert_eq!(jammed.applied, 14_564);
+    assert!(jammed.stuck);
 }

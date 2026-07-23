@@ -9,7 +9,7 @@ xorshift32 draws, followed by nearest-step quantization.
 | accelerometer axes | 8 Hz | 0 | 0.01 m/s2 | +0.002 m/s2 | +/-0.01 m/s2 |
 | pitch gyro | 8 Hz | 0 | 0.01 deg/s | +0.002 deg/s | +/-0.005 deg/s |
 | steering feedback | 8 Hz | 0 | binary angle | 0 | 0 |
-| clock | 8 Hz | 0 | Q12.20 s | +20 ppm drift | 0 |
+| clock | 8 Hz | 0 | Q16.16 s | +20 ppm drift | 0 |
 | altitude | 4 Hz | 1 step | 10 m | +20 m | +/-10 m |
 | GPS-like PVT | 1 Hz | 2 steps | 10 m, 0.1 m/s | 0 | +/-20 m, +/-0.2 m/s |
 

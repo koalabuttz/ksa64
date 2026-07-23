@@ -106,7 +106,7 @@ pub enum CodecError {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SensorFrame {
     pub sequence: u32,
-    pub onboard_time_q20: i32,
+    pub onboard_time_q16: i32,
     pub accel_radial_q28: i32,
     pub accel_tangential_q28: i32,
     pub gyro_rate_q24: i32,
@@ -125,7 +125,7 @@ pub struct SensorFrame {
 impl SensorFrame {
     pub const ZERO: Self = Self {
         sequence: 0,
-        onboard_time_q20: 0,
+        onboard_time_q16: 0,
         accel_radial_q28: 0,
         accel_tangential_q28: 0,
         gyro_rate_q24: 0,
@@ -164,7 +164,7 @@ impl ActuatorCommand {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FlightOutput {
     pub sequence: u32,
-    pub nav_time_q20: i32,
+    pub nav_time_q16: i32,
     pub nav_radius_q12: i32,
     pub nav_downrange_q32: i32,
     pub nav_radial_velocity_q24: i32,
@@ -219,7 +219,7 @@ pub fn write_sensor_frame(f: &SensorFrame, o: &mut [u8]) -> Result<(), CodecErro
     }
     o.fill(0);
     put_u32(o, 0, f.sequence);
-    put_i32(o, 4, f.onboard_time_q20);
+    put_i32(o, 4, f.onboard_time_q16);
     put_i32(o, 8, f.accel_radial_q28);
     put_i32(o, 12, f.accel_tangential_q28);
     put_i32(o, 16, f.gyro_rate_q24);
@@ -254,7 +254,7 @@ pub fn parse_sensor_frame(b: &[u8]) -> Result<SensorFrame, CodecError> {
     }
     Ok(SensorFrame {
         sequence: get_u32(b, 0),
-        onboard_time_q20: get_i32(b, 4),
+        onboard_time_q16: get_i32(b, 4),
         accel_radial_q28: get_i32(b, 8),
         accel_tangential_q28: get_i32(b, 12),
         gyro_rate_q24: get_i32(b, 16),
@@ -316,7 +316,7 @@ pub fn write_flight_output(f: &FlightOutput, o: &mut [u8]) -> Result<(), CodecEr
     }
     o.fill(0);
     put_u32(o, 0, f.sequence);
-    put_i32(o, 4, f.nav_time_q20);
+    put_i32(o, 4, f.nav_time_q16);
     put_i32(o, 8, f.nav_radius_q12);
     put_i32(o, 12, f.nav_downrange_q32);
     put_i32(o, 16, f.nav_radial_velocity_q24);
@@ -356,7 +356,7 @@ pub fn parse_flight_output(b: &[u8]) -> Result<FlightOutput, CodecError> {
     }
     Ok(FlightOutput {
         sequence,
-        nav_time_q20: get_i32(b, 4),
+        nav_time_q16: get_i32(b, 4),
         nav_radius_q12: get_i32(b, 8),
         nav_downrange_q32: get_i32(b, 12),
         nav_radial_velocity_q24: get_i32(b, 16),

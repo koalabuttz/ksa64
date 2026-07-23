@@ -10,6 +10,8 @@ pub use ksa64_flight as flight;
 pub use ksa64_interface as interface;
 
 pub mod actuator;
+pub mod config;
+pub mod mission;
 pub mod sensors;
 pub mod world;
 

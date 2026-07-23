@@ -37,6 +37,12 @@ impl SteeringActuator {
     pub fn set_stuck(&mut self, stuck: bool) {
         self.stuck = stuck;
     }
+    pub fn jam_at(&mut self, pitch: u16) {
+        let jammed = pitch.min(MAX_PITCH);
+        self.applied = jammed;
+        self.lagged_target_q8 = (jammed as i32) << 8;
+        self.stuck = true;
+    }
     pub fn advance(&mut self, request: u16) -> SteeringSnapshot {
         self.requested = request.min(MAX_PITCH);
         let requested_q8 = (self.requested as i32) << 8;

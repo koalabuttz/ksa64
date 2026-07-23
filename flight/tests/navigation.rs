@@ -4,7 +4,7 @@ use ksa64_interface::*;
 fn frame(sequence: u32) -> SensorFrame {
     SensorFrame {
         sequence,
-        onboard_time_q20: (sequence as i32) * 131_072,
+        onboard_time_q16: (sequence as i32) * 8_192,
         accel_radial_q28: 2_628_000,
         accel_tangential_q28: 0,
         gyro_rate_q24: 0,

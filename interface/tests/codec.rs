@@ -3,7 +3,7 @@ use ksa64_interface::*;
 fn sample_sensor() -> SensorFrame {
     SensorFrame {
         sequence: 42,
-        onboard_time_q20: 123,
+        onboard_time_q16: 123,
         accel_radial_q28: -456,
         accel_tangential_q28: 789,
         gyro_rate_q24: -11,
@@ -56,7 +56,7 @@ fn command_and_output_round_trip() {
     assert_eq!(parse_actuator_command(&bytes), Ok(command));
     let output = FlightOutput {
         sequence: 7,
-        nav_time_q20: 1,
+        nav_time_q16: 1,
         nav_radius_q12: 2,
         nav_downrange_q32: 3,
         nav_radial_velocity_q24: 4,

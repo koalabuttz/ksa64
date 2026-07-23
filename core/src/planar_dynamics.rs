@@ -2,7 +2,7 @@
 
 use crate::aerodynamics::AeroSnapshot;
 use crate::numeric::{add, divide_scaled, multiply_scaled, NumericStatus};
-use crate::phase2_numeric::sin_cos_pitch_q15;
+use crate::phase2_numeric::{sin_cos_phase3_pitch_q15, sin_cos_pitch_q15};
 use crate::phase2_quantities::{
     PitchAngle, PlanarAcceleration, PlanarVelocity, Radius, SpecificAngularMomentum,
 };
@@ -82,6 +82,41 @@ pub fn evaluate_planar_forces(
     })
 }
 
+/// Phase 3 force resolution over the actuator's 0-110 degree range.
+/// Values inside the Phase 2 0-90 degree domain are bit-identical.
+pub fn evaluate_planar_forces_phase3(
+    world: PlanarWorld,
+    truth: PlanarTruthState,
+    thrust: Force,
+    pitch: PitchAngle,
+    aero: AeroSnapshot,
+    status: &mut NumericStatus,
+) -> Option<PlanarForceSnapshot> {
+    let (sine, cosine) = sin_cos_phase3_pitch_q15(pitch)?;
+    let radial_thrust = multiply_scaled(thrust.raw(), cosine as i32, 15, status);
+    let tangential_thrust = multiply_scaled(thrust.raw(), sine as i32, 15, status);
+    let radial_force = add(radial_thrust, aero.radial_drag().raw(), status);
+    let tangential_force = add(tangential_thrust, aero.tangential_drag().raw(), status);
+    let radial_non_gravity = divide_scaled(radial_force, truth.total_mass().raw(), 28, status);
+    let tangential_acceleration =
+        divide_scaled(tangential_force, truth.total_mass().raw(), 28, status);
+    let vacuum = evaluate_vacuum(world, truth, status);
+    let radial_acceleration = add(
+        vacuum.radial_acceleration().raw(),
+        radial_non_gravity,
+        status,
+    );
+    Some(PlanarForceSnapshot {
+        pitch,
+        thrust,
+        radial_thrust: Force::from_raw(radial_thrust),
+        tangential_thrust: Force::from_raw(tangential_thrust),
+        radial_drag: aero.radial_drag(),
+        tangential_drag: aero.tangential_drag(),
+        radial_acceleration: PlanarAcceleration::from_raw(radial_acceleration),
+        tangential_acceleration: PlanarAcceleration::from_raw(tangential_acceleration),
+    })
+}
 pub fn advance_planar_state(
     world: PlanarWorld,
     truth: PlanarTruthState,

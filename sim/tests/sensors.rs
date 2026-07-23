@@ -12,7 +12,7 @@ use ksa64_sim::world::WorldSnapshot;
 fn snapshot(step: u32, altitude_m: i32) -> WorldSnapshot {
     let truth = PlanarTruthState::new(
         step,
-        Time::from_raw((step as i32) * 131_072),
+        Time::from_raw((step as i32) * 8_192),
         Radius::from_raw(EARTH_RADIUS_Q12 + altitude_m * 4096 / 1000),
         DownrangeAngle::from_raw((step as i32) * 10),
         PlanarVelocity::from_raw(0),
@@ -77,8 +77,8 @@ fn rates_latency_quantization_bias_noise_and_clock_are_bounded() {
         assert!(frame.accel_tangential_q28.abs() <= ACCEL_RESOLUTION_Q28 * 2);
         assert_eq!(frame.gyro_rate_q24 % GYRO_RESOLUTION_Q24, 0);
         let expected_clock =
-            (step as i32) * 131_072 + (((step as i64) * 131_072 * 20) / 1_000_000) as i32;
-        assert_eq!(frame.onboard_time_q20, expected_clock);
+            (step as i32) * 8_192 + (((step as i64) * 8_192 * 20) / 1_000_000) as i32;
+        assert_eq!(frame.onboard_time_q16, expected_clock);
         if frame.validity & SENSOR_VALID_ALTIMETER != 0 {
             assert_eq!(frame.altitude_q12 % ALT_RESOLUTION_Q12, 0);
             alt_steps.push(step)

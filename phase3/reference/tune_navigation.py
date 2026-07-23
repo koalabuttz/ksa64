@@ -24,11 +24,13 @@ def run(gains: tuple[int, int, int, int], seed: int) -> tuple[float, float]:
     v = 0.0
     truth_x = 0.0
     truth_v = 0.0
+    truth_history = [(truth_x, truth_v)]
     for step in range(1, STEPS + 1):
         t = step * DT
         accel = 0.018 if t < 155.0 else (0.010 if t < 396.5 else 0.0)
         truth_v += accel * DT
         truth_x += truth_v * DT
+        truth_history.append((truth_x, truth_v))
         v += accel * DT
         x += v * DT
         if step % 2 == 1 and t <= 80.0 and not (45.0 <= t < 60.0):
@@ -37,8 +39,9 @@ def run(gains: tuple[int, int, int, int], seed: int) -> tuple[float, float]:
             x += error / (1 << alt_shift)
             v += (error / 0.25) / (1 << (beta_shift + 2))
         if step >= 962 and step % 8 == 2 and not (260.0 <= t < 320.0):
-            measured_x = truth_x + noise(seed, step, 0.020)
-            measured_v = truth_v + noise(seed + 31, step, 0.0002)
+            delayed_x, delayed_v = truth_history[step - 2]
+            measured_x = delayed_x + noise(seed, step, 0.020)
+            measured_v = delayed_v + noise(seed + 31, step, 0.0002)
             x += (measured_x - x) / (1 << gps_pos_shift)
             v += (measured_v - v) / (1 << gps_vel_shift)
     return abs(x - truth_x), abs(v - truth_v)
@@ -46,7 +49,7 @@ def run(gains: tuple[int, int, int, int], seed: int) -> tuple[float, float]:
 
 def main() -> None:
     candidates = []
-    for gains in product(range(1, 4), range(1, 5), range(1, 4), range(1, 4)):
+    for gains in product(range(1, 4), range(1, 5), range(1, 4), range(1, 6)):
         errors = [run(gains, seed) for seed in SEEDS]
         score = (max(p for p, _ in errors), max(v for _, v in errors), gains)
         candidates.append(score)
