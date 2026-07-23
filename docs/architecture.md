@@ -338,3 +338,5 @@ not fit the base machine. The regions are additive at the mission boundary and
 are checked against one native exact-value oracle. The resulting projection
 keeps long execution behind explicit user approval while retaining finite target
 exactness as routine evidence.
+
+Phase 5 Gate 12 introduces a second, explicitly noncanonical observation tier. KPH5 reduces a mission to bounded 16-byte spatial points for stock-C64 plotting, while KST5 remains authoritative. A stock retention reducer keeps aggregates plus five deterministic summaries. The same selection policy feeds capacity-scaled REU reruns. KRA5 is append-only and independently versioned; the shared REU DMA implementation serves KRA4 and KRA5, but neither archive API is visible to the physics, sensor, navigation, guidance, or sequencing layers.

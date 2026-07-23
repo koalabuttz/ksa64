@@ -232,3 +232,7 @@ runs produce identical cycle counts. Vehicle, avionics, and telemetry cost
 sum projects the nominal mission to 19.69 hours, so no full target mission was
 started. The accepted minor fast path preserves all frozen artifacts; a second
 candidate was reverted after a rust-mos-only inertia divergence.
+
+## Accepted Phase 5 adaptive-history validation
+
+Gate 12 requires exact equality between recording-disabled and KPH5-observed missions. The strict 1,664-byte stock history has 99 ordered points, two CRC layers, and independently checked campaign/run identity. Stock retention selects runs `[0, 1, 4, 53, 2]` from the frozen 256-run KSR5 stream. Independent Python allocation agrees with Rust for no REU and all eight supported capacities. KRA5 corruption and interrupted writes reject the first bad record while retaining the previously committed prefix. A finite rust-mos codec/allocation probe freezes signature `0xb5783bf2`. PAL VICE additionally caught and rejected a target-only quotient-planner divergence before the accepted bounded-loop planner passed no-REU and every 128 KiB–16 MiB tier. No full C64 mission is required.

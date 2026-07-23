@@ -77,3 +77,11 @@ required-features = ["c64"]
 name = "ksa64-phase5-telemetry-timed-c64"
 path = "src/bin/phase5_telemetry_timed_c64.rs"
 required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase5-history-sim"
+path = "src/bin/phase5_history_sim.rs"
+required-features = ["sim"]
+[[bin]]
+name = "ksa64-phase5-history-reu-c64"
+path = "src/bin/phase5_history_reu_c64.rs"
+required-features = ["c64"]

@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-11 complete; Gate 12 adaptive stock/REU history is next.
+Status: Gates 1-12 complete; Gate 13 mission-control replay and presentation is next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -80,8 +80,10 @@ paths. Their conservative sum projects a full target mission to 19.69 hours, so
 no full mission was started. One exact zero-variation fast path was accepted and
 a native/MOS-divergent inertia candidate was rejected. See [TIMING.md](TIMING.md).
 
+## Adaptive history evidence
+
+Gate 12 adds strict KPH5 compact spatial histories, deterministic stock retention, capacity-scaled REU plans, and recoverable KRA5 archives. The stock baseline is 1,664 bytes; the finite target probe is 5,917 bytes. See [HISTORY.md](HISTORY.md).
+
 ## Next gate
 
-Gate 12 adds adaptive stock/REU history retention while keeping storage fully
-observational. A complete target mission still requires a fresh projection and
-explicit confirmation.
+Gate 13 adds bounded mission-control replay and presentation over KPH5/KST5 without changing simulator state. A complete target mission still requires a fresh projection and explicit confirmation.

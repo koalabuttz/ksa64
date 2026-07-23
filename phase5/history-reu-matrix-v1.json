@@ -1,0 +1,86 @@
+{
+  "schema": "KSA64 phase5 adaptive history REU matrix v1",
+  "cases": [
+    {
+      "capacity_kib": 0,
+      "preserved": true,
+      "summary_slots": 5,
+      "full_histories": 0,
+      "compact_histories": 1,
+      "used_bytes": 2464,
+      "free_bytes": 0
+    },
+    {
+      "capacity_kib": 128,
+      "preserved": true,
+      "summary_slots": 204,
+      "full_histories": 0,
+      "compact_histories": 15,
+      "used_bytes": 129120,
+      "free_bytes": 1952
+    },
+    {
+      "capacity_kib": 256,
+      "preserved": true,
+      "summary_slots": 256,
+      "full_histories": 0,
+      "compact_histories": 34,
+      "used_bytes": 259040,
+      "free_bytes": 3104
+    },
+    {
+      "capacity_kib": 512,
+      "preserved": true,
+      "summary_slots": 256,
+      "full_histories": 0,
+      "compact_histories": 75,
+      "used_bytes": 521440,
+      "free_bytes": 2848
+    },
+    {
+      "capacity_kib": 1024,
+      "preserved": true,
+      "summary_slots": 256,
+      "full_histories": 0,
+      "compact_histories": 157,
+      "used_bytes": 1046240,
+      "free_bytes": 2336
+    },
+    {
+      "capacity_kib": 2048,
+      "preserved": true,
+      "summary_slots": 256,
+      "full_histories": 1,
+      "compact_histories": 113,
+      "used_bytes": 2093584,
+      "free_bytes": 3568
+    },
+    {
+      "capacity_kib": 4096,
+      "preserved": true,
+      "summary_slots": 256,
+      "full_histories": 3,
+      "compact_histories": 25,
+      "used_bytes": 4188272,
+      "free_bytes": 6032
+    },
+    {
+      "capacity_kib": 8192,
+      "preserved": true,
+      "summary_slots": 256,
+      "full_histories": 6,
+      "compact_histories": 58,
+      "used_bytes": 8386304,
+      "free_bytes": 2304
+    },
+    {
+      "capacity_kib": 16384,
+      "preserved": true,
+      "summary_slots": 256,
+      "full_histories": 12,
+      "compact_histories": 123,
+      "used_bytes": 16775968,
+      "free_bytes": 1248
+    }
+  ]
+}

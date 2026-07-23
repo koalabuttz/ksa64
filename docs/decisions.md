@@ -821,3 +821,9 @@ The following remain deliberately unresolved:
 - The Phase 7 mission set and data-driven configuration scope.
 
 Simulation-rate requirements remain phase- and evidence-specific rather than one global threshold. Stock and 128 KiB through 16 MiB REU storage configurations are accepted Phase 4 decisions, not open architecture questions.
+
+## D-061: Keep adaptive Phase 5 history observational and independently versioned
+
+**Decision.** Stock hardware retains a streaming aggregate, five deterministic KSR5 summaries, and one stride-32 KPH5 baseline. REU capacity increases summary retention and then stores selected complete KST5 reruns before stride-8 KPH5 reruns. Reuse Phase 4 REU detection and DMA, but use new KPH5 and KRA5 identities. Storage failures may make evidence incomplete but cannot influence mission parameters, execution order, checksums, or later seeds.
+
+**Reason.** A 1.33 MB KST5 mission cannot fit stock RAM and does not fit smaller REUs. A 1.66 KB spatial history preserves useful mission-control presentation on every C64 while a strict capacity ladder consumes whatever optional hardware is actually present. Separate format identities prevent Phase 4 readers from silently accepting spatial data. The first PAL target matrix rejected a quotient-based planner that passed native and `mos-sim`; bounded loops replaced its general divisions and preserve the exact allocation results with a hard 256-iteration ceiling.

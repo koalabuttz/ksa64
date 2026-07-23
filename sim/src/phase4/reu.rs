@@ -73,6 +73,7 @@ fn restore_banks<D: ByteReu>(device: &mut D, originals: &[u8; 256]) {
 mod c64 {
     use super::{ByteReu, ReuError};
     use crate::phase4::archive::ArchiveStorage;
+    use crate::phase5_archive::ArchiveStorage as Phase5ArchiveStorage;
 
     const STATUS: *mut u8 = 0xdf00 as *mut u8;
     const COMMAND: *mut u8 = 0xdf01 as *mut u8;
@@ -202,6 +203,17 @@ mod c64 {
         }
     }
 
+    impl Phase5ArchiveStorage for C64ReuStorage {
+        fn capacity(&self) -> u32 {
+            self.capacity
+        }
+        fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ()> {
+            self.read_slice(offset, out).map_err(|_| ())
+        }
+        fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ()> {
+            self.write_slice(offset, bytes).map_err(|_| ())
+        }
+    }
     pub fn detect_c64_reu_capacity() -> Result<u32, ReuError> {
         let mut device = C64ReuStorage::new(16_384);
         super::detect_reu_capacity(&mut device)

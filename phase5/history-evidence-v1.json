@@ -1,0 +1,135 @@
+{
+  "format": "KPH5",
+  "version": 5,
+  "contract_id": "0x050c0001",
+  "stream_bytes": 1664,
+  "stream_sha256": "2b84eae5871dee6967ea63061aefa1c232159e1803507072344866174adacf5f",
+  "stream_crc32": "0xf2b3b81f",
+  "campaign_seed": "0x4b534135",
+  "run_index": 0,
+  "sensor_seed": "0x5a000000",
+  "variation_checksum": "0xab057a4e",
+  "stride": 32,
+  "point_count": 99,
+  "terminal_step": 3133,
+  "points_crc32": "0x6228cb8b",
+  "first_point": {
+    "step": 0,
+    "position_quarter_km": [
+      22420,
+      0,
+      12173
+    ],
+    "dynamic_pressure_sixteenth_kpa": 0,
+    "navigation_error_quarter_km": 0,
+    "events": 0,
+    "alarms": 0
+  },
+  "last_point": {
+    "step": 3133,
+    "position_quarter_km": [
+      20965,
+      3780,
+      15330
+    ],
+    "dynamic_pressure_sixteenth_kpa": 0,
+    "navigation_error_quarter_km": 6,
+    "events": 2,
+    "alarms": 0
+  },
+  "max_dynamic_pressure_sixteenth_kpa": 697,
+  "max_navigation_error_quarter_km": 6,
+  "event_union": "0x0007",
+  "alarm_union": "0x0000",
+  "stock": {
+    "summary_slots": 5,
+    "compact_histories": 1,
+    "retained_run_indices": [
+      0,
+      1,
+      4,
+      53,
+      2
+    ]
+  },
+  "selection_prefix": [
+    0,
+    1,
+    4,
+    53,
+    2,
+    3,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "reu_matrix": [
+    {
+      "capacity_kib": 128,
+      "summary_slots": 204,
+      "full_histories": 0,
+      "compact_histories": 15,
+      "used_bytes": 129120,
+      "free_bytes": 1952
+    },
+    {
+      "capacity_kib": 256,
+      "summary_slots": 256,
+      "full_histories": 0,
+      "compact_histories": 34,
+      "used_bytes": 259040,
+      "free_bytes": 3104
+    },
+    {
+      "capacity_kib": 512,
+      "summary_slots": 256,
+      "full_histories": 0,
+      "compact_histories": 75,
+      "used_bytes": 521440,
+      "free_bytes": 2848
+    },
+    {
+      "capacity_kib": 1024,
+      "summary_slots": 256,
+      "full_histories": 0,
+      "compact_histories": 157,
+      "used_bytes": 1046240,
+      "free_bytes": 2336
+    },
+    {
+      "capacity_kib": 2048,
+      "summary_slots": 256,
+      "full_histories": 1,
+      "compact_histories": 113,
+      "used_bytes": 2093584,
+      "free_bytes": 3568
+    },
+    {
+      "capacity_kib": 4096,
+      "summary_slots": 256,
+      "full_histories": 3,
+      "compact_histories": 25,
+      "used_bytes": 4188272,
+      "free_bytes": 6032
+    },
+    {
+      "capacity_kib": 8192,
+      "summary_slots": 256,
+      "full_histories": 6,
+      "compact_histories": 58,
+      "used_bytes": 8386304,
+      "free_bytes": 2304
+    },
+    {
+      "capacity_kib": 16384,
+      "summary_slots": 256,
+      "full_histories": 12,
+      "compact_histories": 123,
+      "used_bytes": 16775968,
+      "free_bytes": 1248
+    }
+  ]
+}

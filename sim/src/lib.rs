@@ -13,6 +13,7 @@ pub mod actuator;
 pub mod config;
 pub mod mission;
 pub mod phase4;
+pub mod phase5_archive;
 pub mod phase5_campaign;
 #[cfg(feature = "fixtures")]
 mod phase5_campaign_self_test;
@@ -21,6 +22,11 @@ pub use phase5_campaign_self_test::{
     phase5_campaign_probe_signature, run_phase5_campaign_self_tests,
 };
 pub mod phase5_closed_loop;
+pub mod phase5_history;
+#[cfg(feature = "fixtures")]
+mod phase5_history_self_test;
+#[cfg(feature = "fixtures")]
+pub use phase5_history_self_test::{phase5_history_probe_signature, run_phase5_history_self_tests};
 pub mod phase5_mission;
 pub mod phase5_sensors;
 pub mod phase5_telemetry;
