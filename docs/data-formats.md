@@ -164,3 +164,9 @@ Phase 4 preserves KSC2, KSC3, KST3, and KRP3 unchanged and adds six separately v
 Strict readers reject unknown versions and enums, nonzero reserved data, invalid lengths, CRC failures, mismatched identities, incomplete committed records, corrupt archive chains, and missing, duplicate, reordered, or mixed export volumes. KPH4 and the compact C64 outcome classifier exist for bounded presentation and selection; independent float64 analysis remains authoritative for physical campaign acceptance.
 
 Exact layouts and generation rules live in `phase4/CONTRACT.md`, `phase4/FORMATS.md`, `phase4/CAMPAIGNS.md`, and `phase4/EXPORT.md`.
+
+## KST5 spatial mission telemetry
+
+KST5 is the canonical Phase 5 integrated-mission stream. Its 96-byte header binds the numeric/scenario/environment identities, reviewed component signatures, case, seed, 0.125-second timestep, and mission limit. Each 424-byte mission-cadence frame carries committed spatial truth, rigid and flexible state, stage/actuator/load state, the complete CRC-protected spatial sensor and command records, aided navigation, checksum chains, reserved bytes, and a frame CRC.
+
+Frame zero is initial truth. Successor step N contains the sequence N-1 measurement and command that caused it. Strict readers require consecutive steps and time, nested record validity, known masks/enums, zero reserved bytes, an exact rolling observation chain, and exactly one terminal final frame. The checked nominal evidence is 3,134 frames, 1,328,912 bytes, and CRC-32 `0xa9b3b94c`; `phase5/reference/verify_telemetry.py` parses it independently. See `phase5/TELEMETRY.md` for the field contract.

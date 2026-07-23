@@ -3,6 +3,7 @@ pub mod phase3;
 pub mod phase4;
 pub mod phase4_export;
 pub mod phase4_storage;
+pub mod phase5;
 
 use std::io::{self, Write};
 

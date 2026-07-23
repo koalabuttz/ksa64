@@ -322,3 +322,4 @@ body-frame quaternion error and stage-specific static gains; no heap,
 floating-point runtime, or truth access is introduced. Six deterministic
 integrated missions now form the input to KST5 telemetry and later Phase 5
 campaign work.
+Phase 5 Gate 9 adds a KST5 observer to the single integrated spatial mission executor. The no-std simulation layer owns fixed 96-byte headers and 424-byte frames, including embedded sensor and command transports; the host layer owns allocation, file capture, stream sequencing, and presentation. A rolling observation checksum covers every committed mission-cadence record, while per-record and nested CRCs localize transport damage. Target evidence remains a bounded codec probe rather than a full mission.

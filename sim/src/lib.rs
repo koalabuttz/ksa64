@@ -16,6 +16,13 @@ pub mod phase4;
 pub mod phase5_closed_loop;
 pub mod phase5_mission;
 pub mod phase5_sensors;
+pub mod phase5_telemetry;
+#[cfg(feature = "fixtures")]
+mod phase5_telemetry_self_test;
+#[cfg(feature = "fixtures")]
+pub use phase5_telemetry_self_test::{
+    phase5_telemetry_codec_signature, run_phase5_telemetry_self_tests,
+};
 pub mod phase5_vehicle;
 #[cfg(feature = "fixtures")]
 mod phase5_vehicle_self_test;

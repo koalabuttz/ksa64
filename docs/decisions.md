@@ -763,6 +763,16 @@ Date: 2026-07-23
 Status: accepted.
 
 Freeze nominal, gust/slosh, star-outage/gyro-bias, gimbal-jam, damping-loss, and RCS-leak/depletion outcomes and checksum summaries. Nominal and gust must meet the reviewed targeting envelope. Sensor outage and RCS depletion may be stable degraded orbits; jam and damping loss must latch irreversible abort. A finite rust-mos guidance probe is required, but a complete C64 mission remains subject to projection and explicit confirmation.
+
+## D-058: Record KST5 through the single spatial mission executor
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Add an observer boundary to the reviewed Phase 5 mission loop and make both ordinary and telemetry runs use it. Emit one 96-byte KST5 header and one 424-byte frame for initial truth and every committed 0.125-second successor. Embed the already strict spatial sensor and actuator records, preserve their CRCs, and add frame CRC plus a rolling observation chain. Host inspection and an independent Python parser must agree on the complete nominal stream. Target acceptance uses only a finite codec probe; it must not start a full C64 mission.
+
+The frozen nominal stream contains 3,134 frames and 1,328,912 bytes, with CRC-32 `0xa9b3b94c` and terminal observation checksum `0x5b7b2419`. The size-optimized rust-mos codec probe is 16,778 bytes and signature `0x07bc3e16`. KST3 and KST4 remain unchanged.
 ## Open decisions
 
 The following remain deliberately unresolved:

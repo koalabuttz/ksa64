@@ -1,0 +1,29 @@
+{
+  "format": "KST5",
+  "version": 1,
+  "stream_bytes": 1328912,
+  "stream_sha256": "a2391c1c9b56d9bbbf191f14f8a99403e73e038e8e0506754b552a17901d318c",
+  "stream_crc32": "0xa9b3b94c",
+  "frame_count": 3134,
+  "event_frames": 1964,
+  "header_crc32": "0xac13d258",
+  "case": 0,
+  "seed": "0x5a000000",
+  "final": {
+    "step": 3133,
+    "position_q12": [
+      21468577,
+      3871182,
+      15698368
+    ],
+    "velocity_q24": [
+      -66327286,
+      89767125,
+      68337641
+    ],
+    "sensor_checksum": "0x67d05c4a",
+    "navigation_checksum": "0xb2938ca6",
+    "flight_checksum": "0xf27c8d9a",
+    "observation_checksum": "0x5b7b2419"
+  }
+}

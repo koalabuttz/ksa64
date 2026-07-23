@@ -56,3 +56,8 @@ required-features = ["c64"]
 name = "ksa64-phase4-export-c64"
 path = "src/bin/phase4_export_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase5-telemetry-sim"
+path = "src/bin/phase5_telemetry_sim.rs"
+required-features = ["sim"]

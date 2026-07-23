@@ -1,6 +1,6 @@
 //! Gate 8 integrated KSA-5A reference and reviewed failure missions.
 
-use crate::phase5_closed_loop::{Phase5ClosedLoop, Phase5ClosedLoopError};
+use crate::phase5_closed_loop::{Phase5ClosedLoop, Phase5ClosedLoopError, Phase5ClosedLoopStep};
 use crate::phase5_sensors::{Phase5SensorFaults, Phase5SensorParameters};
 use crate::phase5_vehicle::{Phase5StagePhase, EVENT_RCS_DEPLETED};
 use crate::sensors::StepWindow;
@@ -66,12 +66,75 @@ pub struct Phase5MissionSummary {
     pub summary_checksum: u32,
 }
 
+pub trait Phase5MissionObserver {
+    type Error;
+
+    fn observe_initial(
+        &mut self,
+        case: Phase5MissionCase,
+        seed: u32,
+        snapshot: crate::phase5_vehicle::Phase5VehicleSnapshot,
+    ) -> Result<(), Self::Error>;
+
+    fn observe_step(
+        &mut self,
+        case: Phase5MissionCase,
+        step: Phase5ClosedLoopStep,
+        terminal: bool,
+    ) -> Result<(), Self::Error>;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Phase5ObservedMissionError<E> {
+    Mission(Phase5ClosedLoopError),
+    Observer(E),
+}
+
+struct NullObserver;
+
+impl Phase5MissionObserver for NullObserver {
+    type Error = core::convert::Infallible;
+
+    fn observe_initial(
+        &mut self,
+        _case: Phase5MissionCase,
+        _seed: u32,
+        _snapshot: crate::phase5_vehicle::Phase5VehicleSnapshot,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn observe_step(
+        &mut self,
+        _case: Phase5MissionCase,
+        _step: Phase5ClosedLoopStep,
+        _terminal: bool,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
 pub fn run_phase5_mission(
     case: Phase5MissionCase,
 ) -> Result<Phase5MissionSummary, Phase5ClosedLoopError> {
+    match run_phase5_mission_observed(case, &mut NullObserver) {
+        Ok(summary) => Ok(summary),
+        Err(Phase5ObservedMissionError::Mission(error)) => Err(error),
+        Err(Phase5ObservedMissionError::Observer(never)) => match never {},
+    }
+}
+
+pub fn run_phase5_mission_observed<O: Phase5MissionObserver>(
+    case: Phase5MissionCase,
+    observer: &mut O,
+) -> Result<Phase5MissionSummary, Phase5ObservedMissionError<O::Error>> {
     let (faults, parameters) = sensor_configuration(case);
     let seed = 0x5a00_0000u32 | case as u32;
-    let mut loopback = Phase5ClosedLoop::new_parameterized(seed, faults, parameters)?;
+    let mut loopback = Phase5ClosedLoop::new_parameterized(seed, faults, parameters)
+        .map_err(Phase5ObservedMissionError::Mission)?;
+    observer
+        .observe_initial(case, seed, loopback.latest())
+        .map_err(Phase5ObservedMissionError::Observer)?;
     if case == Phase5MissionCase::RcsLeakAndDepletion {
         loopback
             .vehicle_mut()
@@ -114,7 +177,7 @@ pub fn run_phase5_mission(
                 summary.outcome = Phase5MissionOutcome::NumericFault;
                 break;
             }
-            Err(error) => return Err(error),
+            Err(error) => return Err(Phase5ObservedMissionError::Mission(error)),
         };
         summary.steps = result.vehicle.truth.step();
         summary.events |= result.vehicle.events;
@@ -142,10 +205,14 @@ pub fn run_phase5_mission(
         summary.flight_checksum = result.flight.flight_checksum;
         if result.flight.mode == FlightMode::Abort {
             summary.outcome = Phase5MissionOutcome::Aborted;
-            break;
-        }
-        if result.vehicle.truth.phase() == Phase5StagePhase::Complete {
+        } else if result.vehicle.truth.phase() == Phase5StagePhase::Complete {
             summary.outcome = classify_terminal(result.vehicle.truth.spatial(), &mut summary);
+        }
+        let terminal = summary.outcome != Phase5MissionOutcome::StepLimit;
+        observer
+            .observe_step(case, result, terminal)
+            .map_err(Phase5ObservedMissionError::Observer)?;
+        if terminal {
             break;
         }
         step += 1;
