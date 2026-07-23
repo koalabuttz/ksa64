@@ -53,7 +53,7 @@ Exit criteria:
 
 ## Phase 2: two-dimensional multistage ascent
 
-Status: in progress. The rotating-Earth planar contract, vacuum coast, orbital classification, and provisional semi-implicit integrator selection are accepted; atmosphere, aerodynamics, and guidance are next.
+Status: in progress. The rotating-Earth planar contract, vacuum coast, orbital classification, provisional semi-implicit integrator selection, co-rotating atmosphere, Mach-dependent drag, and open-loop pitch guidance are accepted; bounded staging and complete missions are next.
 
 Purpose: produce a recognizable launch trajectory and orbital-insertion attempt.
 

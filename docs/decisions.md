@@ -588,3 +588,12 @@ Status: accepted provisionally; powered-ascent confirmation remains required.
 Implement both semi-implicit Euler and midpoint RK2 at 0.125 seconds. The fixed-point circular-orbit acceptance case produces identical raw states after one orbit, and the changing-radius C64 fixture produces identical terminal radius and radial velocity. Midpoint costs 452,754.37 cycles per step versus 451,742.59 for semi-implicit Euler in three stable PAL VICE runs. Refined RK4 coast evidence converges far inside the declared threshold.
 
 Use semi-implicit Euler because midpoint's correction quantizes away at the accepted field resolution while adding structure and target cost. Reopen the decision if the powered KSA-2A mission misses its insertion-error thresholds.
+## D-039: Model aerodynamic flight in the co-rotating local frame
+
+Date: 2026-07-22
+
+Status: accepted.
+
+Use a generated altitude table for atmospheric density and speed of sound, with the air mass co-rotating at the declared spherical-Earth rate. Derive radial and tangential air-relative velocity from planar truth, interpolate a Mach-dependent drag coefficient, and apply drag opposite that relative-velocity vector. Express commanded pitch as step-aligned binary-turn knots measured from local radial toward prograde, then resolve thrust with the generated Q1.15 trigonometric table.
+
+This makes surface co-rotation an exact zero-dynamic-pressure fixture, keeps the environment and guidance deterministic and allocation-free, and lets one pure force evaluator expose Max-Q, Mach, thrust, drag, and acceleration without leaking mutable truth. Native and rust-mos self-tests exercise the generated environment identity, interpolation, drag direction, physical dynamic-pressure scale, pitch endpoints, thrust axes, and angular-momentum response. The table is a compact Phase 2 learning model rather than a named standard atmosphere; higher-fidelity atmosphere and winds remain future model choices.

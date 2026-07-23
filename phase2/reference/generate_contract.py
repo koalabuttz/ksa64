@@ -221,6 +221,7 @@ def rust_source(contract: dict[str, Any]) -> str:
         f"pub const EARTH_MU_Q12: i32 = {raw('398600.4418', 12)};",
         f"pub const EARTH_ROTATION_TURNS_Q32: u32 = {round_away(dec('0.00007292115') / dec(str(2 * math.pi)) * (1 << 32))};",
         f"pub const INV_TWO_PI_Q30: i32 = {round_away(dec(1) / dec(str(2 * math.pi)) * (1 << 30))};",
+        f"pub const EARTH_ROTATION_RAD_Q30: i32 = {round_away(dec('0.00007292115') * (1 << 30))};",
         "pub const SIN_QUARTER_Q15: &[i16; 257] = &[",
         *(f"    {row}," for row in rows),
         "];",

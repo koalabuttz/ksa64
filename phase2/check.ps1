@@ -13,6 +13,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Phase 2 generated contract is stale." }
     & python -B phase2/reference/generate_integrator_evidence.py --check
     if ($LASTEXITCODE -ne 0) { throw "Phase 2 integrator evidence is stale." }
+    & python -B phase2/reference/generate_environment.py --check
+    if ($LASTEXITCODE -ne 0) { throw "Phase 2 environment evidence is stale." }
 
     & cargo fmt --all -- --check
     if ($LASTEXITCODE -ne 0) { throw "Rust formatting failed." }

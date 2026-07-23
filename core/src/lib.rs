@@ -1,12 +1,16 @@
 #![no_std]
 
+pub mod aerodynamics;
 pub mod dynamics;
 pub mod environment;
+pub mod guidance;
 pub mod mission;
 pub mod numeric;
 pub mod phase2_numeric;
 pub mod phase2_quantities;
 pub mod planar;
+pub mod planar_dynamics;
+pub mod planar_environment;
 pub mod quantities;
 pub mod scenario;
 pub mod telemetry;
@@ -19,11 +23,16 @@ pub mod c64_status;
 pub mod c64_timer;
 
 #[cfg(feature = "fixtures")]
+mod phase2_atmosphere_self_test;
+
+#[cfg(feature = "fixtures")]
 mod phase2_self_test;
 
 #[cfg(feature = "fixtures")]
 mod self_test;
 
+#[cfg(feature = "fixtures")]
+pub use phase2_atmosphere_self_test::run_phase2_atmosphere_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase2_self_test::run_phase2_contract_self_tests;
 #[cfg(feature = "fixtures")]
