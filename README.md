@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–4 are complete. Phase 5—three-dimensional rigid-body dynamics—is ready for planning; no Phase 5 simulator code exists yet.
+> **Project status:** Phases 0–4 are complete. Phase 5 is in progress: Gates 1–7 now provide the frozen 3-D numeric, world, vehicle, and avionics foundation; integrated reference and failure missions are next.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -25,7 +25,9 @@ KSA64 currently provides:
 - stock-C64 campaign analysis with five retained interesting runs and a sparse trajectory history;
 - optional REU detection and adaptive archives from 128 KiB through 16 MiB;
 - interactive PETSCII campaign pages and strict one- or multi-volume IEC disk export;
-- independent Python/float64 analysis, host/C64 exactness probes, and frozen regression artifacts.
+- independent Python/float64 analysis, host/C64 exactness probes, and frozen regression artifacts;
+- additive Phase 5 ECI translation, rigid attitude, bending/slosh, two-axis gimbal and RCS dynamics;
+- strict Phase 5 IMU/barometer/GPS/star-tracker transports, truth-isolated 3-D navigation, quaternion control, and fail-closed sequencing.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -79,6 +81,7 @@ That future Commodore-in-the-loop arrangement is Phase 6 work. The current porta
 | 2 — Planar ascent | Rotating-Earth KSA-2A multistage ascent, atmosphere and drag, orbital insertion/failure cases, KST2 evidence, and PETSCII/SID replay. |
 | 3 — Closed-loop avionics | Truth-isolated sensors, navigation, guidance, sequencing, actuator feedback, deterministic faults, KST3/KRP3, and bounded C64 probes. |
 | 4 — Statistical analysis | Deterministic campaigns, KSR4 summaries, independent float64 analysis, stock/REU storage, interactive UI, KRA4 archives, and KXV4 disk export. |
+| 5 — 3-D dynamics (in progress) | Gates 1–7: spatial numeric/world models, rigid and flexible dynamics, multirate KSA-5A vehicle, strict spatial avionics, aided navigation, and attitude control. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 
@@ -102,7 +105,7 @@ The C64 accuracy-first closed-loop path is intentionally slower than real time. 
 - [Phase 2](phase2/README.md) and [completion audit](phase2/COMPLETION.md)
 - [Phase 3](phase3/README.md) and [completion audit](phase3/COMPLETION.md)
 - [Phase 4](phase4/README.md) and [completion audit](phase4/COMPLETION.md)
-- [Phase 5 handoff](phase5/README.md)
+- [Phase 5](phase5/README.md), including [spatial avionics](phase5/AVIONICS.md)
 
 ### Phase 4 detail
 
@@ -139,18 +142,15 @@ powershell -File phase4/export-c64.ps1
 
 These commands validate checked-in artifacts; normal checks do not silently regenerate or replace frozen evidence.
 
-## Next: Phase 5
+Phase 5 Gates 1–7 are checked with:
 
-Phase 5 will be planned before implementation. Its first decisions must freeze:
+```powershell
+powershell -File phase5/check.ps1
+```
 
-1. frames, axes, handedness, units, and quaternion convention;
-2. three-dimensional truth and ownership boundaries;
-3. ranges for quaternion, angular rate, inertia, torque, and cross products;
-4. analytic and independent float64 rigid-body reference cases;
-5. an exact planar-reduction gate that preserves the accepted Phase 3/4 path;
-6. representative host, MOS, and PAL VICE measurements before cadence or optimization choices.
+## Next: Phase 5 Gate 8
 
-REU support will remain optional and observational. Optimization will target measured three-dimensional kernels only after the exact numeric foundation exists.
+The next gate supplies and tunes complete launch-plane, ascent, and insertion guidance, then freezes six integrated mission outcomes. KST5 telemetry, campaign integration, REU history, and optimization remain later gates. Long C64 missions still require a measured projection and explicit confirmation; routine evidence uses native missions and bounded MOS/VICE probes.
 
 ## Guiding principles
 

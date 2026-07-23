@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-6 complete; Gate 7 spatial transports, sensors, navigation, and GNC is next.
+Status: Gates 1-7 complete; Gate 8 integrated reference and failure missions is next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -25,8 +25,14 @@ signature `0x650d5aa7`.
 The multirate vehicle layer now composes four fast steps per mission command,
 continuous inertia schedules, two-axis engine gimbals, explicit staging, and
 bounded upper-stage RCS propellant. Native and size-optimized rust-mos builds
-agree on the complete raw signature `0x21e55663`; the target probe is 38,597
+agree on the complete raw signature `0x21e55663`; the target probe is 39,255
 bytes.
+The avionics boundary now adds strict spatial sensor and actuator transports,
+deterministic IMU/barometer/GPS/star-tracker models, truth-isolated 3-D aided
+navigation, quaternion attitude control, sequencing, and irreversible safeing.
+Independent transport/controller vectors freeze signature `0xaa0a0b0e`; native
+and rust-mos agree, and the target probe is 7,367 bytes. See
+[AVIONICS.md](AVIONICS.md).
 
 Phase 4 completed the maturity prerequisites for 3-D work: the 2-D world is deterministic and independently checked, flight software is isolated from truth, campaign variation is reproducible, storage is observational, and stock/REU evidence paths are strict.
 
@@ -42,13 +48,6 @@ The existing target evidence also sets expectations:
 - a long C64 run requires a fresh projection and explicit confirmation;
 - optimization begins only after representative 3-D kernels are measured.
 
-## Recommended first planning gates
+## Next gate
 
-1. Freeze frames, axes, handedness, units, quaternion convention, and state ownership.
-2. Perform range analysis for quaternion, angular rate, inertia, torque, and cross products.
-3. Build exact fixed-point vector/quaternion kernels with analytic identity and overflow tests.
-4. Add independent float64 torque-free, constant-torque, and spherical-inertia references.
-5. Prove a zero-torque planar reduction reproduces accepted Phase 4 translational checksums.
-6. Measure representative attitude and coupled 6-DOF steps on host, mos-sim, and PAL VICE before choosing cadence or optimization work.
-
-Candidate later gates are rigid-body propagation, mass/inertia schedules, gimbal torque, sensor extensions, attitude navigation/control, failure cases, 3-D telemetry, and campaign integration. Those choices remain deliberately unfrozen until Phase 5 is planned with explicit model scope.
+Gate 8 composes the complete KSA-5A ascent guidance target generator and the six reviewed missions: nominal; gust plus slosh; star outage plus gyro bias; gimbal-jam abort; damping-loss abort; and RCS leak/depletion. Their exact native outcomes must be frozen before KST5 telemetry, campaign storage, or optimization work begins.

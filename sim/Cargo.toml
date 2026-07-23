@@ -26,6 +26,10 @@ required-features = ["c64"]
 name = "ksa64-phase5-vehicle-sim"
 path = "src/bin/phase5_vehicle_sim.rs"
 required-features = ["sim"]
+[[bin]]
+name = "ksa64-phase5-avionics-sim"
+path = "src/bin/phase5_avionics_sim.rs"
+required-features = ["sim"]
 
 [[bin]]
 name = "ksa64-phase4-distribution-sim"

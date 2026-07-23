@@ -73,6 +73,6 @@ probe agree exactly.
 The ordinary `release` profile is not a valid stock-size measurement for this
 integrated target: it inlines for speed and overflowed the simulator link region.
 The already-established `c64` profile (`opt-level = "z"`, one codegen unit, LTO)
-links the full Gate 6 signature probe at 38,597 bytes and executes successfully.
+links the full Gate 6 signature probe at 39,255 bytes and executes successfully.
 Gate 11 will measure the representative mission kernel and remaining UI/telemetry
 headroom before any additional optimization is accepted.

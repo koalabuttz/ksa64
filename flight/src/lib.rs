@@ -7,6 +7,8 @@
 
 pub mod gnc;
 pub mod navigation;
+pub mod phase5_gnc;
+pub mod phase5_navigation;
 
 pub use ksa64_interface as interface;
 

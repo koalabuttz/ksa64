@@ -480,6 +480,19 @@ pub struct Phase5VehicleSnapshot {
     pub mach: Mach,
     pub dynamic_pressure_q16: i32,
     pub angle_of_attack_sine_q16: i32,
+    /// Four body-specific-force samples at the 32 Hz fast cadence.
+    pub imu_accel_body_q28: [[i32; 3]; PHASE5_SUBSTEPS as usize],
+    /// Four rigid-plus-flex body-rate samples at the 32 Hz fast cadence.
+    pub imu_gyro_body_q24: [[i32; 3]; PHASE5_SUBSTEPS as usize],
+}
+
+#[derive(Clone, Copy)]
+struct FastStepObservation {
+    mach: Mach,
+    dynamic_pressure_q16: i32,
+    angle_of_attack_sine_q16: i32,
+    accel_body_q28: [i32; 3],
+    gyro_body_q24: [i32; 3],
 }
 
 #[derive(Clone, Copy)]
@@ -558,6 +571,31 @@ impl Phase5VehicleMachine {
     }
     pub const fn rcs_propellant_q12(&self) -> i32 {
         self.rcs.propellant_q12()
+    }
+
+    /// Produces a non-advancing observation for the initial sensor frame.
+    /// It has no events or aerodynamic extrema and cannot mutate physics.
+    pub fn current_snapshot(&self) -> Result<Phase5VehicleSnapshot, Phase5VehicleError> {
+        let mut status = NumericStatus::CLEAR;
+        let inertia = self
+            .stage()?
+            .inertia
+            .interpolate(self.truth.active_propellant_q12, &mut status);
+        if !status.is_clear() {
+            return Err(Phase5VehicleError::NumericFault);
+        }
+        Ok(Phase5VehicleSnapshot {
+            truth: self.truth,
+            gimbal: self.gimbal.snapshot(),
+            inertia,
+            rcs_propellant_q12: self.rcs.propellant_q12(),
+            events: 0,
+            mach: Mach::from_raw(0),
+            dynamic_pressure_q16: 0,
+            angle_of_attack_sine_q16: 0,
+            imu_accel_body_q28: [[0; 3]; PHASE5_SUBSTEPS as usize],
+            imu_gyro_body_q24: [[0; 3]; PHASE5_SUBSTEPS as usize],
+        })
     }
 
     pub fn set_gimbal_jammed(&mut self, pitch: bool, yaw: bool) {
@@ -660,7 +698,7 @@ impl Phase5VehicleMachine {
         command: Phase5VehicleCommand,
         events: &mut u16,
         status: &mut NumericStatus,
-    ) -> Result<(Mach, i32, i32), Phase5VehicleError> {
+    ) -> Result<FastStepObservation, Phase5VehicleError> {
         let stage = self.stage()?;
         let gimbal = self.gimbal.advance(command.gimbal);
         if gimbal.pitch_jammed || gimbal.yaw_jammed {
@@ -743,6 +781,11 @@ impl Phase5VehicleMachine {
             .conjugate()
             .rotate(aero.force_eci(), status);
         let body_force = aero_body.checked_add(engine_body, status);
+        let imu_accel_body_q28 = [
+            divide_scaled(body_force.x(), self.truth.total_mass_q12, 28, status),
+            divide_scaled(body_force.y(), self.truth.total_mass_q12, 28, status),
+            divide_scaled(body_force.z(), self.truth.total_mass_q12, 28, status),
+        ];
         let lateral_y_km_q24 = divide_scaled(body_force.y(), self.truth.total_mass_q12, 24, status);
         let lateral_z_km_q24 = divide_scaled(body_force.z(), self.truth.total_mass_q12, 24, status);
         let lateral_y_ms_q24 = multiply_scaled(lateral_y_km_q24, 1_000, 0, status);
@@ -760,6 +803,28 @@ impl Phase5VehicleMachine {
             status,
         );
         self.truth.rigid = rigid_step.state();
+        let rigid_rate = self.truth.rigid.angular_rate();
+        let imu_gyro_body_q24 = [
+            rigid_rate.x(),
+            add(
+                rigid_rate.y(),
+                add(
+                    self.truth.flexible.y().bending().rate(),
+                    self.truth.flexible.y().slosh().rate(),
+                    status,
+                ),
+                status,
+            ),
+            add(
+                rigid_rate.z(),
+                add(
+                    self.truth.flexible.z().bending().rate(),
+                    self.truth.flexible.z().slosh().rate(),
+                    status,
+                ),
+                status,
+            ),
+        ];
         self.truth.spatial = advance_spatial_state(
             self.truth.spatial,
             total_force_eci,
@@ -770,11 +835,13 @@ impl Phase5VehicleMachine {
         if self.truth.phase == Phase5StagePhase::Burning {
             self.consume_engine_propellant(stage, events, status);
         }
-        Ok((
-            aero.mach(),
-            aero.dynamic_pressure().raw(),
-            aero.angle_of_attack_sine_q16(),
-        ))
+        Ok(FastStepObservation {
+            mach: aero.mach(),
+            dynamic_pressure_q16: aero.dynamic_pressure().raw(),
+            angle_of_attack_sine_q16: aero.angle_of_attack_sine_q16(),
+            accel_body_q28: imu_accel_body_q28,
+            gyro_body_q24: imu_gyro_body_q24,
+        })
     }
 
     pub fn step(
@@ -792,10 +859,16 @@ impl Phase5VehicleMachine {
         let mut mach = Mach::from_raw(0);
         let mut dynamic_pressure_q16 = 0;
         let mut angle_of_attack_sine_q16 = 0;
+        let mut imu_accel_body_q28 = [[0; 3]; PHASE5_SUBSTEPS as usize];
+        let mut imu_gyro_body_q24 = [[0; 3]; PHASE5_SUBSTEPS as usize];
         let mut substep = 0;
         while substep < generated::SUBSTEPS {
-            (mach, dynamic_pressure_q16, angle_of_attack_sine_q16) =
-                next.fast_step(command, &mut events, &mut status)?;
+            let fast = next.fast_step(command, &mut events, &mut status)?;
+            mach = fast.mach;
+            dynamic_pressure_q16 = fast.dynamic_pressure_q16;
+            angle_of_attack_sine_q16 = fast.angle_of_attack_sine_q16;
+            imu_accel_body_q28[substep as usize] = fast.accel_body_q28;
+            imu_gyro_body_q24[substep as usize] = fast.gyro_body_q24;
             if !status.is_clear() {
                 return Err(Phase5VehicleError::NumericFault);
             }
@@ -834,6 +907,8 @@ impl Phase5VehicleMachine {
             mach,
             dynamic_pressure_q16,
             angle_of_attack_sine_q16,
+            imu_accel_body_q28,
+            imu_gyro_body_q24,
         };
         *self = next;
         Ok(snapshot)
