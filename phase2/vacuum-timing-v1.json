@@ -1,0 +1,53 @@
+{
+  "runs": [
+    {
+      "semi_implicit_net_cycles": 115646104,
+      "semi_implicit_cycles_per_step": 451742.59375,
+      "midpoint_net_cycles": 115905119,
+      "midpoint_cycles_per_step": 452754.37109375,
+      "midpoint_cost_ratio": 1.0022397209334437,
+      "boundary_overhead": 4,
+      "semi_final": [
+        26862129,
+        15104
+      ],
+      "midpoint_final": [
+        26862129,
+        15104
+      ]
+    },
+    {
+      "semi_implicit_net_cycles": 115646104,
+      "semi_implicit_cycles_per_step": 451742.59375,
+      "midpoint_net_cycles": 115905119,
+      "midpoint_cycles_per_step": 452754.37109375,
+      "midpoint_cost_ratio": 1.0022397209334437,
+      "boundary_overhead": 4,
+      "semi_final": [
+        26862129,
+        15104
+      ],
+      "midpoint_final": [
+        26862129,
+        15104
+      ]
+    },
+    {
+      "semi_implicit_net_cycles": 115646104,
+      "semi_implicit_cycles_per_step": 451742.59375,
+      "midpoint_net_cycles": 115905119,
+      "midpoint_cycles_per_step": 452754.37109375,
+      "midpoint_cost_ratio": 1.0022397209334437,
+      "boundary_overhead": 4,
+      "semi_final": [
+        26862129,
+        15104
+      ],
+      "midpoint_final": [
+        26862129,
+        15104
+      ]
+    }
+  ],
+  "stable": true
+}

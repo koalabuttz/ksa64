@@ -6,6 +6,7 @@ pub mod mission;
 pub mod numeric;
 pub mod phase2_numeric;
 pub mod phase2_quantities;
+pub mod planar;
 pub mod quantities;
 pub mod scenario;
 pub mod telemetry;

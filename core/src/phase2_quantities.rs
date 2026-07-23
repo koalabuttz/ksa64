@@ -33,6 +33,7 @@ fixed_i32!(DynamicPressure, 16);
 fixed_i32!(Coefficient, 14);
 fixed_i32!(ReferenceArea, 16);
 fixed_i32!(SpecificEnergy, 24);
+fixed_i32!(Eccentricity, 16);
 fixed_i32!(GravitationalParameter, 12);
 
 #[repr(transparent)]

@@ -1,0 +1,54 @@
+{
+  "model": "two-body equatorial polar coast",
+  "earth_radius_km": 6378.137,
+  "mu_km3_s2": 398600.4418,
+  "initial_perigee_altitude_km": 180.0,
+  "initial_apogee_altitude_km": 220.0,
+  "specific_angular_momentum_km2_s": 51205.70355466799,
+  "period_s": 5309.6433652979895,
+  "evaluated_duration_s": 5309.625,
+  "base_timestep_s": 0.125,
+  "base_steps": 42477,
+  "semi_implicit_euler": {
+    "final_radius_km": 6558.136999972449,
+    "final_radial_velocity_km_s": -5.17353495873207e-07,
+    "final_angle_rad": 6.283163441918703,
+    "minimum_altitude_km": 179.9999999724496,
+    "maximum_altitude_km": 220.0000000540449,
+    "maximum_relative_energy_excursion": 6.866848225231012e-10
+  },
+  "midpoint_rk2": {
+    "final_radius_km": 6558.137000004691,
+    "final_radial_velocity_km_s": -5.169444112693416e-07,
+    "final_angle_rad": 6.283163442023586,
+    "minimum_altitude_km": 180.0,
+    "maximum_altitude_km": 219.99999996000315,
+    "maximum_relative_energy_excursion": 8.208303049927319e-16
+  },
+  "rk4_dt_over_32": {
+    "final_radius_km": 6558.137000004732,
+    "final_radial_velocity_km_s": -5.174895238243847e-07,
+    "final_angle_rad": 6.283163441884282,
+    "minimum_altitude_km": 180.0,
+    "maximum_altitude_km": 219.99999999994634,
+    "maximum_relative_energy_excursion": 5.863073607090943e-16
+  },
+  "rk4_dt_over_64": {
+    "final_radius_km": 6558.137000004551,
+    "final_radial_velocity_km_s": -5.174900072336501e-07,
+    "final_angle_rad": 6.283163441883897,
+    "minimum_altitude_km": 180.0,
+    "maximum_altitude_km": 219.99999999996453,
+    "maximum_relative_energy_excursion": 5.863073607090943e-16
+  },
+  "refined_rk4_convergence": {
+    "radius_m": 1.8098944565281272e-07,
+    "radial_velocity_mm_s": 4.834092654140614e-07,
+    "angle_microrad": 3.8546943414985435e-07
+  },
+  "selection": {
+    "production": "semi-implicit Euler",
+    "reason": "Both fixed-point candidates produce identical raw one-orbit states at the accepted resolution; semi-implicit Euler uses one declared force evaluation and is no slower in the linked C64 measurement.",
+    "hero_mission_confirmation_required": true
+  }
+}

@@ -29,6 +29,11 @@ path = "src/bin/acceptance_c64.rs"
 required-features = ["c64"]
 
 [[bin]]
+name = "ksa64-phase2-vacuum-timed-c64"
+path = "src/bin/phase2_vacuum_timed_c64.rs"
+required-features = ["c64"]
+
+[[bin]]
 name = "ksa64-phase1-production-timed-c64"
 path = "src/bin/production_timed_c64.rs"
 required-features = ["c64"]

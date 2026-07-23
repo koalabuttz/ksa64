@@ -579,3 +579,12 @@ Status: accepted.
 Use radius, Earth-relative downrange angle, radial velocity, and inertial specific angular momentum as the planar truth variables. Derive tangential velocity from angular momentum and radius. Use a rotating spherical Earth, a co-rotating atmosphere, fixed-capacity constant-engine stages, and step-aligned time/pitch guidance. Preserve Phase 1 contracts and add versioned Phase 2 records.
 
 This representation makes torque-free angular momentum a state invariant, avoids absolute Cartesian position transforms in the hot path, and still supports genuine energy, apogee, perigee, and orbit classification. The generated Phase 2 contract proves the declared field and intermediate envelopes and supplies target-executable trig and square-root checks.
+## D-038: Retain semi-implicit Euler for the initial planar production path
+
+Date: 2026-07-22
+
+Status: accepted provisionally; powered-ascent confirmation remains required.
+
+Implement both semi-implicit Euler and midpoint RK2 at 0.125 seconds. The fixed-point circular-orbit acceptance case produces identical raw states after one orbit, and the changing-radius C64 fixture produces identical terminal radius and radial velocity. Midpoint costs 452,754.37 cycles per step versus 451,742.59 for semi-implicit Euler in three stable PAL VICE runs. Refined RK4 coast evidence converges far inside the declared threshold.
+
+Use semi-implicit Euler because midpoint's correction quantizes away at the accepted field resolution while adding structure and target cost. Reopen the decision if the powered KSA-2A mission misses its insertion-error thresholds.
