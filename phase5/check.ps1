@@ -21,6 +21,7 @@ Invoke-Gate { python -B phase5/reference/generate_guidance.py --check }
 Invoke-Gate { python -B phase5/reference/verify_missions.py --check }
 Invoke-Gate { cargo run -p ksa64-host --bin phase5_telemetry -- target/phase5-nominal.kst5 }
 Invoke-Gate { python -B phase5/reference/verify_telemetry.py target/phase5-nominal.kst5 --check }
+Invoke-Gate { python -B phase5/reference/analyze_campaign.py --ksc phase5/examples/ksa5-reference.ksc5 --ksr phase5/examples/ksa5-reference.ksr5 --output phase5/reference-campaign-analysis.json --check }
 Invoke-Gate { cargo fmt --all -- --check }
 Invoke-Gate { cargo check --workspace --all-targets --features fixtures }
 Invoke-Gate { cargo clippy --workspace --all-targets --features fixtures -- -D warnings -A clippy::result-unit-err -A clippy::manual-is-multiple-of -A clippy::manual-flatten -A clippy::needless-range-loop -A clippy::drop-non-drop -A clippy::too-many-arguments }
@@ -135,5 +136,20 @@ if (-not $SkipMos) {
     Invoke-Gate {
         & $rustWrapper -WorkingDirectory . sh -lc `
             "mos-sim target/mos-sim-none/c64/ksa64-phase5-telemetry-sim"
+    }
+    Invoke-Gate {
+        & $rustWrapper -WorkingDirectory . cargo build --profile c64 `
+            --target mos-sim-none --features sim `
+            -Z build-std=core `
+            -Z build-std-features=compiler-builtins-mem `
+            --bin ksa64-phase5-campaign-sim
+    }
+    $campaignProbe = "target/mos-sim-none/c64/ksa64-phase5-campaign-sim"
+    if ((Get-Item -LiteralPath $campaignProbe).Length -gt 49152) {
+        throw "Phase 5 campaign probe exceeds the 48 KiB stock-profile gate"
+    }
+    Invoke-Gate {
+        & $rustWrapper -WorkingDirectory . sh -lc `
+            "mos-sim target/mos-sim-none/c64/ksa64-phase5-campaign-sim"
     }
 }

@@ -3,7 +3,7 @@
 use crate::phase5_sensors::{Phase5SensorFaults, Phase5SensorParameters, Phase5SensorSuite};
 use crate::phase5_vehicle::{
     GimbalCommandQ16, Phase5VehicleCommand, Phase5VehicleError, Phase5VehicleMachine,
-    Phase5VehicleSnapshot,
+    Phase5VehicleParameters, Phase5VehicleSnapshot,
 };
 use ksa64_core::spatial_numeric::FixedVec3;
 use ksa64_flight::phase5_gnc::{
@@ -48,7 +48,17 @@ impl Phase5ClosedLoop {
         faults: Phase5SensorFaults,
         parameters: Phase5SensorParameters,
     ) -> Result<Self, Phase5ClosedLoopError> {
-        let vehicle = Phase5VehicleMachine::new_ksa5a().map_err(Phase5ClosedLoopError::Vehicle)?;
+        Self::new_with_parameters(seed, faults, parameters, Phase5VehicleParameters::DEFAULT)
+    }
+
+    pub fn new_with_parameters(
+        seed: u32,
+        faults: Phase5SensorFaults,
+        parameters: Phase5SensorParameters,
+        vehicle_parameters: Phase5VehicleParameters,
+    ) -> Result<Self, Phase5ClosedLoopError> {
+        let vehicle = Phase5VehicleMachine::new_ksa5a_parameterized(vehicle_parameters)
+            .map_err(Phase5ClosedLoopError::Vehicle)?;
         let latest = vehicle
             .current_snapshot()
             .map_err(Phase5ClosedLoopError::Vehicle)?;

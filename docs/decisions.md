@@ -773,6 +773,26 @@ Status: accepted.
 Add an observer boundary to the reviewed Phase 5 mission loop and make both ordinary and telemetry runs use it. Emit one 96-byte KST5 header and one 424-byte frame for initial truth and every committed 0.125-second successor. Embed the already strict spatial sensor and actuator records, preserve their CRCs, and add frame CRC plus a rolling observation chain. Host inspection and an independent Python parser must agree on the complete nominal stream. Target acceptance uses only a finite codec probe; it must not start a full C64 mission.
 
 The frozen nominal stream contains 3,134 frames and 1,328,912 bytes, with CRC-32 `0xa9b3b94c` and terminal observation checksum `0x5b7b2419`. The size-optimized rust-mos codec probe is 16,778 bytes and signature `0x07bc3e16`. KST3 and KST4 remain unchanged.
+## D-059: Extend keyed campaigns to the spatial vehicle
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Reuse the reviewed Phase 4 distribution families and keyed-draw semantics, but
+version the spatial configuration and summary independently as KSC5 and KSR5.
+Keep run zero byte-for-byte equivalent at the mission-summary boundary to the
+frozen Phase 5 nominal path. Vary payload, stage thrust, atmosphere, aerodynamic
+scale, spatial sensor errors, and gimbal lag/slew through explicit parameter
+objects; do not mutate guidance gains, mission topology, or event sequencing.
+
+Run the 32-run routine and 256-run reference campaigns natively, merge summaries
+strictly by run index, and use a finite codec/sampling rust-mos probe instead of
+starting a target campaign. Serial and eight-worker reference artifacts are
+byte-identical with ordered KSR5 chain `0x3103d833`. Independent reconstruction
+finds no numeric or step-limit failures. Preserve the 48 safe aborts as evidence
+that the frozen controller is sensitive to reviewed actuator dispersion; do not
+tune them away before the target timing gate measures representative kernels.
 ## Open decisions
 
 The following remain deliberately unresolved:

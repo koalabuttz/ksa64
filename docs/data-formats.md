@@ -170,3 +170,64 @@ Exact layouts and generation rules live in `phase4/CONTRACT.md`, `phase4/FORMATS
 KST5 is the canonical Phase 5 integrated-mission stream. Its 96-byte header binds the numeric/scenario/environment identities, reviewed component signatures, case, seed, 0.125-second timestep, and mission limit. Each 424-byte mission-cadence frame carries committed spatial truth, rigid and flexible state, stage/actuator/load state, the complete CRC-protected spatial sensor and command records, aided navigation, checksum chains, reserved bytes, and a frame CRC.
 
 Frame zero is initial truth. Successor step N contains the sequence N-1 measurement and command that caused it. Strict readers require consecutive steps and time, nested record validity, known masks/enums, zero reserved bytes, an exact rolling observation chain, and exactly one terminal final frame. The checked nominal evidence is 3,134 frames, 1,328,912 bytes, and CRC-32 `0xa9b3b94c`; `phase5/reference/verify_telemetry.py` parses it independently. See `phase5/TELEMETRY.md` for the field contract.
+## Phase 5 spatial campaign formats
+
+Gate 10 preserves every Phase 3/4 artifact and adds two fixed-width families for KSA-5A campaigns. Both use little-endian integers, require zero reserved bytes, and reject unknown versions, identifiers, enums, lengths, or CRCs.
+
+### KSC5 campaign configuration
+
+`KSC5` is exactly 704 bytes and can contain at most 24 distribution records.
+
+| Offset | Size | Field |
+|---:|---:|---|
+| 0 | 4 | Magic `KSC5` |
+| 4 | 2 | Version, 5 |
+| 6 | 2 | Record length, 704 |
+| 8 | 4 | Contract ID `0x050a0000` |
+| 12 | 4 | Phase 5 numeric-contract ID |
+| 16 | 4 | Phase 5 scenario ID |
+| 20 | 4 | Master seed |
+| 24 | 4 | Run count |
+| 28 | 1 | Active distribution count |
+| 29 | 1 | Parameter count |
+| 30 | 1 | Distribution capacity, 24 |
+| 31 | 89 | Reserved, zero |
+| 120 | 4 | CRC-32 of bytes 128 through 703 |
+| 124 | 4 | CRC-32 of bytes 0 through 123 |
+| 128 | 576 | Twenty-four 24-byte distribution records |
+
+Each distribution record stores parameter, family, correlation group, one reserved zero byte, minimum, baseline, maximum, shape, and a CRC-32 over its first 20 bytes. Unused records are all zero. Run zero bypasses sampling and is the exact frozen nominal mission.
+
+### KSR5 run summary
+
+`KSR5` is exactly 160 bytes.
+
+| Offset | Size | Field |
+|---:|---:|---|
+| 0 | 4 | Magic `KSR5` |
+| 4 | 2 | Version, 5 |
+| 6 | 2 | Record length, 160 |
+| 8 | 4 | Contract ID `0x050a0001` |
+| 12 | 4 | Campaign seed |
+| 16 | 4 | Run index |
+| 20 | 4 | Derived sensor seed |
+| 24 | 4 | Variation checksum |
+| 28 | 1 | Mission outcome |
+| 29 | 1 | Mission case |
+| 30 | 2 | Reserved, zero |
+| 32 | 4 | Completed steps |
+| 36 | 12 | Terminal ECI position Q20.12 km |
+| 48 | 12 | Terminal ECI velocity Q8.24 km/s |
+| 60 | 4 | Fixed-point perigee altitude Q20.12 km |
+| 64 | 4 | Fixed-point apogee altitude Q20.12 km |
+| 68 | 2 | Inclination turn16 |
+| 70 | 2 | Event mask |
+| 72 | 4 | Maximum dynamic pressure Q16.16 kPa |
+| 76 | 4 | Maximum angle-of-attack sine Q16.16 |
+| 80 | 4 | Maximum flexible-state magnitude Q8.24 |
+| 84 | 4 | Maximum navigation-position error Q20.12 km |
+| 88 | 16 | Sensor, navigation, flight, and summary checksums |
+| 104 | 52 | Reserved, zero |
+| 156 | 4 | CRC-32 of bytes 0 through 155 |
+
+The ordered campaign chain applies FNV-1a to complete KSR5 records in run-index order. Native workers may execute out of order, but they may not merge out of order. The independent float64 analyzer reconstructs variation from KSC5 and uses raw terminal vectors from KSR5; compact fixed-point orbital fields remain selection and presentation aids.

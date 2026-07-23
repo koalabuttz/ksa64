@@ -61,3 +61,7 @@ required-features = ["c64"]
 name = "ksa64-phase5-telemetry-sim"
 path = "src/bin/phase5_telemetry_sim.rs"
 required-features = ["sim"]
+[[bin]]
+name = "ksa64-phase5-campaign-sim"
+path = "src/bin/phase5_campaign_sim.rs"
+required-features = ["sim"]

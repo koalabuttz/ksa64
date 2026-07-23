@@ -4,6 +4,7 @@ pub mod phase4;
 pub mod phase4_export;
 pub mod phase4_storage;
 pub mod phase5;
+pub mod phase5_campaign;
 
 use std::io::{self, Write};
 

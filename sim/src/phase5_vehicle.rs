@@ -87,15 +87,12 @@ struct GimbalAxisQ16 {
 }
 
 impl GimbalAxisQ16 {
-    fn advance(&mut self, request: i32) {
+    fn advance(&mut self, request: i32, lag_steps: u8, slew_q16: i32) {
         self.requested = request.clamp(-generated::GIMBAL_LIMIT_Q16, generated::GIMBAL_LIMIT_Q16);
         let error = self.requested - self.lagged;
-        self.lagged += error / generated::GIMBAL_LAG_STEPS as i32;
+        self.lagged += error / lag_steps as i32;
         if !self.jammed {
-            let delta = (self.lagged - self.applied).clamp(
-                -generated::GIMBAL_SLEW_PER_FAST_STEP_Q16,
-                generated::GIMBAL_SLEW_PER_FAST_STEP_Q16,
-            );
+            let delta = (self.lagged - self.applied).clamp(-slew_q16, slew_q16);
             self.applied += delta;
         }
     }
@@ -142,8 +139,21 @@ impl TwoAxisGimbalQ16 {
     }
 
     pub fn advance(&mut self, command: GimbalCommandQ16) -> GimbalSnapshotQ16 {
-        self.pitch.advance(command.pitch);
-        self.yaw.advance(command.yaw);
+        self.advance_parameterized(
+            command,
+            generated::GIMBAL_LAG_STEPS,
+            generated::GIMBAL_SLEW_PER_FAST_STEP_Q16,
+        )
+    }
+
+    pub fn advance_parameterized(
+        &mut self,
+        command: GimbalCommandQ16,
+        lag_steps: u8,
+        slew_q16: i32,
+    ) -> GimbalSnapshotQ16 {
+        self.pitch.advance(command.pitch, lag_steps, slew_q16);
+        self.yaw.advance(command.yaw, lag_steps, slew_q16);
         self.snapshot()
     }
 
@@ -275,6 +285,19 @@ pub fn ksa5a_stage(index: u8) -> Option<Phase5StageConfig> {
     })
 }
 
+fn scale_ppm(value: i32, delta_ppm: i32, status: &mut NumericStatus) -> i32 {
+    let scaled = (value as i64 * (1_000_000i64 + delta_ppm as i64)) / 1_000_000i64;
+    if scaled < i32::MIN as i64 || scaled > i32::MAX as i64 {
+        status.record(NumericFault::Saturation);
+        if scaled < 0 {
+            i32::MIN
+        } else {
+            i32::MAX
+        }
+    } else {
+        scaled as i32
+    }
+}
 fn engine_force_and_torque(
     thrust_q12: i32,
     gimbal: GimbalCommandQ16,
@@ -452,6 +475,46 @@ impl Phase5VehicleTruth {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase5VehicleParameters {
+    pub payload_mass_ppm: i32,
+    pub stage_thrust_ppm: [i32; 2],
+    pub atmosphere_density_ppm: i32,
+    pub aerodynamic_scale_ppm: i32,
+    pub gimbal_lag_steps: u8,
+    pub gimbal_slew_ppm: i32,
+}
+impl Phase5VehicleParameters {
+    pub const DEFAULT: Self = Self {
+        payload_mass_ppm: 0,
+        stage_thrust_ppm: [0; 2],
+        atmosphere_density_ppm: 0,
+        aerodynamic_scale_ppm: 0,
+        gimbal_lag_steps: 4,
+        gimbal_slew_ppm: 0,
+    };
+    pub const fn is_valid(self) -> bool {
+        self.payload_mass_ppm >= -100_000
+            && self.payload_mass_ppm <= 100_000
+            && self.stage_thrust_ppm[0] >= -100_000
+            && self.stage_thrust_ppm[0] <= 100_000
+            && self.stage_thrust_ppm[1] >= -100_000
+            && self.stage_thrust_ppm[1] <= 100_000
+            && self.atmosphere_density_ppm >= -250_000
+            && self.atmosphere_density_ppm <= 250_000
+            && self.aerodynamic_scale_ppm >= -250_000
+            && self.aerodynamic_scale_ppm <= 250_000
+            && self.gimbal_lag_steps >= 1
+            && self.gimbal_lag_steps <= 16
+            && self.gimbal_slew_ppm >= -500_000
+            && self.gimbal_slew_ppm <= 500_000
+    }
+}
+impl Default for Phase5VehicleParameters {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Phase5VehicleCommand {
     pub gimbal: GimbalCommandQ16,
     pub rcs_q15: FixedVec3<15>,
@@ -505,6 +568,7 @@ pub struct Phase5VehicleMachine {
     phase_steps: u32,
     disturbance_body_q12: ForceVec,
     damping_scale_q16: i32,
+    parameters: Phase5VehicleParameters,
 }
 
 impl Phase5VehicleMachine {
@@ -516,6 +580,15 @@ impl Phase5VehicleMachine {
     }
 
     pub fn new_ksa5a() -> Result<Self, Phase5VehicleError> {
+        Self::new_ksa5a_parameterized(Phase5VehicleParameters::DEFAULT)
+    }
+
+    pub fn new_ksa5a_parameterized(
+        parameters: Phase5VehicleParameters,
+    ) -> Result<Self, Phase5VehicleError> {
+        if !parameters.is_valid() {
+            return Err(Phase5VehicleError::Configuration);
+        }
         if generated::FAST_STEP_Q16 != ksa64_core::phase5_contract::PHASE5_FAST_STEP_Q16
             || generated::SUBSTEPS != ksa64_core::phase5_contract::PHASE5_ATTITUDE_SUBSTEPS
             || generated::RCS_PROPELLANT_Q12
@@ -550,7 +623,14 @@ impl Phase5VehicleMachine {
                 spatial,
                 rigid,
                 flexible: FlexibleStateQ24::ZERO,
-                total_mass_q12: generated::INITIAL_TOTAL_MASS_Q12,
+                total_mass_q12: generated::INITIAL_TOTAL_MASS_Q12.saturating_add(
+                    scale_ppm(
+                        ksa64_core::phase5_contract::PHASE5_PAYLOAD_MASS_Q12,
+                        parameters.payload_mass_ppm,
+                        &mut status,
+                    )
+                    .saturating_sub(ksa64_core::phase5_contract::PHASE5_PAYLOAD_MASS_Q12),
+                ),
                 active_propellant_q12: generated::STAGE_PROPELLANT_MASS_Q12[0],
                 active_stage: 0,
                 phase: Phase5StagePhase::CoastBeforeIgnition,
@@ -564,6 +644,7 @@ impl Phase5VehicleMachine {
             phase_steps: 0,
             disturbance_body_q12: ForceVec::ZERO,
             damping_scale_q16: 65_536,
+            parameters,
         })
     }
 
@@ -711,8 +792,22 @@ impl Phase5VehicleMachine {
         events: &mut u16,
         status: &mut NumericStatus,
     ) -> Result<FastStepObservation, Phase5VehicleError> {
-        let stage = self.stage()?;
-        let gimbal = self.gimbal.advance(command.gimbal);
+        let mut stage = self.stage()?;
+        stage.thrust_q12 = scale_ppm(
+            stage.thrust_q12,
+            self.parameters.stage_thrust_ppm[self.truth.active_stage as usize],
+            status,
+        );
+        let slew_q16 = scale_ppm(
+            generated::GIMBAL_SLEW_PER_FAST_STEP_Q16,
+            self.parameters.gimbal_slew_ppm,
+            status,
+        );
+        let gimbal = self.gimbal.advance_parameterized(
+            command.gimbal,
+            self.parameters.gimbal_lag_steps,
+            slew_q16,
+        );
         if gimbal.pitch_jammed || gimbal.yaw_jammed {
             *events |= EVENT_GIMBAL_JAMMED;
         }
@@ -744,6 +839,26 @@ impl Phase5VehicleMachine {
             ),
             status,
         );
+        let combined_aero_ppm = (((1_000_000i64 + self.parameters.atmosphere_density_ppm as i64)
+            * (1_000_000i64 + self.parameters.aerodynamic_scale_ppm as i64))
+            / 1_000_000i64
+            - 1_000_000i64) as i32;
+        let aero_force_eci = ForceVec::new(
+            scale_ppm(aero.force_eci().x(), combined_aero_ppm, status),
+            scale_ppm(aero.force_eci().y(), combined_aero_ppm, status),
+            scale_ppm(aero.force_eci().z(), combined_aero_ppm, status),
+        );
+        let aero_torque_body = TorqueVec::new(
+            scale_ppm(aero.torque_body().x(), combined_aero_ppm, status),
+            scale_ppm(aero.torque_body().y(), combined_aero_ppm, status),
+            scale_ppm(aero.torque_body().z(), combined_aero_ppm, status),
+        );
+        let dynamic_pressure_q16 = scale_ppm(
+            aero.dynamic_pressure().raw(),
+            self.parameters.atmosphere_density_ppm,
+            status,
+        );
+
         let (engine_body, gimbal_torque) = if self.truth.phase == Phase5StagePhase::Burning {
             engine_force_and_torque(
                 stage.thrust_q12,
@@ -760,8 +875,7 @@ impl Phase5VehicleMachine {
             .rigid
             .attitude()
             .rotate(self.disturbance_body_q12, status);
-        let total_force_eci = aero
-            .force_eci()
+        let total_force_eci = aero_force_eci
             .checked_add(engine_eci, status)
             .checked_add(disturbance_eci, status);
         let prior_rcs = self.rcs.propellant_q12();
@@ -784,8 +898,7 @@ impl Phase5VehicleMachine {
             effective_rate_damping,
             status,
         );
-        let total_torque = aero
-            .torque_body()
+        let total_torque = aero_torque_body
             .checked_add(gimbal_torque, status)
             .checked_add(rcs_torque, status)
             .checked_add(damping, status);
@@ -801,7 +914,7 @@ impl Phase5VehicleMachine {
             .rigid
             .attitude()
             .conjugate()
-            .rotate(aero.force_eci(), status);
+            .rotate(aero_force_eci, status);
         let body_force = aero_body
             .checked_add(engine_body, status)
             .checked_add(self.disturbance_body_q12, status);
@@ -875,7 +988,7 @@ impl Phase5VehicleMachine {
         }
         Ok(FastStepObservation {
             mach: aero.mach(),
-            dynamic_pressure_q16: aero.dynamic_pressure().raw(),
+            dynamic_pressure_q16,
             angle_of_attack_sine_q16: aero.angle_of_attack_sine_q16(),
             accel_body_q28: imu_accel_body_q28,
             gyro_body_q24: imu_gyro_body_q24,

@@ -2,7 +2,7 @@
 
 use crate::phase5_closed_loop::{Phase5ClosedLoop, Phase5ClosedLoopError, Phase5ClosedLoopStep};
 use crate::phase5_sensors::{Phase5SensorFaults, Phase5SensorParameters};
-use crate::phase5_vehicle::{Phase5StagePhase, EVENT_RCS_DEPLETED};
+use crate::phase5_vehicle::{Phase5StagePhase, Phase5VehicleParameters, EVENT_RCS_DEPLETED};
 use crate::sensors::StepWindow;
 use ksa64_core::numeric::NumericStatus;
 use ksa64_core::phase2_numeric::EARTH_RADIUS_Q12;
@@ -66,6 +66,34 @@ pub struct Phase5MissionSummary {
     pub summary_checksum: u32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase5MissionParameters {
+    pub sensor_seed: u32,
+    pub sensors: Phase5SensorParameters,
+    pub vehicle: Phase5VehicleParameters,
+    pub guidance_pitch_percent: u32,
+    pub guidance_downrange_percent: u32,
+}
+impl Phase5MissionParameters {
+    pub const fn nominal(seed: u32) -> Self {
+        Self {
+            sensor_seed: seed,
+            sensors: Phase5SensorParameters::DEFAULT,
+            vehicle: Phase5VehicleParameters::DEFAULT,
+            guidance_pitch_percent: 100,
+            guidance_downrange_percent: 100,
+        }
+    }
+    pub const fn is_valid(self) -> bool {
+        self.sensor_seed != 0
+            && self.sensors.is_valid()
+            && self.vehicle.is_valid()
+            && self.guidance_pitch_percent >= 80
+            && self.guidance_pitch_percent <= 120
+            && self.guidance_downrange_percent >= 80
+            && self.guidance_downrange_percent <= 120
+    }
+}
 pub trait Phase5MissionObserver {
     type Error;
 
@@ -128,12 +156,55 @@ pub fn run_phase5_mission_observed<O: Phase5MissionObserver>(
     case: Phase5MissionCase,
     observer: &mut O,
 ) -> Result<Phase5MissionSummary, Phase5ObservedMissionError<O::Error>> {
-    let (faults, parameters) = sensor_configuration(case);
-    let seed = 0x5a00_0000u32 | case as u32;
-    let mut loopback = Phase5ClosedLoop::new_parameterized(seed, faults, parameters)
-        .map_err(Phase5ObservedMissionError::Mission)?;
+    let (faults, sensors) = sensor_configuration(case);
+    run_phase5_mission_parameterized_observed(
+        case,
+        faults,
+        Phase5MissionParameters {
+            sensors,
+            ..Phase5MissionParameters::nominal(0x5a00_0000u32 | case as u32)
+        },
+        observer,
+    )
+}
+
+pub fn run_phase5_parameterized(
+    parameters: Phase5MissionParameters,
+) -> Result<Phase5MissionSummary, Phase5ClosedLoopError> {
+    match run_phase5_mission_parameterized_observed(
+        Phase5MissionCase::Nominal,
+        Phase5SensorFaults::default(),
+        parameters,
+        &mut NullObserver,
+    ) {
+        Ok(summary) => Ok(summary),
+        Err(Phase5ObservedMissionError::Mission(error)) => Err(error),
+        Err(Phase5ObservedMissionError::Observer(never)) => match never {},
+    }
+}
+
+pub fn run_phase5_mission_parameterized_observed<O: Phase5MissionObserver>(
+    case: Phase5MissionCase,
+    faults: Phase5SensorFaults,
+    parameters: Phase5MissionParameters,
+    observer: &mut O,
+) -> Result<Phase5MissionSummary, Phase5ObservedMissionError<O::Error>> {
+    if !parameters.is_valid() {
+        return Err(Phase5ObservedMissionError::Mission(
+            Phase5ClosedLoopError::Vehicle(
+                crate::phase5_vehicle::Phase5VehicleError::Configuration,
+            ),
+        ));
+    }
+    let mut loopback = Phase5ClosedLoop::new_with_parameters(
+        parameters.sensor_seed,
+        faults,
+        parameters.sensors,
+        parameters.vehicle,
+    )
+    .map_err(Phase5ObservedMissionError::Mission)?;
     observer
-        .observe_initial(case, seed, loopback.latest())
+        .observe_initial(case, parameters.sensor_seed, loopback.latest())
         .map_err(Phase5ObservedMissionError::Observer)?;
     if case == Phase5MissionCase::RcsLeakAndDepletion {
         loopback
@@ -169,9 +240,14 @@ pub fn run_phase5_mission_observed<O: Phase5MissionObserver>(
         } else {
             AttitudeControllerGains::REFERENCE_STAGE2
         };
-        let result = match loopback
-            .step_with_gains(reference_guidance_target_scaled(step, 100, 100), gains)
-        {
+        let result = match loopback.step_with_gains(
+            reference_guidance_target_scaled(
+                step,
+                parameters.guidance_pitch_percent,
+                parameters.guidance_downrange_percent,
+            ),
+            gains,
+        ) {
             Ok(value) => value,
             Err(Phase5ClosedLoopError::Vehicle(_)) => {
                 summary.outcome = Phase5MissionOutcome::NumericFault;

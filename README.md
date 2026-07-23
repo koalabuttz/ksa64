@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–4 are complete. Phase 5 is in progress: Gates 1–9 now provide the frozen 3-D numeric, world, vehicle, avionics, guidance, integrated mission, and KST5 telemetry foundation; deterministic spatial campaigns are next.
+> **Project status:** Phases 0–4 are complete. Phase 5 is in progress: Gates 1–10 now provide the frozen 3-D numeric, world, vehicle, avionics, guidance, integrated mission, KST5 telemetry, and spatial campaign foundation; target timing is next.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -142,15 +142,15 @@ powershell -File phase4/export-c64.ps1
 
 These commands validate checked-in artifacts; normal checks do not silently regenerate or replace frozen evidence.
 
-Phase 5 Gates 1–8 are checked with:
+Phase 5 Gates 1–10 are checked with:
 
 ```powershell
 powershell -File phase5/check.ps1
 ```
 
-## Next: Phase 5 Gate 10
+## Next: Phase 5 Gate 11
 
-The next gate adds deterministic spatial campaign variation and the reviewed 32/256-run evidence. REU history, target timing, and optimization remain later gates. Long C64 missions still require a measured projection and explicit confirmation; routine evidence uses native missions and bounded MOS/VICE probes.
+The next gate measures representative Phase 5 target paths and permits only evidence-driven optimization. Adaptive stock/REU history and presentation remain later gates. Long C64 missions still require a measured projection and explicit confirmation; routine evidence uses native missions and bounded MOS/VICE probes.
 
 ## Guiding principles
 

@@ -207,3 +207,19 @@ bounded rust-mos probe verifies the generated guidance signature. Full target
 missions are still excluded from routine validation until Gate 11 produces a
 fresh linked-size and elapsed-time projection and the user explicitly approves
 the run.
+## Accepted Phase 5 spatial-campaign validation
+
+Gate 10 verifies that run zero retains the Gate 8 nominal terminal state and all
+three avionics checksum chains. KSC5 and KSR5 round trips, keyed samples, and
+distribution bounds are tested natively; a finite rust-mos program checks the
+same configuration/sample/summary path with signature `0xc921a2d2` and a
+14,445-byte size-optimized image.
+
+The frozen seed `0x4b534135` produces a 32-run routine campaign and a 256-run
+reference campaign. Serial and eight-worker reference executions have identical
+KSC5 and KSR5 bytes; the ordered summary chain is `0x3103d833`. The independent
+Python parser reconstructs every variation checksum and computes float64 orbital
+elements directly from raw terminal vectors. It finds 180 stable-orbit
+classifications, 28 completed non-orbits, 48 safe aborts, and no numeric or
+step-limit failures. The abort population is retained as controller robustness
+evidence, not hidden by retuning during this gate.

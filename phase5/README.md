@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-9 complete; Gate 10 deterministic spatial campaigns is next.
+Status: Gates 1-10 complete; Gate 11 target timing and measured optimization is next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -65,8 +65,17 @@ verification, and a finite rust-mos codec probe. The nominal stream is 3,134
 frames and 1,328,912 bytes with CRC-32 `0xa9b3b94c`. See
 [TELEMETRY.md](TELEMETRY.md).
 
+## Spatial campaign evidence
+
+Gate 10 adds KSC5/KSR5 contracts, a reviewed 15-parameter spatial variation
+catalog, deterministic parallel host execution, independent draw/orbit
+reconstruction, and finite rust-mos sampling/codec evidence. The frozen 256-run
+campaign is byte-identical across serial and eight-worker execution. See
+[CAMPAIGNS.md](CAMPAIGNS.md).
+
 ## Next gate
 
-Gate 10 adds deterministic spatial campaign variation and the reviewed 32/256
-run evidence. Adaptive storage, target timing, and measured optimization remain
-later gates.
+Gate 11 measures the representative target mission, checksum, and telemetry
+paths before applying any optimization. Adaptive stock/REU history and
+presentation remain later work. A complete target mission still requires a
+fresh projection and explicit confirmation.

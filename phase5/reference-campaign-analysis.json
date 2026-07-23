@@ -1,0 +1,39 @@
+{
+  "format": "KSC5/KSR5",
+  "runs": 256,
+  "master_seed": "0x4b534135",
+  "config_crc32": "0x5402172a",
+  "config_sha256": "5885b96aaf8fba62b2fec51fa07d0149371cff7215407ca7aa343d427a7c55d4",
+  "summary_sha256": "4d8f3f03b8d2bcede65a7dab45245768e76f5d5488043ed22a902d247bef9ea9",
+  "ordered_summary_chain": "0x3103d833",
+  "outcomes": {
+    "stable_orbit": 180,
+    "complete_not_orbit": 28,
+    "aborted": 48,
+    "numeric_fault": 0,
+    "step_limit": 0
+  },
+  "authoritative_float64": {
+    "propagatable_runs": 208,
+    "perigee_range_km": [
+      35.88543849547568,
+      187.94435043115573
+    ],
+    "apogee_range_km": [
+      184.4265628148696,
+      396.59726670882355
+    ],
+    "inclination_range_deg": [
+      51.602236983995404,
+      51.629031035131334
+    ],
+    "stable_perigee_at_least_120_km": 184
+  },
+  "loads": {
+    "max_dynamic_pressure_kpa_range": [
+      41.965423583984375,
+      45.73802185058594
+    ],
+    "max_navigation_error_km": 0.69091796875
+  }
+}

@@ -323,3 +323,12 @@ floating-point runtime, or truth access is introduced. Six deterministic
 integrated missions now form the input to KST5 telemetry and later Phase 5
 campaign work.
 Phase 5 Gate 9 adds a KST5 observer to the single integrated spatial mission executor. The no-std simulation layer owns fixed 96-byte headers and 424-byte frames, including embedded sensor and command transports; the host layer owns allocation, file capture, stream sequencing, and presentation. A rolling observation checksum covers every committed mission-cadence record, while per-record and nested CRCs localize transport damage. Target evidence remains a bounded codec probe rather than a full mission.
+Phase 5 Gate 10 parameterizes the integrated vehicle and sensor boundary without
+forking the mission executor. The allocation-free campaign core derives each
+run independently from a master seed and run index, emits strict KSR5 summaries,
+and folds them canonically. The host may distribute complete runs across worker
+threads, but only ordered summaries enter the aggregate. An independent Python
+analyzer reconstructs every variation from KSC5 and computes float64 orbital
+evidence from raw terminal vectors. The target path is deliberately finite: it
+checks configuration, keyed sampling, and summary codecs without executing a
+multi-hour mission.
