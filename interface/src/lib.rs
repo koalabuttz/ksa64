@@ -114,7 +114,7 @@ pub struct SensorFrame {
     pub validity: u16,
     pub altitude_q12: i32,
     pub gps_radius_q12: i32,
-    pub gps_downrange_q30: i32,
+    pub gps_downrange_q32: i32,
     pub gps_radial_velocity_q24: i32,
     pub gps_tangential_velocity_q24: i32,
     pub events: u16,
@@ -133,7 +133,7 @@ impl SensorFrame {
         validity: 0,
         altitude_q12: 0,
         gps_radius_q12: 0,
-        gps_downrange_q30: 0,
+        gps_downrange_q32: 0,
         gps_radial_velocity_q24: 0,
         gps_tangential_velocity_q24: 0,
         events: 0,
@@ -166,7 +166,7 @@ pub struct FlightOutput {
     pub sequence: u32,
     pub nav_time_q20: i32,
     pub nav_radius_q12: i32,
-    pub nav_downrange_q30: i32,
+    pub nav_downrange_q32: i32,
     pub nav_radial_velocity_q24: i32,
     pub nav_tangential_velocity_q24: i32,
     pub nav_pitch: u16,
@@ -227,7 +227,7 @@ pub fn write_sensor_frame(f: &SensorFrame, o: &mut [u8]) -> Result<(), CodecErro
     put_u16(o, 22, f.validity);
     put_i32(o, 24, f.altitude_q12);
     put_i32(o, 28, f.gps_radius_q12);
-    put_i32(o, 32, f.gps_downrange_q30);
+    put_i32(o, 32, f.gps_downrange_q32);
     put_i32(o, 36, f.gps_radial_velocity_q24);
     put_i32(o, 40, f.gps_tangential_velocity_q24);
     put_u16(o, 44, f.events);
@@ -262,7 +262,7 @@ pub fn parse_sensor_frame(b: &[u8]) -> Result<SensorFrame, CodecError> {
         validity,
         altitude_q12: get_i32(b, 24),
         gps_radius_q12: get_i32(b, 28),
-        gps_downrange_q30: get_i32(b, 32),
+        gps_downrange_q32: get_i32(b, 32),
         gps_radial_velocity_q24: get_i32(b, 36),
         gps_tangential_velocity_q24: get_i32(b, 40),
         events,
@@ -318,7 +318,7 @@ pub fn write_flight_output(f: &FlightOutput, o: &mut [u8]) -> Result<(), CodecEr
     put_u32(o, 0, f.sequence);
     put_i32(o, 4, f.nav_time_q20);
     put_i32(o, 8, f.nav_radius_q12);
-    put_i32(o, 12, f.nav_downrange_q30);
+    put_i32(o, 12, f.nav_downrange_q32);
     put_i32(o, 16, f.nav_radial_velocity_q24);
     put_i32(o, 20, f.nav_tangential_velocity_q24);
     put_u16(o, 24, f.nav_pitch);
@@ -358,7 +358,7 @@ pub fn parse_flight_output(b: &[u8]) -> Result<FlightOutput, CodecError> {
         sequence,
         nav_time_q20: get_i32(b, 4),
         nav_radius_q12: get_i32(b, 8),
-        nav_downrange_q30: get_i32(b, 12),
+        nav_downrange_q32: get_i32(b, 12),
         nav_radial_velocity_q24: get_i32(b, 16),
         nav_tangential_velocity_q24: get_i32(b, 20),
         nav_pitch: get_u16(b, 24),

@@ -10,6 +10,7 @@ pub use ksa64_flight as flight;
 pub use ksa64_interface as interface;
 
 pub mod actuator;
+pub mod sensors;
 pub mod world;
 
 pub const PHASE3_SIM_CONTRACT_ID: u32 = 0x0300_0001;
