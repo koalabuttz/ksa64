@@ -113,7 +113,7 @@ fn smoke_campaign_64_is_ordered_and_repeatable() {
     assert_eq!(first.max_proper_acceleration_mps2.maximum, 55);
     assert_eq!(first.navigation_position_error_m.minimum, 1);
     assert_eq!(first.navigation_position_error_m.maximum, 47);
-    assert_eq!(first.summary_chain, 586_068_286);
+    assert_eq!(first.summary_chain, 0x1bbd_3c0b);
     assert_eq!(
         first.insertion_histogram,
         [64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

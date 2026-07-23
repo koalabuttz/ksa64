@@ -51,7 +51,7 @@ The reviewed smoke campaign uses master seed `0x4b534134`, 64 runs, and KSC4 CRC
 | maximum dynamic-pressure range | 40–43 kPa |
 | maximum proper-acceleration range | 54–55 m/s² |
 | navigation position-error range | 1–47 m |
-| ordered KSR4 summary chain | 586,068,286 |
+| ordered KSR4 summary chain | 465,386,507 |
 
 The nine suborbital insertions are expected sampled outcomes, not acceptance failures. The campaign’s purpose is to expose sensitivity while preserving deterministic execution.
 

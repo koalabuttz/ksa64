@@ -1,0 +1,70 @@
+{
+  "float64_orbits_authoritative": {
+    "apogee_altitude_km": {
+      "maximum": 256.83998644272924,
+      "mean": 206.17804654222525,
+      "minimum": 188.06512130727788
+    },
+    "counts": {
+      "escape": 0,
+      "impact": 1,
+      "stable": 934,
+      "suborbital": 89
+    },
+    "perigee_altitude_km": {
+      "maximum": 193.63092387367215,
+      "mean": 160.73952298421952,
+      "minimum": -4.843059419586098
+    }
+  },
+  "inputs": {
+    "campaign_identity": "0xa2e9e9d5",
+    "ksc4_sha256": "c7b2124c4b4b41e578bff3c4b55d9bc2c6b289dd2fae558c38d0809effd90506",
+    "ksr4_sha256": "5823615849f636adeb67a6dae17f384caff81fd5ace8c4ba9e7f8ee1f727bf46",
+    "master_seed": "0x4b534134",
+    "run_count": 1024
+  },
+  "loads": {
+    "maximum_dynamic_pressure_kpa": {
+      "maximum": 43.895721435546875,
+      "mean": 41.84528440237045,
+      "minimum": 39.905548095703125
+    },
+    "maximum_proper_acceleration_m_s2": {
+      "maximum": 55.633544921875,
+      "mean": 55.16372621059418,
+      "minimum": 54.6112060546875
+    }
+  },
+  "navigation": {
+    "position_error_m": {
+      "maximum": 62.744140625,
+      "mean": 21.759986877441406,
+      "minimum": 0.48828125
+    },
+    "velocity_error_m_s": {
+      "maximum": 9.177625179290771,
+      "mean": 8.612724079284817,
+      "minimum": 8.086204528808594
+    }
+  },
+  "reported_outcomes_non_authoritative": [
+    857,
+    166,
+    1,
+    0,
+    0,
+    0
+  ],
+  "run_zero_checksums": [
+    "0xc86045a0",
+    "0x47d11fb0",
+    "0xc6f9da7b",
+    "0x02ce28ef"
+  ],
+  "schema": "KSA64 phase4 independent campaign analysis v1",
+  "variation_reconstruction": {
+    "status": "exact",
+    "verified_runs": 1024
+  }
+}

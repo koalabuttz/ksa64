@@ -50,13 +50,13 @@ pub struct RunSummary {
     pub terminal_radius_q12: i32,
     pub terminal_downrange_q32: i32,
     pub terminal_radial_velocity_q24: i32,
-    pub terminal_angular_momentum_q22: i32,
+    pub terminal_angular_momentum_q14: i32,
     pub terminal_mass_q12: i32,
     pub cutoff_step: u32,
     pub cutoff_radius_q12: i32,
     pub cutoff_downrange_q32: i32,
     pub cutoff_radial_velocity_q24: i32,
-    pub cutoff_angular_momentum_q22: i32,
+    pub cutoff_angular_momentum_q14: i32,
     pub max_dynamic_pressure_q16: i32,
     pub max_proper_acceleration_q28: i32,
     pub navigation_position_error_q12: i32,
@@ -74,7 +74,7 @@ fn abs_i32(value: i32) -> i32 {
     value.checked_abs().unwrap_or(i32::MAX)
 }
 fn tangential_velocity_q24(state: PlanarTruthState) -> i32 {
-    let value = ((state.specific_angular_momentum().raw() as i64) << 14)
+    let value = ((state.specific_angular_momentum().raw() as i64) << 22)
         / state.radius().raw().max(1) as i64;
     value.clamp(i32::MIN as i64, i32::MAX as i64) as i32
 }
@@ -137,13 +137,13 @@ impl RunSummary {
             terminal_radius_q12: result.truth.radius().raw(),
             terminal_downrange_q32: result.truth.downrange().raw(),
             terminal_radial_velocity_q24: result.truth.radial_velocity().raw(),
-            terminal_angular_momentum_q22: result.truth.specific_angular_momentum().raw(),
+            terminal_angular_momentum_q14: result.truth.specific_angular_momentum().raw(),
             terminal_mass_q12: result.truth.total_mass().raw(),
             cutoff_step: result.cutoff_step,
             cutoff_radius_q12: result.cutoff_truth.radius().raw(),
             cutoff_downrange_q32: result.cutoff_truth.downrange().raw(),
             cutoff_radial_velocity_q24: result.cutoff_truth.radial_velocity().raw(),
-            cutoff_angular_momentum_q22: result.cutoff_truth.specific_angular_momentum().raw(),
+            cutoff_angular_momentum_q14: result.cutoff_truth.specific_angular_momentum().raw(),
             max_dynamic_pressure_q16: result.max_dynamic_pressure.raw(),
             max_proper_acceleration_q28: result.max_proper_acceleration.raw(),
             navigation_position_error_q12: position_error,
@@ -210,13 +210,13 @@ pub fn write_ksr4(summary: &RunSummary, out: &mut [u8]) -> Result<(), SummaryErr
     put_i32(out, 40, summary.terminal_radius_q12);
     put_i32(out, 44, summary.terminal_downrange_q32);
     put_i32(out, 48, summary.terminal_radial_velocity_q24);
-    put_i32(out, 52, summary.terminal_angular_momentum_q22);
+    put_i32(out, 52, summary.terminal_angular_momentum_q14);
     put_i32(out, 56, summary.terminal_mass_q12);
     put_u32(out, 60, summary.cutoff_step);
     put_i32(out, 64, summary.cutoff_radius_q12);
     put_i32(out, 68, summary.cutoff_downrange_q32);
     put_i32(out, 72, summary.cutoff_radial_velocity_q24);
-    put_i32(out, 76, summary.cutoff_angular_momentum_q22);
+    put_i32(out, 76, summary.cutoff_angular_momentum_q14);
     put_i32(out, 80, summary.max_dynamic_pressure_q16);
     put_i32(out, 84, summary.max_proper_acceleration_q28);
     put_i32(out, 88, summary.navigation_position_error_q12);
@@ -263,13 +263,13 @@ pub fn parse_ksr4(bytes: &[u8]) -> Result<RunSummary, SummaryError> {
         terminal_radius_q12: get_i32(bytes, 40),
         terminal_downrange_q32: get_i32(bytes, 44),
         terminal_radial_velocity_q24: get_i32(bytes, 48),
-        terminal_angular_momentum_q22: get_i32(bytes, 52),
+        terminal_angular_momentum_q14: get_i32(bytes, 52),
         terminal_mass_q12: get_i32(bytes, 56),
         cutoff_step: get_u32(bytes, 60),
         cutoff_radius_q12: get_i32(bytes, 64),
         cutoff_downrange_q32: get_i32(bytes, 68),
         cutoff_radial_velocity_q24: get_i32(bytes, 72),
-        cutoff_angular_momentum_q22: get_i32(bytes, 76),
+        cutoff_angular_momentum_q14: get_i32(bytes, 76),
         max_dynamic_pressure_q16: get_i32(bytes, 80),
         max_proper_acceleration_q28: get_i32(bytes, 84),
         navigation_position_error_q12: get_i32(bytes, 88),
