@@ -240,3 +240,19 @@ Gate 12 requires exact equality between recording-disabled and KPH5-observed mis
 ## Accepted Phase 5 mission-control replay validation
 
 Gate 13 requires native KPH5 replay to reject corruption and identity substitution and to reproduce the frozen 99-point extrema/event summary. A naturally terminating setup phase in the 6,252-byte stock PRG validates the tape before rendering. PAL VICE checks all 1,000 screen bytes, key rows, plot population, pass marker, and cue hash `0x3b2fb64b`. The PRG loads only through `$206B`; no physics or campaign run is started.
+
+## Accepted Phase 5 completion validation
+
+Gate 14 combines the inherited Phase 4 evidence check with every Phase 5
+generator, independent parser/analyzer, native regression, finite rust-mos
+probe, PAL REU capacity case, stock replay, and three-run target timing gate.
+Every checked-in Phase 5 SHA-256 sidecar is verified after those behavioral
+checks. The audit is bounded and deliberately does not launch a complete target
+mission or campaign.
+
+The final evidence supports implementation verification and declared learning
+objectives, not certification or correlation to a physical launch vehicle.
+KSA-5A uses simplified gravity/environment, aerodynamic, flexible-body,
+actuator, sensor, and guidance models. Campaign frequencies are results under
+reviewed synthetic distributions rather than real-world probability claims.
+`phase5/COMPLETION.md` freezes the accepted measurements and limitations.

@@ -342,3 +342,18 @@ exactness as routine evidence.
 Phase 5 Gate 12 introduces a second, explicitly noncanonical observation tier. KPH5 reduces a mission to bounded 16-byte spatial points for stock-C64 plotting, while KST5 remains authoritative. A stock retention reducer keeps aggregates plus five deterministic summaries. The same selection policy feeds capacity-scaled REU reruns. KRA5 is append-only and independently versioned; the shared REU DMA implementation serves KRA4 and KRA5, but neither archive API is visible to the physics, sensor, navigation, guidance, or sequencing layers.
 
 Phase 5 Gate 13 consumes KPH5 through a portable strict replay reducer and a target-only presentation adapter. The reducer revalidates both CRC layers and run identity, then derives bounded extrema and event-cue evidence. The C64 adapter performs no dynamics and projects the already quantized Y–Z history with fixed shifts. VICE accepts the adapter only from the complete screen image and cue hash; KST5 remains the canonical flight record.
+
+## Accepted Phase 5 completion boundary
+
+Phase 5 closes with one accepted single-machine composition and several
+strictly observational evidence paths. The same portable spatial world,
+transport-isolated flight code, mission executor, KST5 observer, KSC5/KSR5
+campaign layer, and KPH5/KRA5 storage contracts compile natively and through
+the pinned rust-mos target. Optional storage and target presentation remain
+outside the causal simulation path.
+
+This composition becomes the Phase 6 regression oracle. A future physical
+world/flight split must transport the existing bounded measurements and
+commands, make added latency explicit, and preserve one model implementation.
+Link framing, timeouts, replay, and electrical behavior are new adapters; they
+are not permission to duplicate truth or guidance algorithms.

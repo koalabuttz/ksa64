@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-13 complete; Gate 14 completion audit and Phase 6 handoff are next.
+Status: complete. All fourteen gates pass the bounded completion audit; Phase 6 is ready for planning.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -88,6 +88,14 @@ Gate 12 adds strict KPH5 compact spatial histories, deterministic stock retentio
 
 Gate 13 adds strict native KPH5 replay plus a 6,252-byte stock-C64 mission-control page. VICE freezes the complete screen, trajectory plot population, and SID cue schedule. See [REPLAY.md](REPLAY.md).
 
-## Next gate
+## Completion
 
-Gate 14 performs the Phase 5 completion audit and records the Phase 6 handoff. A complete target mission still requires a fresh projection and explicit confirmation.
+Gate 14 freezes the [completion audit](COMPLETION.md) and records the
+[Phase 6 handoff](PHASE6_HANDOFF.md). Run the bounded audit with:
+
+```powershell
+powershell -File phase5/complete.ps1
+```
+
+A complete target mission still requires a fresh projection and explicit
+confirmation. The completion runner never starts one.

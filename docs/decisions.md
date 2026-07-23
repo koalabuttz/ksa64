@@ -833,3 +833,21 @@ Simulation-rate requirements remain phase- and evidence-specific rather than one
 **Decision.** Use the already strict, bounded KPH5 stream as the stock mission-control tape. Add a portable reducer for identity, extrema, events, and cue hashing, then a C64-only VIC-II/SID adapter. Project quantized Y–Z coordinates with fixed shifts and reviewed bounds. Do not derive a second replay format and do not recompute dynamics for display.
 
 **Reason.** The complete KPH5 baseline is only 1,664 bytes and already binds its source run through two CRC layers. Direct replay avoids redundant formats, fits far below stock-RAM limits, and keeps visualization clearly subordinate to KST5 and independent physical analysis.
+
+## D-063: Complete Phase 5 with bounded target evidence
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Close Phase 5 only after one runner validates inherited Phase 4 evidence, every
+Phase 5 independent/native gate, all finite rust-mos and PAL VICE probes, and
+all frozen artifact hashes. Do not make a complete C64 mission or campaign an
+exit criterion: the accepted conservative projection is 19.69 hours for one
+nominal mission, 26.26 days for 32 runs, and 210.07 days for 256 runs.
+
+Treat the accepted single-machine world/flight composition as the Phase 6
+regression oracle. Phase 6 may add framed physical transport, explicit latency,
+timeouts, and replay, but it may not duplicate the physics or expose truth to
+flight software. Leave the electrical transport and multi-machine scheduling
+contract open for dedicated planning.

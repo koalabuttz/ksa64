@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–4 are complete. Phase 5 is in progress: Gates 1–13 now provide the frozen 3-D numeric, world, vehicle, avionics, guidance, integrated mission, KST5 telemetry, spatial campaigns, measured PAL target evidence, adaptive stock/REU history, and verified stock-C64 mission-control replay; the completion audit is next.
+> **Project status:** Phases 0–5 are complete. KSA64 now provides the frozen 3-D numeric, world, vehicle, avionics, guidance, integrated mission, KST5 telemetry, spatial campaigns, measured PAL target evidence, adaptive stock/REU history, and verified stock-C64 mission-control replay. Phase 6, Commodore-in-the-loop, is ready for planning.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -81,7 +81,7 @@ That future Commodore-in-the-loop arrangement is Phase 6 work. The current porta
 | 2 — Planar ascent | Rotating-Earth KSA-2A multistage ascent, atmosphere and drag, orbital insertion/failure cases, KST2 evidence, and PETSCII/SID replay. |
 | 3 — Closed-loop avionics | Truth-isolated sensors, navigation, guidance, sequencing, actuator feedback, deterministic faults, KST3/KRP3, and bounded C64 probes. |
 | 4 — Statistical analysis | Deterministic campaigns, KSR4 summaries, independent float64 analysis, stock/REU storage, interactive UI, KRA4 archives, and KXV4 disk export. |
-| 5 — 3-D dynamics (in progress) | Gates 1–13: spatial numeric/world models, rigid and flexible dynamics, multirate KSA-5A vehicle, strict avionics, integrated missions, KST5, spatial campaigns, PAL target timing, adaptive spatial history, and stock-C64 replay. |
+| 5 — 3-D dynamics | Spatial numeric/world models, rigid and flexible dynamics, multirate KSA-5A vehicle, strict avionics, integrated missions, KST5, spatial campaigns, PAL target timing, adaptive spatial history, and stock-C64 replay pass the completion audit. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 
@@ -105,7 +105,7 @@ The C64 accuracy-first closed-loop path is intentionally slower than real time. 
 - [Phase 2](phase2/README.md) and [completion audit](phase2/COMPLETION.md)
 - [Phase 3](phase3/README.md) and [completion audit](phase3/COMPLETION.md)
 - [Phase 4](phase4/README.md) and [completion audit](phase4/COMPLETION.md)
-- [Phase 5](phase5/README.md), including [spatial avionics](phase5/AVIONICS.md)
+- [Phase 5](phase5/README.md), [completion audit](phase5/COMPLETION.md), and [Phase 6 handoff](phase5/PHASE6_HANDOFF.md)
 
 ### Phase 4 detail
 
@@ -142,15 +142,23 @@ powershell -File phase4/export-c64.ps1
 
 These commands validate checked-in artifacts; normal checks do not silently regenerate or replace frozen evidence.
 
-Phase 5 Gates 1–13 are checked with:
+The complete bounded Phase 5 audit is:
 
 ```powershell
-powershell -File phase5/check.ps1
+powershell -File phase5/complete.ps1
 ```
 
-## Next: Phase 5 Gate 14
+It validates native and independent evidence plus finite MOS/VICE probes. It
+does not start a complete C64 mission or campaign.
 
-The next gate performs the Phase 5 completion audit and records the Phase 6 handoff. The measured conservative full target mission projection is 19.69 hours, so long C64 missions still require explicit confirmation; routine evidence uses native missions and bounded MOS/VICE probes.
+## Next: plan Phase 6
+
+Phase 6 will split the world, flight software, and eventually mission control
+across physical Commodore computers. The [handoff](phase5/PHASE6_HANDOFF.md)
+records the inherited boundaries and recommends a deterministic host loopback
+before selecting the electrical transport. The conservative full target mission
+projection remains 19.69 hours, so long C64 runs still require explicit
+confirmation.
 
 ## Guiding principles
 

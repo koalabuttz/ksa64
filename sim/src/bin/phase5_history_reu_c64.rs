@@ -22,8 +22,8 @@ unsafe fn finish(
     preserved: bool,
     plan: Option<Phase5StoragePlan>,
 ) -> ! {
-    for (n, b) in b"H5P0".iter().enumerate() {
-        core::ptr::write_volatile(RESULT.add(n), *b)
+    for n in 0..4 {
+        core::ptr::write_volatile(RESULT.add(n), 0)
     }
     u16at(4, 1);
     u16at(6, status);
@@ -36,6 +36,9 @@ unsafe fn finish(
         u16at(22, p.compact_histories as u16);
         u32at(24, p.used_bytes);
         u32at(28, p.free_bytes)
+    }
+    for (n, b) in b"H5P0".iter().enumerate() {
+        core::ptr::write_volatile(RESULT.add(n), *b)
     }
     core::ptr::write_volatile(BORDER, if status == 0 { 5 } else { 2 });
     loop {}

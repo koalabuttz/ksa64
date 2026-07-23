@@ -55,5 +55,5 @@ KRA5 is independent of KRA4 and binds a new Phase 5 contract. Records are writte
 - Native tests freeze the KPH5 codec, corruption rejection, exact observer neutrality, stock selection, all capacity plans, KRA5 commit/recovery, and manual REU disable/capping.
 - `verify_history.py` independently parses the frozen KPH5 and KSR5 bytes, reconstructs selection and storage allocation, and checks both CRC layers.
 - A finite rust-mos probe freezes signature `0xb5783bf2`; its size-optimized image is 5,917 bytes.
-- A separate 4,485-byte PAL VICE probe detects no REU and every 128 KiB–16 MiB tier, preserves pre-existing bytes, and matches the independent allocation table exactly.
+- A separate 4,491-byte PAL VICE probe detects no REU and every 128 KiB–16 MiB tier, preserves pre-existing bytes, publishes its result marker last, and matches the independent allocation table exactly.
 - No complete target mission or target campaign is part of this gate.

@@ -123,7 +123,7 @@ Exit criteria:
 
 ## Phase 5: three-dimensional rigid-body dynamics
 
-Status: ready for planning. Phase 4 satisfies the maturity prerequisites, but no Phase 5 simulator implementation exists yet.
+Status: complete. Spatial translation, rigid and reduced flexible dynamics, multirate vehicle behavior, strict avionics, truth-isolated guidance, integrated mission and campaign evidence, adaptive history, measured target probes, and stock replay pass the completion audit. See `phase5/COMPLETION.md`.
 
 Purpose: add attitude dynamics only after the translational architecture is stable.
 
@@ -151,6 +151,11 @@ Exit criteria:
 ## Phase 6: Commodore-in-the-loop
 
 Purpose: split the architecture across physical computers.
+
+Status: ready for planning. Phase 5 leaves fixed-width world/flight transports,
+deterministic replay, finite target probes, and a single-machine regression
+oracle. No physical transport or scheduling contract is frozen yet; see
+`phase5/PHASE6_HANDOFF.md`.
 
 Possible configurations:
 

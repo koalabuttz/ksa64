@@ -14,6 +14,9 @@ try {
  if($LASTEXITCODE-ne 0){throw "Phase 5 REU matrix failed"}
  $actual=[IO.File]::ReadAllBytes((Join-Path $root "target/phase5-history-reu-matrix-v1.json"))
  $expected=[IO.File]::ReadAllBytes((Join-Path $root "phase5/history-reu-matrix-v1.json"))
- if(-not [Linq.Enumerable]::SequenceEqual[byte]($actual,$expected)){throw "Phase 5 REU matrix differs from frozen evidence"}
+ if($actual.Length-ne $expected.Length){throw "Phase 5 REU matrix differs from frozen evidence"}
+ for($index=0;$index-lt $actual.Length;$index++){
+  if($actual[$index]-ne $expected[$index]){throw "Phase 5 REU matrix differs from frozen evidence"}
+ }
  Write-Host "PHASE 5 HISTORY REU MATRIX: PASS"
 } finally {Pop-Location}
