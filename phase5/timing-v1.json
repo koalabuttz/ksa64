@@ -1,0 +1,76 @@
+{
+  "schema": "ksa64.phase5.c64-timing-v1",
+  "target": "PAL C64 via pinned x64sc 3.10",
+  "clock_hz": 985248,
+  "mission_steps": 3133,
+  "runs": 3,
+  "stable": true,
+  "rust_mos_image": "ghcr.io/koalabuttz/rust-mos@sha256:9ddd4ce9502e54409fb56e0a80a2200f1df693a629f2911ff4f1c81303e51271",
+  "vice_sha256": "b48f9117916e960ca6a59ca32bc63765f9b30f2b6bb3ef056514c8bcce0a7030",
+  "artifacts": {
+    "vehicle": {
+      "bytes": 37970,
+      "sha256": "5b504d878a14d7175e180506965e8b231b45965e2824b5ae28fdd79159dadc5c",
+      "load_address": 2049,
+      "load_end_exclusive": 40017,
+      "stock_ram_fit": true
+    },
+    "avionics": {
+      "bytes": 46943,
+      "sha256": "8fb91b18aebee09c126e971e3c856117b8b78764ad85a7a8aa1ab6a751ff52d6",
+      "load_address": 2049,
+      "load_end_exclusive": 48990,
+      "stock_ram_fit": true
+    },
+    "telemetry": {
+      "bytes": 10290,
+      "sha256": "39736b7a3916b493401af9b3fa2ae996cb01c24485e85944a0685c2e2991a890",
+      "load_address": 2049,
+      "load_end_exclusive": 12337,
+      "stock_ram_fit": true
+    }
+  },
+  "cycles": {
+    "vehicle": {
+      "cycles": 15565702,
+      "boundary_overhead": 24,
+      "runs": 3
+    },
+    "avionics": {
+      "cycles": 2579033,
+      "boundary_overhead": 24,
+      "runs": 3
+    },
+    "telemetry": {
+      "cycles": 2124185,
+      "boundary_overhead": 24,
+      "runs": 3
+    },
+    "composed_per_mission_step": 20268920
+  },
+  "full_nominal_decision": {
+    "method": "vehicle plus avionics plus canonical telemetry, with 10 percent projection margin",
+    "projected_real_pal_seconds": 64453.3420621001,
+    "conservative_seconds": 70898.67626831011,
+    "limit_seconds": 1800,
+    "eligible": false,
+    "action": "finite probes plus native mission evidence"
+  },
+  "routine_campaign_32_projected_days": 26.258768988263004,
+  "reference_campaign_256_projected_days": 210.07015190610403,
+  "native_expected": {
+    "vehicle_step": 1,
+    "vehicle_position": [
+      22958965,
+      208,
+      12465701
+    ],
+    "sensor_checksum": 4073534812,
+    "navigation_checksum": 1521188003,
+    "flight_checksum": 3588158244,
+    "command_crc32": 3791117443,
+    "observation_checksum": 1528934227,
+    "telemetry_crc32": 128476697,
+    "telemetry_bytes": 424
+  }
+}

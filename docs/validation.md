@@ -223,3 +223,12 @@ elements directly from raw terminal vectors. It finds 180 stable-orbit
 classifications, 28 completed non-orbits, 48 safe aborts, and no numeric or
 step-limit failures. The abort population is retained as controller robustness
 evidence, not hidden by retuning during this gate.
+## Accepted Phase 5 target-timing validation
+
+Gate 11 uses three stock-compatible, naturally terminating PAL VICE programs.
+Every target result agrees with the native exact-arithmetic probe, and three
+runs produce identical cycle counts. Vehicle, avionics, and telemetry cost
+15,565,702, 2,579,033, and 2,124,185 cycles respectively. Their conservative
+sum projects the nominal mission to 19.69 hours, so no full target mission was
+started. The accepted minor fast path preserves all frozen artifacts; a second
+candidate was reverted after a rust-mos-only inertia divergence.

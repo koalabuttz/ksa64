@@ -793,6 +793,25 @@ byte-identical with ordered KSR5 chain `0x3103d833`. Independent reconstruction
 finds no numeric or step-limit failures. Preserve the 48 safe aborts as evidence
 that the frozen controller is sensitive to reviewed actuator dispersion; do not
 tune them away before the target timing gate measures representative kernels.
+## D-060: Measure Phase 5 as split stock-compatible kernels
+
+Date: 2026-07-23
+
+Status: accepted.
+
+Measure the four-substep vehicle, spatial avionics, and canonical KST5 observer
+as separate naturally terminating PAL C64 executables. Require every executable
+to fit below `$c000`, repeat each measurement three times, and compare its exact
+outputs with a native build. Sum the regions and add a ten-percent margin for
+the full-mission decision. A monolithic timing image is not a stock-memory
+requirement.
+
+The final measured sum is 20,268,920 cycles per 0.125-second mission step. A
+3,133-step nominal mission projects to 17.90 hours, or 19.69 hours with margin,
+so it is not eligible for automatic execution and was not started. Accept the
+exact zero-variation scale fast path, which saves 30,264 cycles per step. Reject
+and revert the faster stage-inertia division because rust-mos telemetry exposed
+native/target divergence. Never cancel a run for timing evidence.
 ## Open decisions
 
 The following remain deliberately unresolved:

@@ -144,16 +144,12 @@ impl<'a, S: Phase5TelemetrySink> Phase5TelemetryObserver<'a, S> {
     }
     fn emit(
         &mut self,
-        mut frame: Phase5TelemetryFrame,
+        frame: Phase5TelemetryFrame,
     ) -> Result<(), Phase5TelemetryObserverError<S::Error>> {
-        frame.observation_checksum = 0;
         let mut bytes = [0u8; PHASE5_TELEMETRY_FRAME_LENGTH];
-        write_phase5_telemetry_frame(&frame, &mut bytes)
-            .map_err(Phase5TelemetryObserverError::Codec)?;
-        self.observation_checksum = hash_bytes(self.observation_checksum, &bytes[..412]);
-        frame.observation_checksum = self.observation_checksum;
-        write_phase5_telemetry_frame(&frame, &mut bytes)
-            .map_err(Phase5TelemetryObserverError::Codec)?;
+        self.observation_checksum =
+            encode_phase5_telemetry_observation(frame, self.observation_checksum, &mut bytes)
+                .map_err(Phase5TelemetryObserverError::Codec)?;
         self.sink
             .write_frame(&bytes)
             .map_err(Phase5TelemetryObserverError::Sink)
@@ -206,6 +202,18 @@ pub fn run_phase5_mission_with_telemetry<S: Phase5TelemetrySink>(
             Err(Phase5TelemetryRunError::Sink(e))
         }
     }
+}
+pub fn encode_phase5_telemetry_observation(
+    mut frame: Phase5TelemetryFrame,
+    previous_checksum: u32,
+    out: &mut [u8; PHASE5_TELEMETRY_FRAME_LENGTH],
+) -> Result<u32, Phase5TelemetryError> {
+    frame.observation_checksum = 0;
+    write_phase5_telemetry_frame(&frame, out)?;
+    let checksum = hash_bytes(previous_checksum, &out[..412]);
+    frame.observation_checksum = checksum;
+    write_phase5_telemetry_frame(&frame, out)?;
+    Ok(checksum)
 }
 pub fn write_phase5_telemetry_header(
     header: Phase5TelemetryHeader,
@@ -468,7 +476,7 @@ pub fn parse_phase5_telemetry_frame(
     })
 }
 
-pub(crate) fn initial_frame(s: Phase5VehicleSnapshot) -> Phase5TelemetryFrame {
+pub fn initial_frame(s: Phase5VehicleSnapshot) -> Phase5TelemetryFrame {
     let mut sensor = SpatialSensorFrame::ZERO;
     sensor.rcs_propellant_q12 = s.rcs_propellant_q12;
     sensor.active_stage = s.truth.active_stage();
@@ -486,7 +494,7 @@ pub(crate) fn initial_frame(s: Phase5VehicleSnapshot) -> Phase5TelemetryFrame {
         false,
     )
 }
-fn frame_from_step(s: Phase5ClosedLoopStep, terminal: bool) -> Phase5TelemetryFrame {
+pub fn frame_from_step(s: Phase5ClosedLoopStep, terminal: bool) -> Phase5TelemetryFrame {
     frame_from_parts(
         s.vehicle,
         s.sensor,

@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-10 complete; Gate 11 target timing and measured optimization is next.
+Status: Gates 1-11 complete; Gate 12 adaptive stock/REU history is next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -73,9 +73,15 @@ reconstruction, and finite rust-mos sampling/codec evidence. The frozen 256-run
 campaign is byte-identical across serial and eight-worker execution. See
 [CAMPAIGNS.md](CAMPAIGNS.md).
 
+## Target timing
+
+Gate 11 measures separate stock-compatible vehicle, avionics, and telemetry
+paths. Their conservative sum projects a full target mission to 19.69 hours, so
+no full mission was started. One exact zero-variation fast path was accepted and
+a native/MOS-divergent inertia candidate was rejected. See [TIMING.md](TIMING.md).
+
 ## Next gate
 
-Gate 11 measures the representative target mission, checksum, and telemetry
-paths before applying any optimization. Adaptive stock/REU history and
-presentation remain later work. A complete target mission still requires a
-fresh projection and explicit confirmation.
+Gate 12 adds adaptive stock/REU history retention while keeping storage fully
+observational. A complete target mission still requires a fresh projection and
+explicit confirmation.

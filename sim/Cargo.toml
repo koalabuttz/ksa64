@@ -65,3 +65,15 @@ required-features = ["sim"]
 name = "ksa64-phase5-campaign-sim"
 path = "src/bin/phase5_campaign_sim.rs"
 required-features = ["sim"]
+[[bin]]
+name = "ksa64-phase5-vehicle-timed-c64"
+path = "src/bin/phase5_vehicle_timed_c64.rs"
+required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase5-avionics-timed-c64"
+path = "src/bin/phase5_avionics_timed_c64.rs"
+required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase5-telemetry-timed-c64"
+path = "src/bin/phase5_telemetry_timed_c64.rs"
+required-features = ["c64"]

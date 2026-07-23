@@ -286,6 +286,9 @@ pub fn ksa5a_stage(index: u8) -> Option<Phase5StageConfig> {
 }
 
 fn scale_ppm(value: i32, delta_ppm: i32, status: &mut NumericStatus) -> i32 {
+    if delta_ppm == 0 {
+        return value;
+    }
     let scaled = (value as i64 * (1_000_000i64 + delta_ppm as i64)) / 1_000_000i64;
     if scaled < i32::MIN as i64 || scaled > i32::MAX as i64 {
         status.record(NumericFault::Saturation);
@@ -839,20 +842,34 @@ impl Phase5VehicleMachine {
             ),
             status,
         );
-        let combined_aero_ppm = (((1_000_000i64 + self.parameters.atmosphere_density_ppm as i64)
-            * (1_000_000i64 + self.parameters.aerodynamic_scale_ppm as i64))
-            / 1_000_000i64
-            - 1_000_000i64) as i32;
-        let aero_force_eci = ForceVec::new(
-            scale_ppm(aero.force_eci().x(), combined_aero_ppm, status),
-            scale_ppm(aero.force_eci().y(), combined_aero_ppm, status),
-            scale_ppm(aero.force_eci().z(), combined_aero_ppm, status),
-        );
-        let aero_torque_body = TorqueVec::new(
-            scale_ppm(aero.torque_body().x(), combined_aero_ppm, status),
-            scale_ppm(aero.torque_body().y(), combined_aero_ppm, status),
-            scale_ppm(aero.torque_body().z(), combined_aero_ppm, status),
-        );
+        let combined_aero_ppm = match (
+            self.parameters.atmosphere_density_ppm,
+            self.parameters.aerodynamic_scale_ppm,
+        ) {
+            (0, aerodynamic) => aerodynamic,
+            (density, 0) => density,
+            (density, aerodynamic) => {
+                (((1_000_000i64 + density as i64) * (1_000_000i64 + aerodynamic as i64))
+                    / 1_000_000i64
+                    - 1_000_000i64) as i32
+            }
+        };
+        let (aero_force_eci, aero_torque_body) = if combined_aero_ppm == 0 {
+            (aero.force_eci(), aero.torque_body())
+        } else {
+            (
+                ForceVec::new(
+                    scale_ppm(aero.force_eci().x(), combined_aero_ppm, status),
+                    scale_ppm(aero.force_eci().y(), combined_aero_ppm, status),
+                    scale_ppm(aero.force_eci().z(), combined_aero_ppm, status),
+                ),
+                TorqueVec::new(
+                    scale_ppm(aero.torque_body().x(), combined_aero_ppm, status),
+                    scale_ppm(aero.torque_body().y(), combined_aero_ppm, status),
+                    scale_ppm(aero.torque_body().z(), combined_aero_ppm, status),
+                ),
+            )
+        };
         let dynamic_pressure_q16 = scale_ppm(
             aero.dynamic_pressure().raw(),
             self.parameters.atmosphere_density_ppm,

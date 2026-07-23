@@ -152,4 +152,5 @@ if (-not $SkipMos) {
         & $rustWrapper -WorkingDirectory . sh -lc `
             "mos-sim target/mos-sim-none/c64/ksa64-phase5-campaign-sim"
     }
+    Invoke-Gate { & .\phase5\timing.ps1 -Runs 3 }
 }

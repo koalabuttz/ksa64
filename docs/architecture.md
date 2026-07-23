@@ -332,3 +332,9 @@ analyzer reconstructs every variation from KSC5 and computes float64 orbital
 evidence from raw terminal vectors. The target path is deliberately finite: it
 checks configuration, keyed sampling, and summary codecs without executing a
 multi-hour mission.
+Phase 5 Gate 11 measures the vehicle, avionics, and telemetry boundaries in
+separate stock-compatible executables because their combined timing image does
+not fit the base machine. The regions are additive at the mission boundary and
+are checked against one native exact-value oracle. The resulting projection
+keeps long execution behind explicit user approval while retaining finite target
+exactness as routine evidence.
