@@ -1,0 +1,143 @@
+{
+  "contract": "ksa64.vehicle.phase5-v1",
+  "portable_signature": "0x21e55663",
+  "payload_mass_q12": 49152,
+  "initial_total_mass_q12": 2187264,
+  "fast_step_q16": 2048,
+  "substeps": 4,
+  "gimbal_limit_q16": 6863,
+  "gimbal_slew_per_fast_step_q16": 286,
+  "gimbal_lag_steps": 4,
+  "rcs_propellant_q12": 410,
+  "rcs_max_torque_q16": 5243,
+  "rcs_max_axis_mass_flow_q24": 155527,
+  "component_vectors": {
+    "gimbal_positive_lagged_applied_q16": [
+      [
+        1715,
+        286
+      ],
+      [
+        4691,
+        1144
+      ],
+      [
+        6175,
+        2288
+      ]
+    ],
+    "stage_inertia_half_q12": [
+      [
+        6094879,
+        185455973,
+        185455973
+      ],
+      [
+        404121,
+        8667127,
+        8667127
+      ]
+    ],
+    "rcs_full_axis_one_mission_consumed_q12": 4
+  },
+  "initial_attitude_q30": [
+    1040703765,
+    0,
+    -264305086,
+    0
+  ],
+  "flex_bend_drive_gain_q16": 1311,
+  "flex_slosh_drive_gain_q16": 3277,
+  "stages": [
+    {
+      "id": "s1",
+      "dry_mass_q12": 122880,
+      "propellant_mass_q12": 1638400,
+      "thrust_q12": 31130,
+      "mass_flow_q16": 169083,
+      "burn_mission_steps": 1240,
+      "separation_delay_steps": 8,
+      "ignition_delay_steps": 0,
+      "gimbal_arm_q16": 1310720,
+      "area_q16": 1835008,
+      "normal_slope_q14": 32768,
+      "cp_aft_q16": 393216,
+      "rate_damping_q16": 11796,
+      "inertia_wet_q12": [
+        9744507,
+        296507454,
+        296507454
+      ],
+      "inertia_dry_q12": [
+        2445251,
+        74404492,
+        74404492
+      ],
+      "bend_omega_q16": 494130,
+      "bend_zeta_q16": 983,
+      "slosh_omega_q16": 185299,
+      "slosh_zeta_q16": 1966,
+      "aero_mach_q16": [
+        0,
+        52429,
+        65536,
+        78643,
+        131072,
+        327680,
+        1638400
+      ],
+      "aero_cd_q14": [
+        4915,
+        5898,
+        9011,
+        10158,
+        6554,
+        4096,
+        3277
+      ]
+    },
+    {
+      "id": "s2",
+      "dry_mass_q12": 32768,
+      "propellant_mass_q12": 344064,
+      "thrust_q12": 4506,
+      "mass_flow_q16": 22938,
+      "burn_mission_steps": 1920,
+      "separation_delay_steps": 0,
+      "ignition_delay_steps": 4,
+      "gimbal_arm_q16": 589824,
+      "area_q16": 655360,
+      "normal_slope_q14": 26214,
+      "cp_aft_q16": 196608,
+      "rate_damping_q16": 7864,
+      "inertia_wet_q12": [
+        677880,
+        14538407,
+        14538407
+      ],
+      "inertia_dry_q12": [
+        130362,
+        2795847,
+        2795847
+      ],
+      "bend_omega_q16": 741195,
+      "bend_zeta_q16": 1311,
+      "slosh_omega_q16": 288242,
+      "slosh_zeta_q16": 2621,
+      "aero_mach_q16": [
+        0,
+        65536,
+        131072,
+        327680,
+        1638400
+      ],
+      "aero_cd_q14": [
+        4096,
+        7373,
+        4915,
+        3277,
+        2949
+      ]
+    }
+  ]
+}

@@ -79,7 +79,10 @@ pub use phase2_telemetry_self_test::run_phase2_telemetry_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase5_flexible_self_test::run_phase5_flexible_self_tests;
 #[cfg(feature = "fixtures")]
-pub use phase5_rigid_self_test::run_phase5_rigid_self_tests;
+pub use phase5_rigid_self_test::{
+    run_phase5_rigid_asymmetric_self_test, run_phase5_rigid_self_tests,
+    run_phase5_rigid_spherical_self_test,
+};
 #[cfg(feature = "fixtures")]
 pub use phase5_spatial_self_test::run_phase5_spatial_self_tests;
 #[cfg(feature = "fixtures")]

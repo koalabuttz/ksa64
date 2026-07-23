@@ -1,5 +1,7 @@
 use crate::numeric::NumericStatus;
-use crate::rigid_body::{step_rigid_body, DiagonalInertiaQ12, RigidBodyState};
+use crate::rigid_body::{
+    angular_acceleration, step_rigid_body, DiagonalInertiaQ12, RigidBodyState,
+};
 use crate::spatial_numeric::{AngularRateVec, QuaternionQ30, TorqueVec};
 
 #[allow(dead_code)]
@@ -15,82 +17,85 @@ fn failure(value: bool) -> u32 {
         1
     }
 }
-fn inertia(raw: [i32; 3]) -> DiagonalInertiaQ12 {
-    DiagonalInertiaQ12::new(raw[0], raw[1], raw[2])
-}
-fn rate(raw: [i32; 3]) -> AngularRateVec {
-    AngularRateVec::new(raw[0], raw[1], raw[2])
-}
-fn torque(raw: [i32; 3]) -> TorqueVec {
-    TorqueVec::new(raw[0], raw[1], raw[2])
-}
-fn attitude(raw: [i32; 4]) -> QuaternionQ30 {
-    QuaternionQ30::new(raw[0], raw[1], raw[2], raw[3])
-}
 
 #[inline(never)]
-fn spherical_probe() -> u32 {
-    let mut failures = 0u32;
+fn probe(case: u8) -> u32 {
+    let (state, inertia_raw, torque_raw, q_expected, rate_expected, alpha_expected) = if case == 0 {
+        (
+            RigidBodyState::REST,
+            vectors::SPHERICAL_INERTIA_Q12,
+            vectors::TORQUE_X_Q16,
+            vectors::SPHERICAL_ONE_STEP_ATTITUDE_Q30,
+            vectors::SPHERICAL_ONE_STEP_RATE_Q24,
+            vectors::SPHERICAL_ALPHA_Q24,
+        )
+    } else {
+        (
+            RigidBodyState::new(
+                QuaternionQ30::new(
+                    vectors::ASYMMETRIC_INITIAL_ATTITUDE_Q30[0],
+                    vectors::ASYMMETRIC_INITIAL_ATTITUDE_Q30[1],
+                    vectors::ASYMMETRIC_INITIAL_ATTITUDE_Q30[2],
+                    vectors::ASYMMETRIC_INITIAL_ATTITUDE_Q30[3],
+                ),
+                AngularRateVec::new(
+                    vectors::ASYMMETRIC_INITIAL_RATE_Q24[0],
+                    vectors::ASYMMETRIC_INITIAL_RATE_Q24[1],
+                    vectors::ASYMMETRIC_INITIAL_RATE_Q24[2],
+                ),
+            ),
+            vectors::ASYMMETRIC_INERTIA_Q12,
+            [0, 0, 0],
+            vectors::ASYMMETRIC_ONE_STEP_ATTITUDE_Q30,
+            vectors::ASYMMETRIC_ONE_STEP_RATE_Q24,
+            vectors::ASYMMETRIC_ALPHA_Q24,
+        )
+    };
     let mut status = NumericStatus::CLEAR;
     let result = step_rigid_body(
-        RigidBodyState::REST,
-        inertia(vectors::SPHERICAL_INERTIA_Q12),
-        torque(vectors::TORQUE_X_Q16),
+        state,
+        DiagonalInertiaQ12::new(inertia_raw[0], inertia_raw[1], inertia_raw[2]),
+        TorqueVec::new(torque_raw[0], torque_raw[1], torque_raw[2]),
         vectors::DT_Q16,
         &mut status,
     );
     let q = result.state().attitude();
     let omega = result.state().angular_rate();
     let alpha = result.angular_acceleration();
-    failures |= failure(q.w() == vectors::SPHERICAL_ONE_STEP_ATTITUDE_Q30[0]);
-    failures |= failure(q.x() == vectors::SPHERICAL_ONE_STEP_ATTITUDE_Q30[1]);
-    failures |= failure(q.y() == vectors::SPHERICAL_ONE_STEP_ATTITUDE_Q30[2]);
-    failures |= failure(q.z() == vectors::SPHERICAL_ONE_STEP_ATTITUDE_Q30[3]);
-    failures |= failure(omega.x() == vectors::SPHERICAL_ONE_STEP_RATE_Q24[0]);
-    failures |= failure(omega.y() == vectors::SPHERICAL_ONE_STEP_RATE_Q24[1]);
-    failures |= failure(omega.z() == vectors::SPHERICAL_ONE_STEP_RATE_Q24[2]);
-    failures |= failure(alpha.x() == vectors::SPHERICAL_ALPHA_Q24[0]);
-    failures |= failure(alpha.y() == vectors::SPHERICAL_ALPHA_Q24[1]);
-    failures |= failure(alpha.z() == vectors::SPHERICAL_ALPHA_Q24[2]);
-    failures | failure(status.is_clear())
+    let mut failures = failure(status.is_clear());
+    failures |= failure([q.w(), q.x(), q.y(), q.z()] == q_expected);
+    failures |= failure([omega.x(), omega.y(), omega.z()] == rate_expected);
+    failures |= failure([alpha.x(), alpha.y(), alpha.z()] == alpha_expected);
+    failures
 }
 
+pub fn run_phase5_rigid_spherical_self_test() -> u32 {
+    probe(0)
+}
 #[inline(never)]
-fn asymmetric_probe() -> u32 {
-    let mut failures = 0u32;
+fn asymmetric_acceleration_probe() -> u32 {
     let mut status = NumericStatus::CLEAR;
-    let result = step_rigid_body(
-        RigidBodyState::new(
-            attitude(vectors::ASYMMETRIC_INITIAL_ATTITUDE_Q30),
-            rate(vectors::ASYMMETRIC_INITIAL_RATE_Q24),
-        ),
-        inertia(vectors::ASYMMETRIC_INERTIA_Q12),
+    let inertia = vectors::ASYMMETRIC_INERTIA_Q12;
+    let rate = vectors::ASYMMETRIC_INITIAL_RATE_Q24;
+    let alpha = angular_acceleration(
+        DiagonalInertiaQ12::new(inertia[0], inertia[1], inertia[2]),
+        AngularRateVec::new(rate[0], rate[1], rate[2]),
         TorqueVec::ZERO,
-        vectors::DT_Q16,
         &mut status,
     );
-    let q = result.state().attitude();
-    let omega = result.state().angular_rate();
-    let alpha = result.angular_acceleration();
-    failures |= failure(q.w() == vectors::ASYMMETRIC_ONE_STEP_ATTITUDE_Q30[0]);
-    failures |= failure(q.x() == vectors::ASYMMETRIC_ONE_STEP_ATTITUDE_Q30[1]);
-    failures |= failure(q.y() == vectors::ASYMMETRIC_ONE_STEP_ATTITUDE_Q30[2]);
-    failures |= failure(q.z() == vectors::ASYMMETRIC_ONE_STEP_ATTITUDE_Q30[3]);
-    failures |= failure(omega.x() == vectors::ASYMMETRIC_ONE_STEP_RATE_Q24[0]);
-    failures |= failure(omega.y() == vectors::ASYMMETRIC_ONE_STEP_RATE_Q24[1]);
-    failures |= failure(omega.z() == vectors::ASYMMETRIC_ONE_STEP_RATE_Q24[2]);
-    failures |= failure(alpha.x() == vectors::ASYMMETRIC_ALPHA_Q24[0]);
-    failures |= failure(alpha.y() == vectors::ASYMMETRIC_ALPHA_Q24[1]);
-    failures |= failure(alpha.z() == vectors::ASYMMETRIC_ALPHA_Q24[2]);
-    failures | failure(status.is_clear())
+    failure(status.is_clear())
+        | failure([alpha.x(), alpha.y(), alpha.z()] == vectors::ASYMMETRIC_ALPHA_Q24)
 }
 
+pub fn run_phase5_rigid_asymmetric_self_test() -> u32 {
+    asymmetric_acceleration_probe()
+}
 pub fn run_phase5_rigid_self_tests() -> u32 {
-    let spherical = spherical_probe();
+    let spherical = probe(0);
     if spherical != 0 {
         return 1;
     }
-    if asymmetric_probe() != 0 {
+    if probe(1) != 0 {
         return 2;
     }
     0

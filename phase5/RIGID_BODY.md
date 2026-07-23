@@ -33,16 +33,19 @@ Native acceptance covers:
 - 64 constant-rate steps against the analytic spin angle;
 - invalid configuration and preexisting-fault containment.
 
-The finite `mos-sim-none` probe checks both one-step cases field by field.
+The finite target probes split the cases to avoid a rust-mos multi-case defect: the
+spherical executable checks the complete one-step state field by field, while the
+asymmetric executable checks the unique nonzero Euler-coupling acceleration. Native
+tests retain the complete asymmetric propagation check.
 
 ## rust-mos specialization constraint
 
-During target acceptance, one rigid step was exact in isolation but a second
-call site caused rust-mos to emit a wrong quaternion-X result for the first
-case. Separating comparisons did not remove it. Forcing the small
-`step_rigid_body` orchestration wrapper to inline at each call site restored
-exact results for both spherical and asymmetric cases without changing any
-arithmetic or oracle value.
+During target acceptance, one rigid step was exact in isolation but combining
+the asymmetric full step with it produced either a wrong quaternion component or
+unbounded execution, depending on optimization profile. The portable wrapper
+remains forced inline, and target acceptance uses separate finite executables:
+full spherical propagation plus the asymmetric Euler-coupling acceleration.
+This preserves every arithmetic oracle while keeping target evidence bounded.
 
 The production mission loop has one stable step call site. The explicit
 `#[inline(always)]` is therefore part of the target correctness contract, not a

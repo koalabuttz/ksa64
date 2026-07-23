@@ -24,6 +24,14 @@ name = "ksa64-phase5-flexible-sim"
 path = "src/bin/phase5_flexible_sim.rs"
 required-features = ["sim"]
 [[bin]]
+name = "ksa64-phase5-rigid-spherical-sim"
+path = "src/bin/phase5_rigid_spherical_sim.rs"
+required-features = ["sim"]
+[[bin]]
+name = "ksa64-phase5-rigid-asymmetric-sim"
+path = "src/bin/phase5_rigid_asymmetric_sim.rs"
+required-features = ["sim"]
+[[bin]]
 name = "ksa64-phase5-rigid-sim"
 path = "src/bin/phase5_rigid_sim.rs"
 required-features = ["sim"]

@@ -1,6 +1,6 @@
 # Phase 5: three-dimensional rigid-body dynamics
 
-Status: Gates 1-5 complete; Gate 6 multirate vehicle coupling is next.
+Status: Gates 1-6 complete; Gate 7 spatial transports, sensors, navigation, and GNC is next.
 
 The Phase 5 numeric/scenario contract and KSA-5A configuration are now frozen
 under `phase5/`. Generated Rust constants bind the new work to the accepted
@@ -22,6 +22,11 @@ The spatial world now adds ECI translation, spherical gravity, atmosphere
 co-rotation, 3-D axial/normal aerodynamics, body aerodynamic torque, and orbit
 analysis with inclination. Native and rust-mos agree on the frozen exact world
 signature `0x650d5aa7`.
+The multirate vehicle layer now composes four fast steps per mission command,
+continuous inertia schedules, two-axis engine gimbals, explicit staging, and
+bounded upper-stage RCS propellant. Native and size-optimized rust-mos builds
+agree on the complete raw signature `0x21e55663`; the target probe is 38,597
+bytes.
 
 Phase 4 completed the maturity prerequisites for 3-D work: the 2-D world is deterministic and independently checked, flight software is isolated from truth, campaign variation is reproducible, storage is observational, and stock/REU evidence paths are strict.
 

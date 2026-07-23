@@ -13,6 +13,11 @@ pub mod actuator;
 pub mod config;
 pub mod mission;
 pub mod phase4;
+pub mod phase5_vehicle;
+#[cfg(feature = "fixtures")]
+mod phase5_vehicle_self_test;
+#[cfg(feature = "fixtures")]
+pub use phase5_vehicle_self_test::{phase5_vehicle_signature, run_phase5_vehicle_self_tests};
 pub mod probe;
 pub mod replay;
 pub mod sensors;
