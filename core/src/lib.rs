@@ -24,6 +24,9 @@ pub mod c64_status;
 
 #[cfg(feature = "c64")]
 pub mod c64_timer;
+#[cfg(feature = "c64")]
+#[path = "phase2_c64_replay_tape.rs"]
+pub mod phase2_c64_replay;
 
 #[cfg(feature = "fixtures")]
 mod phase2_atmosphere_self_test;

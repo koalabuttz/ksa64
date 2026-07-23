@@ -6,3 +6,7 @@ resolver = "2"
 opt-level = 2
 lto = true
 panic = "abort"
+[profile.c64]
+inherits = "release"
+opt-level = "z"
+codegen-units = 1

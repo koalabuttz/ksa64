@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "target": "PAL C64 via pinned x64sc 3.10",
+  "profile": "c64",
+  "fixture_steps": 8,
+  "boundary_overhead_cycles": 24,
+  "raw": {
+    "net_cycles": 9861605,
+    "cycles_per_step": 1232700.625,
+    "steps_per_second": 0.7992597553846458
+  },
+  "recorded": {
+    "net_cycles": 10950388,
+    "cycles_per_step": 1368798.5,
+    "steps_per_second": 0.7197903855096276,
+    "overhead_cycles": 1088783,
+    "overhead_per_step": 136097.875
+  },
+  "result": {
+    "step": 8,
+    "frames": 2,
+    "bytes": 168,
+    "state_checksum": "0x92dc28f3",
+    "final_frame_crc32": "0x2a1875e0"
+  },
+  "timed_prg_bytes": 34208
+}

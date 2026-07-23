@@ -52,3 +52,12 @@ required-features = ["c64"]
 name = "ksa64-phase1-telemetry-status-c64"
 path = "src/bin/telemetry_status_c64.rs"
 required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase2-timed-c64"
+path = "src/bin/phase2_timed_c64.rs"
+required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase2-replay-c64"
+path = "src/bin/phase2_replay_c64.rs"
+required-features = ["c64"]

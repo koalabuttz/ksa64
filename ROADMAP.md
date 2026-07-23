@@ -53,7 +53,7 @@ Exit criteria:
 
 ## Phase 2: two-dimensional multistage ascent
 
-Status: in progress. The rotating-Earth model through checksummed KSC2 scenarios, deterministic nominal/failure missions, canonical KST2 telemetry, strict host inspection, and a GMAT coast-validation fixture are accepted; C64 timing and deterministic replay are next.
+Status: implementation complete; final audit in progress. The rotating-Earth model, nominal/failure missions, KST2 validation, measured C64 target path, and PETSCII/SID replay are accepted.
 
 Purpose: produce a recognizable launch trajectory and orbital-insertion attempt.
 

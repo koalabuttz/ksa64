@@ -619,3 +619,14 @@ Expose immutable initial/successor observations from the authoritative Phase 2 e
 The nominal golden stream contains 901 frames and 57,704 bytes, with stream CRC-32 `0x7d13b2bf` and final state checksum `0xcc57612b`. The host rejects bad framing, CRC, scenario binding, initial truth, cadence, time, numeric ranges, and terminal placement before displaying values. Generated portable fixtures reproduce the header, initial frame, and terminal frame exactly.
 
 Provide a GMAT R2026a point-mass script and report comparator for the independent float64 cutoff state, with Earth radius and force-model assumptions made explicit. Do not make GMAT a build dependency or claim an unexecuted external run as automated evidence. C64 retained-state replay will consume the same sink/decoder contract rather than adding a second mission executor.
+## D-042: Measure slow target execution and replay compact presentation data
+
+Date: 2026-07-22
+
+Status: accepted.
+
+Build Phase 2 C64 artifacts with a dedicated size-optimized Cargo profile while leaving the accepted Phase 1 release layout untouched. Measure raw and checksummed/KST2 execution together over the same eight powered sea-level steps under the PAL CIA common clock, with no real-time acceptance floor. The final linked paths run at 1,232,700.625 and 1,368,798.500 cycles per step respectively, so a complete validated target run is expected to take hours rather than minutes.
+
+Do not recompute all 7,200 physics steps merely to paint the post-run display. Generate a compact `KRP2` presentation tape only from the host-validated canonical KST2 stream. Bind it to the source stream CRC, scenario, terminal checksum, full-mission Max-Q, orbit, its own CRCs, and a reviewed SHA-256. Preserve the canonical KST2 header and terminal frame inside the tape and decode them on the C64 through the portable contract. Use a generated table-driven CRC only for the cold replay-tape integrity check.
+
+Replay the 901 compact points into a 40x25 altitude/downrange plot and drive bounded SID cues for ignition, cutoff, separation, end, and impact alarm events. Verify the final page directly from VIC-II screen memory and freeze the event-schedule hash. `KRP2` is a derived display index, never an alternative physics or regression record; a physical C64 run would transport its canonical KST2 output to replay storage rather than retaining the 57,704-byte stream in main RAM.

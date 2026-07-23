@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "source_stream_crc32": "0x7d13b2bf",
+  "source_state_checksum": "0xcc57612b",
+  "tape_bytes": 2851,
+  "tape_sha256": "35db68c6b8fc602b1ce760552f2b2994b2ec66a27df6b02acba8cce66774ed08",
+  "frames_replayed": 901,
+  "trajectory_cells": 50,
+  "event_mask": "0x0027",
+  "sid_cues": {
+    "ignition": 1,
+    "cutoff": 2,
+    "separation": 1,
+    "end": 1,
+    "alarm": 0,
+    "schedule_hash": "0x9473fcdb"
+  },
+  "retained_sink_bytes": 135,
+  "replay_prg_bytes": 16169
+}

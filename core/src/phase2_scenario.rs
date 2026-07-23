@@ -593,6 +593,13 @@ static KSA2A_SMOKE_FIXTURE: Phase2Scenario = fixture_scenario(
     fixture_data::NOMINAL_BURN_STEPS,
     1,
 );
+#[cfg(feature = "fixtures")]
+static KSA2A_TIMING_FIXTURE: Phase2Scenario = fixture_scenario(
+    fixture_data::NOMINAL_SCENARIO_ID,
+    0,
+    fixture_data::NOMINAL_BURN_STEPS,
+    8,
+);
 
 #[cfg(feature = "fixtures")]
 pub fn ksa2a_fixture(failure: bool) -> &'static Phase2Scenario {
@@ -606,4 +613,8 @@ pub fn ksa2a_fixture(failure: bool) -> &'static Phase2Scenario {
 #[cfg(feature = "fixtures")]
 pub fn ksa2a_smoke_fixture() -> &'static Phase2Scenario {
     &KSA2A_SMOKE_FIXTURE
+}
+#[cfg(feature = "fixtures")]
+pub fn ksa2a_timing_fixture() -> &'static Phase2Scenario {
+    &KSA2A_TIMING_FIXTURE
 }
