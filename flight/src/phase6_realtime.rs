@@ -12,6 +12,30 @@ pub const PAL_TICK_BUDGET_CYCLES: u32 = PAL_FAST_TICK_CYCLES * 4 / 5;
 pub const ALARM_STALE_LINK: u16 = 1;
 pub const ALARM_DEADLINE: u16 = 2;
 pub const ALARM_SAFEING: u16 = 4;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RealtimeGuidanceSlice {
+    pub start: [i16; 3],
+    pub end: [i16; 3],
+    pub rate: [i16; 3],
+}
+mod generated_guidance {
+    use super::RealtimeGuidanceSlice;
+    include!("generated/phase6_guidance_v1.rs");
+}
+pub use generated_guidance::REALTIME_GUIDANCE_SIGNATURE;
+pub fn reference_realtime_guidance_slice(second: u16) -> RealtimeGuidanceSlice {
+    let slices = &generated_guidance::REALTIME_GUIDANCE_SLICES;
+    if slices.is_empty() {
+        return RealtimeGuidanceSlice {
+            start: [0; 3],
+            end: [0; 3],
+            rate: [0; 3],
+        };
+    }
+    let index = (second as usize).min(slices.len() - 1);
+    slices[index]
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ScheduleRelease {
     pub epoch: u16,
@@ -34,7 +58,7 @@ impl VirtualScheduler {
             epoch: e,
             fast: true,
             navigation: e & 3 == 0,
-            guidance: e & 31 == 0,
+            guidance: e & 31 == 2,
             status: e & 3 == 0,
         }
     }

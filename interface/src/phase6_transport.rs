@@ -375,3 +375,190 @@ impl Default for LinkTransmitter {
         Self::new()
     }
 }
+
+pub const SERIAL_BITS_PER_BYTE_8N1: u32 = 10;
+pub const USER_PORT_BAUD: u32 = 9_600;
+pub const TURBO232_BAUD: u32 = 57_600;
+pub const PAL_FAST_SLOT_MICROSECONDS: u32 = 31_250;
+pub const REALTIME_WORLD_FAST_BYTES: u16 = crate::phase6::REALTIME_INERTIAL_LENGTH as u16;
+pub const REALTIME_WORLD_WORST_BYTES: u16 =
+    (crate::phase6::REALTIME_INERTIAL_LENGTH + crate::phase6::REALTIME_AID_LENGTH) as u16;
+pub const REALTIME_FLIGHT_FAST_BYTES: u16 = crate::phase6::REALTIME_COMMAND_LENGTH as u16;
+pub const REALTIME_FLIGHT_WORST_BYTES: u16 =
+    (crate::phase6::REALTIME_COMMAND_LENGTH + crate::phase6::REALTIME_STATUS_LENGTH) as u16;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SerialSlotBudget {
+    pub baud: u32,
+    pub bytes: u16,
+    pub wire_microseconds: u32,
+    pub fits_fast_slot: bool,
+}
+pub const fn serial_slot_budget(baud: u32, bytes: u16) -> SerialSlotBudget {
+    let micros = if baud == 0 {
+        u32::MAX
+    } else {
+        ((bytes as u32 * SERIAL_BITS_PER_BYTE_8N1 * 1_000_000) + baud - 1) / baud
+    };
+    SerialSlotBudget {
+        baud,
+        bytes,
+        wire_microseconds: micros,
+        fits_fast_slot: micros <= PAL_FAST_SLOT_MICROSECONDS,
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RealtimeCellKind {
+    Inertial,
+    Command,
+    Aid,
+    Status,
+}
+impl RealtimeCellKind {
+    pub const fn length(self) -> usize {
+        match self {
+            Self::Inertial => crate::phase6::REALTIME_INERTIAL_LENGTH,
+            Self::Command => crate::phase6::REALTIME_COMMAND_LENGTH,
+            Self::Aid => crate::phase6::REALTIME_AID_LENGTH,
+            Self::Status => crate::phase6::REALTIME_STATUS_LENGTH,
+        }
+    }
+    fn from_tag(tag: u8) -> Option<Self> {
+        match tag {
+            1 => Some(Self::Inertial),
+            2 => Some(Self::Command),
+            3 => Some(Self::Aid),
+            4 => Some(Self::Status),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RealtimeReceiveError {
+    Transport(TransportError),
+    Checksum,
+}
+pub struct RealtimeCellReceiver {
+    bytes: [u8; crate::phase6::REALTIME_AID_LENGTH],
+    length: u8,
+    needed: u8,
+}
+impl RealtimeCellReceiver {
+    pub const fn new() -> Self {
+        Self {
+            bytes: [0; crate::phase6::REALTIME_AID_LENGTH],
+            length: 0,
+            needed: 0,
+        }
+    }
+    pub fn poll<'a, T: ByteTransport>(
+        &'a mut self,
+        transport: &mut T,
+    ) -> Result<Option<(RealtimeCellKind, &'a [u8])>, RealtimeReceiveError> {
+        loop {
+            let Some(byte) = transport
+                .try_read()
+                .map_err(RealtimeReceiveError::Transport)?
+            else {
+                return Ok(None);
+            };
+            if self.length == 0 {
+                if byte != crate::phase6::KLR6_SYNC[0] {
+                    continue;
+                }
+                self.bytes[0] = byte;
+                self.length = 1;
+                continue;
+            }
+            if self.length == 1 {
+                if byte != crate::phase6::KLR6_SYNC[1] {
+                    self.length = if byte == crate::phase6::KLR6_SYNC[0] {
+                        1
+                    } else {
+                        0
+                    };
+                    continue;
+                }
+                self.bytes[1] = byte;
+                self.length = 2;
+                continue;
+            }
+            if self.length == 2 {
+                if byte != 6 {
+                    self.length = 0;
+                    continue;
+                }
+                self.bytes[2] = byte;
+                self.length = 3;
+                continue;
+            }
+            if self.length == 3 {
+                let Some(kind) = RealtimeCellKind::from_tag(byte) else {
+                    self.length = 0;
+                    continue;
+                };
+                self.bytes[3] = byte;
+                self.length = 4;
+                self.needed = kind.length() as u8;
+                continue;
+            }
+            self.bytes[self.length as usize] = byte;
+            self.length = self.length.wrapping_add(1);
+            if self.length == self.needed {
+                let kind = RealtimeCellKind::from_tag(self.bytes[3]).unwrap();
+                let n = self.length as usize;
+                self.length = 0;
+                let expected = u16::from_le_bytes([self.bytes[n - 2], self.bytes[n - 1]]);
+                if crate::phase6::crc16_ccitt(&self.bytes[..n - 2]) != expected {
+                    return Err(RealtimeReceiveError::Checksum);
+                }
+                return Ok(Some((kind, &self.bytes[..n])));
+            }
+        }
+    }
+}
+impl Default for RealtimeCellReceiver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+pub struct ByteTransmitter<const N: usize> {
+    bytes: [u8; N],
+    length: usize,
+    offset: usize,
+}
+impl<const N: usize> ByteTransmitter<N> {
+    pub const fn new() -> Self {
+        Self {
+            bytes: [0; N],
+            length: 0,
+            offset: 0,
+        }
+    }
+    pub const fn is_idle(&self) -> bool {
+        self.offset == self.length
+    }
+    pub fn stage(&mut self, bytes: &[u8]) -> Result<(), TransportError> {
+        if !self.is_idle() || bytes.len() > N {
+            return Err(TransportError::Capacity);
+        }
+        self.bytes[..bytes.len()].copy_from_slice(bytes);
+        self.length = bytes.len();
+        self.offset = 0;
+        Ok(())
+    }
+    pub fn poll<T: ByteTransport>(&mut self, transport: &mut T) -> Result<bool, TransportError> {
+        while self.offset < self.length {
+            if !transport.try_write(self.bytes[self.offset])? {
+                return Ok(false);
+            }
+            self.offset += 1
+        }
+        Ok(true)
+    }
+}
+impl<const N: usize> Default for ByteTransmitter<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}

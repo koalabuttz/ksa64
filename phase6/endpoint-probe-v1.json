@@ -1,0 +1,18 @@
+{
+  "schema": "ksa64.phase6.endpoint-probe-v1",
+  "runs": 3,
+  "result": {
+    "command_bytes": 24,
+    "wire_hash": 1921152639,
+    "navigation_checksum": 3026340201,
+    "flight_checksum": 2593577103,
+    "guidance_signature": 1816505338
+  },
+  "artifact": {
+    "bytes": 16147,
+    "sha256": "96723be259ceb7d470963524828a79d9c59712b632f71a4c09d6bcc82d247106",
+    "load_address": 2049,
+    "load_end_exclusive": 18194,
+    "stock_fit": true
+  }
+}

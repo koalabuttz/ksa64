@@ -146,3 +146,56 @@ fn ultimate_uci_mock_connects_backpressures_and_latches_fault() {
     assert_eq!(link.try_read(), Err(TransportError::Fault));
     assert_eq!(link.state(), UciState::Faulted);
 }
+
+#[test]
+fn serial_budget_selects_paced_user_port_and_realtime_acia() {
+    let user_world = serial_slot_budget(USER_PORT_BAUD, REALTIME_WORLD_WORST_BYTES);
+    let user_flight = serial_slot_budget(USER_PORT_BAUD, REALTIME_FLIGHT_WORST_BYTES);
+    assert_eq!(user_world.wire_microseconds, 108_334);
+    assert_eq!(user_flight.wire_microseconds, 75_000);
+    assert!(!user_world.fits_fast_slot && !user_flight.fits_fast_slot);
+    let acia_world = serial_slot_budget(TURBO232_BAUD, REALTIME_WORLD_WORST_BYTES);
+    let acia_flight = serial_slot_budget(TURBO232_BAUD, REALTIME_FLIGHT_WORST_BYTES);
+    assert_eq!(acia_world.wire_microseconds, 18_056);
+    assert_eq!(acia_flight.wire_microseconds, 12_500);
+    assert!(acia_world.fits_fast_slot && acia_flight.fits_fast_slot);
+}
+
+#[test]
+fn realtime_cell_receiver_resynchronizes_and_checks_crc() {
+    use ksa64_interface::phase6::{
+        write_realtime_command, RealtimeCommandCell, REALTIME_COMMAND_LENGTH,
+    };
+    let cell = RealtimeCommandCell {
+        session: 1,
+        source_epoch: 2,
+        effective_epoch: 3,
+        flags: 0,
+        discrete: 0,
+        gimbal: [4, 5],
+        rcs: [6, 7, 8],
+        status: 0,
+    };
+    let mut bytes = [0u8; REALTIME_COMMAND_LENGTH];
+    write_realtime_command(&cell, &mut bytes).unwrap();
+    let mut wire = MemoryTransport::<128, 1>::new();
+    for b in [9, 8, 7] {
+        wire.inject(b).unwrap()
+    }
+    for b in bytes {
+        wire.inject(b).unwrap()
+    }
+    let mut receiver = RealtimeCellReceiver::new();
+    let (kind, got) = receiver.poll(&mut wire).unwrap().unwrap();
+    assert_eq!(kind, RealtimeCellKind::Command);
+    assert_eq!(got, &bytes);
+    let mut corrupt = bytes;
+    corrupt[12] ^= 1;
+    for b in corrupt {
+        wire.inject(b).unwrap()
+    }
+    assert_eq!(
+        receiver.poll(&mut wire),
+        Err(RealtimeReceiveError::Checksum)
+    );
+}

@@ -4,8 +4,7 @@ use crate::phase5_vehicle::{
     Phase5VehicleMachine, Phase6FastVehicle, PHASE5_SUBSTEPS,
 };
 use ksa64_core::spatial_numeric::FixedVec3;
-use ksa64_flight::phase5_guidance::reference_guidance_target;
-use ksa64_flight::phase6_realtime::RealtimeFlightComputer;
+use ksa64_flight::phase6_realtime::{reference_realtime_guidance_slice, RealtimeFlightComputer};
 use ksa64_interface::phase6::{
     RealtimeAidCell, RealtimeCommandCell, RealtimeInertialCell, REALTIME_AID_GPS, REALTIME_AID_STAR,
 };
@@ -64,6 +63,12 @@ pub fn run_realtime_nominal() -> Result<RealtimeRunEvidence, RealtimeRunError> {
             gimbal_q16: [0; 2],
             rcs_q15: [0; 3],
         })?;
+    let initial_guidance = reference_realtime_guidance_slice(0);
+    flight.set_guidance_segment(
+        initial_guidance.start,
+        initial_guidance.end,
+        initial_guidance.rate,
+    );
     let mut epoch = 0u32;
     let mut status_checksum = 2_166_136_261u32;
     while epoch < REALTIME_MAX_FAST_EPOCHS {
@@ -124,27 +129,9 @@ pub fn run_realtime_nominal() -> Result<RealtimeRunEvidence, RealtimeRunError> {
             ],
             stage_status: truth.phase() as u16,
         };
-        if epoch & 31 == 0 {
-            let mission_step = epoch / PHASE5_SUBSTEPS as u32;
-            let target = reference_guidance_target(mission_step);
-            let target_end = reference_guidance_target(mission_step.saturating_add(8));
-            flight.set_guidance_segment(
-                [
-                    clamp_i16(target.attitude_q30[1] >> 15),
-                    clamp_i16(target.attitude_q30[2] >> 15),
-                    clamp_i16(target.attitude_q30[3] >> 15),
-                ],
-                [
-                    clamp_i16(target_end.attitude_q30[1] >> 15),
-                    clamp_i16(target_end.attitude_q30[2] >> 15),
-                    clamp_i16(target_end.attitude_q30[3] >> 15),
-                ],
-                [
-                    clamp_i16(target.angular_rate_q24[0] >> 12),
-                    clamp_i16(target.angular_rate_q24[1] >> 12),
-                    clamp_i16(target.angular_rate_q24[2] >> 12),
-                ],
-            );
+        if epoch & 31 == 2 {
+            let slice = reference_realtime_guidance_slice((epoch >> 5) as u16);
+            flight.set_guidance_segment(slice.start, slice.end, slice.rate);
         }
         let aid = if epoch & 3 == 0 {
             let p = truth.spatial().position();

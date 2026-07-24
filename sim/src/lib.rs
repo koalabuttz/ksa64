@@ -40,6 +40,8 @@ pub use phase5_telemetry_self_test::{
 pub mod phase5_vehicle;
 #[cfg(feature = "fixtures")]
 mod phase5_vehicle_self_test;
+#[cfg(feature = "c64")]
+pub mod phase6_c64;
 pub mod phase6_link;
 pub mod phase6_mission_control;
 pub mod phase6_realtime;

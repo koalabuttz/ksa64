@@ -15,7 +15,8 @@ Phase 6 turns the existing world/flight seam into explicit endpoints connected b
 - The KSA-6R virtual scheduler and flight-computer skeleton with deterministic 32/8/1 Hz releases, next-epoch commands, stale-link safeing, and deadline safeing.
 - A transport-neutral nonblocking byte interface, bounded queues and incremental frame pumps, a register-neutral SwiftLink/Turbo232 ACIA driver, and an Ultimate UCI TCP state machine with a deterministic native mock.
 - Observation-only Mission Control proven not to perturb a complete exact mission, plus an independent deterministic delayed/noisy tracking network and bounded ground estimator.
-- A complete deterministic native KSA-6R mission and a finite rust-mos/PAL VICE timing probe: both ordinary and worst releases meet the conservative 80% fast-slot budget.
+- A complete deterministic native KSA-6R mission and a finite rust-mos/PAL VICE timing probe: staggered fast, navigation, and guidance releases all meet the conservative 80% fast-slot budget.
+- Frozen transport bandwidth gates and a three-run stock endpoint probe including compact stream pumps, guidance, flight software, and target packaging.
 
 ## Planned acceptance ladder
 
@@ -28,4 +29,4 @@ Phase 6 turns the existing world/flight seam into explicit endpoints connected b
 7. Passive Mission Control and independent ground tracking.
 8. Deployment matrix, self-contained feasibility report, and completion audit.
 
-See [CONTRACT.md](CONTRACT.md) for the frozen wire and authority rules and [REALTIME.md](REALTIME.md) for the accepted KSA-6R mission and timing evidence. Long target runs retain the project rule: project first, ask when the estimate exceeds 30 minutes, and never cancel a run unless David explicitly requests it.
+See [CONTRACT.md](CONTRACT.md) for the frozen wire and authority rules, [REALTIME.md](REALTIME.md) for the accepted KSA-6R mission and timing evidence, and [TRANSPORTS.md](TRANSPORTS.md) for deployment and endpoint evidence. Long target runs retain the project rule: project first, ask when the estimate exceeds 30 minutes, and never cancel a run unless David explicitly requests it.

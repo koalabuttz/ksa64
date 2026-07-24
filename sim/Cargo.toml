@@ -93,3 +93,8 @@ required-features = ["c64"]
 name = "ksa64-phase6-realtime-timed-c64"
 path = "src/bin/phase6_realtime_timed_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase6-endpoint-probe-c64"
+path = "src/bin/phase6_endpoint_probe_c64.rs"
+required-features = ["c64"]
