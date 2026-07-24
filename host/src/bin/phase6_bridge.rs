@@ -1,12 +1,26 @@
 use ksa64_host::phase6::configure_socket;
-use ksa64_host::phase6_runner::{run_world_with_flight, RunnerOptions, RunnerPace};
-use std::io::{self, Write};
+use ksa64_host::phase6_runner::{run_world_with_flight, RunnerEvidence, RunnerOptions, RunnerPace};
+use ksa64_host::phase6_session::default_session_path;
+use ksa64_host::phase6_tui::{
+    run_bridge_console, run_bridge_recorded, ConsoleConfig, DisplayMode, SoundProfile, UnitSystem,
+};
+use std::io::{self, IsTerminal, Write};
 use std::net::TcpListener;
+use std::path::PathBuf;
 
-fn parse() -> Result<(String, bool, u32), String> {
+struct Args {
+    address: String,
+    max_epochs: u32,
+    options: RunnerOptions,
+    display: DisplayMode,
+    config: ConsoleConfig,
+}
+fn parse() -> Result<Args, String> {
     let mut address = "127.0.0.1:25232".to_owned();
-    let mut mission_control = true;
     let mut max_epochs = u32::MAX;
+    let mut options = RunnerOptions::default();
+    let mut display = DisplayMode::Adaptive;
+    let mut config = ConsoleConfig::default();
     let mut args = std::env::args().skip(1);
     while let Some(flag) = args.next() {
         let value = args
@@ -15,43 +29,107 @@ fn parse() -> Result<(String, bool, u32), String> {
         match flag.as_str() {
             "--listen" => address = value,
             "--mission-control" => {
-                mission_control = match value.as_str() {
+                options.mission_control = match value.as_str() {
                     "host" => true,
                     "disabled" => false,
                     _ => return Err("mission control must be host or disabled".into()),
                 }
             }
             "--max-epochs" => {
-                max_epochs = value
-                    .parse()
-                    .map_err(|_| "max epochs must be a positive integer")?;
+                max_epochs = value.parse().map_err(|_| "max epochs must be positive")?;
                 if max_epochs == 0 {
                     return Err("max epochs must be positive".into());
+                }
+            }
+            "--pace" => {
+                options.pace = match value.as_str() {
+                    "fast" => RunnerPace::Fast,
+                    "realtime" => RunnerPace::Realtime,
+                    "step" => RunnerPace::Step,
+                    _ => return Err("pace must be fast, realtime, or step".into()),
+                }
+            }
+            "--display" => {
+                display = match value.as_str() {
+                    "adaptive" => DisplayMode::Adaptive,
+                    "tui" => DisplayMode::Tui,
+                    "summary" => DisplayMode::Summary,
+                    "none" => DisplayMode::None,
+                    _ => return Err("display must be adaptive, tui, summary, or none".into()),
+                }
+            }
+            "--units" => {
+                config.units = match value.as_str() {
+                    "si" => UnitSystem::Si,
+                    "dual" => UnitSystem::Dual,
+                    "us" => UnitSystem::Us,
+                    _ => return Err("units must be si, dual, or us".into()),
+                }
+            }
+            "--sound" => {
+                config.sound = match value.as_str() {
+                    "off" => SoundProfile::Off,
+                    "cues" => SoundProfile::Cues,
+                    "cinematic" => SoundProfile::Cinematic,
+                    _ => return Err("sound must be off, cues, or cinematic".into()),
+                }
+            }
+            "--record" => {
+                config.recording = match value.as_str() {
+                    "auto" => Some(default_session_path()),
+                    "off" => None,
+                    _ => Some(PathBuf::from(value)),
                 }
             }
             _ => return Err(format!("unknown option {flag}")),
         }
     }
-    Ok((address, mission_control, max_epochs))
+    Ok(Args {
+        address,
+        max_epochs,
+        options,
+        display,
+        config,
+    })
 }
-
+fn show(e: &RunnerEvidence) {
+    println!("KSA64_PHASE6_COMPLETE complete={} epochs={} operator_stopped={} steps={} position={:?} velocity={:?} nav_position={:?} nav_velocity={:?} status_flight_checksum={} final_flight_checksum={} navigation_checksum={} deadline_misses={} alarms={}",e.complete,e.fast_epochs,e.operator_stopped,e.mission_steps,e.terminal_position_q12,e.terminal_velocity_q24,e.navigation_position_q12,e.navigation_velocity_q24,e.status_flight_checksum,e.final_flight_checksum,e.navigation_checksum,e.deadline_misses,e.alarms);
+    if let Some(mc) = e.mission_control {
+        println!("KSA64_PHASE6_MISSION_CONTROL world_cells={} flight_cells={} ground_fixes={} transcript_checksum={} ground_checksum={} alarms={} comparison={:?}",mc.world_cells,mc.flight_cells,mc.ground_fixes,mc.transcript_checksum,mc.ground_checksum,mc.alarms,mc.comparison)
+    }
+}
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let (address, mission_control, max_epochs) = parse().map_err(io::Error::other)?;
-    let listener = TcpListener::bind(&address)?;
+    let a = parse().map_err(io::Error::other)?;
+    let display = match a.display {
+        DisplayMode::Adaptive if a.options.pace == RunnerPace::Fast => DisplayMode::Summary,
+        DisplayMode::Adaptive if std::io::stderr().is_terminal() => DisplayMode::Tui,
+        DisplayMode::Adaptive => DisplayMode::Summary,
+        x => x,
+    };
+    if display == DisplayMode::Tui && !a.options.mission_control {
+        return Err(io::Error::other("the TUI requires --mission-control host").into());
+    }
+    let listener = TcpListener::bind(&a.address)?;
     println!("KSA64_PHASE6_LISTENING {}", listener.local_addr()?);
     io::stdout().flush()?;
-    let (mut stream, peer) = listener.accept()?;
+    let (stream, peer) = listener.accept()?;
     configure_socket(&stream)?;
     eprintln!("KSA64 phase6 endpoint connected: {peer}");
-    let options = RunnerOptions {
-        mission_control,
-        pace: RunnerPace::Fast,
+
+    let record_path = a.config.recording.clone();
+    let evidence = if display == DisplayMode::Tui {
+        run_bridge_console(stream, a.max_epochs, a.options, a.config)
+            .map_err(|e| io::Error::other(format!("bridge console: {e:?}")))?
+    } else if let Some(path) = record_path {
+        run_bridge_recorded(stream, a.max_epochs, a.options, path)
+            .map_err(|e| io::Error::other(format!("bridge recording: {e:?}")))?
+    } else {
+        let mut stream = stream;
+        run_world_with_flight(&mut stream, a.max_epochs, a.options)
+            .map_err(|e| io::Error::other(format!("bridge: {e:?}")))?
     };
-    let evidence = run_world_with_flight(&mut stream, max_epochs, options)
-        .map_err(|error| io::Error::other(format!("bridge: {error:?}")))?;
-    println!("KSA64_PHASE6_COMPLETE complete={} epochs={} steps={} position={:?} velocity={:?} nav_position={:?} nav_velocity={:?} status_flight_checksum={} final_flight_checksum={} navigation_checksum={} deadline_misses={} alarms={}", evidence.complete, evidence.fast_epochs, evidence.mission_steps, evidence.terminal_position_q12, evidence.terminal_velocity_q24, evidence.navigation_position_q12, evidence.navigation_velocity_q24, evidence.status_flight_checksum, evidence.final_flight_checksum, evidence.navigation_checksum, evidence.deadline_misses, evidence.alarms);
-    if let Some(mc) = evidence.mission_control {
-        println!("KSA64_PHASE6_MISSION_CONTROL world_cells={} flight_cells={} ground_fixes={} transcript_checksum={} ground_checksum={} alarms={} comparison={:?}", mc.world_cells, mc.flight_cells, mc.ground_fixes, mc.transcript_checksum, mc.ground_checksum, mc.alarms, mc.comparison);
+    if display != DisplayMode::None {
+        show(&evidence)
     }
     Ok(())
 }

@@ -52,8 +52,13 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--mission-control", choices=("host", "disabled"), default="host")
     parser.add_argument("--pace", choices=("fast", "realtime", "step"), default="realtime")
+    parser.add_argument("--display", choices=("adaptive", "tui", "summary", "none"), default="adaptive")
+    parser.add_argument("--units", choices=("si", "dual", "us"), default="si")
+    parser.add_argument("--sound", choices=("off", "cues", "cinematic"), default="cues")
+    parser.add_argument("--record", default="auto")
     parser.add_argument("--max-epochs", type=int, default=65_536)
     args = parser.parse_args()
+    interactive = args.display == "tui" or (args.display == "adaptive" and args.pace != "fast" and sys.stderr.isatty())
     if not 0 < args.max_epochs <= 65_536:
         parser.error("--max-epochs must be between 1 and 65536")
 
@@ -113,13 +118,19 @@ def main() -> int:
                 str(broker), "--listen", f"127.0.0.1:{broker_port}",
                 "--mission-control", args.mission_control,
                 "--max-epochs", str(args.max_epochs),
+                "--pace", args.pace if interactive else "fast",
+                "--display", args.display,
+                "--units", args.units,
+                "--sound", args.sound,
+                "--record", args.record,
             ],
             cwd=ROOT,
+            stdin=None if interactive else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=None if interactive else subprocess.PIPE,
             text=True,
-            startupinfo=startup,
-            creationflags=flags,
+            startupinfo=None if interactive else startup,
+            creationflags=0 if interactive else flags,
         )
         line = broker_process.stdout.readline().strip()
         if "KSA64_PHASE6_LISTENING" not in line:
@@ -133,9 +144,9 @@ def main() -> int:
         last_status = None
         completed_epochs = 0
         for epoch in range(args.max_epochs):
-            if args.pace == "step":
+            if args.pace == "step" and not interactive:
                 input(f"epoch {epoch}: press Enter to release the next C64 step...")
-            if epoch < 4:
+            if epoch < 4 and not interactive:
                 print(f"epoch {epoch}: receiving world cells", flush=True)
             aid = recv_exact(wire, 64) if epoch & 3 == 0 else None
             inertial = recv_exact(wire, 40)
@@ -154,7 +165,7 @@ def main() -> int:
                 lambda value, expected=sequence: value == bytes((expected,)),
                 120,
             )
-            if epoch < 4:
+            if epoch < 4 and not interactive:
                 print(f"epoch {epoch}: C64 response ready", flush=True)
             wire.sendall(monitor.read_memory(0xC880, 0xC897))
             status_present = monitor.read_memory(0xC809, 0xC809)[0]
@@ -174,7 +185,7 @@ def main() -> int:
                 raise ProvenFailure(f"unexpected status at epoch {epoch}")
             monitor.write_memory(0xC807, bytes((sequence,)))
             completed_epochs = epoch + 1
-            if epoch and epoch % 1024 == 0:
+            if epoch and epoch % 1024 == 0 and not interactive:
                 print(f"epoch {epoch}; wall {time.monotonic() - started:.1f}s", flush=True)
             if inertial[11] & 1:
                 terminal = True
@@ -250,6 +261,14 @@ def main() -> int:
     except KeyboardInterrupt:
         raise
     except Exception as error:
+        if broker_process is not None:
+            try:
+                stopped_output, _ = broker_process.communicate(timeout=5)
+                if broker_process.returncode == 0 and "operator_stopped=true" in stopped_output:
+                    print("MISSION STOPPED BY OPERATOR", flush=True)
+                    return 0
+            except subprocess.TimeoutExpired:
+                pass
         print(f"PROVEN FAILURE: {error}", file=sys.stderr)
         return 1
     finally:

@@ -248,3 +248,8 @@ Phase 6 preserves every earlier artifact and adds wire records rather than anoth
 KSA-6R uses fixed CRC-16-CCITT cells: 40-byte inertial, 64-byte aid, 24-byte command, and 48-byte status records. A raw endpoint publishes the four-byte readiness preamble `d6 5a 06 00`. Commands identify their source epoch and following effective epoch; aid and status use the 8 Hz navigation cadence. The terminal inertial flag is set only after the final world commit, allowing the flight endpoint to return final command/status evidence before it stops.
 
 KLF6 transcripts and KLR6 cells are transport evidence, not replacements for KST5. Full layouts, masks, failure rules, and accepted checksums are frozen in `phase6/CONTRACT.md` and `phase6/REALTIME.md`.
+
+
+### KMR6 Mission Control sessions
+
+KMR6 is a host-only, noncanonical presentation/session container. Its 32-byte header identifies version 1 and carries a header CRC-32. Every following record has a type, bounded little-endian length, compact binary payload, and independent CRC-32. Update records preserve the validated KLR6 cells plus passive ground estimates and host presentation fields; a terminal evidence record marks a complete run. Readers stop at the first truncated, oversized, unknown, or corrupt record and expose all earlier records as a recovered partial session. KMR6 never replaces KST5, KLF6, KLR6, or target acceptance evidence. CSV and JSON are explicitly derived presentation exports.

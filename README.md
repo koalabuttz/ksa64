@@ -29,6 +29,8 @@ KSA64 currently provides:
 - additive Phase 5 ECI translation, rigid attitude, bending/slosh, two-axis gimbal and RCS dynamics;
 - strict Phase 5 IMU/barometer/GPS/star-tracker transports, truth-isolated 3-D navigation, quaternion control, and fail-closed sequencing;
 - KLF6/KLR6 split-endpoint contracts, deterministic broker and impairment evidence, passive Mission Control, and independent ground tracking;
+- a host-native F1–F7 live Mission Control console with trajectory, GNC, navigation, vehicle, link, event, and truth-isolated SIM Director pages;
+- adaptive fast/real-time/step presentation, operator pacing and safe detach/stop controls, procedural cues, and recoverable KMR6 session recording/replay with CSV/JSON export;
 - the KSA-6R 32/8/1 Hz stock-C64 flight profile, measured PAL deadline margin, physical ACIA packaging, and a complete shadow-verified host/VICE flight.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
@@ -171,8 +173,14 @@ The accepted VICE mailbox path is externally paced and therefore does not prove 
 Run a complete host-world/host-flight/host-Mission-Control mission with:
 
 ```powershell
+# Fast run with compact summary and an automatic KMR6 recording
 powershell -File phase6/run.ps1
+
+# Live 32 Hz F1–F7 Mission Control dashboard
+powershell -File phase6/run.ps1 -Pace realtime -Display tui
 ```
+
+The live console supports pause, single-step, 0.25x through MAX pacing, bookmarks, SI/US units, three procedural sound profiles, safe detach, postflight review, and replay/export. See the [deployment launcher guide](phase6/LAUNCHER.md).
 
 Move only the flight computer into one VICE C64 with `-Flight vice`. The launcher rejects VICE-world and multi-VICE selections until those endpoint programs actually exist; see the [deployment launcher guide](phase6/LAUNCHER.md).
 

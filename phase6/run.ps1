@@ -8,6 +8,13 @@ param(
     [string]$MissionControl = "host",
     [ValidateSet("fast", "realtime", "step")]
     [string]$Pace = "fast",
+    [ValidateSet("adaptive", "tui", "summary", "none")]
+    [string]$Display = "adaptive",
+    [ValidateSet("si", "dual", "us")]
+    [string]$Units = "si",
+    [ValidateSet("off", "cues", "cinematic")]
+    [string]$Sound = "cues",
+    [string]$Record = "auto",
     [switch]$NoBuild,
     [switch]$Smoke
 )
@@ -21,10 +28,13 @@ try {
     Write-Host "  flight computer: $Flight"
     Write-Host "  mission control: $MissionControl"
     Write-Host "  pace:            $Pace"
+    Write-Host "  display:         $Display"
+    Write-Host "  units / sound:   $Units / $Sound"
+    Write-Host "  recording:       $Record"
     Write-Host ""
 
     if ($Flight -eq "host") {
-        $hostArgs = @("run", "--quiet", "-p", "ksa64-host", "--bin", "phase6_launch", "--", "--world", $World, "--flight", "host", "--mission-control", $MissionControl, "--pace", $Pace)
+        $hostArgs = @("run", "--quiet", "-p", "ksa64-host", "--bin", "phase6_launch", "--", "--world", $World, "--flight", "host", "--mission-control", $MissionControl, "--pace", $Pace, "--display", $Display, "--units", $Units, "--sound", $Sound, "--record", $Record)
         & cargo @hostArgs
         if ($LASTEXITCODE -ne 0) { throw "host mission failed with exit code $LASTEXITCODE" }
         return
@@ -50,7 +60,7 @@ try {
 
     if (-not (Test-Path -LiteralPath $broker)) { throw "missing host broker: $broker" }
     if (-not (Test-Path -LiteralPath $prg)) { throw "missing C64 flight endpoint: $prg" }
-    $pythonArgs = @("-B", "phase6/reference/vice_mailbox_bridge.py", "--vice", $vice, "--prg", $prg, "--broker", $broker, "--mission-control", $MissionControl, "--pace", $Pace)
+    $pythonArgs = @("-B", "phase6/reference/vice_mailbox_bridge.py", "--vice", $vice, "--prg", $prg, "--broker", $broker, "--mission-control", $MissionControl, "--pace", $Pace, "--display", $Display, "--units", $Units, "--sound", $Sound, "--record", $Record)
     if ($Smoke) { $pythonArgs += @("--max-epochs", "8") }
     & python @pythonArgs
     if ($LASTEXITCODE -ne 0) { throw "VICE mission failed with exit code $LASTEXITCODE" }

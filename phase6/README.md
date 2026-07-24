@@ -61,6 +61,26 @@ powershell -File phase6/run.ps1 -Flight vice -MissionControl host -Pace realtime
 
 Mission Control records both validated cell streams, accepts 1,587 deterministic delayed/noisy ground fixes, maintains an independent estimate, and compares it with onboard navigation. Disabling Mission Control produces identical terminal and avionics evidence. VICE world and multi-VICE deployments remain explicitly unsupported because no C64 world endpoint has been packaged. See [LAUNCHER.md](LAUNCHER.md) for the complete placement and pacing matrix.
 
+## Live Mission Control presentation
+
+The host presentation layer consumes the same passive `MissionControlUpdate` stream used by the accepted broker. It cannot issue vehicle commands and its recording, rendering, audio, export, pause, or storage failures cannot alter physics or flight-software evidence.
+
+The 120×40 flagship dashboard provides seven operational pages:
+
+| Key | Console |
+|---|---|
+| F1 | Flight Director overview and GO/NO-GO state |
+| F2 | Trajectory vectors, altitude, velocity, range, and trends |
+| F3 | Guidance, attitude, gimbal, RCS, and navigation-error history |
+| F4 | Onboard navigation, independent ground estimate, and comparison |
+| F5 | Stage, mass, propellant, loads, flexibility, and sequencing |
+| F6 | KLR6 cells, tracking fixes, checksums, alarms, and event log |
+| F7 | Clearly marked omniscient SIM Director state for simulation operations |
+
+The layout remains usable at 80×24 and expands with the terminal. Operational pages display transported telemetry and independent ground products; only F7 exposes simulation truth. Space pauses/resumes, `.` releases one epoch, `[`/`]` select 0.25x through MAX, `U` changes units, `S` changes procedural sound, `B` bookmarks, `F` freezes the view, and `E` exports. Quitting an active mission explicitly offers stop, detach-and-continue-headless, or cancel. A completed mission remains open for postflight review.
+
+Every live run records a host-only, noncanonical KMR6 session by default. Each update has its own CRC-protected binary record; a truncated file replays through the last valid record. The recorder stores KLR6 cells, passive ground products, presentation history, and terminal evidence without replacing KST5 or accepted KLR6 evidence. Sessions replay through `phase6_launch --replay` and export through the `phase6_session` tool.
+
 ## Audit
 
 Run the bounded software audit with:

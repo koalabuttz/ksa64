@@ -243,11 +243,37 @@ pub struct RealtimeWorldEndpoint {
     complete: bool,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RealtimeDirectorSample {
+    pub position_q12: [i32; 3],
+    pub velocity_q24: [i32; 3],
+    pub acceleration_q28: [i32; 3],
+    pub attitude_q30: [i32; 4],
+    pub angular_rate_q24: [i32; 3],
+    pub flexible_q24: [i32; 8],
+    pub total_mass_q12: i32,
+    pub active_propellant_q12: i32,
+    pub rcs_propellant_q12: i32,
+    pub time_q16: i32,
+    pub step: u32,
+    pub active_stage: u8,
+    pub phase: u8,
+    pub substep: u8,
+    pub mach_q16: i32,
+    pub dynamic_pressure_q16: i32,
+    pub angle_of_attack_sine_q16: i32,
+    pub gimbal_requested_q16: [i32; 2],
+    pub gimbal_lagged_q16: [i32; 2],
+    pub gimbal_applied_q16: [i32; 2],
+    pub events: u16,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RealtimeWorldRelease {
     pub inertial: RealtimeInertialCell,
     pub aid: Option<RealtimeAidCell>,
     pub truth_position_q12: [i32; 3],
     pub truth_velocity_q24: [i32; 3],
+    pub director: RealtimeDirectorSample,
     pub complete: bool,
 }
 impl RealtimeWorldEndpoint {
@@ -356,13 +382,56 @@ impl RealtimeWorldEndpoint {
             }
         }
         self.epoch += 1;
-        let position = truth.spatial().position();
-        let velocity = truth.spatial().velocity();
+        let spatial = truth.spatial();
+        let position = spatial.position();
+        let velocity = spatial.velocity();
+        let acceleration = spatial.acceleration();
+        let attitude = truth.rigid().attitude();
+        let angular_rate = truth.rigid().angular_rate();
+        let flexible = truth.flexible();
+        let y_bending = flexible.y().bending();
+        let y_slosh = flexible.y().slosh();
+        let z_bending = flexible.z().bending();
+        let z_slosh = flexible.z().slosh();
+        let gimbal = observation.gimbal;
+        let director = RealtimeDirectorSample {
+            position_q12: [position.x(), position.y(), position.z()],
+            velocity_q24: [velocity.x(), velocity.y(), velocity.z()],
+            acceleration_q28: [acceleration.x(), acceleration.y(), acceleration.z()],
+            attitude_q30: [attitude.w(), attitude.x(), attitude.y(), attitude.z()],
+            angular_rate_q24: [angular_rate.x(), angular_rate.y(), angular_rate.z()],
+            flexible_q24: [
+                y_bending.displacement(),
+                y_bending.rate(),
+                y_slosh.displacement(),
+                y_slosh.rate(),
+                z_bending.displacement(),
+                z_bending.rate(),
+                z_slosh.displacement(),
+                z_slosh.rate(),
+            ],
+            total_mass_q12: truth.total_mass_q12(),
+            active_propellant_q12: truth.active_propellant_q12(),
+            rcs_propellant_q12: self.world.working_rcs_propellant_q12(),
+            time_q16: truth.time_q16(),
+            step: truth.step(),
+            active_stage: truth.active_stage(),
+            phase: truth.phase() as u8,
+            substep: observation.substep,
+            mach_q16: observation.mach_q16,
+            dynamic_pressure_q16: observation.dynamic_pressure_q16,
+            angle_of_attack_sine_q16: observation.angle_of_attack_sine_q16,
+            gimbal_requested_q16: [gimbal.requested.pitch, gimbal.requested.yaw],
+            gimbal_lagged_q16: [gimbal.lagged.pitch, gimbal.lagged.yaw],
+            gimbal_applied_q16: [gimbal.applied.pitch, gimbal.applied.yaw],
+            events: observation.events,
+        };
         Ok(RealtimeWorldRelease {
             inertial,
             aid,
-            truth_position_q12: [position.x(), position.y(), position.z()],
-            truth_velocity_q24: [velocity.x(), velocity.y(), velocity.z()],
+            truth_position_q12: director.position_q12,
+            truth_velocity_q24: director.velocity_q24,
+            director,
             complete: self.complete,
         })
     }

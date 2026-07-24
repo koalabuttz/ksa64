@@ -9,3 +9,12 @@ ksa64-core = { path = "../core" }
 ksa64-flight = { path = "../flight" }
 ksa64-interface = { path = "../interface" }
 ksa64-sim = { path = "../sim" }
+crc32fast = "1.4"
+crossterm = "0.29"
+ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_29"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rodio = { version = "0.22.2", optional = true, default-features = false, features = ["noise", "playback"] }
+
+[features]
+mission-control-audio = ["dep:rodio"]

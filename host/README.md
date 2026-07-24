@@ -66,3 +66,18 @@ The frozen full target run used the same broker behind the VICE binary-monitor m
 ## Phase 6 deployment launcher
 
 `phase6_launch` runs the host world and native flight endpoint across a localhost TCP seam, with optional passive host Mission Control and fast, 32 Hz wall-paced, or manual-step release. The repository-level `phase6/run.ps1` wrapper adds the host-world/VICE-flight combination while enforcing one-VICE-at-a-time lifecycle rules. See `phase6/LAUNCHER.md`.
+
+
+## Phase 6 live console and sessions
+
+`phase6_launch` selects the Ratatui F1–F7 console for realtime/step runs on an interactive terminal and a compact summary for fast or redirected runs. `--display tui` forces the dashboard; `--display summary` and `--display none` support automation. Recording defaults to `target/phase6/sessions/*.kmr6` in every display mode and may be disabled with `--record off`.
+
+Replay a session with:
+
+    cargo run -p ksa64-host --bin phase6_launch -- --replay target/phase6/sessions/<session>.kmr6
+
+Inspect or export without opening the TUI with:
+
+    cargo run -p ksa64-host --bin phase6_session -- --input <session>.kmr6 --csv <flight>.csv --json <flight>.json
+
+KMR6 recording is append-only and CRC-protected per update. Partial recordings recover through their last complete record. The TUI and recorder are passive sinks around `phase6_runner`; they do not enter the world/flight command path.

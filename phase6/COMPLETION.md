@@ -86,3 +86,10 @@ powershell -File phase6/complete.ps1
 ```
 
 It validates formatting, compilation, lints, the entire native regression suite, stock target packaging, refreshed finite timing and endpoint probes, one direct mailbox exchange, an eight-epoch host/VICE/host-Mission-Control exchange, and the checked-in full-flight artifact. It does not silently rerun the full 17-minute target mission.
+
+
+## Operational console addendum
+
+The host-native Mission Control TUI is additive to the accepted Phase 6 software baseline. It changes no KLR6 cell, checksum, target image, scheduler, memory budget, or command path. The acceptance test records one complete 12,692-epoch native mission, reloads exact terminal evidence, exports CSV/JSON, recovers a deliberately truncated footer, and renders all seven pages at 120×40 plus the Flight Director page at 80×24. A bounded eight-epoch host/VICE smoke remains shadow-exact after launcher integration and the relay closes its single VICE instance.
+
+Live pacing, pause, single-step, display freeze, bookmarks, sound, and safe detach are operator/presentation functions. Pacing changes only wall-clock release time. Stop is explicit; detach continues headlessly. KMR6 is noncanonical and cannot substitute for the frozen full-flight artifact or physical-link acceptance.

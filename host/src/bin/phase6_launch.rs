@@ -1,140 +1,140 @@
-use ksa64_host::phase6_runner::{run_native_host_mission, RunnerOptions, RunnerPace};
+use ksa64_host::phase6_runner::{
+    run_native_host_mission, RunnerEvidence, RunnerOptions, RunnerPace,
+};
+use ksa64_host::phase6_session::{default_session_path, Session};
+use ksa64_host::phase6_tui::{
+    run_native_console, run_native_recorded, run_replay_console, ConsoleConfig, DisplayMode,
+    SoundProfile, UnitSystem,
+};
+use std::io::IsTerminal;
+use std::path::PathBuf;
 use std::process::ExitCode;
 
-fn usage() {
-    eprintln!("usage: phase6-launch --world host --flight host --mission-control host|disabled --pace fast|realtime|step");
-    eprintln!("       use phase6/run.ps1 when --flight vice is selected");
+struct Args {
+    options: RunnerOptions,
+    display: DisplayMode,
+    config: ConsoleConfig,
+    replay: Option<PathBuf>,
 }
-
-fn parse() -> Result<RunnerOptions, String> {
-    let mut world = "host".to_owned();
-    let mut flight = "host".to_owned();
-    let mut mission_control = "host".to_owned();
-    let mut pace = "fast".to_owned();
+fn usage() {
+    eprintln!("usage: phase6-launch [--world host] [--flight host] [--mission-control host|disabled] [--pace fast|realtime|step] [--display adaptive|tui|summary|none] [--units si|dual|us] [--sound off|cues|cinematic] [--record auto|off|PATH] [--replay PATH]");
+}
+fn parse() -> Result<Args, String> {
+    let mut options = RunnerOptions::default();
+    let mut display = DisplayMode::Adaptive;
+    let mut config = ConsoleConfig::default();
+    let mut replay = None;
     let mut args = std::env::args().skip(1);
     while let Some(flag) = args.next() {
         let value = args
             .next()
             .ok_or_else(|| format!("missing value for {flag}"))?;
         match flag.as_str() {
-            "--world" => world = value,
-            "--flight" => flight = value,
-            "--mission-control" => mission_control = value,
-            "--pace" => pace = value,
+            "--world" if value != "host" => return Err("only --world host is implemented".into()),
+            "--world" => {}
+            "--flight" if value != "host" => {
+                return Err("use phase6/run.ps1 for --flight vice".into())
+            }
+            "--flight" => {}
+            "--mission-control" => {
+                options.mission_control = match value.as_str() {
+                    "host" => true,
+                    "disabled" => false,
+                    _ => return Err("mission control must be host or disabled".into()),
+                }
+            }
+            "--pace" => {
+                options.pace = match value.as_str() {
+                    "fast" => RunnerPace::Fast,
+                    "realtime" => RunnerPace::Realtime,
+                    "step" => RunnerPace::Step,
+                    _ => return Err("pace must be fast, realtime, or step".into()),
+                }
+            }
+            "--display" => {
+                display = match value.as_str() {
+                    "adaptive" => DisplayMode::Adaptive,
+                    "tui" => DisplayMode::Tui,
+                    "summary" => DisplayMode::Summary,
+                    "none" => DisplayMode::None,
+                    _ => return Err("display must be adaptive, tui, summary, or none".into()),
+                }
+            }
+            "--units" => {
+                config.units = match value.as_str() {
+                    "si" => UnitSystem::Si,
+                    "dual" => UnitSystem::Dual,
+                    "us" => UnitSystem::Us,
+                    _ => return Err("units must be si, dual, or us".into()),
+                }
+            }
+            "--sound" => {
+                config.sound = match value.as_str() {
+                    "off" => SoundProfile::Off,
+                    "cues" => SoundProfile::Cues,
+                    "cinematic" => SoundProfile::Cinematic,
+                    _ => return Err("sound must be off, cues, or cinematic".into()),
+                }
+            }
+            "--record" => {
+                config.recording = match value.as_str() {
+                    "auto" => Some(default_session_path()),
+                    "off" => None,
+                    _ => Some(PathBuf::from(value)),
+                }
+            }
+            "--replay" => replay = Some(PathBuf::from(value)),
             _ => return Err(format!("unknown option {flag}")),
         }
     }
-    if world != "host" {
-        return Err("only --world host is implemented".into());
-    }
-    if flight != "host" {
-        return Err("use phase6/run.ps1 for --flight vice".into());
-    }
-    let mission_control = match mission_control.as_str() {
-        "host" => true,
-        "disabled" => false,
-        _ => return Err("--mission-control must be host or disabled".into()),
-    };
-    let pace = match pace.as_str() {
-        "fast" => RunnerPace::Fast,
-        "realtime" => RunnerPace::Realtime,
-        "step" => RunnerPace::Step,
-        _ => return Err("--pace must be fast, realtime, or step".into()),
-    };
-    Ok(RunnerOptions {
-        mission_control,
-        pace,
+    Ok(Args {
+        options,
+        display,
+        config,
+        replay,
     })
 }
-
+fn show(e: &RunnerEvidence) {
+    println!("KSA64_PHASE6_COMPLETE complete={} epochs={} operator_stopped={} steps={} position={:?} velocity={:?} nav_position={:?} nav_velocity={:?} status_flight_checksum={} final_flight_checksum={} navigation_checksum={} deadline_misses={} alarms={}",e.complete,e.fast_epochs,e.operator_stopped,e.mission_steps,e.terminal_position_q12,e.terminal_velocity_q24,e.navigation_position_q12,e.navigation_velocity_q24,e.status_flight_checksum,e.final_flight_checksum,e.navigation_checksum,e.deadline_misses,e.alarms);
+    if let Some(mc) = e.mission_control {
+        println!("KSA64_PHASE6_MISSION_CONTROL world_cells={} flight_cells={} ground_fixes={} transcript_checksum={} ground_checksum={} alarms={} comparison={:?}",mc.world_cells,mc.flight_cells,mc.ground_fixes,mc.transcript_checksum,mc.ground_checksum,mc.alarms,mc.comparison)
+    }
+}
 fn run() -> Result<(), String> {
-    let options = parse()?;
-    println!(
-        "KSA64 Phase 6: world=host flight=host mission-control={} pace={:?}",
-        if options.mission_control {
-            "host"
-        } else {
-            "disabled"
-        },
-        options.pace
-    );
-    let evidence =
-        run_native_host_mission(options).map_err(|error| format!("mission failed: {error:?}"))?;
-    println!("MISSION COMPLETE");
-    debug_assert!(evidence.complete);
-    println!("  fast epochs: {}", evidence.fast_epochs);
-    println!("  mission steps: {}", evidence.mission_steps);
-    println!(
-        "  terminal position Q12: {:?}",
-        evidence.terminal_position_q12
-    );
-    println!(
-        "  terminal velocity Q24: {:?}",
-        evidence.terminal_velocity_q24
-    );
-    println!(
-        "  navigation position Q12: {:?}",
-        evidence.navigation_position_q12
-    );
-    println!(
-        "  navigation velocity Q24: {:?}",
-        evidence.navigation_velocity_q24
-    );
-    println!(
-        "  navigation checksum: 0x{:08x}",
-        evidence.navigation_checksum
-    );
-    println!(
-        "  last status flight checksum: 0x{:08x}",
-        evidence.status_flight_checksum
-    );
-    println!(
-        "  final flight checksum: 0x{:08x}",
-        evidence.final_flight_checksum
-    );
-    println!(
-        "  flight deadline misses / alarms: {} / {}",
-        evidence.deadline_misses, evidence.alarms
-    );
-    if let Some(mission_control) = evidence.mission_control {
-        println!("MISSION CONTROL");
-        println!(
-            "  observed world / flight cells: {} / {}",
-            mission_control.world_cells, mission_control.flight_cells
-        );
-        println!(
-            "  independent ground fixes: {}",
-            mission_control.ground_fixes
-        );
-        println!(
-            "  transcript checksum: 0x{:08x}",
-            mission_control.transcript_checksum
-        );
-        println!(
-            "  ground checksum: 0x{:08x}",
-            mission_control.ground_checksum
-        );
-        println!("  alarms: {}", mission_control.alarms);
-        if let Some(comparison) = mission_control.comparison {
-            println!(
-                "  final ground-onboard position delta Q12: {:?}",
-                comparison.position_delta_q12
-            );
-            println!(
-                "  final ground-onboard velocity delta Q24: {:?}",
-                comparison.velocity_delta_q24
-            );
+    let mut a = parse()?;
+    if let Some(path) = a.replay.take() {
+        let session = Session::load(path).map_err(|e| format!("session: {e:?}"))?;
+        return run_replay_console(session, a.config).map_err(|e| format!("replay: {e:?}"));
+    }
+    let display = match a.display {
+        DisplayMode::Adaptive if a.options.pace == RunnerPace::Fast => DisplayMode::Summary,
+        DisplayMode::Adaptive if std::io::stderr().is_terminal() => DisplayMode::Tui,
+        DisplayMode::Adaptive => DisplayMode::Summary,
+        x => x,
+    };
+    if display == DisplayMode::Tui && !a.options.mission_control {
+        return Err("the TUI requires --mission-control host".into());
+    }
+    let record_path = a.config.recording.clone();
+    let evidence = match display {
+        DisplayMode::Tui => {
+            run_native_console(a.options, a.config).map_err(|e| format!("mission: {e:?}"))?
         }
+        _ if record_path.is_some() => run_native_recorded(a.options, record_path.unwrap())
+            .map_err(|e| format!("mission: {e:?}"))?,
+        _ => run_native_host_mission(a.options).map_err(|e| format!("mission: {e:?}"))?,
+    };
+    if display != DisplayMode::None {
+        show(&evidence)
     }
     Ok(())
 }
-
 fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
-        Err(error) => {
+        Err(e) => {
             usage();
-            eprintln!("error: {error}");
+            eprintln!("error: {e}");
             ExitCode::FAILURE
         }
     }

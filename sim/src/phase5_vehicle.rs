@@ -1131,6 +1131,9 @@ pub struct Phase6FastObservation {
     pub gyro_body_q24: [i32; 3],
     pub gimbal: GimbalSnapshotQ16,
     pub events: u16,
+    pub mach_q16: i32,
+    pub dynamic_pressure_q16: i32,
+    pub angle_of_attack_sine_q16: i32,
 }
 
 pub struct Phase6FastVehicle {
@@ -1167,6 +1170,9 @@ impl Phase6FastVehicle {
     }
     pub const fn working_truth(&self) -> Phase5VehicleTruth {
         self.working.truth
+    }
+    pub const fn working_rcs_propellant_q12(&self) -> i32 {
+        self.working.rcs.propellant_q12()
     }
     pub fn current_snapshot(&self) -> Result<Phase5VehicleSnapshot, Phase5VehicleError> {
         self.committed.current_snapshot()
@@ -1220,6 +1226,9 @@ impl Phase6FastVehicle {
             gyro_body_q24: fast.gyro_body_q24,
             gimbal: self.working.gimbal.snapshot(),
             events: self.events,
+            mach_q16: fast.mach.raw(),
+            dynamic_pressure_q16: fast.dynamic_pressure_q16,
+            angle_of_attack_sine_q16: fast.angle_of_attack_sine_q16,
         };
         if self.substep < PHASE5_SUBSTEPS {
             return Ok((observation, None));

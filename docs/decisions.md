@@ -909,3 +909,14 @@ Date: 2026-07-24
 Status: accepted.
 
 Provide one launcher for host-world/host-flight and host-world/VICE-flight arrangements, with optional passive host Mission Control and fast, 32 Hz wall-paced, or manual-step execution. Reject VICE-world and multi-VICE selections until actual C64 world or Mission Control endpoint programs exist. Run native endpoints across the same TCP cell seam used by hybrid deployments rather than collapsing them into a privileged combined simulator. Mission Control may observe validated cells and independent delayed/noisy ground fixes but cannot issue commands; enabling it must preserve all terminal and avionics evidence.
+
+
+## D-071: Keep live Mission Control host-native and passive
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Build the live F1–F7 presentation as a host-only Ratatui consumer of validated KLR6 and independent ground products. Reserve omniscient truth for a clearly labelled SIM Director page. Do not change KLR6, C64 memory budgets, physics, or flight-software scheduling to serve the display. Make realtime/step runs interactive, fast runs summary-oriented, and preserve explicit display overrides.
+
+Record all presentation inputs in a host-only noncanonical KMR6 stream with per-record CRC-32, prefix recovery, replay, and CSV/JSON derivation. Keep KST5 and KLR6 authoritative. Operator pacing may delay releases but may not alter their order; stopping is explicit, and detaching returns the console while the mission and recorder continue headlessly.
