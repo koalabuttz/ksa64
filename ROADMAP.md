@@ -216,7 +216,8 @@ Exit criteria:
 
 ## Phase 8: spatial hobby flight and validated vehicle modeling
 
-Status: planned after Phase 7.
+Status: in progress. The accepted implementation contract is frozen in
+`phase8/PLAN.md`.
 
 Purpose: add the physical dimensions that require geometry, attitude, wind, and
 model correlation while preserving the useful vertical profile.
