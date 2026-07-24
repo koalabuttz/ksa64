@@ -1,0 +1,24 @@
+{
+  "contract": "ksa64.numeric.hobby-vertical-v1",
+  "headroom_percent": 25,
+  "raw_storage": "signed-i32",
+  "cadence_seconds": {
+    "constrained_or_powered": "0.01",
+    "coast": "0.02",
+    "recovery": "0.05"
+  },
+  "envelopes": {
+    "time_s": ["0", "4096"],
+    "altitude_m": ["-1000", "150000"],
+    "velocity_mps": ["-2500", "2500"],
+    "acceleration_mps2": ["-2000", "2000"],
+    "mass_kg": ["0", "512"],
+    "force_n": ["-100000", "100000"],
+    "mass_flow_kgps": ["0", "100"],
+    "dynamic_pressure_pa": ["0", "8000000"],
+    "density_kgpm3": ["0", "2"],
+    "reference_area_m2": ["0", "4"],
+    "recovery_cda_m2": ["0", "128"],
+    "mach": ["0", "8"]
+  }
+}
