@@ -9,8 +9,8 @@ Every Phase 6 adapter implements a nonblocking byte-stream boundary. KLF6 owns i
 | Transport | Intended profile | Current evidence |
 |---|---|---|
 | In-process/native mock | Exact and realtime | Complete conformance, impairment, backpressure, and full mission |
-| Native TCP socket | Realtime broker | Complete 12,692-epoch split mission with exact shadow verification |
-| VICE binary-monitor mailbox | Target acceptance only | One-cell smoke and complete externally paced 1x PAL flight |
+| Native TCP socket | Realtime broker | Complete 12,692-epoch split mission with exact shadow verification and passive host Mission Control |
+| VICE binary-monitor mailbox | Target acceptance and launcher | One-cell smoke and complete externally paced 1x PAL flight; optional host Mission Control |
 | C64 user-port serial at 9,600 baud | Exact paced | Bandwidth/policy accepted; electrical interface and target driver pending |
 | SwiftLink at 38,400 baud | Realtime candidate | Register driver and stock endpoint built; hardware run pending |
 | Turbo232 at 57,600 baud | Realtime candidate | Register driver and stock endpoint built; VICE/physical receive run pending |

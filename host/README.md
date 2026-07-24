@@ -61,3 +61,8 @@ See `phase4/HOST_ANALYSIS.md`, `phase4/FORMATS.md`, and `phase4/EXPORT.md` for c
 Phase 6 host support can run the world broker over TCP while a native or C64 flight endpoint owns guidance and control. The broker reads the KLR6 readiness preamble, streams inertial/aid cells, validates returned command/status cells, and compares every result with a native shadow flight computer. The shadow is an observer only and never supplies commands to the world.
 
 The frozen full target run used the same broker behind the VICE binary-monitor mailbox relay. See `phase6/README.md` and `phase6/COMPLETION.md` for exact evidence and the remaining physical-link boundary.
+
+
+## Phase 6 deployment launcher
+
+`phase6_launch` runs the host world and native flight endpoint across a localhost TCP seam, with optional passive host Mission Control and fast, 32 Hz wall-paced, or manual-step release. The repository-level `phase6/run.ps1` wrapper adds the host-world/VICE-flight combination while enforcing one-VICE-at-a-time lifecycle rules. See `phase6/LAUNCHER.md`.

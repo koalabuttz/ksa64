@@ -168,6 +168,14 @@ It validates the checked-in full-flight evidence without silently rerunning the 
 Phase 6 splits world authority, flight software, and passive Mission Control across configurable native, VICE, hybrid, or physical endpoints. The KSA-6R flight profile completed 12,692 epochs on a stock C64 image under 1x PAL x64sc with every command/status cell shadow-verified, exact terminal checksums, and no deadlines or alarms. Its measured controller workload uses about 49.5% average PAL CPU.
 
 The accepted VICE mailbox path is externally paced and therefore does not prove end-to-end wall-clock realtime transport. The SwiftLink/Turbo232 endpoint is built below the stock-memory boundary, while physical ACIA, user-port, and Ultimate hardware acceptance remain open. See the [Phase 6 completion record](phase6/COMPLETION.md).
+Run a complete host-world/host-flight/host-Mission-Control mission with:
+
+```powershell
+powershell -File phase6/run.ps1
+```
+
+Move only the flight computer into one VICE C64 with `-Flight vice`. The launcher rejects VICE-world and multi-VICE selections until those endpoint programs actually exist; see the [deployment launcher guide](phase6/LAUNCHER.md).
+
 
 ## Guiding principles
 

@@ -154,7 +154,7 @@ Purpose: split the architecture across physical computers.
 
 Status: software baseline accepted. Exact split execution, deterministic links,
 the stock-C64 KSA-6R flight profile, passive ground systems, and a complete
-externally paced 1x PAL target flight now pass. Live physical-link acceptance
+externally paced 1x PAL target flight, and the host/VICE deployment launcher now pass. Live physical-link acceptance
 remains open; see `phase6/COMPLETION.md`.
 
 Possible configurations:

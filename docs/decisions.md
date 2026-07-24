@@ -900,3 +900,12 @@ Date: 2026-07-24
 Status: accepted.
 
 Completion requires exact native splitting, deterministic link failures, passive ground systems, finite PAL timing, stock endpoint packaging, and one complete externally paced 1x PAL target flight. It does not require possession of multiple C64s or an REU. A finite run on actual compatible link hardware remains a documented follow-up rather than being hidden or inferred.
+
+
+## D-070: Package host-first Phase 6 deployments without inventing missing endpoints
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Provide one launcher for host-world/host-flight and host-world/VICE-flight arrangements, with optional passive host Mission Control and fast, 32 Hz wall-paced, or manual-step execution. Reject VICE-world and multi-VICE selections until actual C64 world or Mission Control endpoint programs exist. Run native endpoints across the same TCP cell seam used by hybrid deployments rather than collapsing them into a privileged combined simulator. Mission Control may observe validated cells and independent delayed/noisy ground fixes but cannot issue commands; enabling it must preserve all terminal and avionics evidence.

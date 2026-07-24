@@ -34,6 +34,7 @@ try {
         cargo check --workspace --all-targets --features fixtures
         cargo clippy --workspace --all-targets --features fixtures -- -D warnings -A clippy::result-unit-err -A clippy::manual-is-multiple-of -A clippy::manual-flatten -A clippy::needless-range-loop -A clippy::drop-non-drop -A clippy::too-many-arguments
         cargo test --workspace --features fixtures
+        cargo build -p ksa64-host --bin phase6_bridge
     }
 
     if (-not $SkipMos) {
@@ -54,6 +55,8 @@ try {
             python -B phase6/reference/vice_endpoint_probe.py --vice $vice --prg target/mos-c64-none/c64/ksa64-phase6-endpoint-probe-c64 --runs 3 --output phase6/endpoint-probe-v1.json --check
             Assert-NoVice
             python -B phase6/reference/vice_mailbox_smoke.py --warp --vice $vice --prg target/mos-c64-none/c64/ksa64-phase6-mailbox-endpoint-c64
+            Assert-NoVice
+            powershell -NoProfile -ExecutionPolicy Bypass -File phase6/run.ps1 -World host -Flight vice -MissionControl host -Pace fast -NoBuild -Smoke
             Assert-NoVice
         }
 

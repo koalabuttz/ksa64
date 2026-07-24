@@ -246,6 +246,8 @@ pub struct RealtimeWorldEndpoint {
 pub struct RealtimeWorldRelease {
     pub inertial: RealtimeInertialCell,
     pub aid: Option<RealtimeAidCell>,
+    pub truth_position_q12: [i32; 3],
+    pub truth_velocity_q24: [i32; 3],
     pub complete: bool,
 }
 impl RealtimeWorldEndpoint {
@@ -354,9 +356,13 @@ impl RealtimeWorldEndpoint {
             }
         }
         self.epoch += 1;
+        let position = truth.spatial().position();
+        let velocity = truth.spatial().velocity();
         Ok(RealtimeWorldRelease {
             inertial,
             aid,
+            truth_position_q12: [position.x(), position.y(), position.z()],
+            truth_velocity_q24: [velocity.x(), velocity.y(), velocity.z()],
             complete: self.complete,
         })
     }

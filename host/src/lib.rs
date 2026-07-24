@@ -6,6 +6,7 @@ pub mod phase4_storage;
 pub mod phase5;
 pub mod phase5_campaign;
 pub mod phase6;
+pub mod phase6_runner;
 
 use std::io::{self, Write};
 

@@ -85,4 +85,4 @@ The bounded runner is:
 powershell -File phase6/complete.ps1
 ```
 
-It validates formatting, compilation, lints, the entire native regression suite, stock target packaging, refreshed finite timing and endpoint probes, one mailbox exchange, and the checked-in full-flight artifact. It does not silently rerun the full 17-minute target mission.
+It validates formatting, compilation, lints, the entire native regression suite, stock target packaging, refreshed finite timing and endpoint probes, one direct mailbox exchange, an eight-epoch host/VICE/host-Mission-Control exchange, and the checked-in full-flight artifact. It does not silently rerun the full 17-minute target mission.

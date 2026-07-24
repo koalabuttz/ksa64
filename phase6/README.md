@@ -47,6 +47,20 @@ The pinned rust-mos toolchain exposed two target-only traps during full acceptan
 
 The pinned Windows VICE 3.10 ACIA socket backend successfully transmitted C64 bytes to the host but did not deliver host bytes back to the emulated ACIA in the tested configurations. The physical ACIA endpoint remains valid software, while automated target acceptance uses the binary-monitor mailbox transport. This limitation is documented rather than treated as physical-link evidence.
 
+## Running the system
+
+The supported deployment launcher now runs either the entire KSA-6R stack on the host or places the flight computer in one VICE instance while the host owns the world and passive Mission Control:
+
+```powershell
+# Fast all-host mission
+powershell -File phase6/run.ps1
+
+# Host world + VICE flight computer + host Mission Control
+powershell -File phase6/run.ps1 -Flight vice -MissionControl host -Pace realtime
+```
+
+Mission Control records both validated cell streams, accepts 1,587 deterministic delayed/noisy ground fixes, maintains an independent estimate, and compares it with onboard navigation. Disabling Mission Control produces identical terminal and avionics evidence. VICE world and multi-VICE deployments remain explicitly unsupported because no C64 world endpoint has been packaged. See [LAUNCHER.md](LAUNCHER.md) for the complete placement and pacing matrix.
+
 ## Audit
 
 Run the bounded software audit with:
@@ -55,6 +69,6 @@ Run the bounded software audit with:
 powershell -File phase6/complete.ps1
 ```
 
-It runs native regressions, lints, target builds, three finite PAL timing/endpoint probes, one mailbox smoke exchange, and validation of the checked-in full-flight artifact. It deliberately does not rerun the approximately 17-minute full mission. The runner refuses to start if another x64sc process is already open and every probe closes its VICE instance on success or proven failure.
+It runs native regressions, lints, target builds, three finite PAL timing/endpoint probes, direct and Mission-Control mailbox smoke exchanges, and validation of the checked-in full-flight artifact. It deliberately does not rerun the approximately 17-minute full mission. The runner refuses to start if another x64sc process is already open and every probe closes its VICE instance on success or proven failure.
 
-See [CONTRACT.md](CONTRACT.md), [REALTIME.md](REALTIME.md), [TRANSPORTS.md](TRANSPORTS.md), and [COMPLETION.md](COMPLETION.md).
+See [LAUNCHER.md](LAUNCHER.md), [CONTRACT.md](CONTRACT.md), [REALTIME.md](REALTIME.md), [TRANSPORTS.md](TRANSPORTS.md), and [COMPLETION.md](COMPLETION.md).
