@@ -366,3 +366,13 @@ Phase 6 makes the Phase 5 seam deployable without duplicating either side. The w
 KLF6 is the general framed session protocol for exact-paced or realtime adapters. KLR6 is the compact reviewed 32 Hz stream used by KSA-6R. Native processes, TCP, C64 mailbox automation, ACIA cartridges, Ultimate UCI, and a future user-port adapter share these contracts; transports do not gain authority over physics or guidance. One C64 plus a host is the accessible baseline. Additional C64s are optional endpoint placements, not functional requirements.
 
 The exact-paced split remains the Phase 5 regression oracle. KSA-6R is separately versioned because its 32/8/1 Hz multirate schedule and compact observations are designed around stock PAL compute and link budgets. The accepted target run proves exact full-flight execution at normal PAL CPU speed under external pacing. Live physical transport remains a separate acceptance gate.
+
+## Accepted Phase 6 Mission Control presentation architecture
+
+The host presentation retains the complete ordered `MissionControlUpdate` history and renders it without entering the world-to-flight or flight-to-world path. Live flight and KMR6 replay use the same presentation model. Freeze changes only the display cursor; the broker and recorder continue. Replay derives every plot and event panel from the prefix ending at the selected cursor.
+
+A strictly parsed embedded copy of the frozen 99-point nominal KPH5 history supplies the planned ascent. The accepted nominal terminal state supplies its orbit target. Onboard and independent ground states supply the two observed tracks. Presentation-only osculating elements, atmosphere/load estimates, and Earth-fixed coordinates use accepted model constants but remain labelled `MODEL EST`; they are not transported measurements or canonical evidence.
+
+F1 through F6 have no SIM Director dependency. They consume PLAN, ONBOARD, GROUND EST, and labelled MODEL EST sources. F7 alone may display omniscient world truth and is rendered with a distinct warning palette. This boundary is enforced by mutating all director fields and requiring the operational page buffers to remain unchanged.
+
+The renderer selects compact, standard, wide, and ultra-wide panel arrangements from terminal dimensions. Braille and ASCII plotters share the same bounded world-to-canvas transforms. Plot selection and initial trajectory view are launcher settings only; KLR6, KMR6, KST5, endpoint RAM, and mission scheduling remain unchanged.

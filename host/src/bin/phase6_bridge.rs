@@ -2,7 +2,8 @@ use ksa64_host::phase6::configure_socket;
 use ksa64_host::phase6_runner::{run_world_with_flight, RunnerEvidence, RunnerOptions, RunnerPace};
 use ksa64_host::phase6_session::default_session_path;
 use ksa64_host::phase6_tui::{
-    run_bridge_console, run_bridge_recorded, ConsoleConfig, DisplayMode, SoundProfile, UnitSystem,
+    run_bridge_console, run_bridge_recorded, ConsoleConfig, DisplayMode, PlotStyle, SoundProfile,
+    TrajectoryView, UnitSystem,
 };
 use std::io::{self, IsTerminal, Write};
 use std::net::TcpListener;
@@ -72,6 +73,22 @@ fn parse() -> Result<Args, String> {
                     "cues" => SoundProfile::Cues,
                     "cinematic" => SoundProfile::Cinematic,
                     _ => return Err("sound must be off, cues, or cinematic".into()),
+                }
+            }
+            "--plot" => {
+                config.plot_style = match value.as_str() {
+                    "auto" => PlotStyle::Auto,
+                    "braille" => PlotStyle::Braille,
+                    "ascii" => PlotStyle::Ascii,
+                    _ => return Err("plot must be auto, braille, or ascii".into()),
+                }
+            }
+            "--trajectory-view" => {
+                config.trajectory_view = match value.as_str() {
+                    "ascent" => TrajectoryView::Ascent,
+                    "orbit" => TrajectoryView::Orbit,
+                    "ground" => TrajectoryView::GroundTrack,
+                    _ => return Err("trajectory view must be ascent, orbit, or ground".into()),
                 }
             }
             "--record" => {

@@ -4,7 +4,7 @@ use ksa64_host::phase6_runner::{
 use ksa64_host::phase6_session::{default_session_path, Session};
 use ksa64_host::phase6_tui::{
     run_native_console, run_native_recorded, run_replay_console, ConsoleConfig, DisplayMode,
-    SoundProfile, UnitSystem,
+    PlotStyle, SoundProfile, TrajectoryView, UnitSystem,
 };
 use std::io::IsTerminal;
 use std::path::PathBuf;
@@ -17,7 +17,7 @@ struct Args {
     replay: Option<PathBuf>,
 }
 fn usage() {
-    eprintln!("usage: phase6-launch [--world host] [--flight host] [--mission-control host|disabled] [--pace fast|realtime|step] [--display adaptive|tui|summary|none] [--units si|dual|us] [--sound off|cues|cinematic] [--record auto|off|PATH] [--replay PATH]");
+    eprintln!("usage: phase6-launch [--world host] [--flight host] [--mission-control host|disabled] [--pace fast|realtime|step] [--display adaptive|tui|summary|none] [--units si|dual|us] [--sound off|cues|cinematic] [--plot auto|braille|ascii] [--trajectory-view ascent|orbit|ground] [--record auto|off|PATH] [--replay PATH]");
 }
 fn parse() -> Result<Args, String> {
     let mut options = RunnerOptions::default();
@@ -74,6 +74,22 @@ fn parse() -> Result<Args, String> {
                     "cues" => SoundProfile::Cues,
                     "cinematic" => SoundProfile::Cinematic,
                     _ => return Err("sound must be off, cues, or cinematic".into()),
+                }
+            }
+            "--plot" => {
+                config.plot_style = match value.as_str() {
+                    "auto" => PlotStyle::Auto,
+                    "braille" => PlotStyle::Braille,
+                    "ascii" => PlotStyle::Ascii,
+                    _ => return Err("plot must be auto, braille, or ascii".into()),
+                }
+            }
+            "--trajectory-view" => {
+                config.trajectory_view = match value.as_str() {
+                    "ascent" => TrajectoryView::Ascent,
+                    "orbit" => TrajectoryView::Orbit,
+                    "ground" => TrajectoryView::GroundTrack,
+                    _ => return Err("trajectory view must be ascent, orbit, or ground".into()),
                 }
             }
             "--record" => {

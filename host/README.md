@@ -70,7 +70,7 @@ The frozen full target run used the same broker behind the VICE binary-monitor m
 
 ## Phase 6 live console and sessions
 
-`phase6_launch` selects the Ratatui F1–F7 console for realtime/step runs on an interactive terminal and a compact summary for fast or redirected runs. `--display tui` forces the dashboard; `--display summary` and `--display none` support automation. Recording defaults to `target/phase6/sessions/*.kmr6` in every display mode and may be disabled with `--record off`.
+`phase6_launch` selects the responsive Ratatui F1–F7 console for realtime/step runs on an interactive terminal and a compact summary for fast or redirected runs. `--display tui` forces the dashboard; `--display summary` and `--display none` support automation. `--plot auto|braille|ascii` controls plot glyphs, while `--trajectory-view ascent|orbit|ground` selects the initial F2 visualization. F2 compares the frozen KPH5 plan with onboard and independent ground estimates; only F7 reads simulator truth. Recording defaults to `target/phase6/sessions/*.kmr6` in every display mode and may be disabled with `--record off`.
 
 Replay a session with:
 
@@ -80,4 +80,4 @@ Inspect or export without opening the TUI with:
 
     cargo run -p ksa64-host --bin phase6_session -- --input <session>.kmr6 --csv <flight>.csv --json <flight>.json
 
-KMR6 recording is append-only and CRC-protected per update. Partial recordings recover through their last complete record. The TUI and recorder are passive sinks around `phase6_runner`; they do not enter the world/flight command path.
+KMR6 recording is append-only and CRC-protected per update. Partial recordings recover through their last complete record. Replay rebuilds plots and events from the exact recorded prefix. The TUI and recorder are passive sinks around `phase6_runner`; they do not enter the world/flight command path. See `phase6/MISSION_CONTROL.md` for source badges, responsive tiers, visual controls, and authority rules.

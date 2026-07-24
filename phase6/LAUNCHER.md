@@ -11,6 +11,9 @@ powershell -File phase6/run.ps1
 # Live all-host mission at the 32 Hz release rate
 powershell -File phase6/run.ps1 -Pace realtime -Display tui
 
+# Start on the orbital display with explicit Braille plots
+powershell -File phase6/run.ps1 -Pace realtime -Display tui -Plot braille -TrajectoryView orbit
+
 # One VICE C64 owns the flight computer
 powershell -File phase6/run.ps1 -Flight vice -Pace realtime -Display tui
 ```
@@ -39,13 +42,16 @@ Mission Control observes validated world-to-flight and flight-to-world cells, de
 | `summary` | Prints terminal and Mission Control evidence after the run. |
 | `none` | Suppresses presentation output; validation errors still fail visibly. |
 
-The flagship layout is 120×40 and scales down to 80×24. F1 is the Flight Director overview; F2 trajectory; F3 GNC; F4 onboard/ground navigation; F5 vehicle; F6 network/events; and F7 the clearly labelled omniscient SIM Director. Only F7 presents simulator truth.
+The flagship layout is 120×40, scales down to 80×24, and adds dense panels through 200×60 ultra-wide terminals. F1 is the Flight Director overview; F2 switches among ascent, orbit, and ground track; F3 is GNC; F4 onboard/ground navigation; F5 vehicle; F6 network/events; and F7 the clearly labelled omniscient SIM Director. Only F7 presents simulator truth. Use `-Plot auto|braille|ascii` to select plot glyphs and `-TrajectoryView ascent|orbit|ground` to select the initial F2 view.
 
 ## Live controls
 
 | Key | Action |
 |---|---|
 | F1–F7 | Select console |
+| `1` / `2` / `3` | F2 Ascent / Orbit / Ground Track |
+| Tab / Shift+Tab | Cycle F2 visualizations |
+| `P` / `O` | Emphasize planned / onboard trajectory |
 | Space | Hold/resume releases |
 | `.` | Release exactly one epoch while held |
 | `[` / `]` | Select 0.25x, 0.5x, 1x, 2x, or MAX |
@@ -54,6 +60,7 @@ The flagship layout is 120×40 and scales down to 80×24. F1 is the Flight Direc
 | `B` | Add a session bookmark |
 | `F` | Freeze/unfreeze the displayed sample; recording continues |
 | `E` | Export the current completed recording to CSV and JSON |
+| `?` | Open the in-console help overlay |
 | `Q` | Active mission: choose stop, detach/continue headless, or cancel. Postflight: exit. |
 
 Detaching restores the terminal immediately, resumes releases, and keeps both the mission and recorder alive. Stopping is an explicit operator action. A healthy run is never canceled merely because it is taking a long time.
@@ -86,12 +93,12 @@ Inspect or export without the dashboard:
 cargo run -p ksa64-host --bin phase6_session -- --input <session>.kmr6 --csv <flight>.csv --json <flight>.json
 ```
 
-Replay arrows seek one sample, Home/End jump, Space plays/pauses, and `E` exports. KMR6 and its CSV/JSON products are presentation evidence; KST5 and KLR6 remain authoritative.
+Replay arrows seek one sample, Home/End jump, Space plays/pauses, and `E` exports. Every history plot is rebuilt from the exact replay prefix, so future samples cannot appear at an earlier cursor. KMR6 and its CSV/JSON products are presentation evidence; KST5 and KLR6 remain authoritative.
 
 ## Direct native command
 
 ```powershell
-cargo run -p ksa64-host --bin phase6_launch -- --world host --flight host --mission-control host --pace realtime --display tui --units si --sound cues --record auto
+cargo run -p ksa64-host --bin phase6_launch -- --world host --flight host --mission-control host --pace realtime --display tui --units si --sound cues --plot auto --trajectory-view ascent --record auto
 ```
 
-Unsupported values fail immediately. The launcher never silently substitutes a different endpoint placement.
+Unsupported values fail immediately. The launcher never silently substitutes a different endpoint placement. Presentation architecture, provenance, responsive layouts, and plot controls are documented in [MISSION_CONTROL.md](MISSION_CONTROL.md).

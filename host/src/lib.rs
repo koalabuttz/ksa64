@@ -9,6 +9,7 @@ pub mod phase6;
 pub mod phase6_audio;
 pub mod phase6_runner;
 pub mod phase6_session;
+pub mod phase6_trajectory;
 pub mod phase6_tui;
 
 use std::io::{self, Write};

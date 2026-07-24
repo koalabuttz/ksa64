@@ -253,3 +253,9 @@ KLF6 transcripts and KLR6 cells are transport evidence, not replacements for KST
 ### KMR6 Mission Control sessions
 
 KMR6 is a host-only, noncanonical presentation/session container. Its 32-byte header identifies version 1 and carries a header CRC-32. Every following record has a type, bounded little-endian length, compact binary payload, and independent CRC-32. Update records preserve the validated KLR6 cells plus passive ground estimates and host presentation fields; a terminal evidence record marks a complete run. Readers stop at the first truncated, oversized, unknown, or corrupt record and expose all earlier records as a recovered partial session. KMR6 never replaces KST5, KLF6, KLR6, or target acceptance evidence. CSV and JSON are explicitly derived presentation exports.
+
+### Phase 6 visualization derivation
+
+The expanded Mission Control plots introduce no format revision. The planned ascent is the strictly validated frozen run-zero KPH5 artifact; the nominal orbit target comes from its accepted reference record. Live and replayed onboard, ground, and SIM Director inputs already exist in `MissionControlUpdate`/KMR6. Osculating-orbit, ground-track, environment, and residual products are regenerated presentation aids and are never serialized as canonical flight evidence.
+
+KMR6 version 1 remains sufficient because each recorded update already preserves the ordered inputs needed to rebuild every plot. A replay renderer may use only records at or before its selected cursor. Plot glyph mode, terminal size, focused trajectory view, and path emphasis are transient UI preferences and are not stored in KMR6.

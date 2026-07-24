@@ -29,7 +29,7 @@ KSA64 currently provides:
 - additive Phase 5 ECI translation, rigid attitude, bending/slosh, two-axis gimbal and RCS dynamics;
 - strict Phase 5 IMU/barometer/GPS/star-tracker transports, truth-isolated 3-D navigation, quaternion control, and fail-closed sequencing;
 - KLF6/KLR6 split-endpoint contracts, deterministic broker and impairment evidence, passive Mission Control, and independent ground tracking;
-- a host-native F1–F7 live Mission Control console with trajectory, GNC, navigation, vehicle, link, event, and truth-isolated SIM Director pages;
+- a responsive host-native F1–F7 Mission Control console with planned-versus-observed ascent, osculating-orbit, Earth ground-track, GNC, navigation, vehicle, link, event, and truth-isolated SIM Director views;
 - adaptive fast/real-time/step presentation, operator pacing and safe detach/stop controls, procedural cues, and recoverable KMR6 session recording/replay with CSV/JSON export;
 - the KSA-6R 32/8/1 Hz stock-C64 flight profile, measured PAL deadline margin, physical ACIA packaging, and a complete shadow-verified host/VICE flight.
 
@@ -176,11 +176,11 @@ Run a complete host-world/host-flight/host-Mission-Control mission with:
 # Fast run with compact summary and an automatic KMR6 recording
 powershell -File phase6/run.ps1
 
-# Live 32 Hz F1–F7 Mission Control dashboard
-powershell -File phase6/run.ps1 -Pace realtime -Display tui
+# Live 32 Hz F1–F7 Mission Control dashboard, initially focused on orbit
+powershell -File phase6/run.ps1 -Pace realtime -Display tui -TrajectoryView orbit
 ```
 
-The live console supports pause, single-step, 0.25x through MAX pacing, bookmarks, SI/US units, three procedural sound profiles, safe detach, postflight review, and replay/export. See the [deployment launcher guide](phase6/LAUNCHER.md).
+The live console fills terminals from 80x24 through ultra-wide layouts. F2 switches among planned-versus-observed ascent, orbital geometry, and rotating-Earth ground track; wide pages add timelines, histories, status matrices, and link ribbons. It also supports pause, single-step, 0.25x through MAX pacing, bookmarks, SI/US units, three procedural sound profiles, safe detach, postflight review, and replay/export. See the [Mission Control guide](phase6/MISSION_CONTROL.md) and [deployment launcher guide](phase6/LAUNCHER.md).
 
 Move only the flight computer into one VICE C64 with `-Flight vice`. The launcher rejects VICE-world and multi-VICE selections until those endpoint programs actually exist; see the [deployment launcher guide](phase6/LAUNCHER.md).
 

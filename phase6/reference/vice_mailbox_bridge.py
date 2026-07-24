@@ -55,6 +55,8 @@ def main() -> int:
     parser.add_argument("--display", choices=("adaptive", "tui", "summary", "none"), default="adaptive")
     parser.add_argument("--units", choices=("si", "dual", "us"), default="si")
     parser.add_argument("--sound", choices=("off", "cues", "cinematic"), default="cues")
+    parser.add_argument("--plot", choices=("auto", "braille", "ascii"), default="auto")
+    parser.add_argument("--trajectory-view", choices=("ascent", "orbit", "ground"), default="ascent")
     parser.add_argument("--record", default="auto")
     parser.add_argument("--max-epochs", type=int, default=65_536)
     args = parser.parse_args()
@@ -122,6 +124,8 @@ def main() -> int:
                 "--display", args.display,
                 "--units", args.units,
                 "--sound", args.sound,
+                "--plot", args.plot,
+                "--trajectory-view", args.trajectory_view,
                 "--record", args.record,
             ],
             cwd=ROOT,

@@ -920,3 +920,13 @@ Status: accepted.
 Build the live F1–F7 presentation as a host-only Ratatui consumer of validated KLR6 and independent ground products. Reserve omniscient truth for a clearly labelled SIM Director page. Do not change KLR6, C64 memory budgets, physics, or flight-software scheduling to serve the display. Make realtime/step runs interactive, fast runs summary-oriented, and preserve explicit display overrides.
 
 Record all presentation inputs in a host-only noncanonical KMR6 stream with per-record CRC-32, prefix recovery, replay, and CSV/JSON derivation. Keep KST5 and KLR6 authoritative. Operator pacing may delay releases but may not alter their order; stopping is explicit, and detaching returns the console while the mission and recorder continue headlessly.
+
+## D-072: Give host Mission Control rich views without weakening provenance
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Use the strictly validated frozen KPH5 nominal history as the planned ascent and the accepted nominal terminal state as its orbit target. Render onboard navigation and the independent delayed/noisy ground estimate as separate observed paths. Label derived orbital, geographic, atmospheric, and load products as MODEL EST. Reserve omniscient world truth for F7 and enforce that F1 through F6 are render-invariant under arbitrary SIM Director truth changes.
+
+Keep the upgrade host-only and presentation-only. Retain full ordered history for live/replay plots; make replay history prefix-exact; provide Ascent, Orbit, and Ground Track views plus responsive 80x24 through ultra-wide layouts and ASCII/Braille plotters. Do not change KLR6, KMR6, KLF6, KST5, C64 memory budgets, flight scheduling, or command authority.
