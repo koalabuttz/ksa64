@@ -229,6 +229,28 @@ pub fn keyed_word(
     )
 }
 
+/// Phase-neutral access to the frozen keyed draw used by later campaign
+/// catalogs. Existing Phase 4 draws retain their original entry point.
+pub fn keyed_word_raw(
+    master_seed: u32,
+    run_index: u32,
+    parameter: u8,
+    correlation_group: u8,
+    draw_index: u8,
+) -> u32 {
+    let source = if correlation_group == 0 {
+        parameter as u32
+    } else {
+        0x100 + correlation_group as u32
+    };
+    mix32(
+        master_seed
+            ^ run_index.wrapping_mul(0x9e37_79b9)
+            ^ source.wrapping_mul(0x85eb_ca6b)
+            ^ (draw_index as u32).wrapping_mul(0xc2b2_ae35),
+    )
+}
+
 fn multiply_high_u32(a: u32, b: u32) -> u32 {
     let a0 = a & 0xffff;
     let a1 = a >> 16;

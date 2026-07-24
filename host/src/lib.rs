@@ -15,6 +15,8 @@ pub mod phase7_compiler;
 
 pub mod phase7;
 use std::io::{self, Write};
+pub mod phase7_campaign;
+pub mod phase7_plot;
 pub mod phase7_reference;
 
 use ksa64_core::mission::VERTICAL_CHECKSUM_OFFSET;

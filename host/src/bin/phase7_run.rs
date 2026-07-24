@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use ksa64_core::evaluation::MetricSlot;
 use ksa64_core::phase7_pack::{parse_mission_pack, parse_motor_pack, parse_vehicle_pack};
 use ksa64_host::phase7::{capture_hobby_mission, telemetry_frame_count};
+use ksa64_host::phase7_plot::build_stock_kph7;
 
 fn main() {
     let mut arguments = env::args_os().skip(1);
@@ -40,6 +41,11 @@ fn main() {
         capture.summary_record,
     )
     .expect("write summary");
+    fs::write(
+        output_directory.join("firestorm-i211.kph7"),
+        build_stock_kph7(&capture.telemetry).expect("build sparse plot"),
+    )
+    .expect("write sparse plot");
     println!(
         "outcome={:?} frames={} apogee_raw={} impact_velocity_raw={} checksum={:08x}",
         capture.evaluation.outcome,
