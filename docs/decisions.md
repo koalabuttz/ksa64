@@ -930,3 +930,58 @@ Status: accepted.
 Use the strictly validated frozen KPH5 nominal history as the planned ascent and the accepted nominal terminal state as its orbit target. Render onboard navigation and the independent delayed/noisy ground estimate as separate observed paths. Label derived orbital, geographic, atmospheric, and load products as MODEL EST. Reserve omniscient world truth for F7 and enforce that F1 through F6 are render-invariant under arbitrary SIM Director truth changes.
 
 Keep the upgrade host-only and presentation-only. Retain full ordered history for live/replay plots; make replay history prefix-exact; provide Ascent, Orbit, and Ground Track views plus responsive 80x24 through ultra-wide layouts and ASCII/Braille plotters. Do not change KLR6, KMR6, KLF6, KST5, C64 memory budgets, flight scheduling, or command authority.
+
+## D-073: Split reusable missions, spatial hobby flight, and optimization
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Use Phase 7 to add explicit profile identities, bounded compiled packs, and a
+credible vertical hobby/high-power evaluator. Preserve KSA-2A and KSA-5A by
+calling their frozen executors through an additive facade rather than
+refactoring them into a universal vehicle model. Treat KSA-6R as a realtime
+flight/link profile over the KSA-5A physical world.
+
+Reserve Phase 8 for component geometry, mass properties, 3-D hobby flight,
+stability, wind, weathercocking, recovery drift, and external correlation.
+Reserve Phase 9 for host-side optimization, Pareto and sensitivity analysis,
+robust design campaigns, and result browsing. Keep broader central-body,
+rendezvous, entry, landing, and tracking missions in an unassigned backlog
+until a concrete experiment defines their required fidelity.
+
+## D-074: Use a published-data Firestorm/I211W Phase 7 reference
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Use the published Giant Leap Firestorm 54 dual-deploy dimensions, dry weight,
+recovery sizes, and recommended AeroTech I211 pairing together with the
+public-domain, TRA-test-derived I211W RASP curve hosted by ThrustCurve. Commit
+normalized inputs, source identity, retrieval date, attribution, license, and
+checksums so builds remain offline and reproducible.
+
+Use the selected curve's own motor and propellant masses rather than mixing it
+with differing current product specifications. Label the rail, body Cd,
+canopy Cd, deployment triggers, and inflation times as KSA64 modeling
+assumptions. This is a published-data reference configuration, not
+flight-correlation or certification evidence.
+
+## D-075: Keep Phase 7 vertical, typed, and target-bounded
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Give HobbyVerticalV1 its own generated SI fixed-point contract and phase-aware
+0.01/0.02/0.05-second schedule. Use typed mission phases plus orthogonal rail,
+motor, and recovery states rather than a universal mission bytecode. The
+portable evaluator reports physical metrics and validity bits without imposing
+a safety, regulatory, or optimization score.
+
+Link one profile per C64 image, require no REU, and retain only one summary and
+an approximately 2 KiB plot on stock hardware. Run target jobs sequentially
+with guaranteed VICE cleanup. Require a complete target mission only when the
+measured projection is at most 30 minutes; otherwise use exact finite probes,
+and never cancel a run merely because it is taking a long time.

@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–5 are complete and the Phase 6 software baseline is accepted. KSA64 now supports exact split endpoints, deterministic link contracts, a stock-C64 32 Hz flight-computer profile, host/VICE Commodore-in-the-loop execution, and passive ground systems. Live physical-link acceptance remains open.
+> **Project status:** Phases 0–5 are complete and the Phase 6 software baseline is accepted. Phase 7 is planned as a separately versioned hobby/high-power vertical-flight profile over a new multi-profile evaluation and pack boundary. Live physical-link acceptance remains open.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -87,6 +87,9 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 4 — Statistical analysis | Deterministic campaigns, KSR4 summaries, independent float64 analysis, stock/REU storage, interactive UI, KRA4 archives, and KXV4 disk export. |
 | 5 — 3-D dynamics | Spatial numeric/world models, rigid and flexible dynamics, multirate KSA-5A vehicle, strict avionics, integrated missions, KST5, spatial campaigns, PAL target timing, adaptive spatial history, and stock-C64 replay pass the completion audit. |
 | 6 — Commodore-in-the-loop | Exact and realtime endpoint contracts, deterministic broker/replay, passive ground systems, a stock-C64 flight profile, and a complete 12,692-epoch host/VICE flight pass the software audit; physical-link validation remains open. |
+| 7 — Multi-profile evaluation | Planned: frozen legacy adapters, compiled hobby vehicle/motor/mission packs, a published-data vertical mission, dual-deploy recovery, candidate grids, campaigns, and stock-C64 evidence. |
+| 8 — Spatial hobby flight | Planned: geometry-derived mass properties, 3-D stability, wind, weathercocking, recovery drift, and external correlation. |
+| 9 — Optimization workbench | Planned: host-side search, Pareto and sensitivity analysis, robustness campaigns, archives, and C64 finalist browsing. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 
@@ -112,6 +115,7 @@ The C64 accuracy-first closed-loop path is intentionally slower than real time. 
 - [Phase 4](phase4/README.md) and [completion audit](phase4/COMPLETION.md)
 - [Phase 5](phase5/README.md), [completion audit](phase5/COMPLETION.md), [Phase 6 handoff](phase5/PHASE6_HANDOFF.md), and [deployment options](phase5/PHASE6_OPTIONS.md)
 - [Phase 6](phase6/README.md), [wire/authority contract](phase6/CONTRACT.md), and [software completion record](phase6/COMPLETION.md)
+- [Phase 7 implementation contract](phase7/PLAN.md)
 
 ### Phase 4 detail
 

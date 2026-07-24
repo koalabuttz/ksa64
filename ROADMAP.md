@@ -171,17 +171,90 @@ Exit criteria:
 - Single-machine and multi-machine runs can use the same core models.
 - Mission-control estimates can be compared with onboard estimates.
 
-## Phase 7: mission framework
+## Phase 7: multi-profile mission packs and hobby vertical evaluation
 
-Purpose: make the system reusable rather than hardwired to one launch.
+Status: planned. The implementation contract is frozen in `phase7/PLAN.md`.
+
+Purpose: establish a reusable, explicitly versioned profile and pack boundary,
+then prove it with a second physical scale rather than by generalizing the
+accepted orbital models in place.
+
+Planned capabilities:
+
+- A typed evaluation facade over the frozen KSA-2A, KSA-5A, and new hobby
+  vertical profiles.
+- Host-compiled, bounded vehicle, motor, mission, campaign, telemetry, summary,
+  plot, and archive formats.
+- A separate SI/fixed-point numeric contract for model through high-power
+  rockets.
+- A published-data Firestorm 54 / AeroTech I211W reference configuration.
+- Sampled thrust, changing motor mass, launch-rail constraint, powered ascent,
+  coast, dual-deploy recovery, and ground contact.
+- Stable objective/constraint summaries, ordered candidate grids, and
+  deterministic uncertainty campaigns.
+- Native, independent high-precision, stock-C64, and VICE evidence without an
+  REU requirement.
+
+Exit criteria:
+
+- Every accepted Phase 0-6 artifact remains unchanged.
+- Legacy missions execute through the facade without replacing their
+  implementations.
+- The published-data reference mission completes from ignition through ground
+  contact and produces strict KST7/KSR7/KPH7 evidence.
+- Native and target exact executions agree for the bounded accepted path.
+- Candidate and uncertainty results are independent of worker count,
+  presentation, and storage.
+- The evaluator exposes metrics without imposing one universal optimization
+  score.
+
+## Phase 8: spatial hobby flight and validated vehicle modeling
+
+Status: planned after Phase 7.
+
+Purpose: add the physical dimensions that require geometry, attitude, wind, and
+model correlation while preserving the useful vertical profile.
 
 Candidate capabilities:
 
-- Data-driven vehicles and mission programs.
-- Saved scenarios and replay.
-- Multiple central bodies.
-- Rendezvous, deorbit, entry, or landing experiments.
-- Ground tracking and pass prediction.
-- Shareable validation packs.
+- Component geometry with provenance, longitudinal centre of gravity, inertia,
+  centre of pressure, and static margin.
+- Three-dimensional translation, quaternion attitude, angular rates, and
+  aerodynamic restoring and damping moments.
+- Wind, gusts, rail-guide constraints, weathercocking, and recovery drift.
+- Moving mass properties and stability through propellant depletion and
+  configuration changes.
+- External-tool and representative flight-data comparisons with explicit model
+  alignment and tolerances.
 
-This phase is intentionally open-ended. It should not distort the earlier architecture until concrete missions require it.
+The host compiler may derive only quantities supported by reviewed methods and
+declared source data. It must not turn arbitrary geometry into unexplained
+aerodynamic truth.
+
+## Phase 9: design optimization and robustness workbench
+
+Status: planned after Phase 8.
+
+Purpose: build host-side search and analysis around the portable evaluator
+without introducing a second production simulator.
+
+Candidate capabilities:
+
+- Parameter-grid, evolutionary, and Pareto-front search.
+- Constraint policies, sensitivity analysis, robust objectives, and nested
+  uncertainty campaigns.
+- Reproducible optimization manifests, resumable archives, and selected
+  trajectory retention.
+- Rich host visualization plus stock/REU-scaled C64 browsing and replay of
+  finalists.
+- External optimizer adapters that submit compiled candidates through the
+  stable evaluation contract.
+
+The optimizer selects candidates; the portable core only evaluates them.
+
+## Post-Phase-9 mission backlog
+
+The profile architecture may later support multiple central bodies,
+rendezvous, deorbit, entry, landing, tracking, and pass prediction. These
+missions remain deliberately unassigned until a concrete experiment can define
+their required fidelity and evidence.
