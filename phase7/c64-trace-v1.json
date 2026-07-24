@@ -1,0 +1,38 @@
+{
+  "schema": "ksa64.phase7.exact-trace-v1",
+  "count": 129,
+  "first_divergence": null,
+  "host_last": {
+    "acceleration": 37427269,
+    "altitude": 650846,
+    "checksum": 1777057477,
+    "dynamic_pressure": 1119199,
+    "events": 0,
+    "impulse": 21946236,
+    "mach": 47346556,
+    "mass": 5004126,
+    "phase": 1,
+    "propellant": 115430,
+    "step": 128,
+    "thrust": 1683591,
+    "time": 335488,
+    "velocity": 62880043
+  },
+  "target_last": {
+    "step": 128,
+    "time": 335488,
+    "altitude": 650846,
+    "velocity": 62880043,
+    "acceleration": 37427269,
+    "mass": 5004126,
+    "propellant": 115430,
+    "impulse": 21946236,
+    "phase": 1,
+    "thrust": 1683591,
+    "dynamic_pressure": 1119199,
+    "mach": 47346556,
+    "events": 0,
+    "checksum": 1777057477
+  },
+  "exact": true
+}

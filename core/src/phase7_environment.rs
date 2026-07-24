@@ -18,7 +18,7 @@ fn interpolate(values: &[i32], altitude_raw: i32, status: &mut NumericStatus) ->
     if altitude_raw <= 0 {
         return values[0];
     }
-    let index = altitude_raw as usize / ALTITUDE_STEP_RAW as usize;
+    let index = (altitude_raw / ALTITUDE_STEP_RAW) as usize;
     if index >= values.len() - 1 {
         return values[values.len() - 1];
     }

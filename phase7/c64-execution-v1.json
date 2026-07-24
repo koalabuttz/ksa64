@@ -1,0 +1,52 @@
+{
+  "schema": "ksa64.phase7.c64-execution-v1",
+  "target": "PAL stock C64 via pinned x64sc 3.10",
+  "vice": "x64sc 3.10 (pinned)",
+  "replay": {
+    "screen_crc32": "7de57a4e",
+    "screen_sha256": "4057aa74944445e1a410b8dba9e6f96a3098c5683f87cd19fd85f9095ffb1d65",
+    "state_checksum": "a61c5720",
+    "point_count": 124,
+    "plot_cells": 88,
+    "stream_identity": "27b6ec02",
+    "rows": {
+      "0": "    KSA64 PHASE 7 MISSION CONTROL",
+      "2": "  FIRESTORM 54 / AEROTECH I211W",
+      "3": "  STATUS: COMPLETE - RECOVERED",
+      "24": "        PHASE 7 REPLAY PASS"
+    }
+  },
+  "full_mission": {
+    "elapsed_cycles": 1047635293,
+    "boundary_overhead_cycles": 24,
+    "net_cycles": 1047635269,
+    "projected_pal_cpu_seconds": 1063.3213860875637,
+    "steps": 2702,
+    "cycles_per_step": 387725.8582531458,
+    "apogee_raw_q13": 8012317,
+    "impact_velocity_raw_q19": -3227800,
+    "state_checksum": "a61c5720",
+    "event_history": "000001ff",
+    "numeric_faults": 0,
+    "outcome": "landed",
+    "under_30_minute_policy": true
+  },
+  "artifacts": {
+    "replay": {
+      "path": "ksa64-phase7-replay-c64",
+      "bytes": 10076,
+      "sha256": "faa6c033ed5a8a2fd03d8265f5a7b9c3899918ab429350037196d4d762ccbc2f",
+      "load_address": "0801",
+      "end_address": "2f5b",
+      "stock_fit": true
+    },
+    "full_mission": {
+      "path": "ksa64-phase7-full-c64",
+      "bytes": 21884,
+      "sha256": "f8a0201414209218c16f9adcf247181774d5f55881485fd7a06d5c06424eddfb",
+      "load_address": "0801",
+      "end_address": "5d7b",
+      "stock_fit": true
+    }
+  }
+}
