@@ -1,0 +1,16 @@
+{
+  "schema": "ksa64.vehicle-source-v1",
+  "identity": "giant-leap-firestorm-54-dual-v1",
+  "name": "Giant Leap Firestorm 54 Fiberglass Dual Deployment",
+  "profile": "HobbyVerticalV1",
+  "dry_mass_kg": "2.1120394728125",
+  "length_m": "1.8923",
+  "diameter_m": "0.057658",
+  "reference_area_m2": "0.002611012969041496",
+  "body_cd": "0.60",
+  "drogue_cda_m2": "0.2462598348413839",
+  "main_cda_m2": "0.9850393393655356",
+  "source_url": "https://giantleaprocketry.com/products/firestorm-54-rocket-kit",
+  "retrieved": "2026-07-24",
+  "model_note": "Published dimensions and dry weight; Cd and canopy CdA are declared KSA64 assumptions."
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "ksa64.mission-source-v1",
+  "identity": "firestorm54-i211w-sea-level-calm-v1",
+  "vehicle_identity": "giant-leap-firestorm-54-dual-v1",
+  "motor_identity": "aerotech-i211w-thrustcurve-5f4294d2-v1",
+  "environment": "ksa64.environment.us76-250m-v1",
+  "launch_altitude_m": "0",
+  "rail_length_m": "2",
+  "main_deployment_altitude_m": "200",
+  "drogue_inflation_time_s": "0.5",
+  "main_inflation_time_s": "1.0",
+  "max_mission_time_s": "900",
+  "telemetry_period_s": "0.25",
+  "minimum_rail_exit_velocity_mps": "15",
+  "drogue_trigger": "first descending state after apogee",
+  "main_trigger": "first descending successor at or below 200 m AGL",
+  "validation_note": "Published-data reference configuration; not flight-correlated or certification-grade."
+}

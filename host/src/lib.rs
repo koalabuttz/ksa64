@@ -11,6 +11,7 @@ pub mod phase6_runner;
 pub mod phase6_session;
 pub mod phase6_trajectory;
 pub mod phase6_tui;
+pub mod phase7_compiler;
 
 use std::io::{self, Write};
 
