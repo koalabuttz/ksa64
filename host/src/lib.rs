@@ -13,7 +13,9 @@ pub mod phase6_trajectory;
 pub mod phase6_tui;
 pub mod phase7_compiler;
 
+pub mod phase7;
 use std::io::{self, Write};
+pub mod phase7_reference;
 
 use ksa64_core::mission::VERTICAL_CHECKSUM_OFFSET;
 use ksa64_core::scenario::{crc32_ieee, Scenario};

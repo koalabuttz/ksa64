@@ -1,0 +1,24 @@
+{
+  "profile": "HobbyVerticalV1",
+  "vehicle": "giant-leap-firestorm-54-dual-v1",
+  "motor": "aerotech-i211w-thrustcurve-5f4294d2-v1",
+  "mission": "firestorm54-i211w-sea-level-calm-v1",
+  "exact": {
+    "steps": 2702,
+    "apogee_m": "978.0660400390625",
+    "max_speed_mps": "146.4770851135254",
+    "max_acceleration_mps2": "107.69050216674805",
+    "max_dynamic_pressure_pa": "12933.40625",
+    "max_mach": "0.43122580647468567",
+    "impact_velocity_mps": "-6.1565399169921875",
+    "state_checksum": "a61c5720"
+  },
+  "float64_reference": {
+    "apogee_m": "978.0757349095951",
+    "max_dynamic_pressure_pa": "12932.683355393528",
+    "impact_velocity_mps": "-6.156092754826449"
+  },
+  "kst7_sha256": "b12ec2a06dfa071e5f30678769ea66321606aaa4deb824082ac67682a6db98bd",
+  "ksr7_sha256": "a0042a7e1ac2445b6a088e259721652b12b9bb378e0b4d5d9166b186e69e6498",
+  "validation_scope": "published-data reference, not flight-correlated or certification-grade"
+}

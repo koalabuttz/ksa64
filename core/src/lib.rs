@@ -19,6 +19,8 @@ pub mod phase7_format;
 pub mod phase7_mission;
 pub mod phase7_numeric;
 pub mod phase7_pack;
+pub mod phase7_result;
+pub mod phase7_telemetry;
 pub mod planar;
 pub mod planar_dynamics;
 pub mod planar_environment;
