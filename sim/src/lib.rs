@@ -8,6 +8,7 @@
 pub use ksa64_core as core_world;
 pub use ksa64_flight as flight;
 pub use ksa64_interface as interface;
+pub mod evaluation;
 
 pub mod actuator;
 pub mod config;

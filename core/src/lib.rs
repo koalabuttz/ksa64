@@ -3,6 +3,7 @@
 pub mod aerodynamics;
 pub mod dynamics;
 pub mod environment;
+pub mod evaluation;
 pub mod flexible;
 pub mod guidance;
 pub mod mission;
