@@ -4,8 +4,10 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
-use ksa64_sim::phase4::archive::ArchiveStorage;
-use ksa64_sim::phase5_archive::ArchiveStorage as Phase5ArchiveStorage;
+use ksa64_sim::phase4::archive::{ArchiveStorage, ArchiveStorageError};
+use ksa64_sim::phase5_archive::{
+    ArchiveStorage as Phase5ArchiveStorage, ArchiveStorageError as Phase5ArchiveStorageError,
+};
 
 pub struct FileArchiveStorage {
     file: File,
@@ -47,22 +49,24 @@ impl ArchiveStorage for FileArchiveStorage {
         self.capacity
     }
 
-    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ()> {
+    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ArchiveStorageError> {
         self.file
             .seek(SeekFrom::Start(offset as u64))
-            .map_err(|_| ())?;
-        self.file.read_exact(out).map_err(|_| ())
+            .map_err(|_| ArchiveStorageError)?;
+        self.file.read_exact(out).map_err(|_| ArchiveStorageError)
     }
 
-    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ()> {
-        let end = offset.checked_add(bytes.len() as u32).ok_or(())?;
+    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ArchiveStorageError> {
+        let end = offset
+            .checked_add(bytes.len() as u32)
+            .ok_or(ArchiveStorageError)?;
         if end > self.capacity {
-            return Err(());
+            return Err(ArchiveStorageError);
         }
         self.file
             .seek(SeekFrom::Start(offset as u64))
-            .map_err(|_| ())?;
-        self.file.write_all(bytes).map_err(|_| ())
+            .map_err(|_| ArchiveStorageError)?;
+        self.file.write_all(bytes).map_err(|_| ArchiveStorageError)
     }
 }
 
@@ -70,20 +74,26 @@ impl Phase5ArchiveStorage for FileArchiveStorage {
     fn capacity(&self) -> u32 {
         self.capacity
     }
-    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ()> {
+    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), Phase5ArchiveStorageError> {
         self.file
             .seek(SeekFrom::Start(offset as u64))
-            .map_err(|_| ())?;
-        self.file.read_exact(out).map_err(|_| ())
+            .map_err(|_| Phase5ArchiveStorageError)?;
+        self.file
+            .read_exact(out)
+            .map_err(|_| Phase5ArchiveStorageError)
     }
-    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ()> {
-        let end = offset.checked_add(bytes.len() as u32).ok_or(())?;
+    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), Phase5ArchiveStorageError> {
+        let end = offset
+            .checked_add(bytes.len() as u32)
+            .ok_or(Phase5ArchiveStorageError)?;
         if end > self.capacity {
-            return Err(());
+            return Err(Phase5ArchiveStorageError);
         }
         self.file
             .seek(SeekFrom::Start(offset as u64))
-            .map_err(|_| ())?;
-        self.file.write_all(bytes).map_err(|_| ())
+            .map_err(|_| Phase5ArchiveStorageError)?;
+        self.file
+            .write_all(bytes)
+            .map_err(|_| Phase5ArchiveStorageError)
     }
 }

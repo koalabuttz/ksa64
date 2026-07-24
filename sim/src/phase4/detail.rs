@@ -68,7 +68,7 @@ pub fn write_kst4(
     output: &mut [u8],
 ) -> Result<DetailHeader, DetailError> {
     if frames.is_empty()
-        || frames.len() % DETAIL_FRAME_LENGTH != 0
+        || frames.len().checked_rem(DETAIL_FRAME_LENGTH) != Some(0)
         || output.len() != DETAIL_HEADER_LENGTH + frames.len()
         || frames.len() > u32::MAX as usize
     {

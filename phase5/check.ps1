@@ -26,7 +26,7 @@ Invoke-Gate { cargo run -p ksa64-host --bin phase5_history -- target/phase5-base
 Invoke-Gate { python -B phase5/reference/verify_history.py --input target/phase5-baseline.kph5 --check }
 Invoke-Gate { cargo fmt --all -- --check }
 Invoke-Gate { cargo check --workspace --all-targets --features fixtures }
-Invoke-Gate { cargo clippy --workspace --all-targets --features fixtures -- -D warnings -A clippy::result-unit-err -A clippy::manual-is-multiple-of -A clippy::manual-flatten -A clippy::needless-range-loop -A clippy::drop-non-drop -A clippy::too-many-arguments }
+Invoke-Gate { cargo clippy --workspace --all-targets --features fixtures -- -D warnings }
 Invoke-Gate { cargo test --workspace --features fixtures }
 if (-not $SkipMos) {
     $rustWrapper = Join-Path (Get-Location) "tools/toolchains/rust-mos.ps1"

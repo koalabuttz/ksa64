@@ -79,16 +79,17 @@ impl StockRetention {
         let baseline = self.baseline.ok_or(StockError::Empty)?;
         let mut retained = [baseline; STOCK_INTERESTING_SUMMARIES];
         let mut count = 0usize;
-        for candidate in [
+        for summary in [
             self.baseline,
             self.worst_insertion,
             self.worst_load,
             self.worst_navigation,
             self.first_failure,
-        ] {
-            if let Some(summary) = candidate {
-                push_unique(&mut retained, &mut count, summary);
-            }
+        ]
+        .into_iter()
+        .flatten()
+        {
+            push_unique(&mut retained, &mut count, summary);
         }
         for candidate in self.lowest.into_iter().flatten() {
             push_unique(&mut retained, &mut count, candidate);

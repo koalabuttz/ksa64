@@ -78,7 +78,7 @@ impl<const N: usize> MissionObserver for PlotRecorder<N> {
 
     fn observe(&mut self, record: MissionRecord) -> Result<(), Self::Error> {
         let step = record.world.truth.step();
-        if self.stride == 0 || step % self.stride != 0 {
+        if step.checked_rem(self.stride) != Some(0) {
             return Ok(());
         }
         if self.count == N || step > u16::MAX as u32 {

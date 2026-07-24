@@ -1,6 +1,6 @@
 use ksa64_host::phase4_export::{
     build_selected_report, build_stock_report, encode_volumes, join_volumes,
-    stock_aggregate_payload, validate_joined_archive, HistoryRecord,
+    stock_aggregate_payload, validate_joined_archive, HistoryRecord, ReportSources,
 };
 use ksa64_interface::crc32_ieee;
 use ksa64_sim::phase4::campaign::{derive_run, reviewed_campaign_config};
@@ -117,17 +117,17 @@ fn configurable_report_selects_summary_compact_and_full_history() {
         run_index: 0,
         bytes: &kst4,
     }];
-    let mut report = build_selected_report(
-        &manifest,
-        0xa2e9_e9d5,
-        REFERENCE_RUNS,
-        KSC4,
-        &stock_aggregate_payload(),
-        KSR4,
-        &compact,
-        &full,
-    )
-    .unwrap();
+    let aggregate = stock_aggregate_payload();
+    let sources = ReportSources {
+        campaign_crc32: 0xa2e9_e9d5,
+        run_count: REFERENCE_RUNS,
+        ksc4: KSC4,
+        aggregate: &aggregate,
+        ksr4: KSR4,
+        compact: &compact,
+        full: &full,
+    };
+    let mut report = build_selected_report(&manifest, &sources).unwrap();
     assert!(report.len() < 160 * 1_024);
     validate_joined_archive(&mut report).unwrap();
 }

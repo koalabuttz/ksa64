@@ -72,8 +72,10 @@ fn restore_banks<D: ByteReu>(device: &mut D, originals: &[u8; 256]) {
 #[cfg(feature = "c64")]
 mod c64 {
     use super::{ByteReu, ReuError};
-    use crate::phase4::archive::ArchiveStorage;
-    use crate::phase5_archive::ArchiveStorage as Phase5ArchiveStorage;
+    use crate::phase4::archive::{ArchiveStorage, ArchiveStorageError};
+    use crate::phase5_archive::{
+        ArchiveStorage as Phase5ArchiveStorage, ArchiveStorageError as Phase5ArchiveStorageError,
+    };
 
     const STATUS: *mut u8 = 0xdf00 as *mut u8;
     const COMMAND: *mut u8 = 0xdf01 as *mut u8;
@@ -195,11 +197,13 @@ mod c64 {
         fn capacity(&self) -> u32 {
             self.capacity
         }
-        fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ()> {
-            self.read_slice(offset, out).map_err(|_| ())
+        fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ArchiveStorageError> {
+            self.read_slice(offset, out)
+                .map_err(|_| ArchiveStorageError)
         }
-        fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ()> {
-            self.write_slice(offset, bytes).map_err(|_| ())
+        fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ArchiveStorageError> {
+            self.write_slice(offset, bytes)
+                .map_err(|_| ArchiveStorageError)
         }
     }
 
@@ -207,11 +211,13 @@ mod c64 {
         fn capacity(&self) -> u32 {
             self.capacity
         }
-        fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ()> {
-            self.read_slice(offset, out).map_err(|_| ())
+        fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), Phase5ArchiveStorageError> {
+            self.read_slice(offset, out)
+                .map_err(|_| Phase5ArchiveStorageError)
         }
-        fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ()> {
-            self.write_slice(offset, bytes).map_err(|_| ())
+        fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), Phase5ArchiveStorageError> {
+            self.write_slice(offset, bytes)
+                .map_err(|_| Phase5ArchiveStorageError)
         }
     }
     pub fn detect_c64_reu_capacity() -> Result<u32, ReuError> {

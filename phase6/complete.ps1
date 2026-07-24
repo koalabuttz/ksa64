@@ -32,7 +32,7 @@ try {
     Invoke-PhaseGate "PHASE 6 NATIVE CONTRACT AND REGRESSION AUDIT" {
         cargo fmt --all -- --check
         cargo check --workspace --all-targets --features fixtures
-        cargo clippy --workspace --all-targets --features fixtures -- -D warnings -A clippy::result-unit-err -A clippy::manual-is-multiple-of -A clippy::manual-flatten -A clippy::needless-range-loop -A clippy::drop-non-drop -A clippy::too-many-arguments
+        cargo clippy --workspace --all-targets --features fixtures -- -D warnings
         cargo test --workspace --features fixtures
         cargo build -p ksa64-host --bin phase6_bridge
     }

@@ -92,16 +92,29 @@ pub fn join_volumes(volumes: &[Vec<u8>]) -> Result<Vec<u8>, ExportError> {
     Ok(logical)
 }
 
+pub struct ReportSources<'a> {
+    pub campaign_crc32: u32,
+    pub run_count: u32,
+    pub ksc4: &'a [u8],
+    pub aggregate: &'a [u8],
+    pub ksr4: &'a [u8],
+    pub compact: &'a [HistoryRecord<'a>],
+    pub full: &'a [HistoryRecord<'a>],
+}
+
 pub fn build_selected_report(
     manifest: &ExportManifest,
-    campaign_crc32: u32,
-    run_count: u32,
-    ksc4: &[u8],
-    aggregate: &[u8],
-    ksr4: &[u8],
-    compact: &[HistoryRecord<'_>],
-    full: &[HistoryRecord<'_>],
+    sources: &ReportSources<'_>,
 ) -> Result<Vec<u8>, ExportError> {
+    let ReportSources {
+        campaign_crc32,
+        run_count,
+        ksc4,
+        aggregate,
+        ksr4,
+        compact,
+        full,
+    } = *sources;
     manifest.validate(run_count)?;
     if ksc4.len() != 512 || aggregate.is_empty() || ksr4.len() != run_count as usize * 128 {
         return Err(ExportError::Length);
@@ -187,12 +200,13 @@ pub fn build_selected_report(
             .map_err(|_| ExportError::Length)?;
     }
     writer.finish().map_err(|_| ExportError::Length)?;
-    let mut storage = writer.into_storage();
-    let scan = scan_archive(&mut storage).map_err(|_| ExportError::Checksum)?;
-    if !scan.complete || scan.valid_bytes as usize != capacity {
-        return Err(ExportError::Length);
+    {
+        let mut storage = writer.into_storage();
+        let scan = scan_archive(&mut storage).map_err(|_| ExportError::Checksum)?;
+        if !scan.complete || scan.valid_bytes as usize != capacity {
+            return Err(ExportError::Length);
+        }
     }
-    drop(storage);
     Ok(report)
 }
 
@@ -233,12 +247,13 @@ pub fn build_stock_report(
     }
     writer.append(4, 0, kph4).map_err(|_| ExportError::Length)?;
     writer.finish().map_err(|_| ExportError::Length)?;
-    let mut storage = writer.into_storage();
-    let scan = scan_archive(&mut storage).map_err(|_| ExportError::Checksum)?;
-    if !scan.complete || scan.valid_bytes as usize != STOCK_REPORT_CAPACITY {
-        return Err(ExportError::Length);
+    {
+        let mut storage = writer.into_storage();
+        let scan = scan_archive(&mut storage).map_err(|_| ExportError::Checksum)?;
+        if !scan.complete || scan.valid_bytes as usize != STOCK_REPORT_CAPACITY {
+            return Err(ExportError::Length);
+        }
     }
-    drop(storage);
     let manifest = ExportManifest::stock_default();
     manifest.validate(1_024)?;
     Ok((report, manifest))

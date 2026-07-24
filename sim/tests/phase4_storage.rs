@@ -1,5 +1,5 @@
 use ksa64_sim::phase4::archive::{
-    scan_archive, ArchiveError, ArchiveStorage, ArchiveWriter, SliceStorage,
+    scan_archive, ArchiveError, ArchiveStorage, ArchiveStorageError, ArchiveWriter, SliceStorage,
 };
 use ksa64_sim::phase4::contracts::{REFERENCE_RUNS, RUN_SUMMARY_LENGTH};
 use ksa64_sim::phase4::storage::{
@@ -43,24 +43,26 @@ fn storage_plan_scales_across_stock_and_every_reu_tier() {
 #[test]
 fn kra4_append_scan_and_corruption_are_strict() {
     let mut bytes = vec![0xa5u8; 32_768];
-    let mut storage = SliceStorage::new(&mut bytes);
-    let mut writer = ArchiveWriter::create(storage, 0xa2e9_e9d5).unwrap();
-    writer.append(1, u32::MAX, b"metadata").unwrap();
-    writer.append(2, 0, &[0x5a; 128]).unwrap();
-    writer.append(4, 8, &[0x33; 512]).unwrap();
-    writer.finish().unwrap();
-    storage = writer.into_storage();
-    let scan = scan_archive(&mut storage).unwrap();
-    assert!(scan.complete);
-    assert_eq!(scan.campaign_crc32, 0xa2e9_e9d5);
-    assert_eq!(scan.valid_records, 4);
-    let valid_bytes = scan.valid_bytes;
-    drop(storage);
+    let valid_bytes = {
+        let storage = SliceStorage::new(&mut bytes);
+        let mut writer = ArchiveWriter::create(storage, 0xa2e9_e9d5).unwrap();
+        writer.append(1, u32::MAX, b"metadata").unwrap();
+        writer.append(2, 0, &[0x5a; 128]).unwrap();
+        writer.append(4, 8, &[0x33; 512]).unwrap();
+        writer.finish().unwrap();
+        let mut storage = writer.into_storage();
+        let scan = scan_archive(&mut storage).unwrap();
+        assert!(scan.complete);
+        assert_eq!(scan.campaign_crc32, 0xa2e9_e9d5);
+        assert_eq!(scan.valid_records, 4);
+        scan.valid_bytes
+    };
 
     bytes[256 + 32 + 1] ^= 0x80;
-    let mut corrupt = SliceStorage::new(&mut bytes);
-    assert_eq!(scan_archive(&mut corrupt), Err(ArchiveError::Checksum));
-    drop(corrupt);
+    {
+        let mut corrupt = SliceStorage::new(&mut bytes);
+        assert_eq!(scan_archive(&mut corrupt), Err(ArchiveError::Checksum));
+    }
     bytes[256 + 32 + 1] ^= 0x80;
     bytes[valid_bytes as usize..].fill(0xcc);
 }
@@ -100,20 +102,24 @@ impl ArchiveStorage for FailingStorage {
     fn capacity(&self) -> u32 {
         self.bytes.len() as u32
     }
-    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ()> {
+    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ArchiveStorageError> {
         let start = offset as usize;
-        out.copy_from_slice(self.bytes.get(start..start + out.len()).ok_or(())?);
+        out.copy_from_slice(
+            self.bytes
+                .get(start..start + out.len())
+                .ok_or(ArchiveStorageError)?,
+        );
         Ok(())
     }
-    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ()> {
+    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ArchiveStorageError> {
         self.writes += 1;
         if self.fail_on_write == Some(self.writes) {
-            return Err(());
+            return Err(ArchiveStorageError);
         }
         let start = offset as usize;
         self.bytes
             .get_mut(start..start + bytes.len())
-            .ok_or(())?
+            .ok_or(ArchiveStorageError)?
             .copy_from_slice(bytes);
         Ok(())
     }

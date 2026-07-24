@@ -271,7 +271,7 @@ pub fn parse_ksc5(input: &[u8]) -> Result<Phase5CampaignConfig, Phase5CampaignEr
         return Err(Phase5CampaignError::Summary);
     }
     let mut records = [DistributionSpec::EMPTY; PHASE5_MAX_DISTRIBUTIONS];
-    for n in 0..PHASE5_MAX_DISTRIBUTIONS {
+    for (n, record) in records.iter_mut().enumerate() {
         let p = 128 + n * 24;
         if n >= count {
             if input[p..p + 24].iter().any(|&b| b != 0) {
@@ -281,7 +281,7 @@ pub fn parse_ksc5(input: &[u8]) -> Result<Phase5CampaignConfig, Phase5CampaignEr
             if input[p + 3] != 0 || gu32(input, p + 20) != crc32_ieee(&input[p..p + 20]) {
                 return Err(Phase5CampaignError::Summary);
             }
-            records[n] = DistributionSpec {
+            *record = DistributionSpec {
                 parameter: ParameterId::from_byte(input[p]).ok_or(Phase5CampaignError::Summary)?,
                 kind: DistributionKind::from_byte(input[p + 1])
                     .ok_or(Phase5CampaignError::Summary)?,

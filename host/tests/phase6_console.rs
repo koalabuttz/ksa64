@@ -92,7 +92,7 @@ fn live_session_recovers_exports_and_renders_all_consoles() {
                 }
             }
         }
-        for page in 0..7 {
+        for (page, title) in PAGES_FOR_TEST.iter().enumerate() {
             let text = render_updates_text(
                 &sampled,
                 width,
@@ -102,7 +102,7 @@ fn live_session_recovers_exports_and_renders_all_consoles() {
                 PlotStyle::Ascii,
             )
             .unwrap();
-            assert!(text.contains(PAGES_FOR_TEST[page]));
+            assert!(text.contains(title));
             assert!(
                 text.is_ascii(),
                 "ASCII page {page} emitted Unicode at {width}x{height}"

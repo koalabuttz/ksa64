@@ -288,7 +288,7 @@ impl<const N: usize> Phase5MissionObserver for Phase5HistoryRecorder<N> {
         let n = step.vehicle.truth.step();
         self.events_since_sample |= step.vehicle.events;
         self.alarms_since_sample |= step.flight.alarms;
-        if terminal || n % self.stride as u32 == 0 {
+        if terminal || n.checked_rem(self.stride as u32) == Some(0) {
             let point = point_from_snapshot(
                 step.vehicle,
                 self.events_since_sample,

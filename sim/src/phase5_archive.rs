@@ -18,10 +18,13 @@ pub const RECORD_FOOTER: u16 = 0xffff;
 const SUPERBLOCK_CRC_OFFSET: usize = ARCHIVE_SUPERBLOCK_LENGTH - 4;
 const RECORD_CRC_OFFSET: usize = ARCHIVE_RECORD_HEADER_LENGTH - 4;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ArchiveStorageError;
+
 pub trait ArchiveStorage {
     fn capacity(&self) -> u32;
-    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ()>;
-    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ()>;
+    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ArchiveStorageError>;
+    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ArchiveStorageError>;
 }
 
 pub struct SliceStorage<'a> {
@@ -39,18 +42,18 @@ impl ArchiveStorage for SliceStorage<'_> {
     fn capacity(&self) -> u32 {
         self.bytes.len().min(u32::MAX as usize) as u32
     }
-    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ()> {
+    fn read(&mut self, offset: u32, out: &mut [u8]) -> Result<(), ArchiveStorageError> {
         let start = offset as usize;
-        let end = start.checked_add(out.len()).ok_or(())?;
-        out.copy_from_slice(self.bytes.get(start..end).ok_or(())?);
+        let end = start.checked_add(out.len()).ok_or(ArchiveStorageError)?;
+        out.copy_from_slice(self.bytes.get(start..end).ok_or(ArchiveStorageError)?);
         Ok(())
     }
-    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ()> {
+    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), ArchiveStorageError> {
         let start = offset as usize;
-        let end = start.checked_add(bytes.len()).ok_or(())?;
+        let end = start.checked_add(bytes.len()).ok_or(ArchiveStorageError)?;
         self.bytes
             .get_mut(start..end)
-            .ok_or(())?
+            .ok_or(ArchiveStorageError)?
             .copy_from_slice(bytes);
         Ok(())
     }

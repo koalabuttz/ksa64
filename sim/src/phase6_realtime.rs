@@ -72,7 +72,7 @@ pub fn run_realtime_nominal() -> Result<RealtimeRunEvidence, RealtimeRunError> {
     let mut epoch = 0u32;
     let mut status_checksum = 2_166_136_261u32;
     while epoch < REALTIME_MAX_FAST_EPOCHS {
-        if epoch % PHASE5_SUBSTEPS as u32 == 0 {
+        if epoch.checked_rem(PHASE5_SUBSTEPS as u32) == Some(0) {
             world
                 .begin(command)
                 .map_err(|error| RealtimeRunError::VehicleAt {
@@ -316,7 +316,7 @@ impl RealtimeWorldEndpoint {
             return Err(RealtimeRunError::Epoch);
         }
         let epoch = self.epoch;
-        if epoch % PHASE5_SUBSTEPS as u32 == 0 {
+        if epoch.checked_rem(PHASE5_SUBSTEPS as u32) == Some(0) {
             self.world
                 .begin(self.command)
                 .map_err(|error| world_error(epoch, error, self.command))?;

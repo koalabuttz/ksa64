@@ -124,9 +124,7 @@ impl GroundTrackingNetwork {
         }
     }
     pub fn observe(&mut self, epoch: u32, position_q12: [i32; 3], velocity_q24: [i32; 3]) {
-        if self.config.cadence_epochs == 0
-            || epoch % self.config.cadence_epochs as u32 != 0
-            || self.pending.is_some()
+        if epoch.checked_rem(self.config.cadence_epochs as u32) != Some(0) || self.pending.is_some()
         {
             return;
         }

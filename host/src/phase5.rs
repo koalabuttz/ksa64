@@ -70,7 +70,9 @@ pub struct Phase5StreamInspection {
 
 pub fn inspect_phase5_stream(stream: &[u8]) -> Result<Phase5StreamInspection, Phase5StreamError> {
     if stream.len() < PHASE5_TELEMETRY_HEADER_LENGTH
-        || (stream.len() - PHASE5_TELEMETRY_HEADER_LENGTH) % PHASE5_TELEMETRY_FRAME_LENGTH != 0
+        || (stream.len() - PHASE5_TELEMETRY_HEADER_LENGTH)
+            .checked_rem(PHASE5_TELEMETRY_FRAME_LENGTH)
+            != Some(0)
     {
         return Err(Phase5StreamError::Framing);
     }

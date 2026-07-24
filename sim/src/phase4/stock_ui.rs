@@ -301,9 +301,9 @@ fn render_histogram(canvas: &mut Canvas<'_>, data: &StockUiData) {
     let labels: [&[u8]; 6] = [
         b"STABLE", b"SUBORB", b"IMPACT", b"ESCAPE", b"ABORT ", b"ERROR ",
     ];
-    for index in 0..6 {
+    for (index, label) in labels.iter().enumerate() {
         let row = 3 + index * 3;
-        canvas.text(row, 0, labels[index]);
+        canvas.text(row, 0, label);
         canvas.unsigned(row, 7, 4, data.outcomes[index]);
         let width = (data.outcomes[index] as u64 * 26 / maximum as u64) as usize;
         for column in 0..width {
