@@ -10,6 +10,7 @@ pub mod navigation;
 pub mod phase5_gnc;
 pub mod phase5_guidance;
 pub mod phase5_navigation;
+pub mod phase6_realtime;
 
 pub use ksa64_interface as interface;
 

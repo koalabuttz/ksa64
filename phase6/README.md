@@ -11,6 +11,8 @@ Phase 6 turns the existing world/flight seam into explicit endpoints connected b
 - Allocation-free exact world and flight endpoints.
 - Deterministic broker decisions and transcript checksum chain.
 - A complete split native nominal mission whose terminal state, sensor checksum, navigation checksum, and flight checksum exactly reproduce Phase 5.
+- An additive 32 Hz vehicle seam where four held-command ticks exactly reproduce one frozen Phase 5 step.
+- The KSA-6R virtual scheduler and flight-computer skeleton with deterministic 32/8/1 Hz releases, next-epoch commands, stale-link safeing, and deadline safeing.
 
 ## Planned acceptance ladder
 

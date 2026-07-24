@@ -1121,3 +1121,141 @@ fn validate_base_scenario(scenario: &Phase2Scenario) -> bool {
     }
     true
 }
+
+/// Additive Phase 6 view of the already accepted four-substep vehicle update.
+/// Holding one command for all four calls is required to equal Phase 5 step().
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase6FastObservation {
+    pub substep: u8,
+    pub accel_body_q28: [i32; 3],
+    pub gyro_body_q24: [i32; 3],
+    pub gimbal: GimbalSnapshotQ16,
+    pub events: u16,
+}
+
+pub struct Phase6FastVehicle {
+    committed: Phase5VehicleMachine,
+    working: Phase5VehicleMachine,
+    active: bool,
+    substep: u8,
+    events: u16,
+    phase_during_step: Phase5StagePhase,
+    mach: Mach,
+    dynamic_pressure_q16: i32,
+    angle_of_attack_sine_q16: i32,
+    accel: [[i32; 3]; PHASE5_SUBSTEPS as usize],
+    gyro: [[i32; 3]; PHASE5_SUBSTEPS as usize],
+}
+impl Phase6FastVehicle {
+    pub fn new(machine: Phase5VehicleMachine) -> Self {
+        Self {
+            committed: machine,
+            working: machine,
+            active: false,
+            substep: 0,
+            events: 0,
+            phase_during_step: machine.truth.phase,
+            mach: Mach::from_raw(0),
+            dynamic_pressure_q16: 0,
+            angle_of_attack_sine_q16: 0,
+            accel: [[0; 3]; PHASE5_SUBSTEPS as usize],
+            gyro: [[0; 3]; PHASE5_SUBSTEPS as usize],
+        }
+    }
+    pub const fn committed_machine(&self) -> Phase5VehicleMachine {
+        self.committed
+    }
+    pub fn current_snapshot(&self) -> Result<Phase5VehicleSnapshot, Phase5VehicleError> {
+        self.committed.current_snapshot()
+    }
+    pub fn begin(&mut self, boundary: Phase5VehicleCommand) -> Result<(), Phase5VehicleError> {
+        if self.active {
+            return Err(Phase5VehicleError::Configuration);
+        }
+        if self.committed.truth.step >= ksa64_core::phase5_contract::PHASE5_MISSION_STEPS {
+            return Err(Phase5VehicleError::Complete);
+        }
+        self.working = self.committed;
+        self.events = 0;
+        self.substep = 0;
+        self.accel = [[0; 3]; PHASE5_SUBSTEPS as usize];
+        self.gyro = [[0; 3]; PHASE5_SUBSTEPS as usize];
+        let mut status = NumericStatus::CLEAR;
+        self.working
+            .apply_boundary_command(boundary, &mut self.events, &mut status)?;
+        if !status.is_clear() {
+            return Err(Phase5VehicleError::NumericFault);
+        }
+        self.phase_during_step = self.working.truth.phase;
+        self.active = true;
+        Ok(())
+    }
+    pub fn advance(
+        &mut self,
+        command: Phase5VehicleCommand,
+    ) -> Result<(Phase6FastObservation, Option<Phase5VehicleSnapshot>), Phase5VehicleError> {
+        if !self.active || self.substep >= PHASE5_SUBSTEPS {
+            return Err(Phase5VehicleError::Configuration);
+        }
+        let mut status = NumericStatus::CLEAR;
+        let fast = self
+            .working
+            .fast_step(command, &mut self.events, &mut status)?;
+        if !status.is_clear() {
+            return Err(Phase5VehicleError::NumericFault);
+        }
+        let at = self.substep as usize;
+        self.accel[at] = fast.accel_body_q28;
+        self.gyro[at] = fast.gyro_body_q24;
+        self.mach = fast.mach;
+        self.dynamic_pressure_q16 = fast.dynamic_pressure_q16;
+        self.angle_of_attack_sine_q16 = fast.angle_of_attack_sine_q16;
+        self.substep += 1;
+        let observation = Phase6FastObservation {
+            substep: self.substep,
+            accel_body_q28: fast.accel_body_q28,
+            gyro_body_q24: fast.gyro_body_q24,
+            gimbal: self.working.gimbal.snapshot(),
+            events: self.events,
+        };
+        if self.substep < PHASE5_SUBSTEPS {
+            return Ok((observation, None));
+        }
+        if self.working.truth.phase == self.phase_during_step
+            && matches!(
+                self.working.truth.phase,
+                Phase5StagePhase::CoastBeforeIgnition | Phase5StagePhase::CoastBeforeSeparation
+            )
+        {
+            self.working.phase_steps += 1
+        }
+        self.working.truth.step += 1;
+        self.working.truth.time_q16 = add(
+            self.working.truth.time_q16,
+            ksa64_core::phase5_contract::PHASE5_MISSION_STEP_Q16,
+            &mut status,
+        );
+        let stage = self.working.stage()?;
+        let inertia = stage
+            .inertia
+            .interpolate(self.working.truth.active_propellant_q12, &mut status);
+        if !status.is_clear() {
+            return Err(Phase5VehicleError::NumericFault);
+        }
+        let snapshot = Phase5VehicleSnapshot {
+            truth: self.working.truth,
+            gimbal: self.working.gimbal.snapshot(),
+            inertia,
+            rcs_propellant_q12: self.working.rcs.propellant_q12(),
+            events: self.events,
+            mach: self.mach,
+            dynamic_pressure_q16: self.dynamic_pressure_q16,
+            angle_of_attack_sine_q16: self.angle_of_attack_sine_q16,
+            imu_accel_body_q28: self.accel,
+            imu_gyro_body_q24: self.gyro,
+        };
+        self.committed = self.working;
+        self.active = false;
+        Ok((observation, Some(snapshot)))
+    }
+}
