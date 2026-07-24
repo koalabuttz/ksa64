@@ -14,6 +14,7 @@ Phase 6 turns the existing world/flight seam into explicit endpoints connected b
 - An additive 32 Hz vehicle seam where four held-command ticks exactly reproduce one frozen Phase 5 step.
 - The KSA-6R virtual scheduler and flight-computer skeleton with deterministic 32/8/1 Hz releases, next-epoch commands, stale-link safeing, and deadline safeing.
 - A transport-neutral nonblocking byte interface, bounded queues and incremental frame pumps, a register-neutral SwiftLink/Turbo232 ACIA driver, and an Ultimate UCI TCP state machine with a deterministic native mock.
+- Observation-only Mission Control proven not to perturb a complete exact mission, plus an independent deterministic delayed/noisy tracking network and bounded ground estimator.
 
 ## Planned acceptance ladder
 

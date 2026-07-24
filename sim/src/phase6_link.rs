@@ -410,7 +410,25 @@ pub struct ExactRunEvidence {
     pub flight_checksum: u32,
     pub transcript_checksum: u32,
 }
+pub trait ExactFrameObserver {
+    fn observe(&mut self, source: EndpointRole, destination: EndpointRole, frame: &[u8]);
+}
+struct NoopObserver;
+impl ExactFrameObserver for NoopObserver {
+    fn observe(&mut self, _source: EndpointRole, _destination: EndpointRole, _frame: &[u8]) {}
+}
+
 pub fn run_exact_nominal() -> Result<ExactRunEvidence, ExactLinkError> {
+    run_exact_nominal_inner(None::<&mut NoopObserver>)
+}
+pub fn run_exact_nominal_observed<O: ExactFrameObserver>(
+    observer: &mut O,
+) -> Result<ExactRunEvidence, ExactLinkError> {
+    run_exact_nominal_inner(Some(observer))
+}
+fn run_exact_nominal_inner<O: ExactFrameObserver>(
+    mut observer: Option<&mut O>,
+) -> Result<ExactRunEvidence, ExactLinkError> {
     let mut world = ExactWorldEndpoint::new(0x5a00_0000)?;
     let mut flight = ExactFlightEndpoint::new();
     let mut broker = DeterministicBroker::new(ImpairmentSchedule::default());
@@ -426,10 +444,16 @@ pub fn run_exact_nominal() -> Result<ExactRunEvidence, ExactLinkError> {
         let (bn, _) = broker
             .route(EndpointRole::World, EndpointRole::Flight, &a[..an], &mut b)
             .map_err(|_| ExactLinkError::Payload)?;
+        if let Some(o) = observer.as_deref_mut() {
+            o.observe(EndpointRole::World, EndpointRole::Flight, &b[..bn]);
+        }
         let cn = flight.accept_sensor(&b[..bn], &mut decode_a, &mut c)?;
         let (dn, _) = broker
             .route(EndpointRole::Flight, EndpointRole::World, &c[..cn], &mut d)
             .map_err(|_| ExactLinkError::Payload)?;
+        if let Some(o) = observer.as_deref_mut() {
+            o.observe(EndpointRole::Flight, EndpointRole::World, &d[..dn]);
+        }
         world.accept_command(&d[..dn], &mut decode_b)?;
         flight.acknowledge_commit(step)?;
         step += 1;
