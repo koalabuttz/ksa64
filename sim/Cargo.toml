@@ -89,3 +89,7 @@ required-features = ["c64"]
 name = "ksa64-phase5-replay-c64"
 path = "src/bin/phase5_replay_c64.rs"
 required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase6-realtime-timed-c64"
+path = "src/bin/phase6_realtime_timed_c64.rs"
+required-features = ["c64"]

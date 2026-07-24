@@ -1,0 +1,21 @@
+{
+  "schema": "ksa64.phase6.realtime-timing-v1",
+  "target": "PAL C64 via pinned x64sc 3.10",
+  "runs": 3,
+  "fast_ticks": 12692,
+  "cycles": {
+    "overhead": 24,
+    "worst_cycles": 23771,
+    "fast_cycles": 12481,
+    "budget_cycles": 24631,
+    "navigation_checksum": 3026340201,
+    "flight_checksum": 1157075787
+  },
+  "deadline_pass": true,
+  "projected_cpu_seconds": 197.14023474292767,
+  "physical_mission_seconds": 396.625,
+  "artifact": {
+    "bytes": 6947,
+    "sha256": "62f1e63fdc2d9d0ad24210a19f1024075eb03ad2d26c6277ae10bde118cec25f"
+  }
+}

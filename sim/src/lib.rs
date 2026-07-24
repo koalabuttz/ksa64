@@ -42,6 +42,7 @@ pub mod phase5_vehicle;
 mod phase5_vehicle_self_test;
 pub mod phase6_link;
 pub mod phase6_mission_control;
+pub mod phase6_realtime;
 #[cfg(feature = "fixtures")]
 pub use phase5_vehicle_self_test::{phase5_vehicle_signature, run_phase5_vehicle_self_tests};
 #[cfg(feature = "fixtures")]

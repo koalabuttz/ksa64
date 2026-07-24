@@ -1165,6 +1165,9 @@ impl Phase6FastVehicle {
     pub const fn committed_machine(&self) -> Phase5VehicleMachine {
         self.committed
     }
+    pub const fn working_truth(&self) -> Phase5VehicleTruth {
+        self.working.truth
+    }
     pub fn current_snapshot(&self) -> Result<Phase5VehicleSnapshot, Phase5VehicleError> {
         self.committed.current_snapshot()
     }

@@ -366,6 +366,12 @@ pub fn parse_link_frame<'a>(
     parse_link_decoded(&decoded[..n])
 }
 
+/// KLR6 inertial delta velocity uses signed Q12 m/s. Platform attitude vector uses signed Q15.
+pub const REALTIME_DELTA_VELOCITY_FRACTION_BITS: u8 = 12;
+pub const REALTIME_PLATFORM_FRACTION_BITS: u8 = 15;
+pub const REALTIME_AID_BAROMETER: u16 = 1;
+pub const REALTIME_AID_GPS: u16 = 2;
+pub const REALTIME_AID_STAR: u16 = 4;
 pub const REALTIME_INERTIAL_LENGTH: usize = 40;
 pub const REALTIME_COMMAND_LENGTH: usize = 24;
 pub const REALTIME_AID_LENGTH: usize = 64;
