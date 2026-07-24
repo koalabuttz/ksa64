@@ -105,7 +105,8 @@ The C64 accuracy-first closed-loop path is intentionally slower than real time. 
 - [Phase 2](phase2/README.md) and [completion audit](phase2/COMPLETION.md)
 - [Phase 3](phase3/README.md) and [completion audit](phase3/COMPLETION.md)
 - [Phase 4](phase4/README.md) and [completion audit](phase4/COMPLETION.md)
-- [Phase 5](phase5/README.md), [completion audit](phase5/COMPLETION.md), and [Phase 6 handoff](phase5/PHASE6_HANDOFF.md)
+- [Phase 5](phase5/README.md), [completion audit](phase5/COMPLETION.md), [Phase 6 handoff](phase5/PHASE6_HANDOFF.md), and [deployment options](phase5/PHASE6_OPTIONS.md)
+- [Phase 6](phase6/README.md) and [wire/authority contract](phase6/CONTRACT.md)
 
 ### Phase 4 detail
 
@@ -151,14 +152,15 @@ powershell -File phase5/complete.ps1
 It validates native and independent evidence plus finite MOS/VICE probes. It
 does not start a complete C64 mission or campaign.
 
-## Next: plan Phase 6
+## Phase 6: implementation in progress
 
-Phase 6 will split the world, flight software, and eventually mission control
-across physical Commodore computers. The [handoff](phase5/PHASE6_HANDOFF.md)
-records the inherited boundaries and recommends a deterministic host loopback
-before selecting the electrical transport. The conservative full target mission
-projection remains 19.69 hours, so long C64 runs still require explicit
-confirmation.
+Phase 6 is splitting the world, flight software, and eventually mission control
+across configurable native, VICE, hybrid, or physical Commodore endpoints. The
+[handoff](phase5/PHASE6_HANDOFF.md) records the inherited boundaries, while the
+[options record](phase5/PHASE6_OPTIONS.md) preserves the accessible one-C64,
+multi-VICE, user-port, Ultimate Ethernet, and self-contained deployment ideas
+without freezing a plan. The conservative full target mission projection
+remains 19.69 hours, so long C64 runs still require explicit confirmation.
 
 ## Guiding principles
 

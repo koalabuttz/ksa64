@@ -2,6 +2,7 @@
 
 //! Transport-neutral Phase 3 messages and strict fixed-width codecs.
 pub mod phase5;
+pub mod phase6;
 
 pub const SENSOR_FRAME_LENGTH: usize = 56;
 pub const ACTUATOR_COMMAND_LENGTH: usize = 16;

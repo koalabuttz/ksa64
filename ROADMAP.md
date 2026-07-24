@@ -152,9 +152,9 @@ Exit criteria:
 
 Purpose: split the architecture across physical computers.
 
-Status: ready for planning. Phase 5 leaves fixed-width world/flight transports,
-deterministic replay, finite target probes, and a single-machine regression
-oracle. No physical transport or scheduling contract is frozen yet; see
+Status: implementation in progress. KLF6/KLR6 contracts, allocation-free exact
+endpoints, deterministic broker evidence, and the first complete split-native
+Phase 5-exact mission now pass. See `phase6/README.md` and
 `phase5/PHASE6_HANDOFF.md`.
 
 Possible configurations:

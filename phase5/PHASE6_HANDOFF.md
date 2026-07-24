@@ -14,6 +14,11 @@ Phase 5 leaves KSA64 ready to plan, but not yet implement, a physical multi-comp
 
 No Phase 6 transport format, electrical interface, baud/handshake rate, or machine assignment is frozen yet.
 
+The post-completion [deployment and transport options](PHASE6_OPTIONS.md)
+preserve the one-C64, hybrid host/VICE, multi-VICE, physical multi-C64,
+user-port, Ultimate Ethernet, and self-contained overlay alternatives. That
+record is exploratory and does not supersede this handoff or freeze a plan.
+
 ## Non-negotiable constraints
 
 1. The single-machine Phase 5 composition remains a regression oracle.

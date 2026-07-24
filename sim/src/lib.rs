@@ -40,6 +40,7 @@ pub use phase5_telemetry_self_test::{
 pub mod phase5_vehicle;
 #[cfg(feature = "fixtures")]
 mod phase5_vehicle_self_test;
+pub mod phase6_link;
 #[cfg(feature = "fixtures")]
 pub use phase5_vehicle_self_test::{phase5_vehicle_signature, run_phase5_vehicle_self_tests};
 #[cfg(feature = "fixtures")]
