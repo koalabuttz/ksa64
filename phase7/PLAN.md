@@ -1,6 +1,6 @@
 # Phase 7 implementation contract
 
-Status: accepted plan.
+Status: implemented and accepted. See `README.md` and `COMPLETION.md`.
 
 Phase 7 adds a typed multi-profile evaluation boundary and proves it with a
 separately versioned hobby/high-power vertical-flight model. It does not

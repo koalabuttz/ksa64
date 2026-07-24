@@ -1,0 +1,28 @@
+{
+  "schema": "ksa64.phase7.campaign-analysis-v1",
+  "master_seed": "4b534137",
+  "run_count": 1024,
+  "parameter_count": 8,
+  "variation_identities_exact": true,
+  "outcomes": {
+    "3": 1024
+  },
+  "aggregate": {
+    "minimum_apogee_raw_q13": 7051834,
+    "maximum_apogee_raw_q13": 8987803,
+    "mean_apogee_raw_q13": 8024967,
+    "minimum_impact_velocity_raw_q19": -3441863,
+    "maximum_impact_velocity_raw_q19": -3039388,
+    "ordered_records_crc32": "a939041c"
+  },
+  "si_envelope": {
+    "minimum_apogee_m": 860.819580078125,
+    "maximum_apogee_m": 1097.1439208984375,
+    "minimum_impact_velocity_mps": -6.56483268737793,
+    "maximum_impact_velocity_mps": -5.797172546386719
+  },
+  "artifacts": {
+    "ksc7_sha256": "c60b9b76e813dec23f31cf6c3f6a608477f4da92a3554841768f694303b29e6d",
+    "kra7_sha256": "0075b65ca99242e97d38acd4817048adef1b986e4ac395c4855fec84bc348295"
+  }
+}

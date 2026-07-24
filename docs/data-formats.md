@@ -259,3 +259,24 @@ KMR6 is a host-only, noncanonical presentation/session container. Its 32-byte he
 The expanded Mission Control plots introduce no format revision. The planned ascent is the strictly validated frozen run-zero KPH5 artifact; the nominal orbit target comes from its accepted reference record. Live and replayed onboard, ground, and SIM Director inputs already exist in `MissionControlUpdate`/KMR6. Osculating-orbit, ground-track, environment, and residual products are regenerated presentation aids and are never serialized as canonical flight evidence.
 
 KMR6 version 1 remains sufficient because each recorded update already preserves the ordered inputs needed to rebuild every plot. A replay renderer may use only records at or before its selected cursor. Plot glyph mode, terminal size, focused trajectory view, and path emphasis are transient UI preferences and are not stored in KMR6.
+## Phase 7 multi-profile formats
+
+Phase 7 preserves all earlier families and adds strict version-7 records under
+the hobby numeric-contract identity `0xee0448fa`:
+
+- KVP7 is a fixed 512-byte vertical vehicle pack.
+- KMP7 is a fixed 896-byte motor pack with at most 64 sampled thrust knots.
+- KMC7 is a fixed 256-byte mission/environment/launch/recovery pack.
+- KST7 uses a 96-byte header and 96-byte canonical telemetry frames.
+- KSR7 is a fixed 192-byte profile-neutral evaluation summary with a metric
+  validity mask.
+- KSC7 is a fixed 512-byte keyed uncertainty campaign.
+- KCL7 is a bounded ordered candidate-list manifest.
+- KPH7 uses a 64-byte header and 16-byte sparse plot points; it is
+  noncanonical presentation evidence.
+- KRA7 uses a strict 64-byte archive header followed by ordered, independently
+  CRC-protected KSR7 records.
+
+Every common header binds kind, length, numeric contract, identity, reserved
+zero bytes, and CRC-32. The host compiler consumes JSON/RASP source data; no
+human-readable format is accepted by a C64 evaluator.

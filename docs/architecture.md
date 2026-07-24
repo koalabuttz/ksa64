@@ -376,3 +376,22 @@ A strictly parsed embedded copy of the frozen 99-point nominal KPH5 history supp
 F1 through F6 have no SIM Director dependency. They consume PLAN, ONBOARD, GROUND EST, and labelled MODEL EST sources. F7 alone may display omniscient world truth and is rendered with a distinct warning palette. This boundary is enforced by mutating all director fields and requiring the operational page buffers to remain unchanged.
 
 The renderer selects compact, standard, wide, and ultra-wide panel arrangements from terminal dimensions. Braille and ASCII plotters share the same bounded world-to-canvas transforms. Plot selection and initial trajectory view are launcher settings only; KLR6, KMR6, KST5, endpoint RAM, and mission scheduling remain unchanged.
+## Accepted Phase 7 profile and pack architecture
+
+Phase 7 adds a profile-neutral `EvaluationSummary` around the frozen KSA-2A and
+KSA-5A executors and the separately scaled `HobbyVerticalV1` evaluator. Profile
+selection happens at composition or link time; there is no universal hot-loop
+vehicle model and no dynamic allocation in the portable mission path.
+
+Human-readable vehicle, motor, and mission sources are host inputs. The offline
+compiler resolves decimal units, sampled thrust, identities, bounds, and CRCs
+into KVP7/KMP7/KMC7 before execution. The portable evaluator owns all physical
+state transitions. Host tools may compile candidates, distribute independent
+runs, retain evidence, and analyze results, but they do not duplicate the
+production dynamics.
+
+The stock C64 links only the hobby profile and embeds bounded packs. KSR7 and
+KPH7 support compact post-run inspection; KST7 and KRA7 remain host-retained
+evidence. Optional storage remains observational and cannot alter mission or
+campaign checksums. Phase 8 may extend hobby flight spatially, but the useful
+vertical evaluator remains a separately identified smaller model.

@@ -985,3 +985,18 @@ an approximately 2 KiB plot on stock hardware. Run target jobs sequentially
 with guaranteed VICE cleanup. Require a complete target mission only when the
 measured projection is at most 30 minutes; otherwise use exact finite probes,
 and never cancel a run merely because it is taking a long time.
+## D-076: Keep table addressing target-width independent
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Perform fixed-point physical arithmetic in its declared signed word width and
+convert only a proven bounded table quotient to `usize`. Never cast raw
+fixed-point values or raw strides to `usize` before arithmetic: `usize` is 64
+bits on the development host and 16 bits on the C64.
+
+A 129-state native/MOS trace is permanent Phase 7 completion evidence. It found
+the original environment lookup divergence at step 24, when a 2,048,000-raw
+250 m stride truncated to 16,384 on the target. The repaired full stock-C64
+mission must reproduce the host state checksum through ground contact.

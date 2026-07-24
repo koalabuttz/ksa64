@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–5 are complete and the Phase 6 software baseline is accepted. Phase 7 is planned as a separately versioned hobby/high-power vertical-flight profile over a new multi-profile evaluation and pack boundary. Live physical-link acceptance remains open.
+> **Project status:** Phases 0–7 are complete. Phase 7 adds the accepted multi-profile pack boundary and a stock-C64 hobby/high-power vertical mission. Phase 8 (spatial hobby flight and validated vehicle modeling) is next. Phase 6 live physical-link acceptance remains open.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -32,6 +32,10 @@ KSA64 currently provides:
 - a responsive host-native F1–F7 Mission Control console with planned-versus-observed ascent, osculating-orbit, Earth ground-track, GNC, navigation, vehicle, link, event, and truth-isolated SIM Director views;
 - adaptive fast/real-time/step presentation, operator pacing and safe detach/stop controls, procedural cues, and recoverable KMR6 session recording/replay with CSV/JSON export;
 - the KSA-6R 32/8/1 Hz stock-C64 flight profile, measured PAL deadline margin, physical ACIA packaging, and a complete shadow-verified host/VICE flight.
+- an additive Phase 7 evaluation facade preserving KSA-2A/KSA-5A while adding the separately scaled `HobbyVerticalV1` profile;
+- offline compiled KVP7/KMP7/KMC7 packs, sampled motor thrust and mass depletion, rail launch, apogee, dual-deploy recovery, strict KST7/KSR7/KPH7 evidence, and KRA7 campaigns;
+- a frozen 1,024-run Firestorm 54/I211W uncertainty campaign independently parsed in Python and byte-identical across worker counts;
+- stock-C64 Phase 7 replay, 129-state exactness evidence, and a complete 2,702-step target mission matching the host checksum in 17.72 PAL CPU minutes.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -87,13 +91,13 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 4 — Statistical analysis | Deterministic campaigns, KSR4 summaries, independent float64 analysis, stock/REU storage, interactive UI, KRA4 archives, and KXV4 disk export. |
 | 5 — 3-D dynamics | Spatial numeric/world models, rigid and flexible dynamics, multirate KSA-5A vehicle, strict avionics, integrated missions, KST5, spatial campaigns, PAL target timing, adaptive spatial history, and stock-C64 replay pass the completion audit. |
 | 6 — Commodore-in-the-loop | Exact and realtime endpoint contracts, deterministic broker/replay, passive ground systems, a stock-C64 flight profile, and a complete 12,692-epoch host/VICE flight pass the software audit; physical-link validation remains open. |
-| 7 — Multi-profile evaluation | Planned: frozen legacy adapters, compiled hobby vehicle/motor/mission packs, a published-data vertical mission, dual-deploy recovery, candidate grids, campaigns, and stock-C64 evidence. |
+| 7 — Multi-profile evaluation | Complete: frozen legacy adapters, compiled hobby vehicle/motor/mission packs, published-data vertical ascent and dual-deploy recovery, strict evidence, deterministic campaigns, independent analysis, and an exact complete stock-C64 mission. |
 | 8 — Spatial hobby flight | Planned: geometry-derived mass properties, 3-D stability, wind, weathercocking, recovery drift, and external correlation. |
 | 9 — Optimization workbench | Planned: host-side search, Pareto and sensitivity analysis, robustness campaigns, archives, and C64 finalist browsing. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 
-The C64 accuracy-first closed-loop path is intentionally slower than real time. The accepted projection for one complete target mission is 243.7 minutes, so full target campaigns are not started as routine validation. Native runs provide campaign breadth; finite MOS/VICE probes provide target exactness, storage, UI, and transport evidence. Long C64 runs require a fresh projection and explicit user confirmation and are never canceled merely to obtain timing evidence.
+The legacy Phase 3/4 accuracy-first closed-loop path still projects to 243.7 minutes per C64 mission, so its campaigns remain native with finite target probes. The smaller Phase 7 vertical profile completed its full target mission in 17.72 PAL CPU minutes, below its reviewed 30-minute threshold. Campaign breadth remains host-native. Long C64 runs require a fresh projection and explicit user confirmation and are never canceled merely to obtain timing evidence.
 
 ## Repository guide
 
@@ -115,7 +119,7 @@ The C64 accuracy-first closed-loop path is intentionally slower than real time. 
 - [Phase 4](phase4/README.md) and [completion audit](phase4/COMPLETION.md)
 - [Phase 5](phase5/README.md), [completion audit](phase5/COMPLETION.md), [Phase 6 handoff](phase5/PHASE6_HANDOFF.md), and [deployment options](phase5/PHASE6_OPTIONS.md)
 - [Phase 6](phase6/README.md), [wire/authority contract](phase6/CONTRACT.md), and [software completion record](phase6/COMPLETION.md)
-- [Phase 7 implementation contract](phase7/PLAN.md)
+- [Phase 7](phase7/README.md), [implementation contract](phase7/PLAN.md), and [completion audit](phase7/COMPLETION.md)
 
 ### Phase 4 detail
 
@@ -168,6 +172,14 @@ powershell -File phase6/complete.ps1
 ```
 
 It validates the checked-in full-flight evidence without silently rerunning the approximately 17-minute target mission.
+
+The bounded Phase 7 audit is:
+
+```powershell
+powershell -File phase7/complete.ps1
+```
+
+It rebuilds packs and mission artifacts, reproduces the 1,024-run campaign with one and four workers, runs the independent analyzer, and reruns only finite C64 trace/replay probes. The frozen 17.72-minute Phase 7 target flight is verified by result and binary hash rather than silently repeated.
 
 ## Phase 6: software baseline accepted
 

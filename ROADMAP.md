@@ -173,13 +173,19 @@ Exit criteria:
 
 ## Phase 7: multi-profile mission packs and hobby vertical evaluation
 
-Status: planned. The implementation contract is frozen in `phase7/PLAN.md`.
+Status: complete. The accepted implementation and measurements are recorded in `phase7/COMPLETION.md`.
 
 Purpose: establish a reusable, explicitly versioned profile and pack boundary,
 then prove it with a second physical scale rather than by generalizing the
 accepted orbital models in place.
 
-Planned capabilities:
+Current result: the Firestorm 54/I211W reference mission executes from ignition
+through dual-deploy recovery using one portable exact implementation. Strict
+KVP7-KRA7 evidence, an independently checked 1,024-run campaign, stock-C64
+replay, a 129-state native/MOS trace, and a complete 17.72-minute PAL target
+mission pass. No REU is required.
+
+Accepted capabilities:
 
 - A typed evaluation facade over the frozen KSA-2A, KSA-5A, and new hobby
   vertical profiles.

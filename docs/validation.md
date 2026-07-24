@@ -281,3 +281,27 @@ The host test suite validates the frozen nominal KPH5 identity and CRC before us
 Presentation acceptance renders all seven pages at 80x24, 100x30, 120x40, 160x48, and 200x60. F2 is separately rendered in Ascent, Orbit, and Ground Track modes with Braille and ASCII plotting. ASCII mode must produce an entirely ASCII buffer with no replacement characters. A provenance test changes every omniscient director field while holding operational inputs fixed: F1 through F6 must remain byte-identical, while F7 must change.
 
 The existing complete native mission, KMR6 recovery/export, explicit stop, and disconnect behavior tests remain in the same gate. The full workspace regression passes. A finite eight-epoch one-VICE realtime TUI smoke rendered the strict-ASCII Ground Track page, shadow-verified all eight command/status cells, reported zero deadline misses and alarms, and closed the emulator and bridge after postflight exit. No complete target mission was rerun for a presentation-only change.
+## Accepted Phase 7 validation
+
+Legacy-facade tests compare Phase 7 normalized results with the unchanged Phase
+2 and Phase 5 executors. Pack-compiler tests rebuild checked-in KVP7/KMP7/KMC7
+bytes from offline source data. Exact mission tests freeze 2,702 state
+transitions, event order, extrema, terminal state, and checksum; an independent
+float64 implementation separately attributes the remaining numerical error.
+
+The 1,024-run campaign is reproduced with one and four workers and must be
+byte-identical. An independent Python reader validates KSC7/KRA7 framing,
+reserved bytes, CRCs, run ordering, every embedded KSR7, the keyed sampler,
+variation identities, and aggregate extrema without using Rust codecs.
+
+Target acceptance combines a 129-state field-by-field native/MOS trace, direct
+validation of the complete 1,000-byte KPH7 replay screen, stock linked-layout
+checks, and one complete target mission. The accepted mission consumes
+1,047,635,269 net PAL cycles (17.72 minutes), lands with every event observed,
+reports zero faults, and reproduces checksum `0xa61c5720`. Routine audits verify
+the frozen complete-run evidence and binary hash but rerun only the finite trace
+and replay.
+
+The evidence establishes implementation consistency and declared numerical
+behavior. The Firestorm/I211W model is published-data-based but not
+flight-correlated, certification-grade, or a real-world probability model.

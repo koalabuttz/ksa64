@@ -54,6 +54,7 @@ def main() -> int:
     parser.add_argument("--prg", type=Path, required=True)
     parser.add_argument("--host", type=Path, required=True)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     host = json.loads(args.host.read_text())
     target = run_prg_until_result(
@@ -84,7 +85,12 @@ def main() -> int:
     }
     text = json.dumps(data, indent=2) + "\n"
     print(text, end="")
-    if args.output is not None:
+    if args.check:
+        if args.output is None:
+            raise RuntimeError("--check requires --output")
+        if json.loads(args.output.read_text()) != data:
+            raise RuntimeError(f"trace evidence differs from {args.output}")
+    elif args.output is not None:
         args.output.write_text(text)
     return 0 if data["exact"] else 2
 

@@ -81,3 +81,18 @@ Inspect or export without opening the TUI with:
     cargo run -p ksa64-host --bin phase6_session -- --input <session>.kmr6 --csv <flight>.csv --json <flight>.json
 
 KMR6 recording is append-only and CRC-protected per update. Partial recordings recover through their last complete record. Replay rebuilds plots and events from the exact recorded prefix. The TUI and recorder are passive sinks around `phase6_runner`; they do not enter the world/flight command path. See `phase6/MISSION_CONTROL.md` for source badges, responsive tiers, visual controls, and authority rules.
+## Phase 7 profile tools
+
+Phase 7 host tools compile human-readable hobby sources, run the portable exact
+mission, build sparse plots, execute deterministic campaigns, and emit a native
+trace oracle:
+
+```powershell
+cargo run -p ksa64-host --bin phase7_compile -- phase7/source-data target/phase7/packs
+cargo run -p ksa64-host --bin phase7_run -- phase7/examples target/phase7/run
+cargo run -p ksa64-host --release --bin phase7_campaign -- phase7/examples target/phase7/campaign 1024 4
+cargo run -p ksa64-host --bin phase7_trace
+```
+
+`phase7/reference/analyze_campaign.py` independently parses and validates the
+frozen campaign. See `phase7/README.md` and `phase7/COMPLETION.md`.

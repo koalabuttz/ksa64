@@ -91,4 +91,12 @@ Before implementation reaches the relevant phase:
 - Locate machine-readable constants and atmosphere data with clear provenance.
 - Identify published 6-DOF check cases before beginning rigid-body work.
 - Preserve screenshots or manuals from vintage software only where redistribution is allowed.
+## Phase 7 published-data inputs
 
+The canonical hobby reference uses the Giant Leap Firestorm 54 product page
+for kit dimensions, dry weight, recovery sizes, and recommended motor pairing,
+plus the public-domain TRA-test-derived AeroTech I211W RASP curve distributed
+by ThrustCurve. Normalized snapshots, attribution, retrieval date, source URLs,
+license information, and checksums are committed under `phase7/sources/` so the
+pack compiler and completion audit require no network access. Model assumptions
+and the non-correlation warning are frozen in `phase7/PLAN.md`.

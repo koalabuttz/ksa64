@@ -154,6 +154,7 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=1_800.0)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--replay-only", action="store_true")
     args = parser.parse_args()
 
     vice = args.vice.resolve(strict=True)
@@ -162,6 +163,16 @@ def main() -> int:
     replay = run_prg_until_result(
         vice, replay_prg, 180.0, REPLAY_START, REPLAY_END, parse_replay
     )
+    if args.replay_only:
+        data = {"replay": replay, "artifact": artifact(replay_prg)}
+        print(json.dumps(data, indent=2))
+        if not args.check or args.output is None:
+            return 0
+        expected = json.loads(args.output.read_text())
+        if expected["replay"] != replay or expected["artifacts"]["replay"] != data["artifact"]:
+            raise RuntimeError(f"replay evidence differs from {args.output}")
+        return 0
+
     full = run_prg_until_result(
         vice, full_prg, args.timeout, FULL_START, FULL_END, parse_full
     )
