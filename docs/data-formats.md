@@ -239,3 +239,12 @@ KPH5 is a presentation-only compact trajectory. Its 80-byte header uses magic `K
 KRA5 is the append-only Phase 5 archive, with magic `KRA5`, version 5, and contract `0x050c0002`. It retains the KRA4 commit discipline but never accepts a KRA4 superblock. Complete KST5 payloads are embedded unchanged; compact histories remain complete KPH5 streams.
 
 KPH5 is also the direct Phase 5 stock replay tape. Replay adds no new binary format: the portable reader revalidates KPH5 and derives a presentation summary and cue hash in constant memory. The Y–Z projection and SID cues are target presentation outputs and carry no canonical physics authority.
+
+
+## Phase 6 link formats
+
+Phase 6 preserves every earlier artifact and adds wire records rather than another canonical telemetry stream. KLF6 is a COBS-delimited frame with a 36-byte decoded header, at most 512 payload bytes, CRC-32, session/sequence/acknowledgement identity, and explicit measurement, production, and effective epochs. The maximum encoded frame is 556 bytes. Strict readers reject malformed COBS, bad length or CRC, unknown types or required flags, nonzero reserved fields, identity mismatch, and impossible epoch relationships.
+
+KSA-6R uses fixed CRC-16-CCITT cells: 40-byte inertial, 64-byte aid, 24-byte command, and 48-byte status records. A raw endpoint publishes the four-byte readiness preamble `d6 5a 06 00`. Commands identify their source epoch and following effective epoch; aid and status use the 8 Hz navigation cadence. The terminal inertial flag is set only after the final world commit, allowing the flight endpoint to return final command/status evidence before it stops.
+
+KLF6 transcripts and KLR6 cells are transport evidence, not replacements for KST5. Full layouts, masks, failure rules, and accepted checksums are frozen in `phase6/CONTRACT.md` and `phase6/REALTIME.md`.

@@ -152,10 +152,10 @@ Exit criteria:
 
 Purpose: split the architecture across physical computers.
 
-Status: implementation in progress. KLF6/KLR6 contracts, allocation-free exact
-endpoints, deterministic broker evidence, and the first complete split-native
-Phase 5-exact mission now pass. See `phase6/README.md` and
-`phase5/PHASE6_HANDOFF.md`.
+Status: software baseline accepted. Exact split execution, deterministic links,
+the stock-C64 KSA-6R flight profile, passive ground systems, and a complete
+externally paced 1x PAL target flight now pass. Live physical-link acceptance
+remains open; see `phase6/COMPLETION.md`.
 
 Possible configurations:
 

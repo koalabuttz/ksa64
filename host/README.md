@@ -54,3 +54,10 @@ The reviewed smoke campaign contains 64 runs. The frozen reference campaign cont
 Host archive/export tests build a one-volume stock report and a synthetic three-volume selection, then require the joiner to reject corruption, missing, duplicate, reordered, or mismatched volumes. The actual C64 IEC utility is validated separately by `phase4/export-c64.ps1`.
 
 See `phase4/HOST_ANALYSIS.md`, `phase4/FORMATS.md`, and `phase4/EXPORT.md` for commands, frozen identities, and accepted evidence.
+
+
+## Phase 6 endpoint broker
+
+Phase 6 host support can run the world broker over TCP while a native or C64 flight endpoint owns guidance and control. The broker reads the KLR6 readiness preamble, streams inertial/aid cells, validates returned command/status cells, and compares every result with a native shadow flight computer. The shadow is an observer only and never supplies commands to the world.
+
+The frozen full target run used the same broker behind the VICE binary-monitor mailbox relay. See `phase6/README.md` and `phase6/COMPLETION.md` for exact evidence and the remaining physical-link boundary.

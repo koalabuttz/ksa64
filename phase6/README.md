@@ -1,32 +1,60 @@
 # Phase 6: Commodore-in-the-loop
 
-Status: implementation in progress.
+Status: software baseline accepted; physical-link acceptance remains open.
 
-Phase 6 turns the existing world/flight seam into explicit endpoints connected by deterministic, replayable transports. The exact paced path preserves Phase 5 results while enabling native, VICE, hybrid, and physical deployments. A distinct KSA-6R profile adds a C64-oriented realtime controller without weakening the accepted accuracy-first simulator.
+Phase 6 turns the Phase 5 world/flight seam into explicit endpoints joined by deterministic, replayable transports. The exact-paced path preserves Phase 5 results. The separate KSA-6R profile gives one stock C64 a computationally feasible 32 Hz flight-computer workload while a host or another machine owns the simulated world.
 
-## Accepted so far
+## Accepted software baseline
 
-- Strict KLF6 COBS framing, CRC-32, capability records, explicit epochs, and 512-byte payload bound.
-- Compact KLR6 inertial, aid, command, and status cells with CRC-16.
-- Allocation-free exact world and flight endpoints.
-- Deterministic broker decisions and transcript checksum chain.
-- A complete split native nominal mission whose terminal state, sensor checksum, navigation checksum, and flight checksum exactly reproduce Phase 5.
-- An additive 32 Hz vehicle seam where four held-command ticks exactly reproduce one frozen Phase 5 step.
-- The KSA-6R virtual scheduler and flight-computer skeleton with deterministic 32/8/1 Hz releases, next-epoch commands, stale-link safeing, and deadline safeing.
-- A transport-neutral nonblocking byte interface, bounded queues and incremental frame pumps, a register-neutral SwiftLink/Turbo232 ACIA driver, and an Ultimate UCI TCP state machine with a deterministic native mock.
-- Observation-only Mission Control proven not to perturb a complete exact mission, plus an independent deterministic delayed/noisy tracking network and bounded ground estimator.
-- A complete deterministic native KSA-6R mission and a finite rust-mos/PAL VICE timing probe: staggered fast, navigation, and guidance releases all meet the conservative 80% fast-slot budget.
-- Frozen transport bandwidth gates and a three-run stock endpoint probe including compact stream pumps, guidance, flight software, and target packaging.
+- KLF6 COBS framing, CRC-32, capabilities, explicit epochs, bounded payloads, retry/safeing policy, and deterministic impairment transcripts.
+- Fixed KLR6 inertial, aid, command, and status cells with CRC-16 and a four-byte readiness preamble.
+- Allocation-free world and flight endpoints. Only the world owns truth; commands become effective in the following epoch.
+- A split native exact-paced mission that reproduces the frozen Phase 5 terminal state and checksum chains.
+- A KSA-6R scheduler with 32 Hz control, 8 Hz navigation/status, and 1 Hz sliced guidance.
+- Transport-neutral memory, ACIA, and Ultimate-UCI state machines, including bounded queues and native fault/backpressure tests.
+- Passive Mission Control and an independent delayed/noisy ground estimator that cannot perturb flight.
+- A stock physical-flight PRG for SwiftLink 38,400 or Turbo232 57,600 baud, plus a VICE-only mailbox PRG.
+- A complete externally paced flight under x64sc at 1x PAL CPU speed: all 12,692 command/status cells matched an independent host shadow flight computer, the terminal state and checksums were exact, and there were zero deadline misses or alarms.
 
-## Planned acceptance ladder
+## Full-flight evidence
 
-1. Frozen contracts and Phase 5 compatibility.
-2. Link codec, exact split, impairment, and replay.
-3. Stock endpoint packaging and paced user-port VICE exchange.
-4. Native socket, VICE ACIA, and Ultimate UCI transports.
-5. 32/8/1 Hz KSA-6R scheduler and controller.
-6. Native and full 1x PAL realtime missions.
-7. Passive Mission Control and independent ground tracking.
-8. Deployment matrix, self-contained feasibility report, and completion audit.
+The accepted KSA-6R run completed 12,692 fast epochs and 3,173 mission steps. The C64 reported navigation checksum `0x82e09168` and final flight checksum `0xacf09b87`. The exact terminal state was:
 
-See [CONTRACT.md](CONTRACT.md) for the frozen wire and authority rules, [REALTIME.md](REALTIME.md) for the accepted KSA-6R mission and timing evidence, and [TRANSPORTS.md](TRANSPORTS.md) for deployment and endpoint evidence. Long target runs retain the project rule: project first, ask when the estimate exceeds 30 minutes, and never cancel a run unless David explicitly requests it.
+- position Q12: `[21360371, 4030786, 15731027]`;
+- velocity Q24: `[-69442203, 96406364, 65655653]`;
+- navigation position Q12: `[21360000, 4031445, 15731484]`;
+- navigation velocity Q24: `[-68076267, 95786604, 65320561]`.
+
+The binary-monitor mailbox relay took 1,011.328 wall seconds for 396.625 simulated seconds because monitor access pauses the emulated CPU. This proves exact execution at normal PAL CPU speed, not end-to-end wall-clock realtime transport. The separate CIA timing probe establishes controller compute feasibility; a live ACIA or physical-link run remains the final transport proof.
+
+## Capability and deployment ladder
+
+| Deployment | Status |
+|---|---|
+| Single-process native oracle | Accepted |
+| Split native world/flight over TCP | Accepted |
+| Host world plus one VICE C64 flight computer | Accepted through externally paced mailbox relay |
+| Stock C64 flight endpoint image | Built and stock-memory bounded |
+| SwiftLink/Turbo232 physical link | Driver and endpoint implemented; hardware run pending |
+| Ultimate UCI TCP | Allocation-free state machine and native mock accepted; hardware adapter pending |
+| User-port exact-paced link | Protocol/bandwidth policy accepted; electrical and target driver work pending |
+| Two or three physical C64s | Optional demonstration, not a baseline requirement |
+| Self-contained world and flight on one C64 | Separate post-Phase-6 feasibility track |
+
+## Important implementation findings
+
+The pinned rust-mos toolchain exposed two target-only traps during full acceptance. An integer loop written with a 256 upper bound compiled into a nonterminating 16-bit decrement sequence, so mailbox initialization now uses two explicit 128-byte spans. Direct negative `i16` widening inside the checksum also differed from the native compiler; the accepted implementation hashes explicit little-endian bytes and sign bytes. Frozen 1,024-epoch checkpoints and a per-cell shadow flight computer now detect either class of divergence early.
+
+The pinned Windows VICE 3.10 ACIA socket backend successfully transmitted C64 bytes to the host but did not deliver host bytes back to the emulated ACIA in the tested configurations. The physical ACIA endpoint remains valid software, while automated target acceptance uses the binary-monitor mailbox transport. This limitation is documented rather than treated as physical-link evidence.
+
+## Audit
+
+Run the bounded software audit with:
+
+```powershell
+powershell -File phase6/complete.ps1
+```
+
+It runs native regressions, lints, target builds, three finite PAL timing/endpoint probes, one mailbox smoke exchange, and validation of the checked-in full-flight artifact. It deliberately does not rerun the approximately 17-minute full mission. The runner refuses to start if another x64sc process is already open and every probe closes its VICE instance on success or proven failure.
+
+See [CONTRACT.md](CONTRACT.md), [REALTIME.md](REALTIME.md), [TRANSPORTS.md](TRANSPORTS.md), and [COMPLETION.md](COMPLETION.md).

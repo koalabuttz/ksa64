@@ -4,9 +4,7 @@ use ksa64_sim::phase5_vehicle::{
 #[test]
 fn four_phase6_ticks_equal_one_frozen_phase5_step() {
     let base = Phase5VehicleMachine::new_ksa5a().unwrap();
-    let expected = base;
-    let expected = expected;
-    let mut legacy = expected;
+    let mut legacy = base;
     let legacy_snapshot = legacy.step(Phase5VehicleCommand::HOLD).unwrap();
     let mut split = Phase6FastVehicle::new(base);
     split.begin(Phase5VehicleCommand::HOLD).unwrap();

@@ -18,6 +18,7 @@ name = "ksa64-host"
 version = "0.1.0"
 dependencies = [
  "ksa64-core",
+ "ksa64-flight",
  "ksa64-interface",
  "ksa64-sim",
 ]

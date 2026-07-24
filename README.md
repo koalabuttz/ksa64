@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–5 are complete. KSA64 now provides the frozen 3-D numeric, world, vehicle, avionics, guidance, integrated mission, KST5 telemetry, spatial campaigns, measured PAL target evidence, adaptive stock/REU history, and verified stock-C64 mission-control replay. Phase 6, Commodore-in-the-loop, is ready for planning.
+> **Project status:** Phases 0–5 are complete and the Phase 6 software baseline is accepted. KSA64 now supports exact split endpoints, deterministic link contracts, a stock-C64 32 Hz flight-computer profile, host/VICE Commodore-in-the-loop execution, and passive ground systems. Live physical-link acceptance remains open.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -27,7 +27,9 @@ KSA64 currently provides:
 - interactive PETSCII campaign pages and strict one- or multi-volume IEC disk export;
 - independent Python/float64 analysis, host/C64 exactness probes, and frozen regression artifacts;
 - additive Phase 5 ECI translation, rigid attitude, bending/slosh, two-axis gimbal and RCS dynamics;
-- strict Phase 5 IMU/barometer/GPS/star-tracker transports, truth-isolated 3-D navigation, quaternion control, and fail-closed sequencing.
+- strict Phase 5 IMU/barometer/GPS/star-tracker transports, truth-isolated 3-D navigation, quaternion control, and fail-closed sequencing;
+- KLF6/KLR6 split-endpoint contracts, deterministic broker and impairment evidence, passive Mission Control, and independent ground tracking;
+- the KSA-6R 32/8/1 Hz stock-C64 flight profile, measured PAL deadline margin, physical ACIA packaging, and a complete shadow-verified host/VICE flight.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -62,7 +64,7 @@ scenario and campaign inputs
     +-------------------+
 ```
 
-The long-term deployment can split those boundaries across physical machines:
+Phase 6 can now place those logical endpoints in separate native processes, VICE, or a hybrid host/C64 arrangement:
 
 ```text
 C64 #1  flight computer
@@ -70,7 +72,7 @@ C64 #2  vehicle simulator
 C64 #3  mission control
 ```
 
-That future Commodore-in-the-loop arrangement is Phase 6 work. The current portable core and fixed-width transports are designed so the split does not require a second physics implementation.
+The accepted accessible baseline is a host-owned world plus one C64 flight computer. Two- and three-C64 arrangements remain optional demonstrations, and the split still uses one physics implementation.
 
 ## Completed phases
 
@@ -82,6 +84,7 @@ That future Commodore-in-the-loop arrangement is Phase 6 work. The current porta
 | 3 — Closed-loop avionics | Truth-isolated sensors, navigation, guidance, sequencing, actuator feedback, deterministic faults, KST3/KRP3, and bounded C64 probes. |
 | 4 — Statistical analysis | Deterministic campaigns, KSR4 summaries, independent float64 analysis, stock/REU storage, interactive UI, KRA4 archives, and KXV4 disk export. |
 | 5 — 3-D dynamics | Spatial numeric/world models, rigid and flexible dynamics, multirate KSA-5A vehicle, strict avionics, integrated missions, KST5, spatial campaigns, PAL target timing, adaptive spatial history, and stock-C64 replay pass the completion audit. |
+| 6 — Commodore-in-the-loop | Exact and realtime endpoint contracts, deterministic broker/replay, passive ground systems, a stock-C64 flight profile, and a complete 12,692-epoch host/VICE flight pass the software audit; physical-link validation remains open. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 
@@ -106,7 +109,7 @@ The C64 accuracy-first closed-loop path is intentionally slower than real time. 
 - [Phase 3](phase3/README.md) and [completion audit](phase3/COMPLETION.md)
 - [Phase 4](phase4/README.md) and [completion audit](phase4/COMPLETION.md)
 - [Phase 5](phase5/README.md), [completion audit](phase5/COMPLETION.md), [Phase 6 handoff](phase5/PHASE6_HANDOFF.md), and [deployment options](phase5/PHASE6_OPTIONS.md)
-- [Phase 6](phase6/README.md) and [wire/authority contract](phase6/CONTRACT.md)
+- [Phase 6](phase6/README.md), [wire/authority contract](phase6/CONTRACT.md), and [software completion record](phase6/COMPLETION.md)
 
 ### Phase 4 detail
 
@@ -152,15 +155,19 @@ powershell -File phase5/complete.ps1
 It validates native and independent evidence plus finite MOS/VICE probes. It
 does not start a complete C64 mission or campaign.
 
-## Phase 6: implementation in progress
+The bounded Phase 6 software audit is:
 
-Phase 6 is splitting the world, flight software, and eventually mission control
-across configurable native, VICE, hybrid, or physical Commodore endpoints. The
-[handoff](phase5/PHASE6_HANDOFF.md) records the inherited boundaries, while the
-[options record](phase5/PHASE6_OPTIONS.md) preserves the accessible one-C64,
-multi-VICE, user-port, Ultimate Ethernet, and self-contained deployment ideas
-without freezing a plan. The conservative full target mission projection
-remains 19.69 hours, so long C64 runs still require explicit confirmation.
+```powershell
+powershell -File phase6/complete.ps1
+```
+
+It validates the checked-in full-flight evidence without silently rerunning the approximately 17-minute target mission.
+
+## Phase 6: software baseline accepted
+
+Phase 6 splits world authority, flight software, and passive Mission Control across configurable native, VICE, hybrid, or physical endpoints. The KSA-6R flight profile completed 12,692 epochs on a stock C64 image under 1x PAL x64sc with every command/status cell shadow-verified, exact terminal checksums, and no deadlines or alarms. Its measured controller workload uses about 49.5% average PAL CPU.
+
+The accepted VICE mailbox path is externally paced and therefore does not prove end-to-end wall-clock realtime transport. The SwiftLink/Turbo232 endpoint is built below the stock-memory boundary, while physical ACIA, user-port, and Ultimate hardware acceptance remain open. See the [Phase 6 completion record](phase6/COMPLETION.md).
 
 ## Guiding principles
 

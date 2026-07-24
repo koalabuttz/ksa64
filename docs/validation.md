@@ -264,3 +264,12 @@ publish the magic only after the complete result is visible. Monitors must
 ignore records without the exact final marker. Publishing magic first creates a
 race in which VICE or physical monitoring hardware can accept a partially
 written record.
+
+
+## Accepted Phase 6 software validation
+
+Phase 6 first requires the allocation-free exact endpoints to reproduce the frozen Phase 5 terminal state and all three avionics checksum chains. Native link tests then cover framing, identity, ordering, replay, backpressure, deterministic impairment, timeout, and disconnect behavior. The realtime broker compares every returned KLR6 command and status cell with an independent native shadow flight computer.
+
+Three naturally terminating PAL CIA probes measure the ordinary, navigation/status, and guidance releases. Their accepted maxima are 12,339, 23,656, and 14,914 cycles against a conservative 24,631-cycle release budget. A complete stock-C64 KSA-6R endpoint subsequently processed 12,692 epochs under 1x PAL x64sc, reached the frozen terminal state, matched all shadow cells, and reported zero deadline misses and alarms. Binary-monitor transactions pause emulation, so that externally paced run proves complete target exactness but not end-to-end realtime transport.
+
+The bounded completion runner builds every endpoint below the stock boundary, reruns the finite timing and endpoint probes sequentially, performs one mailbox exchange, and verifies the frozen full-flight artifact and PRG hash. It refuses to start while x64sc is already running, and its harnesses close VICE after success or proven failure. A complete live SwiftLink, Turbo232, Ultimate, or user-port hardware run remains open.

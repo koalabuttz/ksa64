@@ -357,3 +357,12 @@ world/flight split must transport the existing bounded measurements and
 commands, make added latency explicit, and preserve one model implementation.
 Link framing, timeouts, replay, and electrical behavior are new adapters; they
 are not permission to duplicate truth or guidance algorithms.
+
+
+## Accepted Phase 6 endpoint architecture
+
+Phase 6 makes the Phase 5 seam deployable without duplicating either side. The world endpoint alone owns vehicle truth, sensor synthesis, mission time, and canonical observation. The flight endpoint consumes fixed transported measurements and returns next-epoch commands. A passive Mission Control endpoint may observe telemetry and run an independent delayed/noisy ground estimate, but it has no command authority.
+
+KLF6 is the general framed session protocol for exact-paced or realtime adapters. KLR6 is the compact reviewed 32 Hz stream used by KSA-6R. Native processes, TCP, C64 mailbox automation, ACIA cartridges, Ultimate UCI, and a future user-port adapter share these contracts; transports do not gain authority over physics or guidance. One C64 plus a host is the accessible baseline. Additional C64s are optional endpoint placements, not functional requirements.
+
+The exact-paced split remains the Phase 5 regression oracle. KSA-6R is separately versioned because its 32/8/1 Hz multirate schedule and compact observations are designed around stock PAL compute and link budgets. The accepted target run proves exact full-flight execution at normal PAL CPU speed under external pacing. Live physical transport remains a separate acceptance gate.

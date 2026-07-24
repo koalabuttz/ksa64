@@ -9,10 +9,10 @@
     "guidance_signature": 1816505338
   },
   "artifact": {
-    "bytes": 16147,
-    "sha256": "96723be259ceb7d470963524828a79d9c59712b632f71a4c09d6bcc82d247106",
+    "bytes": 16491,
+    "sha256": "91d6b17fe4ef2682f5ea049e27e0e824ca37ce745954c6070593886473e2e72c",
     "load_address": 2049,
-    "load_end_exclusive": 18194,
+    "load_end_exclusive": 18538,
     "stock_fit": true
   }
 }

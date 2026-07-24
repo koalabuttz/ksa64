@@ -377,6 +377,8 @@ pub const REALTIME_COMMAND_LENGTH: usize = 24;
 pub const REALTIME_AID_LENGTH: usize = 64;
 pub const REALTIME_STATUS_LENGTH: usize = 48;
 pub const KLR6_SYNC: [u8; 2] = [0xd6, 0x5a];
+/// Flight endpoint readiness preamble; consumed before the first realtime cell.
+pub const KLR6_READY: [u8; 4] = [0xd6, 0x5a, 6, 0];
 fn cell_prefix(o: &mut [u8], kind: u8, session: u16, a: u16, b: u16) {
     o[..2].copy_from_slice(&KLR6_SYNC);
     o[2] = 6;

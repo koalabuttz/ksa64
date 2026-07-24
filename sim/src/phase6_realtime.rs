@@ -232,3 +232,159 @@ fn hash_status(mut h: u32, a: u32, b: u32) -> u32 {
     }
     h
 }
+
+/// Incremental world endpoint used by socket, VICE, and physical brokers.
+/// It owns simulator truth; the flight endpoint can only return next-epoch commands.
+pub struct RealtimeWorldEndpoint {
+    world: Phase6FastVehicle,
+    command: Phase5VehicleCommand,
+    snapshot: crate::phase5_vehicle::Phase5VehicleSnapshot,
+    epoch: u32,
+    complete: bool,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RealtimeWorldRelease {
+    pub inertial: RealtimeInertialCell,
+    pub aid: Option<RealtimeAidCell>,
+    pub complete: bool,
+}
+impl RealtimeWorldEndpoint {
+    pub fn new_nominal() -> Result<Self, RealtimeRunError> {
+        let machine =
+            Phase5VehicleMachine::new_ksa5a().map_err(|error| RealtimeRunError::VehicleAt {
+                epoch: 0,
+                error,
+                gimbal_q16: [0; 2],
+                rcs_q15: [0; 3],
+            })?;
+        let world = Phase6FastVehicle::new(machine);
+        let snapshot = world
+            .current_snapshot()
+            .map_err(|error| RealtimeRunError::VehicleAt {
+                epoch: 0,
+                error,
+                gimbal_q16: [0; 2],
+                rcs_q15: [0; 3],
+            })?;
+        Ok(Self {
+            world,
+            command: Phase5VehicleCommand::HOLD,
+            snapshot,
+            epoch: 0,
+            complete: false,
+        })
+    }
+    pub const fn epoch(&self) -> u32 {
+        self.epoch
+    }
+    pub const fn is_complete(&self) -> bool {
+        self.complete
+    }
+    pub const fn snapshot(&self) -> crate::phase5_vehicle::Phase5VehicleSnapshot {
+        self.snapshot
+    }
+    pub fn release(&mut self) -> Result<RealtimeWorldRelease, RealtimeRunError> {
+        if self.complete || self.epoch >= REALTIME_MAX_FAST_EPOCHS {
+            return Err(RealtimeRunError::Epoch);
+        }
+        let epoch = self.epoch;
+        if epoch % PHASE5_SUBSTEPS as u32 == 0 {
+            self.world
+                .begin(self.command)
+                .map_err(|error| world_error(epoch, error, self.command))?;
+        }
+        let (observation, committed) = self
+            .world
+            .advance(self.command)
+            .map_err(|error| world_error(epoch, error, self.command))?;
+        let truth = self.world.working_truth();
+        let q = truth.rigid().attitude();
+        let mut inertial = RealtimeInertialCell {
+            session: REALTIME_SESSION,
+            measurement_epoch: epoch as u16,
+            production_epoch: epoch as u16,
+            validity: 0xff,
+            flags: 0,
+            platform_angle: [
+                clamp_i16(q.x() >> 15),
+                clamp_i16(q.y() >> 15),
+                clamp_i16(q.z() >> 15),
+            ],
+            angular_rate: [
+                clamp_i16(observation.gyro_body_q24[0] >> 12),
+                clamp_i16(observation.gyro_body_q24[1] >> 12),
+                clamp_i16(observation.gyro_body_q24[2] >> 12),
+            ],
+            delta_velocity: [
+                clamp_i16(observation.accel_body_q28[0] >> 21),
+                clamp_i16(observation.accel_body_q28[1] >> 21),
+                clamp_i16(observation.accel_body_q28[2] >> 21),
+            ],
+            gimbal_applied: [
+                clamp_i16(observation.gimbal.applied.pitch),
+                clamp_i16(observation.gimbal.applied.yaw),
+            ],
+            stage_status: truth.phase() as u16,
+        };
+        let aid = if epoch & 3 == 0 {
+            let p = truth.spatial().position();
+            let v = truth.spatial().velocity();
+            Some(RealtimeAidCell {
+                session: REALTIME_SESSION,
+                measurement_epoch: epoch as u16,
+                production_epoch: epoch as u16,
+                validity: REALTIME_AID_GPS | REALTIME_AID_STAR,
+                events: observation.events,
+                onboard_time_q16: truth.time_q16(),
+                barometer_q12: 0,
+                gps_position_q12: [p.x(), p.y(), p.z()],
+                gps_velocity_q24: [v.x(), v.y(), v.z()],
+                star_angle: inertial.platform_angle,
+                rcs_propellant_q12: self.world.committed_machine().rcs_propellant_q12(),
+                vehicle_status: truth.phase() as u32,
+            })
+        } else {
+            None
+        };
+        if let Some(value) = committed {
+            self.snapshot = value;
+            self.complete = value.truth.phase() == Phase5StagePhase::Complete;
+            if self.complete {
+                inertial.flags |= 1;
+            }
+        }
+        self.epoch += 1;
+        Ok(RealtimeWorldRelease {
+            inertial,
+            aid,
+            complete: self.complete,
+        })
+    }
+    pub fn accept_command(&mut self, cell: RealtimeCommandCell) -> Result<(), RealtimeRunError> {
+        if self.epoch == 0
+            || cell.session != REALTIME_SESSION
+            || cell.source_epoch != (self.epoch - 1) as u16
+            || cell.effective_epoch != self.epoch as u16
+        {
+            return Err(RealtimeRunError::Epoch);
+        }
+        self.command = map_command(cell, cell.flags & 1 != 0);
+        Ok(())
+    }
+}
+fn world_error(
+    epoch: u32,
+    error: Phase5VehicleError,
+    command: Phase5VehicleCommand,
+) -> RealtimeRunError {
+    RealtimeRunError::VehicleAt {
+        epoch,
+        error,
+        gimbal_q16: [command.gimbal.pitch, command.gimbal.yaw],
+        rcs_q15: [
+            command.rcs_q15.x(),
+            command.rcs_q15.y(),
+            command.rcs_q15.z(),
+        ],
+    }
+}

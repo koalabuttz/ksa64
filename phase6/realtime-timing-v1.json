@@ -5,18 +5,18 @@
   "fast_ticks": 12692,
   "cycles": {
     "overhead": 24,
-    "navigation_cycles": 23787,
-    "fast_cycles": 12452,
-    "guidance_cycles": 14997,
+    "navigation_cycles": 23656,
+    "fast_cycles": 12339,
+    "guidance_cycles": 14914,
     "budget_cycles": 24631,
     "navigation_checksum": 3026340201,
     "flight_checksum": 924618584
   },
   "deadline_pass": true,
-  "projected_cpu_seconds": 197.93707168144468,
+  "projected_cpu_seconds": 196.43552080288416,
   "physical_mission_seconds": 396.625,
   "artifact": {
-    "bytes": 14586,
-    "sha256": "4b9925d9891f4350f768da29eab4a8fe5dfe850dd62032e0e17485a857ba106a"
+    "bytes": 14924,
+    "sha256": "f006ef4734c5c1e61f0d8ec1f479d35d2b66a24984ffe64d2c3f5102351deab4"
   }
 }

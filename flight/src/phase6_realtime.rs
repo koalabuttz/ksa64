@@ -302,12 +302,25 @@ impl RealtimeFlightComputer {
         }
     }
 }
+fn hash_byte(h: u32, byte: u8) -> u32 {
+    (h.rotate_left(5) ^ byte as u32).wrapping_add(0x9e37_79b9)
+}
 fn hw(mut h: u32, v: u32) -> u32 {
-    for b in v.to_le_bytes() {
-        h = h.rotate_left(5) ^ b as u32;
-        h = h.wrapping_add(0x9e37_79b9)
+    for byte in v.to_le_bytes() {
+        h = hash_byte(h, byte);
     }
     h
+}
+/// Hashes the exact four-byte two's-complement widening of an i16.
+/// This is explicit because the pinned rust-mos compiler lowers direct i16-to-u32
+/// casts differently from the native compiler for negative values.
+fn hw_i16(mut h: u32, v: i16) -> u32 {
+    let bytes = v.to_le_bytes();
+    let sign = if bytes[1] & 0x80 != 0 { 0xff } else { 0 };
+    h = hash_byte(h, bytes[0]);
+    h = hash_byte(h, bytes[1]);
+    h = hash_byte(h, sign);
+    hash_byte(h, sign)
 }
 fn hash_navigation_release(
     mut h: u32,
@@ -323,8 +336,8 @@ fn hash_navigation_release(
 fn hash_command(mut h: u32, c: RealtimeCommandCell) -> u32 {
     h = hw(h, c.source_epoch as u32);
     h = hw(h, c.effective_epoch as u32);
-    h = hw(h, c.gimbal[0] as u32);
-    h = hw(h, c.gimbal[1] as u32);
+    h = hw_i16(h, c.gimbal[0]);
+    h = hw_i16(h, c.gimbal[1]);
     h = hw(h, c.flags as u32);
     h
 }

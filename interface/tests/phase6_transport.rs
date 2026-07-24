@@ -74,7 +74,7 @@ fn acia_driver_is_nonblocking_and_fails_closed() {
         tx: None,
     });
     assert_eq!(link.try_read().unwrap(), None);
-    assert_eq!(link.try_write(7).unwrap(), false);
+    assert!(!link.try_write(7).unwrap());
     link.registers_mut().status = ACIA_STATUS_RX_READY | ACIA_STATUS_TX_EMPTY;
     assert_eq!(link.try_read().unwrap(), Some(42));
     assert!(link.try_write(7).unwrap());

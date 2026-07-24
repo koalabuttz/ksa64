@@ -851,3 +851,52 @@ regression oracle. Phase 6 may add framed physical transport, explicit latency,
 timeouts, and replay, but it may not duplicate the physics or expose truth to
 flight software. Leave the electrical transport and multi-machine scheduling
 contract open for dedicated planning.
+
+
+## D-064: Preserve exact Phase 5 behavior through KLF6 and version KSA-6R separately
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Use allocation-free world and flight endpoints plus KLF6 to reproduce the accepted Phase 5 mission exactly. Give the stock-oriented 32/8/1 Hz flight profile its own KLR6 cells and KSA-6R evidence instead of silently changing Phase 5 timing or measurements.
+
+## D-065: Make one C64 plus a host the Phase 6 baseline
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Require every C64 endpoint to fit stock memory and require no REU. Support two- and three-C64 arrangements as optional endpoint placements. Keep the host, another C64, or future hardware free to own the world and Mission Control roles without changing the flight contract.
+
+## D-066: Treat Mission Control and storage as passive
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Mission Control may consume delayed/noisy telemetry and calculate an independent ground estimate, but it cannot command the vehicle in Phase 6. Transcript, UI, archive, and REU behavior must not alter command ordering, checksums, or world state.
+
+## D-067: Accept binary-monitor mailboxes only as target-exactness evidence
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Use a VICE-only mailbox to execute and shadow-verify the complete stock-C64 flight endpoint after the pinned Windows VICE ACIA receive path proved unusable. Because monitor transactions pause emulation, label this evidence externally paced and never present it as live transport timing. Keep physical SwiftLink/Turbo232, Ultimate, and user-port acceptance open.
+
+## D-068: Make cross-target checksums byte-explicit
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Hash signed control values from explicit little-endian bytes and sign bytes rather than compiler-dependent widening. Split target loops whose bound is 256 into two bounded 128-byte spans. Compare every target command and status cell with a native shadow endpoint and retain 1,024-epoch checkpoints for early divergence detection.
+
+## D-069: Close the Phase 6 software baseline without claiming physical-link completion
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Completion requires exact native splitting, deterministic link failures, passive ground systems, finite PAL timing, stock endpoint packaging, and one complete externally paced 1x PAL target flight. It does not require possession of multiple C64s or an REU. A finite run on actual compatible link hardware remains a documented follow-up rather than being hidden or inferred.

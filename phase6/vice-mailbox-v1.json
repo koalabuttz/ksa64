@@ -1,0 +1,26 @@
+{
+  "schema": "ksa64.phase6.vice-mailbox-v1",
+  "wall_seconds": 1011.3280000000086,
+  "c64": {
+    "fast_epochs": 12692,
+    "navigation_checksum": 2195755368,
+    "flight_checksum": 2901449607
+  },
+  "broker": "KSA64_PHASE6_COMPLETE epochs=12692 steps=3173 position=[21360371, 4030786, 15731027] velocity=[-69442203, 96406364, 65655653] nav_position=[21360000, 4031445, 15731484] nav_velocity=[-68076267, 95786604, 65320561] status_flight_checksum=833868727 final_flight_checksum=2901449607 navigation_checksum=2195755368 deadline_misses=0 alarms=0",
+  "target": "PAL C64 via pinned x64sc 3.10, binary-monitor mailbox relay",
+  "acceptance": {
+    "cpu_speed": "1x PAL",
+    "simulated_seconds": 396.625,
+    "externally_paced": true,
+    "command_status_cells_shadow_verified": 12692,
+    "deadline_misses": 0,
+    "alarms": 0
+  },
+  "artifact": {
+    "bytes": 15324,
+    "sha256": "00a5ca6536335f77bdadb0dd0d39d0b3b7da0d1cdc930d1fb6648be0be4059b0",
+    "load_address": 2049,
+    "load_end_exclusive": 17371,
+    "stock_fit": true
+  }
+}

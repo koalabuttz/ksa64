@@ -254,19 +254,25 @@ impl<D: UciTcpDevice> ByteTransport for UltimateUciTransport<D> {
         if self.state != UciState::Connected {
             return Err(TransportError::Disconnected);
         }
-        self.device.try_receive().map_err(|e| {
-            self.state = UciState::Faulted;
-            e
-        })
+        match self.device.try_receive() {
+            Ok(value) => Ok(value),
+            Err(error) => {
+                self.state = UciState::Faulted;
+                Err(error)
+            }
+        }
     }
     fn try_write(&mut self, byte: u8) -> Result<bool, TransportError> {
         if self.state != UciState::Connected {
             return Err(TransportError::Disconnected);
         }
-        self.device.try_send(byte).map_err(|e| {
-            self.state = UciState::Faulted;
-            e
-        })
+        match self.device.try_send(byte) {
+            Ok(value) => Ok(value),
+            Err(error) => {
+                self.state = UciState::Faulted;
+                Err(error)
+            }
+        }
     }
     fn is_connected(&self) -> bool {
         self.state == UciState::Connected
@@ -397,7 +403,10 @@ pub const fn serial_slot_budget(baud: u32, bytes: u16) -> SerialSlotBudget {
     let micros = if baud == 0 {
         u32::MAX
     } else {
-        ((bytes as u32 * SERIAL_BITS_PER_BYTE_8N1 * 1_000_000) + baud - 1) / baud
+        let bit_microseconds = bytes as u32 * SERIAL_BITS_PER_BYTE_8N1 * 1_000_000;
+        let quotient = bit_microseconds / baud;
+        let remainder = bit_microseconds - quotient * baud;
+        quotient + if remainder == 0 { 0 } else { 1 }
     };
     SerialSlotBudget {
         baud,

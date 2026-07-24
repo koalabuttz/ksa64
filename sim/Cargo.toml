@@ -98,3 +98,14 @@ required-features = ["c64"]
 name = "ksa64-phase6-endpoint-probe-c64"
 path = "src/bin/phase6_endpoint_probe_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase6-flight-endpoint-c64"
+path = "src/bin/phase6_flight_endpoint_c64.rs"
+required-features = ["c64"]
+
+
+[[bin]]
+name = "ksa64-phase6-mailbox-endpoint-c64"
+path = "src/bin/phase6_mailbox_endpoint_c64.rs"
+required-features = ["c64"]
