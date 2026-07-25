@@ -1,0 +1,23 @@
+{
+  "compiler_report": "phase8/examples/compile-report.json",
+  "derived": {
+    "derived_cp_from_nose_m": 1.5669162818628921,
+    "dry_static_margin_calibers": 11.638198502714411,
+    "normal_force_slope_per_rad": 36.74058098857774,
+    "pitch_yaw_damping": 0.3969821219863283,
+    "roll_damping": 0.060851972332130924
+  },
+  "fixtures": {
+    "angle_of_attack_envelope_deg": 15.0,
+    "body_tube_normal_force_slope": 0.0,
+    "conical_nose_cp_fraction": 0.6666666666666666,
+    "elliptical_nose_cp_fraction": 0.3333333333333333,
+    "mach_envelope": 0.8,
+    "pitch_yaw_symmetry_error": 0.0,
+    "qualified_cp_delta_calibers": 0.004573834283324161,
+    "tangent_ogive_cp_fraction": 0.466
+  },
+  "method": "independent Python reconstruction of documented Barrowman-compatible equations",
+  "schema": "ksa64.phase8-aero-analysis-v1",
+  "source": "phase8/source-data/firestorm54-spatial.json"
+}

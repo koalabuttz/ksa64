@@ -11,9 +11,15 @@
     0.00016999113599999998,
     0.004845835567999999
   ],
+  "derived_cp_from_nose_m": 1.5669162818628921,
+  "qualified_cp_reference_m": 1.56718,
+  "normal_force_slope_per_rad": 36.74058098857774,
+  "pitch_yaw_damping": 0.3969821219863283,
+  "roll_damping": 0.060851972332130924,
+  "dry_static_margin_calibers": 11.638198502714411,
   "dry_motor_inertia_kgm2": [
     0.000079851744,
     0.002276285872
   ],
-  "source_manifest_identity": 92737573
+  "source_manifest_identity": 198652872
 }

@@ -21,6 +21,7 @@ pub mod phase7_numeric;
 pub mod phase7_pack;
 pub mod phase7_result;
 pub mod phase7_telemetry;
+pub mod phase8_aero;
 pub mod phase8_format;
 pub mod phase8_numeric;
 pub mod phase8_pack;

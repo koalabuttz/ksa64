@@ -146,10 +146,8 @@ struct RailGuideSource {
 struct AeroSeedKnotSource {
     mach: SourcedDecimal,
     axial_cd: SourcedDecimal,
-    cp_from_nose_m: SourcedDecimal,
-    normal_force_slope_per_rad: SourcedDecimal,
 }
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum NoseShape {
     Conical,
@@ -200,9 +198,7 @@ struct VehicleSource {
     motor_aft_from_tail_m: SourcedDecimal,
     drogue_cda_m2: SourcedDecimal,
     main_cda_m2: SourcedDecimal,
-    pitch_damping: SourcedDecimal,
-    yaw_damping: SourcedDecimal,
-    roll_damping: SourcedDecimal,
+    qualified_cp_reference_m: SourcedDecimal,
     aero_seed: Vec<AeroSeedKnotSource>,
 }
 
@@ -274,6 +270,12 @@ pub struct SpatialCompileReport {
     pub dry_inertia_kgm2: [f64; 3],
     pub reference_area_m2: f64,
     pub loaded_motor_inertia_kgm2: [f64; 2],
+    pub derived_cp_from_nose_m: f64,
+    pub qualified_cp_reference_m: f64,
+    pub normal_force_slope_per_rad: f64,
+    pub pitch_yaw_damping: f64,
+    pub roll_damping: f64,
+    pub dry_static_margin_calibers: f64,
     pub dry_motor_inertia_kgm2: [f64; 2],
     pub source_manifest_identity: u32,
 }
@@ -312,6 +314,91 @@ fn own_inertia(primitive: MassPrimitive, mass: f64, length: f64, radius: f64) ->
     [axial, transverse, transverse]
 }
 
+#[derive(Clone, Copy, Debug)]
+struct DerivedAerodynamics {
+    cp_from_nose_m: f64,
+    normal_force_slope_per_rad: f64,
+    pitch_yaw_damping: f64,
+    roll_damping: f64,
+    dry_static_margin_calibers: f64,
+}
+
+fn derive_geometry_aerodynamics(
+    source: &VehicleSource,
+    length: f64,
+    diameter: f64,
+    dry_cg: f64,
+) -> Result<DerivedAerodynamics, CompileError> {
+    let nose_length = source.nose.length_m.number()?;
+    let nose_cp_factor = match source.nose.shape {
+        NoseShape::Conical => 2.0 / 3.0,
+        NoseShape::TangentOgive => 0.466,
+        NoseShape::Elliptical => 1.0 / 3.0,
+    };
+    let mut total_slope = 2.0;
+    let mut weighted_cp = 2.0 * nose_cp_factor * nose_length;
+    let reference_area = core::f64::consts::PI * diameter * diameter / 4.0;
+    let mut roll_damping = 0.0;
+
+    for transition in &source.transitions {
+        let fore = transition.fore_diameter_m.number()?;
+        let aft = transition.aft_diameter_m.number()?;
+        let transition_length = transition.length_m.number()?;
+        let station = transition.fore_station_m.number()?;
+        let slope = 2.0 * (aft * aft - fore * fore) / (diameter * diameter);
+        let ratio = fore / aft;
+        let denominator = 1.0 - ratio * ratio;
+        let cp_fraction = if denominator.abs() < 1e-12 {
+            0.5
+        } else {
+            (1.0 + (1.0 - ratio) / denominator) / 3.0
+        };
+        total_slope += slope;
+        weighted_cp += slope * (station + transition_length * cp_fraction);
+    }
+
+    for fins in &source.fin_sets {
+        let count = f64::from(fins.count);
+        let root = fins.root_chord_m.number()?;
+        let tip = fins.tip_chord_m.number()?;
+        let span = fins.span_m.number()?;
+        let sweep = fins.leading_edge_sweep_m.number()?;
+        let station = fins.leading_edge_from_nose_m.number()?;
+        let mid_chord_offset = sweep + 0.5 * (tip - root);
+        let mid_chord_length = (span * span + mid_chord_offset * mid_chord_offset).sqrt();
+        let isolated = 4.0 * count * (span / diameter).powi(2)
+            / (1.0 + (1.0 + (2.0 * mid_chord_length / (root + tip)).powi(2)).sqrt());
+        let interference = 1.0 + diameter / (2.0 * span + diameter);
+        let slope = isolated * interference;
+        let cp = station
+            + sweep * (root + 2.0 * tip) / (3.0 * (root + tip))
+            + (root + tip - root * tip / (root + tip)) / 6.0;
+        total_slope += slope;
+        weighted_cp += slope * cp;
+        let fin_area = 0.5 * (root + tip) * span;
+        roll_damping += 0.5 * count * (fin_area / reference_area) * (span / length).powi(2);
+    }
+
+    if total_slope <= 0.0 || total_slope > 64.0 {
+        return Err(CompileError::Range);
+    }
+    let cp = weighted_cp / total_slope;
+    if cp <= 0.0 || cp >= length {
+        return Err(CompileError::Range);
+    }
+    let static_margin = (cp - dry_cg) / diameter;
+    let pitch_yaw_damping = total_slope * ((cp - dry_cg) / length).abs() * diameter / length;
+    if pitch_yaw_damping > 64.0 || roll_damping > 64.0 {
+        return Err(CompileError::Range);
+    }
+    Ok(DerivedAerodynamics {
+        cp_from_nose_m: cp,
+        normal_force_slope_per_rad: total_slope,
+        pitch_yaw_damping,
+        roll_damping,
+        dry_static_margin_calibers: static_margin,
+    })
+}
 fn derive_vehicle(
     source: &VehicleSource,
     source_bytes: &[u8],
@@ -427,6 +514,11 @@ fn derive_vehicle(
     ];
     guides.sort_by(f64::total_cmp);
 
+    let derived_aero = derive_geometry_aerodynamics(source, length, diameter, cg)?;
+    let qualified_cp = source.qualified_cp_reference_m.number()?;
+    if (derived_aero.cp_from_nose_m - qualified_cp).abs() > 0.5 * diameter {
+        return Err(CompileError::Range);
+    }
     let mut aero_knots = [AeroKnot::ZERO; KVP8_MAX_AERO_KNOTS];
     for (index, knot) in source.aero_seed.iter().enumerate() {
         aero_knots[index] = AeroKnot {
@@ -434,17 +526,16 @@ fn derive_vehicle(
             axial_cd: SpatialCoefficient::from_raw(
                 knot.axial_cd.raw(SPATIAL_COEFFICIENT_FRACTIONAL_BITS)?,
             ),
-            cp_from_nose: SpatialMomentArm::from_raw(
-                knot.cp_from_nose_m
-                    .raw(SPATIAL_MOMENT_ARM_FRACTIONAL_BITS)?,
-            ),
-            normal_force_slope: SpatialCoefficient::from_raw(
-                knot.normal_force_slope_per_rad
-                    .raw(SPATIAL_COEFFICIENT_FRACTIONAL_BITS)?,
-            ),
+            cp_from_nose: SpatialMomentArm::from_raw(quantize(
+                derived_aero.cp_from_nose_m,
+                SPATIAL_MOMENT_ARM_FRACTIONAL_BITS,
+            )?),
+            normal_force_slope: SpatialCoefficient::from_raw(quantize(
+                derived_aero.normal_force_slope_per_rad,
+                SPATIAL_COEFFICIENT_FRACTIONAL_BITS,
+            )?),
         };
     }
-
     let reference_area = core::f64::consts::PI * diameter * diameter / 4.0;
     let manifest_identity = fnv1a_32(source_bytes);
     if manifest_identity == 0 {
@@ -485,21 +576,18 @@ fn derive_vehicle(
         )?),
         drogue_cda: SpatialArea::from_raw(source.drogue_cda_m2.raw(SPATIAL_AREA_FRACTIONAL_BITS)?),
         main_cda: SpatialArea::from_raw(source.main_cda_m2.raw(SPATIAL_AREA_FRACTIONAL_BITS)?),
-        pitch_damping: SpatialCoefficient::from_raw(
-            source
-                .pitch_damping
-                .raw(SPATIAL_COEFFICIENT_FRACTIONAL_BITS)?,
-        ),
-        yaw_damping: SpatialCoefficient::from_raw(
-            source
-                .yaw_damping
-                .raw(SPATIAL_COEFFICIENT_FRACTIONAL_BITS)?,
-        ),
-        roll_damping: SpatialCoefficient::from_raw(
-            source
-                .roll_damping
-                .raw(SPATIAL_COEFFICIENT_FRACTIONAL_BITS)?,
-        ),
+        pitch_damping: SpatialCoefficient::from_raw(quantize(
+            derived_aero.pitch_yaw_damping,
+            SPATIAL_COEFFICIENT_FRACTIONAL_BITS,
+        )?),
+        yaw_damping: SpatialCoefficient::from_raw(quantize(
+            derived_aero.pitch_yaw_damping,
+            SPATIAL_COEFFICIENT_FRACTIONAL_BITS,
+        )?),
+        roll_damping: SpatialCoefficient::from_raw(quantize(
+            derived_aero.roll_damping,
+            SPATIAL_COEFFICIENT_FRACTIONAL_BITS,
+        )?),
         source_manifest_identity: manifest_identity,
         aero_knot_count: source.aero_seed.len() as u8,
         aero_knots,
@@ -512,6 +600,12 @@ fn derive_vehicle(
             dry_inertia_kgm2: inertia,
             reference_area_m2: reference_area,
             loaded_motor_inertia_kgm2: [0.0; 2],
+            derived_cp_from_nose_m: derived_aero.cp_from_nose_m,
+            qualified_cp_reference_m: qualified_cp,
+            normal_force_slope_per_rad: derived_aero.normal_force_slope_per_rad,
+            pitch_yaw_damping: derived_aero.pitch_yaw_damping,
+            roll_damping: derived_aero.roll_damping,
+            dry_static_margin_calibers: derived_aero.dry_static_margin_calibers,
             dry_motor_inertia_kgm2: [0.0; 2],
             source_manifest_identity: manifest_identity,
         },
