@@ -1,0 +1,41 @@
+{
+  "schema": "ksa64.phase9_5.advanced-avionics-gate-v1",
+  "wrapper": "truth-blind advanced wrapper over frozen LocalFlightComputer",
+  "native": {
+    "advanced_wrapper_tests": 5,
+    "pitot_tests": 2,
+    "phase8_5_interface_tests": 2,
+    "phase8_5_flight_tests": 3,
+    "failures": 0,
+    "signature": "0x8c165977"
+  },
+  "mos": {
+    "probe": "ksa64-phase9-5-avionics-probe-c64",
+    "prg_bytes": 18700,
+    "sha256": "37dfd02a7b84662af1d620715df7dcdc9d42abba41c3f9060ae2b8e67ac4a059",
+    "vice_version": "3.10",
+    "failures": 0,
+    "signature": "0x8c165977",
+    "instances": 1,
+    "closed": true
+  },
+  "truth_blindness": {
+    "flight_crate_runtime_dependency": [
+      "ksa64-interface"
+    ],
+    "core_or_sim_dependency": false
+  },
+  "coverage": [
+    "KLR9 to frozen KLR8 translation",
+    "byte-identical frozen local command output",
+    "three-axis physical torque demand",
+    "roll PD demand",
+    "pitot bias/noise/quantization/delay/dropout/saturation",
+    "conservative navigation/wind fallback",
+    "air-data unavailable fail-closed state",
+    "two-epoch continuous hold",
+    "third-epoch safeing",
+    "no discrete replay",
+    "sensor/navigation/demand/command checksum chains"
+  ]
+}

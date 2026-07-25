@@ -41,6 +41,7 @@ See [PLAN.md](PLAN.md) for the implementation gates and
 - Gate 3 adds the offline provenance-bearing compiler and four reconstructible reference pack sets under `phase9_5/examples/`. Static hardware is compiled into each derivative KVP8; KPE9 carries only active effector and supply behavior. `reference/verify_reference_packs.py` independently checks identities, CRCs, mass moments, hinge limits, and pack links.
 - Gate 4 implements four independently actuated canards with incremental force, torque, induced drag, hinge-load limiting, lag/slew/saturation, and fail-closed aerodynamic envelopes. Native exact vectors match an independent float64 model within 0.213%; the three-vector stock-C64 VICE probe passes without an REU.
 - Gate 5 implements twelve individual cold-gas jets, exact 1/256-second valve edges, one-shot pulse scheduling and accumulation, shared regulated/blowdown supply interpolation, exact depletion, residual translation, and changing propellant mass properties. Native exact vectors agree with independent float64 torque and mass-flow results well within 0.5%; the three-vector stock-C64 VICE probe passes without an REU.
+- Gate 6 adds a truth-blind advanced wrapper around the frozen local flight computer, three-axis torque demand with roll control, deterministic 32 Hz pitot sensing, conservative navigation/wind fallback, bounded link-loss behavior, and independent checksum chains. Native and stock-C64 probes produce the same `0x8c165977` signature; the C64 probe is 18,700 bytes and requires no REU.
 
 Regenerate Gate 3 outputs with:
 

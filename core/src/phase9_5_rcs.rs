@@ -395,13 +395,13 @@ pub fn integrate_rcs_segment(
     })
 }
 
-#[cfg(feature = "fixtures")]
+#[cfg(any(test, feature = "fixtures"))]
 #[allow(dead_code)]
 mod independent_vectors {
     include!("../../phase9_5/generated/rcs_vectors_v1.rs");
 }
 
-#[cfg(feature = "fixtures")]
+#[cfg(any(test, feature = "fixtures"))]
 pub fn run_phase95_rcs_case(index: u8) -> u32 {
     let pack = match crate::phase9_5_contract::parse_effector_pack(include_bytes!(
         "../../phase9_5/examples/firestorm-r9.kpe9"
