@@ -1,0 +1,39 @@
+{
+  "schema": "ksa64.phase9_5.canard-gate-v1",
+  "model": "four-surface incremental canard aerodynamics",
+  "cases": [
+    "pitch",
+    "roll",
+    "hinge-load-limit"
+  ],
+  "native": {
+    "tests": 5,
+    "failures": 0
+  },
+  "independent_float64": {
+    "maximum_relative_error": 0.002132331674701024,
+    "acceptance_limit": 0.005
+  },
+  "mos": {
+    "probe": "ksa64-phase9-5-canard-c64",
+    "prg_bytes": 20154,
+    "sha256": "0f38d4fc6fb25de4d371921e90a370515fb724cab1553529ce0b6f2f0531b447",
+    "vice_version": "3.10",
+    "failures": 0,
+    "stage": 259,
+    "instances": 1,
+    "closed": true
+  },
+  "coverage": [
+    "zero-deflection equivalence",
+    "pitch symmetry",
+    "roll symmetry",
+    "independent lag and slew",
+    "jam-at-current",
+    "fail-neutral",
+    "hardover",
+    "hinge-load limiting",
+    "Mach/AoA/dynamic-pressure envelope rejection"
+  ],
+  "target_note": "Expected aggregate values are passed through one referenced fixture to avoid a rust-mos aggregate-argument ABI/static-stack failure in the acceptance probe; production force/torque APIs are unchanged."
+}

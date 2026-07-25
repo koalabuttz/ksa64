@@ -1,0 +1,19 @@
+// Generated independently by phase9_5/reference/generate_canard_vectors.py.
+pub const PITCH_TURN16: [i16; 4] = [1820, -1820, 0, 0];
+pub const PITCH_FORCE_Q13: [i32; 3] = [-182, 0, 36180];
+pub const PITCH_TORQUE_Q12: [i32; 3] = [0, 8708, 0];
+pub const PITCH_HINGE_Q24: [i32; 4] = [185253, 185253, 0, 0];
+pub const PITCH_EFFECTIVE_TURN16: [i16; 4] = [1820, -1820, 0, 0];
+pub const PITCH_MASK: u8 = 0;
+pub const ROLL_TURN16: [i16; 4] = [1820, 1820, 0, 0];
+pub const ROLL_FORCE_Q13: [i32; 3] = [-182, 0, 0];
+pub const ROLL_TORQUE_Q12: [i32; 3] = [748, 0, 0];
+pub const ROLL_HINGE_Q24: [i32; 4] = [185253, 185253, 0, 0];
+pub const ROLL_EFFECTIVE_TURN16: [i16; 4] = [1820, 1820, 0, 0];
+pub const ROLL_MASK: u8 = 0;
+pub const LOAD_TURN16: [i16; 4] = [1820, 1820, 1820, 1820];
+pub const LOAD_FORCE_Q13: [i32; 3] = [0, 0, 0];
+pub const LOAD_TORQUE_Q12: [i32; 3] = [0, 0, 0];
+pub const LOAD_HINGE_Q24: [i32; 4] = [4096, 4096, 4096, 4096];
+pub const LOAD_EFFECTIVE_TURN16: [i16; 4] = [10, 10, 10, 10];
+pub const LOAD_MASK: u8 = 15;

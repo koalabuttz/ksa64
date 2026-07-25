@@ -39,10 +39,12 @@ See [PLAN.md](PLAN.md) for the implementation gates and
 - Gate 1 froze the additive contract and proved the complete Phase 0–9 audit.
 - Gate 2 froze the numeric and binary contracts and matched native and MOS vectors.
 - Gate 3 adds the offline provenance-bearing compiler and four reconstructible reference pack sets under `phase9_5/examples/`. Static hardware is compiled into each derivative KVP8; KPE9 carries only active effector and supply behavior. `reference/verify_reference_packs.py` independently checks identities, CRCs, mass moments, hinge limits, and pack links.
+- Gate 4 implements four independently actuated canards with incremental force, torque, induced drag, hinge-load limiting, lag/slew/saturation, and fail-closed aerodynamic envelopes. Native exact vectors match an independent float64 model within 0.213%; the three-vector stock-C64 VICE probe passes without an REU.
 
 Regenerate Gate 3 outputs with:
 
 ```powershell
 cargo run -p ksa64-host --bin phase9_5_compile -- phase8/examples/firestorm54.kvp8 phase9_5/source-data/advanced-effectors-v1.json phase9_5/examples
 python phase9_5/reference/verify_reference_packs.py
+python phase9_5/reference/generate_canard_vectors.py --check --report
 ```

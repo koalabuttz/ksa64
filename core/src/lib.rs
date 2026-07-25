@@ -33,6 +33,7 @@ pub mod phase8_pack;
 pub mod phase8_result;
 pub mod phase8_telemetry;
 pub mod phase8_world;
+pub mod phase9_5_canard;
 pub mod phase9_5_contract;
 pub mod phase9_5_numeric;
 pub mod phase9_contract;
