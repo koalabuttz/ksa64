@@ -305,3 +305,15 @@ and replay.
 The evidence establishes implementation consistency and declared numerical
 behavior. The Firestorm/I211W model is published-data-based but not
 flight-correlated, certification-grade, or a real-world probability model.
+
+## Accepted Phase 8 validation
+
+The completion audit first reruns the complete Phase 0-7 workspace regression and rebuilds all source-bound packs. Analytic fixtures cover spatial numeric types, component mass and parallel-axis calculations, CP and normal-force symmetry, drag interpolation, envelope rejection, inertial and torque propagation, rail release, crosswind, and keyed gust repeatability.
+
+The frozen Firestorm/I211W mission produces strict KST8/KSR8/KPH8 evidence and is independently integrated in float64. Event times agree within their active timestep, apogee within 0.5%, landing position within the larger of 5 m or 2%, and predeployment attitude within 0.5 degrees. Nineteen aligned OpenRocket 24.12 checks cover mass/stability reconstruction and calm/crosswind flight metrics without tuning the assumption-backed drag table.
+
+The 1,024-run seed-`0x4b534138` campaign is byte-identical with one and four host workers; the independent parser validates ordering, keyed variations, every CRC, aggregates, and corruption rejection. Stock and every REU retention plan preserve the same physical summaries.
+
+Target evidence consists of all three programs linking below `$C000`, a 17-state field-exact native/MOS trace, and a seven-page replay with a frozen screen checksum. The finite trace measured 59,421,528 PAL cycles, approximately 3.71 million cycles per powered step. A complete mission conservatively projects to 2.35 hours, so it was not started under the established 30-minute projection-and-confirmation rule.
+
+These results are engineering-model evidence only. Neither KSA64 nor the OpenRocket comparison provides launch approval, certification, regulatory advice, or safety authority.

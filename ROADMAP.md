@@ -216,31 +216,26 @@ Exit criteria:
 
 ## Phase 8: spatial hobby flight and validated vehicle modeling
 
-Status: in progress. The accepted implementation contract is frozen in
-`phase8/PLAN.md`.
+Status: complete. The accepted implementation and evidence are recorded in `phase8/COMPLETION.md`.
 
-Purpose: add the physical dimensions that require geometry, attitude, wind, and
-model correlation while preserving the useful vertical profile.
+Purpose: add the physical dimensions that require geometry, attitude, wind, and model correlation while preserving the useful vertical profile.
 
-Candidate capabilities:
+Accepted result:
 
-- Component geometry with provenance, longitudinal centre of gravity, inertia,
-  centre of pressure, and static margin.
-- Three-dimensional translation, quaternion attitude, angular rates, and
-  aerodynamic restoring and damping moments.
-- Wind, gusts, rail-guide constraints, weathercocking, and recovery drift.
-- Moving mass properties and stability through propellant depletion and
-  configuration changes.
-- External-tool and representative flight-data comparisons with explicit model
-  alignment and tolerances.
+- Separately versioned `HobbySpatialV1`; `HobbyVerticalV1` remains unchanged.
+- Provenance-backed component geometry with derived mass, CG, diagonal inertia, CP, static margin, restoring forces, and damping.
+- Local ENU rail constraint, 6-DOF powered/coast flight, layered deterministic wind/gusts, weathercocking, and 3-D dual-deploy recovery.
+- Explicit Mach, AoA, and 3 km Firestorm environment envelopes with fail-closed outcomes.
+- Strict KVP8/KMP8/KMC8/KWP8/KST8/KSR8/KPH8/KSC8/KRA8 contracts.
+- Independent float64 evidence and 19 aligned OpenRocket 24.12 comparisons.
+- A 1,024-run deterministic campaign, adaptive stock/REU retention, host exports/plots, and seven-page stock-C64 replay.
+- Exact finite native/MOS evidence; the built full target path projects above the 30-minute completion threshold and is not automatically run.
 
-The host compiler may derive only quantities supported by reviewed methods and
-declared source data. It must not turn arbitrary geometry into unexplained
-aerodynamic truth.
+Exit criteria: all pass. Phase 0–7 regressions remain exact; representative mass/stability, trajectory, external comparison, campaign determinism, stock packaging, and finite target gates are accepted.
 
 ## Phase 9: design optimization and robustness workbench
 
-Status: planned after Phase 8.
+Status: ready for planning; Phase 8 has supplied the stable evaluator and evidence boundary.
 
 Purpose: build host-side search and analysis around the portable evaluator
 without introducing a second production simulator.

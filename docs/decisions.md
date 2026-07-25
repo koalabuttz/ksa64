@@ -1000,3 +1000,43 @@ A 129-state native/MOS trace is permanent Phase 7 completion evidence. It found
 the original environment lookup divergence at step 24, when a 2,048,000-raw
 250 m stride truncated to 16,384 on the target. The repaired full stock-C64
 mission must reproduce the host state checksum through ground contact.
+
+## D-077: Add spatial hobby flight as a separate profile
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Preserve `HobbyVerticalV1` byte-for-byte as the inexpensive evaluator and add `HobbySpatialV1` with separately generated units, packs, steps, validity flags, and evidence. Do not widen or reinterpret KSR7; use KSR8 for the 32-metric spatial summary.
+
+## D-078: Require provenance and explicit model envelopes
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Compile only bounded derived quantities onto the target while retaining each source value's published, measured, assumed, or derived provenance on the host. Reject flight beyond Mach 0.8, 15 degrees angle of attack, or the accepted Firestorm environment range. Never hide an external disagreement by tuning an undocumented coefficient.
+
+## D-079: Retire attitude at recovery deployment
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Use rail-constrained motion followed by full six-degree-of-freedom ascent and coast. At first recovery deployment, preserve position and velocity but retire attitude dynamics and continue with a three-dimensional point-mass canopy model. Suspended-body and canopy-pendulum dynamics remain explicit non-goals.
+
+## D-080: Treat external tools as independent evidence
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Align geometry, mass, motor, atmosphere, rail, recovery, and randomness settings with OpenRocket 24.12, preserve all inputs and exports, and compare declared metrics. OpenRocket is corroborating evidence rather than production truth. Incomplete historical Firestorm records are qualified context and cannot silently become acceptance data.
+
+## D-081: Keep Phase 8 stock-compatible and bound target runs by evidence
+
+Date: 2026-07-24
+
+Status: accepted.
+
+Embed generated pack constants, retain the exact Phase 7 environment prefix through 3 km, and link mission, exact-trace, and replay images below `$C000` without requiring an REU. Place the probe mailbox at `$C800` to avoid rust-mos static-stack storage. Measure finite PAL kernels first; because the full mission projects to 2.35 hours, do not start it without explicit user confirmation.

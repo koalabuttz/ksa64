@@ -96,3 +96,17 @@ cargo run -p ksa64-host --bin phase7_trace
 
 `phase7/reference/analyze_campaign.py` independently parses and validates the
 frozen campaign. See `phase7/README.md` and `phase7/COMPLETION.md`.
+
+## Phase 8 spatial hobby tools
+
+Phase 8 tools rebuild source-bound packs, execute exact missions and campaigns, export presentation data, and emit the native half of the target trace:
+
+```powershell
+cargo run -p ksa64-host --bin phase8_compile -- phase8/source-data target/phase8/packs
+cargo run -p ksa64-host --bin phase8_run -- phase8/examples target/phase8/run
+cargo run -p ksa64-host --release --bin phase8_campaign -- phase8/examples target/phase8/campaign 1024 4
+cargo run -p ksa64-host --bin phase8_export -- phase8/examples target/phase8/exports
+cargo run -p ksa64-host --bin phase8_trace
+```
+
+`phase8/reference/analyze.py`, `analyze_campaign.py`, and `openrocket/compare.py` independently validate canonical outputs. `phase8/complete.ps1` is the bounded completion audit; it runs finite VICE trace/replay probes but never silently launches the projected 2.35-hour target mission.

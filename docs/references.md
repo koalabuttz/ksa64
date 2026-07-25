@@ -100,3 +100,13 @@ by ThrustCurve. Normalized snapshots, attribution, retrieval date, source URLs,
 license information, and checksums are committed under `phase7/sources/` so the
 pack compiler and completion audit require no network access. Model assumptions
 and the non-correlation warning are frozen in `phase7/PLAN.md`.
+
+## Phase 8 geometry and external evidence
+
+- Giant Leap Rocketry, Firestorm 54 current product specification: <https://giantleaprocketry.com/products/firestorm-54-rocket-kit>
+- Giant Leap Firestorm instructions and manufacturer CP reference: <https://device.report/m/812f6174958b8cd34507c368da687b542bb64ac1e999166f78acb37249905e0c>
+- OpenRocket 24.12 release: <https://github.com/openrocket/openrocket/releases/tag/release-24.12>
+- OpenRocket advanced simulation and CSV documentation: <https://openrocket.readthedocs.io/en/latest/user_guide/advanced_flight_simulation.html>
+- Stanford SSI Firestorm post-flight reports: <https://wiki.stanfordssi.org/L2_Post-Flight_Analyses>
+
+Normalized source inventory, provenance labels, hashes, OpenRocket `.ork` files, settings manifests, and exported CSV evidence are committed under `phase8/`. The completion audit consumes the checked-in evidence without network access. Stanford material is retained as a qualified contextual comparison because configuration and raw-data limitations prevent treating it as a numerical oracle.

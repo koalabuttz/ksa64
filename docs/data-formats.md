@@ -280,3 +280,19 @@ the hobby numeric-contract identity `0xee0448fa`:
 Every common header binds kind, length, numeric contract, identity, reserved
 zero bytes, and CRC-32. The host compiler consumes JSON/RASP source data; no
 human-readable format is accepted by a C64 evaluator.
+
+## Phase 8 spatial formats
+
+Phase 8 preserves every earlier format and introduces a strict version-8 family bound to `HobbySpatialV1`:
+
+- KVP8: 1,024-byte derived spatial vehicle and aerodynamic pack.
+- KMP8: 1,024-byte sampled motor and propellant-dependent mass-properties pack.
+- KMC8: 512-byte launch, mission, recovery, and environment pack.
+- KWP8: 512-byte layered-wind and deterministic-gust pack.
+- KST8: 128-byte header followed by 160-byte canonical telemetry frames.
+- KSR8: 256-byte evaluation summary with 32 metric slots and spatial validity flags.
+- KPH8: 64-byte header followed by 24-byte noncanonical spatial plot points.
+- KSC8: 512-byte deterministic campaign configuration.
+- KRA8: append-only campaign archive of independently protected summaries.
+
+All multibyte fields are little-endian. Headers bind kind, version, profile/numeric identity, logical identity, payload size, reserved-zero regions, and CRC-32. Parsers reject unknown flags, nonzero reserved bytes, mismatched identities, truncation, trailing bytes where forbidden, and the first corrupt record. KSR7 keeps its original 24 metric slots and rejects Phase 8 profiles or flags; it was not widened in place.

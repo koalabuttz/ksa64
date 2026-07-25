@@ -395,3 +395,13 @@ KPH7 support compact post-run inspection; KST7 and KRA7 remain host-retained
 evidence. Optional storage remains observational and cannot alter mission or
 campaign checksums. Phase 8 may extend hobby flight spatially, but the useful
 vertical evaluator remains a separately identified smaller model.
+
+## Accepted Phase 8 spatial hobby architecture
+
+`HobbySpatialV1` is an additive profile, not a replacement for `HobbyVerticalV1`. The host compiler turns provenance-bearing component sources into fixed-capacity vehicle, motor, mission, and wind packs. The portable evaluator alone advances physical state; host analysis, OpenRocket comparison, recording, storage, and presentation remain observational.
+
+The spatial world uses local east/north/up coordinates and scalar-first Hamilton quaternions. A rail-constrained one-dimensional segment hands continuous state to bounded six-degree-of-freedom powered and coast flight. At first recovery deployment, attitude is retired and the world continues as three-dimensional point-mass descent with staged canopy inflation, layered wind, drift, and flat-ground contact.
+
+Geometry-derived mass properties interpolate with propellant fraction. Barrowman-compatible normal-force and CP models, geometry-based damping, and the reviewed Mach/Cd table are valid only inside the declared Firestorm envelope. Atmosphere and aerodynamics fail closed rather than extrapolating. The reference environment prefix through 3 km is embedded exactly for stock-target size; the source compiler and identity bind its meaning.
+
+The stock C64 embeds generated pack constants and links separate mission, exact-trace, and replay images below `$C000`. Rust-mos static-stack storage may extend above the PRG end, so the finite-probe result mailbox is fixed at `$C800`, outside linked program and stack memory. REU-backed history changes retention only and can never enter the simulation transition path.
