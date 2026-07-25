@@ -1087,3 +1087,37 @@ Date: 2026-07-25
 Status: accepted.
 
 The active local controller holds the measured initial launch-rail attitude rather than coordinate-zero attitude. The fictional derivative declares a 20 g actuator installation, Q15 proportional gain 14,000, Q15 derivative gain 4,096, plus the frozen travel, slew, lag, pivot, rail, and burnout limits. This assumption-backed derivative is separate from the published Firestorm and exists to exercise the allocator. Its 5 m/s crosswind case must remain inside the Phase 8 envelope and reach <=3 degrees rail-relative error within eight releases.
+
+## D-087: Keep optimization outside the production evaluator
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Compile bounded design manifests on the host, materialize identity-bound candidate packs, and evaluate them through the unchanged Phase 8.5 avionics-aware boundary. Search engines, worker scheduling, archives, reports, and external tools may choose candidates but cannot implement physics or access private truth.
+
+## D-088: Use feasibility-first deterministic search
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Evaluate all candidates nominally, use the same ordered eight cases for search, and promote deterministic terminal finalists to all 64 Phase 8.5 cases. Feasible candidates always dominate infeasible candidates. Use exact fatal-class, violation-count, i128 normalized-violation, and candidate-identity ordering for infeasible candidates; never turn hard constraints into weighted penalties.
+
+Freeze GridV1, Nsga2V1, and DifferentialEvolutionV1 identities. Any proposal or selection change requires a new engine identity.
+
+## D-089: Commit optimization evidence at generation boundaries
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Merge evaluations by candidate and uncertainty index, then commit one complete KRA9 segment per generation or grid batch. Resume accepts only an exact completed prefix and must reproduce uninterrupted archive bytes. Retain KAS8 per-case evidence inside independently protected KRE9 records. Live progress publishes only after deterministic boundaries.
+
+## D-090: Keep production search off the C64
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Use the C64 for bounded finalist browsing, presentation, and selected exact reruns through the accepted split flight endpoint. Do not run production optimization on the target or make REU capacity part of candidate identity. The 15,391-byte stock browser satisfies packaging; the unresolved VICE binary-monitor screen probe remains an explicit presentation limitation rather than a reason to infer success.

@@ -1,0 +1,2745 @@
+{
+  "budgets": {
+    "finalists": 32,
+    "generations": 32,
+    "grid_points": 17,
+    "max_candidates": 1000000,
+    "population": 48
+  },
+  "cache_hits": 1618,
+  "constraint_contract": [
+    {
+      "aggregate": 3,
+      "metric": 9,
+      "operator": 1,
+      "scale": 524288,
+      "threshold": 7864320
+    },
+    {
+      "aggregate": 3,
+      "metric": 25,
+      "operator": 1,
+      "scale": 16777216,
+      "threshold": 16777216
+    },
+    {
+      "aggregate": 4,
+      "metric": 22,
+      "operator": 2,
+      "scale": 524288,
+      "threshold": 4194304
+    },
+    {
+      "aggregate": 3,
+      "metric": 103,
+      "operator": 1,
+      "scale": 1,
+      "threshold": 1
+    },
+    {
+      "aggregate": 4,
+      "metric": 104,
+      "operator": 2,
+      "scale": 1,
+      "threshold": 0
+    }
+  ],
+  "engine": 3,
+  "evaluations": 408,
+  "finalists": [
+    {
+      "candidate": "8010c46b",
+      "constraints": [
+        9352511,
+        158606938,
+        3665762,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6223560,
+        710009,
+        4381008
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9352511,
+        158606938,
+        3292386,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6223560,
+        764837,
+        4381008
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "c063cdf6",
+      "constraints": [
+        9352511,
+        158606938,
+        3194785,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6223560,
+        781977,
+        4381008
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "4684d948",
+      "constraints": [
+        9352511,
+        158606938,
+        3162949,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6223560,
+        787943,
+        4381008
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "5180fc52",
+      "constraints": [
+        9352511,
+        158606938,
+        3134918,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6223560,
+        793117,
+        4381008
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "b9e01245",
+      "constraints": [
+        10779013,
+        148834020,
+        3189798,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6217144,
+        718341,
+        4388224
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "813d1841",
+      "constraints": [
+        8833707,
+        158208737,
+        3671337,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6209546,
+        696476,
+        4395132
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "e869ed4c",
+      "constraints": [
+        9311863,
+        159470654,
+        3295956,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6202958,
+        759882,
+        4401979
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "9304acee",
+      "constraints": [
+        9311863,
+        159470654,
+        3295958,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6202958,
+        759991,
+        4401979
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "495ab64e",
+      "constraints": [
+        9311863,
+        159241021,
+        3574272,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6202955,
+        716493,
+        4401979
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "430a0f7a",
+      "constraints": [
+        12235163,
+        148235729,
+        3128549,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6203269,
+        764133,
+        4402767
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "46c42e79",
+      "constraints": [
+        8833512,
+        155970358,
+        3737798,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6191603,
+        668629,
+        4413323
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "bfb19967",
+      "constraints": [
+        9284490,
+        160049364,
+        3628752,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6188992,
+        704519,
+        4416195
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "f84dc4a9",
+      "constraints": [
+        11582937,
+        151896727,
+        3584730,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6189046,
+        705269,
+        4417020
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "ce8e1200",
+      "constraints": [
+        9281331,
+        159454708,
+        3681000,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6187381,
+        697361,
+        4417838
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "ffc85bb8",
+      "constraints": [
+        9271532,
+        159870122,
+        3631809,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6182330,
+        700457,
+        4422950
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "ef352f93",
+      "constraints": [
+        9271532,
+        159870122,
+        3631591,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6182330,
+        701431,
+        4422950
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "6e14c4da",
+      "constraints": [
+        9271532,
+        159870122,
+        3631605,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6182330,
+        701431,
+        4422950
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "b3b535c5",
+      "constraints": [
+        12221419,
+        148616218,
+        3170375,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6182676,
+        745038,
+        4423738
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "56021f6f",
+      "constraints": [
+        12221419,
+        148983670,
+        3135208,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6182666,
+        762733,
+        4423738
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "8cc29f54",
+      "constraints": [
+        11627316,
+        151700989,
+        3632097,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6181778,
+        696494,
+        4424402
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "f7b85c93",
+      "constraints": [
+        11627316,
+        151700989,
+        3587482,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6181778,
+        702755,
+        4424402
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "fb19d5d5",
+      "constraints": [
+        9735584,
+        153049431,
+        3414793,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6176228,
+        696182,
+        4429268
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "bb630570",
+      "constraints": [
+        11592086,
+        151311134,
+        3589818,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6167231,
+        697911,
+        4439166
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "9138d378",
+      "constraints": [
+        8840848,
+        156504638,
+        3750457,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6165491,
+        671975,
+        4439849
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "2d9b1186",
+      "constraints": [
+        8830685,
+        156909966,
+        3697933,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6159962,
+        673934,
+        4445441
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "add23ff1",
+      "constraints": [
+        9218377,
+        160793791,
+        3641428,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6154834,
+        697092,
+        4450842
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "7254fb27",
+      "constraints": [
+        9215018,
+        160746994,
+        3593261,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6153086,
+        702370,
+        4452613
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "635646a1",
+      "constraints": [
+        9674649,
+        162287806,
+        3595944,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6146145,
+        712833,
+        4459780
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "20788778",
+      "constraints": [
+        9633473,
+        161736632,
+        3604248,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6125575,
+        701496,
+        4480597
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "c530fae6",
+      "constraints": [
+        9623080,
+        161597535,
+        3604874,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6120354,
+        707537,
+        4485876
+      ],
+      "tier": 64
+    },
+    {
+      "candidate": "ea4cf700",
+      "constraints": [
+        12228037,
+        151266843,
+        3159214,
+        1,
+        0
+      ],
+      "feasible": true,
+      "objectives": [
+        6120729,
+        739991,
+        4486651
+      ],
+      "tier": 64
+    }
+  ],
+  "generation_crc32": [
+    "30a52d94",
+    "337bc7f0",
+    "9dc82bdb",
+    "b974ceb5",
+    "40d56021",
+    "3f63e7e2",
+    "67eb0c79",
+    "a45e967b",
+    "05a8ec3d",
+    "aa686157",
+    "698710e9",
+    "8b8a9143",
+    "3065c5d7",
+    "9fa548bd",
+    "36aa6de6",
+    "996ae08c",
+    "9d5e4a83",
+    "329ec7e9",
+    "19ae5616",
+    "192bcf81",
+    "e08a6115",
+    "4f4aec7f",
+    "647a7d80",
+    "28d8ec58",
+    "40fa16ab",
+    "72ec29ce",
+    "59dcb831",
+    "f61c355b",
+    "71f2da83",
+    "7a2cffea",
+    "cb14530b",
+    "64d4de61",
+    "3dbc1d51"
+  ],
+  "generation_evidence": [
+    {
+      "candidates": 48,
+      "crc32": "30a52d94",
+      "feasible": 46,
+      "index": 0
+    },
+    {
+      "candidates": 48,
+      "crc32": "337bc7f0",
+      "feasible": 48,
+      "index": 1
+    },
+    {
+      "candidates": 48,
+      "crc32": "9dc82bdb",
+      "feasible": 48,
+      "index": 2
+    },
+    {
+      "candidates": 48,
+      "crc32": "b974ceb5",
+      "feasible": 48,
+      "index": 3
+    },
+    {
+      "candidates": 48,
+      "crc32": "40d56021",
+      "feasible": 48,
+      "index": 4
+    },
+    {
+      "candidates": 48,
+      "crc32": "3f63e7e2",
+      "feasible": 48,
+      "index": 5
+    },
+    {
+      "candidates": 48,
+      "crc32": "67eb0c79",
+      "feasible": 48,
+      "index": 6
+    },
+    {
+      "candidates": 48,
+      "crc32": "a45e967b",
+      "feasible": 48,
+      "index": 7
+    },
+    {
+      "candidates": 48,
+      "crc32": "05a8ec3d",
+      "feasible": 48,
+      "index": 8
+    },
+    {
+      "candidates": 48,
+      "crc32": "aa686157",
+      "feasible": 48,
+      "index": 9
+    },
+    {
+      "candidates": 48,
+      "crc32": "698710e9",
+      "feasible": 48,
+      "index": 10
+    },
+    {
+      "candidates": 48,
+      "crc32": "8b8a9143",
+      "feasible": 48,
+      "index": 11
+    },
+    {
+      "candidates": 48,
+      "crc32": "3065c5d7",
+      "feasible": 48,
+      "index": 12
+    },
+    {
+      "candidates": 48,
+      "crc32": "9fa548bd",
+      "feasible": 48,
+      "index": 13
+    },
+    {
+      "candidates": 48,
+      "crc32": "36aa6de6",
+      "feasible": 48,
+      "index": 14
+    },
+    {
+      "candidates": 48,
+      "crc32": "996ae08c",
+      "feasible": 48,
+      "index": 15
+    },
+    {
+      "candidates": 48,
+      "crc32": "9d5e4a83",
+      "feasible": 48,
+      "index": 16
+    },
+    {
+      "candidates": 48,
+      "crc32": "329ec7e9",
+      "feasible": 48,
+      "index": 17
+    },
+    {
+      "candidates": 48,
+      "crc32": "19ae5616",
+      "feasible": 48,
+      "index": 18
+    },
+    {
+      "candidates": 48,
+      "crc32": "192bcf81",
+      "feasible": 48,
+      "index": 19
+    },
+    {
+      "candidates": 48,
+      "crc32": "e08a6115",
+      "feasible": 48,
+      "index": 20
+    },
+    {
+      "candidates": 48,
+      "crc32": "4f4aec7f",
+      "feasible": 48,
+      "index": 21
+    },
+    {
+      "candidates": 48,
+      "crc32": "647a7d80",
+      "feasible": 48,
+      "index": 22
+    },
+    {
+      "candidates": 48,
+      "crc32": "28d8ec58",
+      "feasible": 48,
+      "index": 23
+    },
+    {
+      "candidates": 48,
+      "crc32": "40fa16ab",
+      "feasible": 48,
+      "index": 24
+    },
+    {
+      "candidates": 48,
+      "crc32": "72ec29ce",
+      "feasible": 48,
+      "index": 25
+    },
+    {
+      "candidates": 48,
+      "crc32": "59dcb831",
+      "feasible": 48,
+      "index": 26
+    },
+    {
+      "candidates": 48,
+      "crc32": "f61c355b",
+      "feasible": 48,
+      "index": 27
+    },
+    {
+      "candidates": 48,
+      "crc32": "71f2da83",
+      "feasible": 48,
+      "index": 28
+    },
+    {
+      "candidates": 48,
+      "crc32": "7a2cffea",
+      "feasible": 48,
+      "index": 29
+    },
+    {
+      "candidates": 48,
+      "crc32": "cb14530b",
+      "feasible": 48,
+      "index": 30
+    },
+    {
+      "candidates": 48,
+      "crc32": "64d4de61",
+      "feasible": 48,
+      "index": 31
+    },
+    {
+      "candidates": 48,
+      "crc32": "3dbc1d51",
+      "feasible": 48,
+      "index": 32
+    }
+  ],
+  "generations": 33,
+  "manifest_identity": "097c7280",
+  "objective_contract": [
+    {
+      "aggregate": 2,
+      "direction": 2,
+      "metric": 2
+    },
+    {
+      "aggregate": 5,
+      "direction": 1,
+      "metric": 29
+    },
+    {
+      "aggregate": 4,
+      "direction": 1,
+      "metric": 100
+    }
+  ],
+  "pareto": [
+    14
+  ],
+  "preset": 3,
+  "retained_case_evidence": [
+    {
+      "candidate": "0161f884",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "042df629",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "044119ff",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "09ba3733",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "0c45fa31",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "11b27496",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "1af76a5d",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "1bc07e5c",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "20788778",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "2674d05f",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "27477e81",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "28fb93ea",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "29f7ff6a",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "2d9b1186",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "32fb11ad",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "36ad2cfc",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "37c96f4f",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "38407cd5",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "397e58e0",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "3a19cfa0",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "430a0f7a",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "45b395f5",
+      "records": 1,
+      "tier": 1
+    },
+    {
+      "candidate": "46731dbb",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "4684d948",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "46c42e79",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "4886c40e",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "495ab64e",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "49990447",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "4b34b9d8",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "4cdca64e",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "5180fc52",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "53daf824",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "56021f6f",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "561165f0",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "59f0dd46",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "5b779e2a",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "5c06ce68",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "5cdeb044",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "635646a1",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "6665a83c",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "67e82443",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "6bfadb15",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "6e14c4da",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "71b1fbfb",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "7254fb27",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "74edae12",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "74fc857f",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "76e45c7f",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "8010c46b",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "813d1841",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "84eac1db",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "8a04bbe2",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "8cc29f54",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "8d8bac25",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "9138d378",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "9304acee",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "93105079",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "94b5b37f",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "9654b3d2",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "a3647b65",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "a478d7b8",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "a5bfe548",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "a777f604",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "a870e830",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "ac7a098f",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "add23ff1",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "b3b535c5",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "b9e01245",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "bb630570",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "bb8adf11",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "bfb19967",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "c063cdf6",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "c1e55de5",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "c530fae6",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "c59428b4",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "c9188a3a",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "ce8e1200",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "cec8278f",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "d3f6c059",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "d8ff2174",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "e46ef81d",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "e605efc2",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "e75c07b4",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "e869ed4c",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "e9c850ac",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "ea4cf700",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "ef352f93",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "f0e6cd81",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "f0f362f9",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "f6e804be",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "f7181763",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "f7b85c93",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "f84dc4a9",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "f994a475",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "faefa915",
+      "records": 8,
+      "tier": 8
+    },
+    {
+      "candidate": "fb19d5d5",
+      "records": 64,
+      "tier": 64
+    },
+    {
+      "candidate": "fb95527d",
+      "records": 1,
+      "tier": 1
+    },
+    {
+      "candidate": "ffc85bb8",
+      "records": 64,
+      "tier": 64
+    }
+  ],
+  "schema": "KSA64 Phase 9 report v2",
+  "seed": 1263747385,
+  "sensitivity": [
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 3706,
+      "delta_upper": -3696,
+      "flags": 0,
+      "lower": 6267782,
+      "objective": 0,
+      "slope_q16": -24254,
+      "upper": 6260380,
+      "variable": 2
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": 115,
+      "delta_upper": -1467,
+      "flags": 0,
+      "lower": 454022,
+      "objective": 1,
+      "slope_q16": -5183,
+      "upper": 452440,
+      "variable": 2
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": -3691,
+      "delta_upper": 3691,
+      "flags": 0,
+      "lower": 4425577,
+      "objective": 2,
+      "slope_q16": 24189,
+      "upper": 4432959,
+      "variable": 2
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 6264076,
+      "objective": 0,
+      "slope_q16": 0,
+      "upper": 6264076,
+      "variable": 9
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 453907,
+      "objective": 1,
+      "slope_q16": 0,
+      "upper": 453907,
+      "variable": 9
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 0,
+      "upper": 4429268,
+      "variable": 9
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 1848,
+      "delta_upper": -1848,
+      "flags": 0,
+      "lower": 6265924,
+      "objective": 0,
+      "slope_q16": -12111,
+      "upper": 6262228,
+      "variable": 1
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": -500,
+      "delta_upper": -681,
+      "flags": 0,
+      "lower": 453407,
+      "objective": 1,
+      "slope_q16": -593,
+      "upper": 453226,
+      "variable": 1
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": -1845,
+      "delta_upper": 1845,
+      "flags": 0,
+      "lower": 4427423,
+      "objective": 2,
+      "slope_q16": 12091,
+      "upper": 4431113,
+      "variable": 1
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 1848,
+      "delta_upper": -1848,
+      "flags": 0,
+      "lower": 6265924,
+      "objective": 0,
+      "slope_q16": -12111,
+      "upper": 6262228,
+      "variable": 3
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": -500,
+      "delta_upper": -681,
+      "flags": 0,
+      "lower": 453407,
+      "objective": 1,
+      "slope_q16": -593,
+      "upper": 453226,
+      "variable": 3
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": -1845,
+      "delta_upper": 1845,
+      "flags": 0,
+      "lower": 4427423,
+      "objective": 2,
+      "slope_q16": 12091,
+      "upper": 4431113,
+      "variable": 3
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 4,
+      "delta_upper": -4,
+      "flags": 0,
+      "lower": 6264080,
+      "objective": 0,
+      "slope_q16": -26,
+      "upper": 6264072,
+      "variable": 4
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": 343,
+      "delta_upper": -326,
+      "flags": 0,
+      "lower": 454250,
+      "objective": 1,
+      "slope_q16": -2192,
+      "upper": 453581,
+      "variable": 4
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 0,
+      "upper": 4429268,
+      "variable": 4
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": -21022,
+      "flags": 1,
+      "lower": 6264076,
+      "objective": 0,
+      "slope_q16": -65695,
+      "upper": 6243054,
+      "variable": 5
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": -3975,
+      "flags": 1,
+      "lower": 453907,
+      "objective": 1,
+      "slope_q16": -12422,
+      "upper": 449932,
+      "variable": 5
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 20971,
+      "flags": 1,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 65536,
+      "upper": 4450239,
+      "variable": 5
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 1,
+      "lower": 6264076,
+      "objective": 0,
+      "slope_q16": 0,
+      "upper": 6264076,
+      "variable": 6
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 1,
+      "lower": 453907,
+      "objective": 1,
+      "slope_q16": 0,
+      "upper": 453907,
+      "variable": 6
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 1,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 0,
+      "upper": 4429268,
+      "variable": 6
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 6264076,
+      "objective": 0,
+      "slope_q16": 0,
+      "upper": 6264076,
+      "variable": 7
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": -7032,
+      "delta_upper": 6472,
+      "flags": 0,
+      "lower": 446875,
+      "objective": 1,
+      "slope_q16": 17699,
+      "upper": 460379,
+      "variable": 7
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 0,
+      "upper": 4429268,
+      "variable": 7
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 6264076,
+      "objective": 0,
+      "slope_q16": 0,
+      "upper": 6264076,
+      "variable": 8
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": -2892,
+      "delta_upper": 2847,
+      "flags": 0,
+      "lower": 451015,
+      "objective": 1,
+      "slope_q16": 7522,
+      "upper": 456754,
+      "variable": 8
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 0,
+      "upper": 4429268,
+      "variable": 8
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 6264076,
+      "objective": 0,
+      "slope_q16": 0,
+      "upper": 6264076,
+      "variable": 10
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": 41,
+      "delta_upper": -56,
+      "flags": 0,
+      "lower": 453948,
+      "objective": 1,
+      "slope_q16": -127,
+      "upper": 453851,
+      "variable": 10
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 0,
+      "upper": 4429268,
+      "variable": 10
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 6264076,
+      "objective": 0,
+      "slope_q16": 0,
+      "upper": 6264076,
+      "variable": 11
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": -15,
+      "delta_upper": -292,
+      "flags": 0,
+      "lower": 453892,
+      "objective": 1,
+      "slope_q16": -363,
+      "upper": 453615,
+      "variable": 11
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 0,
+      "upper": 4429268,
+      "variable": 11
+    },
+    {
+      "baseline": 6264076,
+      "candidate": "fb19d5d5",
+      "delta_lower": 5,
+      "delta_upper": 35,
+      "flags": 0,
+      "lower": 6264081,
+      "objective": 0,
+      "slope_q16": 960,
+      "upper": 6264111,
+      "variable": 12
+    },
+    {
+      "baseline": 453907,
+      "candidate": "fb19d5d5",
+      "delta_lower": -5357,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 448550,
+      "objective": 1,
+      "slope_q16": 171424,
+      "upper": 453907,
+      "variable": 12
+    },
+    {
+      "baseline": 4429268,
+      "candidate": "fb19d5d5",
+      "delta_lower": 0,
+      "delta_upper": 0,
+      "flags": 0,
+      "lower": 4429268,
+      "objective": 2,
+      "slope_q16": 0,
+      "upper": 4429268,
+      "variable": 12
+    }
+  ],
+  "terminal_candidates": [
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "8010c46b",
+      "constraints": [
+        9568295,
+        159467941,
+        3573525,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        467201,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    },
+    {
+      "candidate": "a3647b65",
+      "constraints": [
+        9568295,
+        159467941,
+        3181255,
+        1,
+        0
+      ],
+      "fatal": 0,
+      "feasible": true,
+      "objectives": [
+        6312381,
+        498039,
+        4381008
+      ],
+      "violations": 0
+    }
+  ],
+  "variables": [
+    {
+      "catalogue_identity": "00000000",
+      "id": 2,
+      "kind": 1,
+      "maximum": 1150000,
+      "minimum": 850000,
+      "quantum": 10000
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 9,
+      "kind": 1,
+      "maximum": 2457600,
+      "minimum": 1228800,
+      "quantum": 40960
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 1,
+      "kind": 1,
+      "maximum": 1150000,
+      "minimum": 850000,
+      "quantum": 10000
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 3,
+      "kind": 1,
+      "maximum": 1150000,
+      "minimum": 850000,
+      "quantum": 10000
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 4,
+      "kind": 1,
+      "maximum": 1150000,
+      "minimum": 850000,
+      "quantum": 10000
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 5,
+      "kind": 1,
+      "maximum": 419430,
+      "minimum": 0,
+      "quantum": 20971
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 6,
+      "kind": 1,
+      "maximum": 214748365,
+      "minimum": 53687091,
+      "quantum": 5368709
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 7,
+      "kind": 1,
+      "maximum": 1200000,
+      "minimum": 800000,
+      "quantum": 25000
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 8,
+      "kind": 1,
+      "maximum": 1200000,
+      "minimum": 800000,
+      "quantum": 25000
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 10,
+      "kind": 1,
+      "maximum": 1250000,
+      "minimum": 750000,
+      "quantum": 25000
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 11,
+      "kind": 1,
+      "maximum": 1250000,
+      "minimum": 750000,
+      "quantum": 25000
+    },
+    {
+      "catalogue_identity": "00000000",
+      "id": 12,
+      "kind": 1,
+      "maximum": 24576,
+      "minimum": 12288,
+      "quantum": 1024
+    }
+  ]
+}

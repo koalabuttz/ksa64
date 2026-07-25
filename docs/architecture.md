@@ -417,3 +417,15 @@ Guidance emits an effector-neutral control demand. The original Firestorm binds 
 Host/host and host-world plus VICE/C64-flight placements share KLF6/KLR8 ordering and the F1-F7 Mission Control sink. The generic stock flight endpoint supports monitor and gimbal configuration in one 15,412-byte image. Presentation, pacing, recording, storage, and endpoint location never enter evaluation identity or simulation transitions.
 
 The accepted standalone Phase 8 stock world remains available. The attempted self-contained combined target requires 71,500 resident bytes, exceeding even all physical C64 RAM. ROM banking cannot add capacity, so combined stock packaging stopped at its explicit decision boundary. Disk overlays, a stock-specialized rewrite, or expansion memory require a separate decision; none was chosen implicitly.
+
+## Accepted Phase 9 optimization architecture
+
+Phase 9 keeps design search outside the portable evaluator. A KOM9 manifest defines bounded variables, objectives, constraints, uncertainty aggregation, engine identity, seed, and budgets. The host materializes each KDV9 vector into identity-bound Phase 8/8.5 packs, then calls the unchanged avionics-aware evaluator. Duplicate materialized candidates share evidence; neither the optimizer nor presentation receives private truth.
+
+Every proposal draw is keyed by manifest, engine, generation, individual, variable, and draw index. Evaluations may run on arbitrary workers, but results merge by candidate and uncertainty index. Generation proposals and selection occur only after the preceding ordered boundary. Live progress observes completed boundaries and cannot influence proposal generation.
+
+The robustness ladder is nominal for every candidate, the same ordered eight cases for search selection, and the frozen 64-case set for deterministically selected terminal finalists. Hard constraints remain hard: feasible candidates dominate infeasible ones; exact violation ordering applies only among infeasible candidates. NSGA-II is the canonical multi-objective engine, DE is a scalar/lexicographic challenger, and grid search supplies exact surfaces.
+
+KRA9 commits complete generation segments and embeds KRE9 copies of retained KAS8 case evidence. Resume accepts only an exact completed prefix of the desired deterministic archive, then atomically replaces it with the validated complete form. Reports, TUI state, archive paths, worker count, and C64 placement are observational.
+
+The C64 receives a bounded KFP9 finalist package and does not run production searches. Exact finalist flight may be rerun through the accepted host-world/C64-flight endpoint. The standalone finalist browser is a separate stock image; Phase 9 does not reopen the rejected monolithic Phase 8.5 packaging decision.

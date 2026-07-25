@@ -310,3 +310,16 @@ Phase 8.5 is additive to KVP8-KRA8:
 - KMR8 is a host-only noncanonical Mission Control recording.
 
 KLF6 remains the outer split-endpoint transport. KLR8's distinct contract identity prevents it from being parsed as KLR6 despite the intentionally reused bounded cell lengths. Every canonical format is little-endian, identity-bound, CRC-protected, and reserved-zero strict. KMR8 is passive presentation evidence and cannot replace canonical telemetry.
+
+## Phase 9 optimization formats
+
+Phase 9 adds strict little-endian, CRC-protected optimization records while reusing KAS8/KAT8/KST8/KPH8 for flight evidence:
+
+- KOM9 is a fixed 2,048-byte compiled search manifest with at most 32 variables, eight objectives, and sixteen constraints.
+- KDV9 is a fixed 256-byte canonical design vector bound to its KOM9 identity.
+- KOE9 is a fixed 512-byte robust candidate aggregate containing exact objective/constraint values, tier, feasibility, violations, and identity.
+- KRA9 is a segmented append-only search archive. Each complete generation segment carries design vectors and aggregates plus independently protected KRE9 retained-evidence records containing strict KAS8 cases.
+- KPF9 is the bounded ordered finalist package consumed by host and stock-C64 browsers.
+- KSN9 contains fixed sensitivity records for baseline/finalist one-quantum derivatives.
+
+KRA9 readers reject truncation, trailing data, bad CRCs, identity or tier mismatch, malformed embedded KDV9/KOE9/KAS8 records, and incomplete generation boundaries. Resume accepts only a byte-exact complete-segment prefix. JSON manifests, JSONL optimizer messages, CSV, HTML, and report JSON are host interfaces or derived presentation—not canonical simulation formats.

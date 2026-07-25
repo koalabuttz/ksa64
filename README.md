@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–8.5 are complete. Phase 8.5 adds exact local avionics execution, truth-blind recovery, a bounded fictional gimbal derivative, split host/C64 placement, live Mission Control, and deterministic campaign evidence. The self-contained combined stock image reached its explicit fit decision boundary; Phase 9 optimization follows. Phase 6 live physical-link acceptance remains open.
+> **Project status:** Phases 0–9 are implemented. Phase 9 adds deterministic grid, NSGA-II, and differential-evolution search; 1/8/64-case robustness; exact checkpoint/resume; external optimizer integration; rich reports; and stock-C64 finalist browsing. All accepted searches are byte-identical with one, four, and eight workers. The finite Phase 9 VICE browser probe remains blocked at its monitor handshake, and Phase 6 live physical-link acceptance remains open.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -43,7 +43,10 @@ KSA64 currently provides:
 - an exact 32 Hz local-ENU avionics executor with retained physical deadlines, sensor-N/command-N/effective-N+1 ordering, truth-blind navigation, and measured-state dual-deploy recovery;
 - monitor-only control for the original Firestorm and a separately identified fictional two-axis-gimbal derivative that passes the 5 m/s crosswind settling gate;
 - KAP8/KAC8/KLE8/KLR8/KAT8/KAS8/KMR8 contracts, host/host and host/VICE placements, a shared live F1–F7 Mission Control TUI, and a deterministic 64-run avionics campaign;
-- a 15,412-byte stock-C64 flight endpoint and PAL avionics kernel using 68.8% of a release slot; the 71,500-byte self-contained combined image stopped at the documented stock-fit boundary rather than silently requiring expansion memory.
+- a 15,412-byte stock-C64 flight endpoint and PAL avionics kernel using 68.8% of a release slot; the 71,500-byte self-contained combined image stopped at the documented stock-fit boundary rather than silently requiring expansion memory;
+- a deterministic Phase 9 optimization workbench with strict manifests, grid/NSGA-II/DE engines, feasibility-first Pareto ranking, 1/8/64-case robustness, exact resume, sensitivity analysis, and an external JSONL evaluator;
+- ten frozen search studies and 13.1 MB of independently verified evidence, byte-identical at one, four, and eight workers, plus live TUI and self-contained HTML/JSON/CSV reports;
+- a 15,391-byte stock-C64 KFP9 finalist browser below `$C000`; its automated finite VICE screen probe is documented as blocked at monitor handshake rather than falsely accepted.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -102,7 +105,7 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 7 — Multi-profile evaluation | Complete: frozen legacy adapters, compiled hobby vehicle/motor/mission packs, published-data vertical ascent and dual-deploy recovery, strict evidence, deterministic campaigns, independent analysis, and an exact complete stock-C64 mission. |
 | 8 — Spatial hobby flight | Complete: geometry-derived mass properties/stability, bounded 6-DOF ascent, deterministic wind, recovery drift, strict evidence, float64/OpenRocket comparison, campaigns, host plots, and stock-C64 replay. |
 | 8.5 — Unified avionics | Complete: exact event execution, local truth-blind navigation/recovery, monitor and gimbal capabilities, strict formats, host/VICE placement, live Mission Control, campaigns, PAL timing, and an explicit combined-stock fit decision. |
-| 9 — Optimization workbench | Planned: host-side search, Pareto and sensitivity analysis, robustness campaigns, archives, and C64 finalist browsing. |
+| 9 — Optimization workbench | Implemented: deterministic grid/NSGA-II/DE search, 1/8/64 robustness, feasibility-first Pareto evidence, exact archives/resume, external optimizer protocol, reports/TUI, and stock-C64 finalist browsing. The finite VICE screen probe remains an explicit environment limitation. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 
@@ -131,6 +134,7 @@ The legacy Phase 3/4 accuracy-first closed-loop path still projects to 243.7 min
 - [Phase 7](phase7/README.md), [implementation contract](phase7/PLAN.md), and [completion audit](phase7/COMPLETION.md)
 - [Phase 8](phase8/README.md), [implementation contract](phase8/PLAN.md), and [completion audit](phase8/COMPLETION.md)
 - [Phase 8.5](phase8_5/README.md), [implementation contract](phase8_5/PLAN.md), [completion audit](phase8_5/COMPLETION.md), [stock-fit decision](phase8_5/STOCK_FIT_DECISION.md), and [Phase 9 handoff](phase8_5/PHASE9_HANDOFF.md)
+- [Phase 9](phase9/README.md), [implementation contract](phase9/PLAN.md), [completion record](phase9/COMPLETION.md), and [Phase 9.5 handoff](phase9/PHASE9_5_HANDOFF.md)
 
 ### Phase 4 detail
 
@@ -207,6 +211,14 @@ powershell -File phase8_5/complete.ps1
 ```
 
 It verifies all frozen Phase 0–8 evidence, exact local avionics tests, the one/four-worker campaign, checked PAL and VICE evidence, and MOS endpoint packaging. Add `-RunVice` only when you explicitly want the sequential finite emulator probes rerun. It never attempts the non-fitting combined image or a long target mission.
+
+The bounded Phase 9 audit is:
+
+```powershell
+powershell -File phase9/complete.ps1
+```
+
+It verifies the full native workspace, independent accepted-search evidence, the external JSONL protocol, fresh one/four/eight-worker quick searches, strict reports, KFP9 packaging, and the pinned rust-mos stock browser. It validates checked-in accepted searches rather than silently spending minutes regenerating all thirty worker variants. Add `-RunVice` only to retry the known finite monitor-handshake gate.
 
 ## Phase 6: software baseline accepted
 

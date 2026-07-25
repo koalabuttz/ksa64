@@ -329,6 +329,53 @@ pub fn scan_search_archive(input: &[u8]) -> Result<SearchArchiveScan, ArchiveErr
     })
 }
 
+pub fn resume_search_archive_atomic(
+    path: &Path,
+    manifest: u32,
+    generations: &[SearchGeneration],
+    evidence: &[CandidateEvaluation],
+) -> Result<(), ArchiveError> {
+    let desired = encode_search_archive(manifest, generations, evidence)?;
+    if path.exists() {
+        let existing = fs::read(path).map_err(|_| ArchiveError::Io)?;
+        if existing == desired {
+            return Ok(());
+        }
+        if existing.len() > desired.len() || existing != desired[..existing.len()] {
+            return Err(ArchiveError::Sequence);
+        }
+        let mut offset = 0usize;
+        while offset < existing.len() {
+            if existing.len() - offset < 12 {
+                return Err(ArchiveError::Length);
+            }
+            let magic = &existing[offset..offset + 4];
+            if magic != b"KRA9" && magic != b"KRE9" {
+                return Err(ArchiveError::Magic);
+            }
+            let length = r32(&existing, offset + 8) as usize;
+            if length < 36 || offset + length > existing.len() {
+                return Err(ArchiveError::Length);
+            }
+            offset += length;
+        }
+        if offset != existing.len() {
+            return Err(ArchiveError::Length);
+        }
+    }
+    let scan = scan_search_archive(&desired)?;
+    if scan.valid_length != desired.len() as u64 {
+        return Err(ArchiveError::Length);
+    }
+    let temp = temp_path(path);
+    {
+        let mut file = File::create(&temp).map_err(|_| ArchiveError::Io)?;
+        file.write_all(&desired).map_err(|_| ArchiveError::Io)?;
+        file.sync_all().map_err(|_| ArchiveError::Io)?;
+    }
+    fs::rename(temp, path).map_err(|_| ArchiveError::Io)
+}
+
 pub fn write_search_archive_atomic(
     path: &Path,
     manifest: u32,
@@ -455,7 +502,7 @@ mod tests {
     #[test]
     fn archive_roundtrip_and_corruption() {
         let (m, g) = fixture();
-        let b = encode_archive(m, &[g.clone()]).unwrap();
+        let b = encode_archive(m, std::slice::from_ref(&g)).unwrap();
         assert_eq!(scan_archive(&b).unwrap().generations, vec![g]);
         let mut bad = b;
         bad[50] ^= 1;
@@ -467,12 +514,35 @@ mod tests {
         let dir = std::env::temp_dir();
         let p = dir.join(format!("ksa64-kra9-{}.bin", std::process::id()));
         let _ = fs::remove_file(&p);
-        resume_append(&p, m, &[g.clone()]).unwrap();
-        resume_append(&p, m, &[g.clone()]).unwrap();
+        resume_append(&p, m, std::slice::from_ref(&g)).unwrap();
+        resume_append(&p, m, std::slice::from_ref(&g)).unwrap();
         let got = fs::read(&p).unwrap();
         assert_eq!(got, encode_archive(m, &[g]).unwrap());
         fs::remove_file(p).unwrap()
     }
+    #[test]
+    fn interrupted_search_resume_is_byte_identical() {
+        let (manifest, first) = fixture();
+        let mut second = first.clone();
+        second.index = 1;
+        second.crc32 = super::super::phase9_search::generation_fingerprint(
+            second.index,
+            &second.candidates,
+            &second.aggregates,
+        );
+        let generations = vec![first.clone(), second];
+        let directory = std::env::temp_dir();
+        let path = directory.join(format!("ksa64-kra9-search-{}.bin", std::process::id()));
+        let _ = fs::remove_file(&path);
+        fs::write(&path, encode_archive(manifest, &[first]).unwrap()).unwrap();
+        resume_search_archive_atomic(&path, manifest, &generations, &[]).unwrap();
+        assert_eq!(
+            fs::read(&path).unwrap(),
+            encode_search_archive(manifest, &generations, &[]).unwrap()
+        );
+        fs::remove_file(path).unwrap()
+    }
+
     #[test]
     fn finalist_pack_is_strict() {
         let (m, g) = fixture();

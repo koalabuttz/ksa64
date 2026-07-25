@@ -329,3 +329,15 @@ The 64-run seed-0x4b534185 campaign is byte-identical with one and four workers 
 The self-contained combined build is validation evidence of an explicit packaging limit: 71,500 resident bytes, 20,301 bytes beyond the ordinary region and at least 5,964 bytes beyond total physical RAM before reservations. No full combined mission was started. The completion audit validates the preserved Phase 0-8 artifacts and never silently launches long target work or multiple VICE instances.
 
 These results are engineering simulation evidence, not launch approval, certification, regulatory evidence, or safety authority.
+
+## Accepted Phase 9 validation
+
+The accepted seed is `0x4b534139`. Ten studies—six primary accepted searches, a coupled demonstration, an experimental broad-airframe demonstration, and two quick fixtures—were run with one, four, and eight workers. All seven emitted artifacts for every study are byte-identical across worker counts.
+
+Independent Python verification parses KOM9/KDV9/KOE9/KRA9/KRE9/KAS8 without Rust codecs; checks every framing field, reserved byte, CRC, identity, quantization rule, generation fingerprint, retained case, finalist tier, and feasibility bit; and reconstructs the terminal Pareto front. Unit fixtures separately recover an analytic known front and a DE integer-sphere optimum within one design quantum. Interrupted/resumed and uninterrupted search archives are byte-identical.
+
+The persistent JSONL example proves hello, ordered duplicate-aware evaluation, checkpoint, malformed-input isolation, and close behavior. Reports are self-contained and passive; progress observers and renderers cannot alter SearchResult.
+
+The rust-mos finalist browser is 15,391 bytes and ends at `$441E`, below the stock `$C000` boundary without an REU. Its finite VICE screen probe remains unresolved because the configured binary monitor failed its initial PING twice; both emulators were closed after proven failure. This unpassed presentation gate is recorded rather than inferred from the MOS build.
+
+The accepted physical studies remain inside the Phase 8 model envelope and promote only candidates satisfying all 64 hard-constraint cases. The broad-airframe demonstration is explicitly experimental, promotes no accepted finalists, and is never described as correlated or safety-valid.

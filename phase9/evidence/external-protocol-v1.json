@@ -1,0 +1,80 @@
+{
+  "schema": "KSA64 Phase 9 external protocol example v1",
+  "responses": [
+    {
+      "kind": "hello",
+      "request_id": 1,
+      "ok": true,
+      "message": "ksa64-phase9-jsonl-v1",
+      "manifest_identity": 3898636244,
+      "candidate_identity": null,
+      "feasible": null,
+      "objectives": null,
+      "constraints": null
+    },
+    {
+      "kind": "evaluation",
+      "request_id": 2,
+      "ok": true,
+      "message": "ok",
+      "manifest_identity": 3898636244,
+      "candidate_identity": 3611441567,
+      "feasible": true,
+      "objectives": [
+        6053370,
+        420119,
+        4638978
+      ],
+      "constraints": [
+        10142779,
+        159955132,
+        3386718,
+        1,
+        0
+      ]
+    },
+    {
+      "kind": "evaluation",
+      "request_id": 3,
+      "ok": true,
+      "message": "ok",
+      "manifest_identity": 3898636244,
+      "candidate_identity": 269274811,
+      "feasible": true,
+      "objectives": [
+        6109175,
+        434296,
+        4583613
+      ],
+      "constraints": [
+        10255537,
+        161417923,
+        3364155,
+        1,
+        0
+      ]
+    },
+    {
+      "kind": "checkpoint",
+      "request_id": 4,
+      "ok": true,
+      "message": "completed_boundary",
+      "manifest_identity": 3898636244,
+      "candidate_identity": null,
+      "feasible": null,
+      "objectives": null,
+      "constraints": null
+    },
+    {
+      "kind": "close",
+      "request_id": 5,
+      "ok": true,
+      "message": "closed",
+      "manifest_identity": 3898636244,
+      "candidate_identity": null,
+      "feasible": null,
+      "objectives": null,
+      "constraints": null
+    }
+  ]
+}

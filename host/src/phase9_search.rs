@@ -16,6 +16,14 @@ pub struct SearchGeneration {
     pub aggregates: Vec<CandidateAggregate>,
     pub crc32: u32,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SearchProgress {
+    pub generation: u16,
+    pub candidates: usize,
+    pub evaluations: u32,
+    pub cache_hits: u32,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SearchResult {
     pub manifest_identity: u32,
@@ -489,9 +497,16 @@ fn run_nsga<E: CandidateEvaluator + Sync>(
     m: &SearchManifest,
     cache: &mut EvalCache<E>,
     workers: usize,
+    progress: &mut dyn FnMut(SearchProgress),
 ) -> Result<Vec<SearchGeneration>, SearchError> {
     let mut generations = Vec::new();
     let mut current = evaluate_generation(cache, 0, initial_population(m), workers)?;
+    progress(SearchProgress {
+        generation: current.index,
+        candidates: current.candidates.len(),
+        evaluations: cache.calls,
+        cache_hits: cache.hits,
+    });
     generations.push(current.clone());
     for g in 1..=m.budgets.generations {
         let children = offspring(m, g, &current.candidates, &current.aggregates);
@@ -508,6 +523,12 @@ fn run_nsga<E: CandidateEvaluator + Sync>(
             aggregates: a,
             crc32: crc,
         };
+        progress(SearchProgress {
+            generation: current.index,
+            candidates: current.candidates.len(),
+            evaluations: cache.calls,
+            cache_hits: cache.hits,
+        });
         generations.push(current.clone())
     }
     Ok(generations)
@@ -532,9 +553,16 @@ fn run_de<E: CandidateEvaluator + Sync>(
     m: &SearchManifest,
     cache: &mut EvalCache<E>,
     workers: usize,
+    progress: &mut dyn FnMut(SearchProgress),
 ) -> Result<Vec<SearchGeneration>, SearchError> {
     let mut generations = Vec::new();
     let mut current = evaluate_generation(cache, 0, initial_population(m), workers)?;
+    progress(SearchProgress {
+        generation: current.index,
+        candidates: current.candidates.len(),
+        evaluations: cache.calls,
+        cache_hits: cache.hits,
+    });
     generations.push(current.clone());
     let n = current.candidates.len();
     if n < 4 {
@@ -610,6 +638,12 @@ fn run_de<E: CandidateEvaluator + Sync>(
             aggregates: next_a,
             crc32: crc,
         };
+        progress(SearchProgress {
+            generation: current.index,
+            candidates: current.candidates.len(),
+            evaluations: cache.calls,
+            cache_hits: cache.hits,
+        });
         generations.push(current.clone())
     }
     Ok(generations)
@@ -651,23 +685,62 @@ pub fn run_search_with_workers<E: CandidateEvaluator + Sync>(
     grid_axes: &[usize],
     workers: usize,
 ) -> Result<SearchResult, SearchError> {
+    run_search_with_workers_and_progress(m, evaluator, grid_axes, workers, |_| {})
+}
+
+pub fn run_search_with_workers_and_progress<E, F>(
+    m: &SearchManifest,
+    evaluator: &E,
+    grid_axes: &[usize],
+    workers: usize,
+    mut progress: F,
+) -> Result<SearchResult, SearchError>
+where
+    E: CandidateEvaluator + Sync,
+    F: FnMut(SearchProgress),
+{
     m.validate().map_err(|_| SearchError::Configuration)?;
     let mut cache = EvalCache::new(evaluator);
     let generations = match m.engine {
-        SearchEngineId::GridV1 => vec![evaluate_generation(
-            &mut cache,
-            0,
-            grid_candidates(m, grid_axes)?,
-            workers,
-        )?],
-        SearchEngineId::Nsga2V1 => run_nsga(m, &mut cache, workers)?,
-        SearchEngineId::DifferentialEvolutionV1 => run_de(m, &mut cache, workers)?,
+        SearchEngineId::GridV1 => {
+            let generation =
+                evaluate_generation(&mut cache, 0, grid_candidates(m, grid_axes)?, workers)?;
+            progress(SearchProgress {
+                generation: generation.index,
+                candidates: generation.candidates.len(),
+                evaluations: cache.calls,
+                cache_hits: cache.hits,
+            });
+            vec![generation]
+        }
+        SearchEngineId::Nsga2V1 => run_nsga(m, &mut cache, workers, &mut progress)?,
+        SearchEngineId::DifferentialEvolutionV1 => run_de(m, &mut cache, workers, &mut progress)?,
     };
     let last = generations.last().ok_or(SearchError::Configuration)?;
     let pareto = pareto_front(m, &last.aggregates);
     let target = usize::from(m.budgets.finalists);
-    let mut finalist_candidates: Vec<DesignVector> =
-        pareto.iter().map(|i| last.candidates[*i]).collect();
+    let mut finalist_indices = pareto.clone();
+    if target == 0 {
+        finalist_indices.clear();
+    } else if finalist_indices.len() > target {
+        let scores = crowding(m, &finalist_indices, &last.aggregates);
+        finalist_indices.sort_by(|left, right| {
+            scores
+                .get(right)
+                .unwrap_or(&0)
+                .cmp(scores.get(left).unwrap_or(&0))
+                .then_with(|| {
+                    last.aggregates[*left]
+                        .candidate_identity
+                        .cmp(&last.aggregates[*right].candidate_identity)
+                })
+        });
+        finalist_indices.truncate(target);
+    }
+    let mut finalist_candidates: Vec<DesignVector> = finalist_indices
+        .iter()
+        .map(|index| last.candidates[*index])
+        .collect();
     let mut selected: BTreeSet<u32> = finalist_candidates.iter().map(|c| c.identity).collect();
     let mut history: BTreeMap<u32, (DesignVector, CandidateAggregate)> = BTreeMap::new();
     for generation in &generations {
@@ -693,8 +766,20 @@ pub fn run_search_with_workers<E: CandidateEvaluator + Sync>(
     for candidate in &finalist_candidates {
         finalists.push(cache.cached(candidate, 64)?)
     }
+    let retained_identities: BTreeSet<u32> = generations
+        .iter()
+        .flat_map(|generation| {
+            generation
+                .candidates
+                .iter()
+                .map(|candidate| candidate.identity)
+        })
+        .collect();
     let mut highest_evidence: BTreeMap<u32, CandidateEvaluation> = BTreeMap::new();
     for ((candidate_identity, _), value) in &cache.values {
+        if !retained_identities.contains(candidate_identity) {
+            continue;
+        }
         let replace = highest_evidence
             .get(candidate_identity)
             .is_none_or(|current| {
@@ -773,6 +858,63 @@ mod tests {
         assert_eq!(r.generations[0].candidates.len(), 25)
     }
     #[test]
+    fn de_reaches_integer_sphere_optimum_within_one_quantum() {
+        let mut manifest = built_in_manifest(
+            StudyId::GimbalControl,
+            SearchEngineId::DifferentialEvolutionV1,
+            ksa64_core::phase9_contract::SearchPresetId::Quick,
+        );
+        manifest.variable_count = 2;
+        manifest.objective_count = 1;
+        manifest.constraint_count = 0;
+        manifest.variables[0].minimum = -16;
+        manifest.variables[0].maximum = 16;
+        manifest.variables[0].quantum = 1;
+        manifest.variables[1] = manifest.variables[0];
+        manifest.variables[1].id = 999;
+        manifest.budgets.population = 16;
+        manifest.budgets.generations = 40;
+        manifest = manifest.seal().unwrap();
+        let evaluator = |design: &DesignVector, tier: u8| {
+            let x = design.values[0];
+            let y = design.values[1];
+            let mut objectives = [0; 8];
+            objectives[0] = x * x + y * y;
+            Ok(CandidateEvaluation {
+                aggregate: CandidateAggregate {
+                    identity: 0,
+                    manifest_identity: manifest.identity,
+                    candidate_identity: design.identity,
+                    uncertainty_tier: tier,
+                    case_count: tier,
+                    fatal_class: 0,
+                    violated_constraints: 0,
+                    feasible: true,
+                    case_crc: design.identity ^ u32::from(tier),
+                    normalized_violation: 0,
+                    objective_count: 1,
+                    constraint_count: 0,
+                    objectives,
+                    constraint_values: [0; 16],
+                }
+                .seal(),
+                cases: Vec::new(),
+            })
+        };
+        let result = run_search(&manifest, &evaluator, &[]).unwrap();
+        let best = result
+            .generations
+            .last()
+            .unwrap()
+            .aggregates
+            .iter()
+            .map(|value| value.objectives[0])
+            .min()
+            .unwrap();
+        assert!(best <= 1, "integer sphere best {best}");
+    }
+
+    #[test]
     fn nsga_and_de_are_byte_repeatable() {
         for engine in [
             SearchEngineId::Nsga2V1,
@@ -795,8 +937,15 @@ mod tests {
             let a = run_search(&m, &synthetic(m), &[]).unwrap();
             let b = run_search_with_workers(&m, &synthetic(m), &[], 4).unwrap();
             let c = run_search_with_workers(&m, &synthetic(m), &[], 8).unwrap();
+            let mut progress = Vec::new();
+            let d = run_search_with_workers_and_progress(&m, &synthetic(m), &[], 4, |value| {
+                progress.push(value)
+            })
+            .unwrap();
             assert_eq!(a, b);
             assert_eq!(a, c);
+            assert_eq!(a, d);
+            assert_eq!(progress.len(), a.generations.len());
             assert!(!a.finalists.is_empty());
             assert!(a.finalists.len() <= usize::from(m.budgets.finalists));
             let ids: BTreeSet<u32> = a

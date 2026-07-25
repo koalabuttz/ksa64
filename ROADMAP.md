@@ -253,28 +253,26 @@ The frozen Phase 8 truth-triggered executor and standalone stock world remain av
 
 ## Phase 9: design optimization and robustness workbench
 
-Status: ready to plan. Optimization contracts consume the accepted Phase 8.5 avionics-aware evaluation identity rather than the Phase 8 truth-triggered boundary alone.
+Status: implemented. The optimizer consumes the accepted Phase 8.5 avionics-aware evaluation identity and does not introduce a second production simulator.
 
-Purpose: build host-side search and analysis around the portable evaluator
-without introducing a second production simulator.
+Accepted result:
 
-Candidate capabilities:
+- Strict KOM9/KDV9 manifests and canonical materialized candidates.
+- Exact nominal, eight-case search, and 64-case finalist robustness tiers.
+- Feasibility-first constraints, Pareto ordering, exact grids and sensitivity, deterministic NSGA-II V1, and DE/rand/1/bin.
+- Proposal, evaluation, generation, checkpoint/resume, archive, and report bytes independent of one, four, or eight workers.
+- KOE9/KRA9/KRE9/KSN9/KFP9 evidence with retained KAS8 case records, strict corruption rejection, and independent Python verification.
+- Two accepted Firestorm-derived studies, a coupled demonstration, and an explicitly experimental broad-airframe search excluded from validated physical evidence.
+- Persistent bounded JSONL integration for external optimizers.
+- Live seven-page host workbench, self-contained HTML/JSON/CSV reporting, and a stock-C64 finalist browser below `$C000`.
 
-- Parameter-grid, evolutionary, and Pareto-front search.
-- Constraint policies, sensitivity analysis, robust objectives, and nested
-  uncertainty campaigns.
-- Reproducible optimization manifests, resumable archives, and selected
-  trajectory retention.
-- Rich host visualization plus stock/REU-scaled C64 browsing and replay of
-  finalists.
-- External optimizer adapters that submit compiled candidates through the
-  stable evaluation contract.
+The finite automated VICE browser probe remains blocked at its binary-monitor PING and is not claimed as passed. The stock browser builds and fits; selected exact reruns continue through the accepted Phase 8.5 host-world/C64-flight endpoint.
 
 The optimizer selects candidates; the portable core only evaluates them.
 
 ## Phase 9.5: advanced control effectors
 
-Status: planned after the Phase 9 workbench and before Phase 10 global flight.
+Status: next planned phase, now that the Phase 9 workbench is implemented; it remains before Phase 10 global flight.
 
 Purpose: extend the Phase 8.5 control-allocation boundary with physically modeled aerodynamic and reaction-control effectors, using the Phase 9 workbench to size, tune, compare, and robustly evaluate them.
 

@@ -1,0 +1,10 @@
+{"kind":"hello","request_id":1}
+{"kind":"hello","request_id":1,"ok":true,"message":"ksa64-phase9-jsonl-v1","manifest_identity":3898636244,"candidate_identity":null,"feasible":null,"objectives":null,"constraints":null}
+{"kind":"evaluate","request_id":2,"tier":8,"values":{"2":1000000,"9":1843200,"1":1000000,"3":1000000,"4":1000000,"5":209710,"6":134217726,"7":1000000,"8":1000000,"10":1000000,"11":1000000,"12":18432}}
+{"kind":"evaluation","request_id":2,"ok":true,"message":"ok","manifest_identity":3898636244,"candidate_identity":3611441567,"feasible":true,"objectives":[6053370,420119,4638978],"constraints":[10142779,159955132,3386718,1,0]}
+{"kind":"evaluate","request_id":3,"tier":8,"values":{"2":850000,"9":1843200,"1":1000000,"3":1000000,"4":1000000,"5":209710,"6":134217726,"7":1000000,"8":1000000,"10":1000000,"11":1000000,"12":18432}}
+{"kind":"evaluation","request_id":3,"ok":true,"message":"ok","manifest_identity":3898636244,"candidate_identity":269274811,"feasible":true,"objectives":[6109175,434296,4583613],"constraints":[10255537,161417923,3364155,1,0]}
+{"kind":"checkpoint","request_id":4}
+{"kind":"checkpoint","request_id":4,"ok":true,"message":"completed_boundary","manifest_identity":3898636244,"candidate_identity":null,"feasible":null,"objectives":null,"constraints":null}
+{"kind":"close","request_id":5}
+{"kind":"close","request_id":5,"ok":true,"message":"closed","manifest_identity":3898636244,"candidate_identity":null,"feasible":null,"objectives":null,"constraints":null}

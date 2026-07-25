@@ -1,11 +1,17 @@
 //! KSA64 Phase 9 optimization workbench CLI.
 use ksa64_core::phase9_contract::{SearchEngineId, SearchManifest, SearchPresetId};
 use ksa64_host::phase9::{baseline_vector, built_in_manifest, evaluate_candidate, StudyId};
-use ksa64_host::phase9_archive::{encode_kpf9, write_search_archive_atomic};
+use ksa64_host::phase9_archive::{
+    encode_kpf9, resume_search_archive_atomic, write_search_archive_atomic,
+};
 use ksa64_host::phase9_manifest::compile_manifest_json;
 use ksa64_host::phase9_protocol::serve_jsonl;
-use ksa64_host::phase9_report::{report_csv, report_html, report_json};
-use ksa64_host::phase9_search::{run_search_with_workers, SearchError};
+use ksa64_host::phase9_report::{
+    report_csv, report_html_with_sensitivity, report_json_with_sensitivity,
+};
+use ksa64_host::phase9_search::{
+    run_search_with_workers, run_search_with_workers_and_progress, SearchError,
+};
 use ksa64_host::phase9_sensitivity::{encode_ksn9, one_at_a_time};
 use ksa64_host::phase9_tui::run_optimization_tui;
 use std::fs;
@@ -102,28 +108,57 @@ fn execute_search(
     } else {
         vec![]
     };
-    let result = run_search_with_workers(&manifest, &evaluator, &axes, workers)
-        .map_err(|e| format!("search failed: {e:?}"))?;
+    let result = if tui {
+        run_search_with_workers_and_progress(&manifest, &evaluator, &axes, workers, |progress| {
+            eprintln!(
+                "Phase 9 live  generation {:>3}  candidates {:>4}  evaluations {:>5}  cache {:>5}",
+                progress.generation, progress.candidates, progress.evaluations, progress.cache_hits
+            );
+        })
+    } else {
+        run_search_with_workers(&manifest, &evaluator, &axes, workers)
+    }
+    .map_err(|e| format!("search failed: {e:?}"))?;
     fs::write(
         output.join("manifest.kom9"),
         manifest.encode().map_err(|e| format!("manifest: {e:?}"))?,
     )
     .map_err(|e| e.to_string())?;
-    write_search_archive_atomic(
-        &output.join("search.kra9"),
-        manifest.identity,
-        &result.generations,
-        &result.evidence,
-    )
+    if std::env::args().any(|argument| argument == "--resume") {
+        resume_search_archive_atomic(
+            &output.join("search.kra9"),
+            manifest.identity,
+            &result.generations,
+            &result.evidence,
+        )
+    } else {
+        write_search_archive_atomic(
+            &output.join("search.kra9"),
+            manifest.identity,
+            &result.generations,
+            &result.evidence,
+        )
+    }
     .map_err(|e| format!("archive: {e:?}"))?;
+    let base = baseline_vector(&manifest);
+    let sensitivity = one_at_a_time(&manifest, &base, &evaluator, 8)
+        .map_err(|e| format!("sensitivity: {e:?}"))?;
     fs::write(
         output.join("report.json"),
-        serde_json::to_vec_pretty(&report_json(&manifest, &result)).unwrap(),
+        serde_json::to_vec_pretty(&report_json_with_sensitivity(
+            &manifest,
+            &result,
+            &sensitivity,
+        ))
+        .unwrap(),
     )
     .map_err(|e| e.to_string())?;
     fs::write(output.join("report.csv"), report_csv(&result)).map_err(|e| e.to_string())?;
-    fs::write(output.join("report.html"), report_html(&manifest, &result))
-        .map_err(|e| e.to_string())?;
+    fs::write(
+        output.join("report.html"),
+        report_html_with_sensitivity(&manifest, &result, &sensitivity),
+    )
+    .map_err(|e| e.to_string())?;
     result.generations.last().ok_or("empty search")?;
     let mut candidate_history = std::collections::BTreeMap::new();
     for generation in &result.generations {
@@ -144,12 +179,9 @@ fn execute_search(
             .map_err(|e| format!("finalists: {e:?}"))?,
     )
     .map_err(|e| e.to_string())?;
-    let base = baseline_vector(&manifest);
-    let sensitivity = one_at_a_time(&manifest, &base, &evaluator, 8)
-        .map_err(|e| format!("sensitivity: {e:?}"))?;
     let mut bytes = Vec::new();
-    for r in sensitivity {
-        bytes.extend_from_slice(&encode_ksn9(r))
+    for record in &sensitivity {
+        bytes.extend_from_slice(&encode_ksn9(*record))
     }
     fs::write(output.join("sensitivity.ksn9"), bytes).map_err(|e| e.to_string())?;
     println!(

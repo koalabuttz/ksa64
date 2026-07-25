@@ -110,3 +110,9 @@ cargo run -p ksa64-host --bin phase8_trace
 ```
 
 `phase8/reference/analyze.py`, `analyze_campaign.py`, and `openrocket/compare.py` independently validate canonical outputs. `phase8/complete.ps1` is the bounded completion audit; it runs finite VICE trace/replay probes but never silently launches the projected 2.35-hour target mission.
+
+## Phase 9 optimization workbench
+
+The `phase9` binary compiles KOM9 manifests, runs built-in or compiled searches, emits deterministic KRA9/KPF9/KSN9 evidence and HTML/JSON/CSV reports, opens the passive optimization TUI, and exposes a persistent JSONL evaluator service.
+
+`phase9_search` owns grid/NSGA-II/DE proposal and selection logic; `phase9` owns candidate materialization and 1/8/64-case evaluation; `phase9_archive` owns generation commits/resume; `phase9_report`, `phase9_tui`, and `phase9_sensitivity` are observational. See `phase9/README.md` for commands and the accepted evidence boundary.

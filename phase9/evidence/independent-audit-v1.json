@@ -1,0 +1,86 @@
+{
+  "schema": "KSA64 Phase 9 independent audit v1",
+  "studies": {
+    "accepted-study-a-de": {
+      "archive_sha256": "87e37c6f8b12448a87f8916f1adc70a50ade75c7f5a207d9f50eebdb3826d8ac",
+      "archived_candidates": 98,
+      "finalists": 32,
+      "generations": 33,
+      "manifest": "097c7280",
+      "pareto": 1
+    },
+    "accepted-study-a-grid": {
+      "archive_sha256": "31b49da0b47a00f03611d73182f94150075e31f95e13e896fa18f009e3116518",
+      "archived_candidates": 289,
+      "finalists": 32,
+      "generations": 1,
+      "manifest": "b2d1260b",
+      "pareto": 14
+    },
+    "accepted-study-a-nsga2": {
+      "archive_sha256": "31353160a2f296f675955ee794819b424c45f4bae4faf44984647fc46886f1b2",
+      "archived_candidates": 157,
+      "finalists": 32,
+      "generations": 33,
+      "manifest": "b9125be5",
+      "pareto": 27
+    },
+    "accepted-study-b-de": {
+      "archive_sha256": "0879514432e6397408fbd5b3d5a9a74d104539e4d740fde19c79054958cfe07f",
+      "archived_candidates": 110,
+      "finalists": 32,
+      "generations": 33,
+      "manifest": "614854cd",
+      "pareto": 1
+    },
+    "accepted-study-b-grid": {
+      "archive_sha256": "b5374660ab060096fcd0249c5389b885ada195a8a302e480782bed835d1640ab",
+      "archived_candidates": 289,
+      "finalists": 32,
+      "generations": 1,
+      "manifest": "dae50046",
+      "pareto": 2
+    },
+    "accepted-study-b-nsga2": {
+      "archive_sha256": "d7ccb02fccc1eac5fb00e656158ba05303f3955455b0cb59b0929e384ecb1edb",
+      "archived_candidates": 186,
+      "finalists": 32,
+      "generations": 33,
+      "manifest": "d1267da8",
+      "pareto": 7
+    },
+    "coupled-demo": {
+      "archive_sha256": "a026161397e874f63942aebba2ea42ce46e202477a969ad7f1b75bfdd6a527be",
+      "archived_candidates": 83,
+      "finalists": 16,
+      "generations": 17,
+      "manifest": "8d418d0a",
+      "pareto": 32
+    },
+    "experimental-airframe": {
+      "archive_sha256": "7d3e5757f5047b9dced4aca228bac9ff872c8fd4b54bf2bf556202e1affe5fd7",
+      "archived_candidates": 87,
+      "finalists": 0,
+      "generations": 13,
+      "manifest": "aa8d5f42",
+      "pareto": 1
+    },
+    "quick-study-a": {
+      "archive_sha256": "b657c759abedba4093690f3171e25c1c5854ff83878bc2370b285ac8f5f66982",
+      "archived_candidates": 16,
+      "finalists": 4,
+      "generations": 5,
+      "manifest": "e86077d4",
+      "pareto": 8
+    },
+    "quick-study-b": {
+      "archive_sha256": "9bcf40690d0721de67df92750b9a5de3b3c8e6be54514644b9f9ac4a8b059008",
+      "archived_candidates": 21,
+      "finalists": 4,
+      "generations": 5,
+      "manifest": "80545199",
+      "pareto": 4
+    }
+  },
+  "worker_hashes": "exact"
+}

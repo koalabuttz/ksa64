@@ -1,0 +1,168 @@
+{
+  "schema": "KSA64 Phase 9 worker exactness v1",
+  "seed": "0x4b534139",
+  "quick": {
+    "study-a": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "ad6cdcc9dc9de96b815ade7a40f3a87e0ff47f6419b5628aa0c7ace54457a9db",
+        "manifest.kom9": "fa57f2813b1c6ad61792f4abd190b4a58abf1becc9578d379e603737939a76b8",
+        "report.csv": "54e9e5e9567c213a29306ee11c3c14a21f853f92862ed68da457e5d8884ab3c3",
+        "report.html": "a44643def8a4b8e85402e2ecfde4a78ffde4c8b7ef3a7ca0589e92467c3dfd78",
+        "report.json": "9b9b0704155a1f4e0660fe9c60379e4c4cf8389a831144a193705697c6514098",
+        "search.kra9": "b657c759abedba4093690f3171e25c1c5854ff83878bc2370b285ac8f5f66982",
+        "sensitivity.ksn9": "7d39d8210cf570a8ab5e45886b6dc9bdeae52607a4676bda596cb001353cc90f"
+      }
+    },
+    "study-b": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "6ef20028b87633ec787e2cbec85d0046a42abeb453a96f165a85e8a52b7ae791",
+        "manifest.kom9": "032aa4dfee5779aa6c1f2bf4f83601d69520303042f05ac339431f6a6c310fbd",
+        "report.csv": "f6d5366b01da4c70b128d44d1f0827fc80896fbe43f72890122847f020679b29",
+        "report.html": "161080b821e7e465dd14abf6c392ef11796612eea2aafc6277d014b225f6f968",
+        "report.json": "82df09116e898a4d94c37f50a02d341714d5ba841b1106b7b19a85aa01e0e36d",
+        "search.kra9": "9bcf40690d0721de67df92750b9a5de3b3c8e6be54514644b9f9ac4a8b059008",
+        "sensitivity.ksn9": "bf231ee8d291d8bd190c856f5bd0e1d4fac6c2f4871ea110fe2c3e7ed2a6a5a6"
+      }
+    }
+  },
+  "accepted": {
+    "accepted-study-a-de": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "410e3deeea9ceec01ed9f356e5bf0d421273f222c6d7b35e9966939ca30da646",
+        "manifest.kom9": "c675dd733485970516fc44f6625a9f593db7c65d686e054110fffe7b258bea10",
+        "report.csv": "a8694739b45e00acf31ffae72334320a54bba301fe0bcadf56dc0ef2cb285128",
+        "report.html": "95c4e438624a26313b85556bd25343010e3761935c1c431ff1a820685dd2a167",
+        "report.json": "5711762e05317453cf6a01e4828a2366ced8a60632701463e1595c395e8f6637",
+        "search.kra9": "87e37c6f8b12448a87f8916f1adc70a50ade75c7f5a207d9f50eebdb3826d8ac",
+        "sensitivity.ksn9": "ec45e0138a0a49d1ced6ee18b88a8c715a3ff53f550e1ea45216a17aa3c9b90f"
+      }
+    },
+    "accepted-study-a-grid": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "87e7629cacefeabc18911cb0a5f629ad305008ba8e217e9a3449cb016a36d22a",
+        "manifest.kom9": "40dab50390eee898bb5fb3d9586664d950b289f712275a08feae5fcf39698164",
+        "report.csv": "71f43e64a0bfbc6a26cb559f888a17403ee6d089d1f34a89cee6f69144d75d6a",
+        "report.html": "19d3accb073dd87e5b591cc37619baf4eb34d1833ab4dc0b4c58c45f4dafeee3",
+        "report.json": "7c43f452a69ab8bed50c68a2d26e17b3094cbc46d5a940eab5c3ffa5ef2efe7b",
+        "search.kra9": "31b49da0b47a00f03611d73182f94150075e31f95e13e896fa18f009e3116518",
+        "sensitivity.ksn9": "b60e2be57decb58ee760e730baf51c676470ad35770516677a04045a2cb74d23"
+      }
+    },
+    "accepted-study-a-nsga2": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "019fdf00caba6b244fc91056660a7f5495e4a6ee05f062c1d408315594e86c07",
+        "manifest.kom9": "2bd73b272b5a9b400ad028626bb298df019c59ef789064263b6f28cdde5ac0e2",
+        "report.csv": "1d560d31ece530c03aad39c35df09de80031504a319f5551a7a421d22b6536d4",
+        "report.html": "a8b223093cd1e52cdc40f8d16b94570bd3aefefc0a169b2f8ce27c9b8729a2e3",
+        "report.json": "d39811ef7186d6f89fac20cd4bb7a4dea0fb09fe5b745290f4824e3d65b2c5a7",
+        "search.kra9": "31353160a2f296f675955ee794819b424c45f4bae4faf44984647fc46886f1b2",
+        "sensitivity.ksn9": "f5f0b17c3392039059941fb72e27cf95002b0063e451f0566ac67c7510b5ca93"
+      }
+    },
+    "accepted-study-b-de": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "09b60361406b9faf66d28819701caad6e84b606fc212fda8c4ca54467f1a2feb",
+        "manifest.kom9": "7a03c1e8771dda42347df457f54287afd9f0691c65941a9f857af090055c5db7",
+        "report.csv": "f221bb83a9daf6d2bff0862bea9b52f0bde8d6c413ed3ecda3d99f27e76c1bd4",
+        "report.html": "af956f29d4b3c015f08e9b956ea7ccc50d5927221940717e15e48ecbf86aed78",
+        "report.json": "5d99324e063afd3e8ef53d0ad35929bd891a5a43301351d5a9c4f7e3c7c8c6b5",
+        "search.kra9": "0879514432e6397408fbd5b3d5a9a74d104539e4d740fde19c79054958cfe07f",
+        "sensitivity.ksn9": "cb5d2f0b3669bc64d987e7b56e0c9dc986f217d6ea50dcfc1135dab0bff52489"
+      }
+    },
+    "accepted-study-b-grid": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "52338e1248ac3a7b3535de5e63ae78559efb17906751d72d68a8addf042b3669",
+        "manifest.kom9": "9eac4aa6124d63c1ef48d1bbbd0ec60f1d14f2d43e8c0527c4ffab5820ff0268",
+        "report.csv": "06c364ee29278dcaee74c3051f2932d6b1605d87982fd5204f5461073957f3a4",
+        "report.html": "91e1f9237473b9f22f094ad0187900f855cf8bcecbada5e769e14b8317262dba",
+        "report.json": "e924bf2969d47fa2efead114f1ac1f72bb4d48f669ceb6de37396f125b9ac289",
+        "search.kra9": "b5374660ab060096fcd0249c5389b885ada195a8a302e480782bed835d1640ab",
+        "sensitivity.ksn9": "d8c0a6c3540b00142bd0d120a46308e1ca4ff665196f0097f8b260a31c1b53e6"
+      }
+    },
+    "accepted-study-b-nsga2": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "a0583d28ff0f5c13f6e58c6e9a65336cd0c936a44b0b6c20e72fa0a315b9fd20",
+        "manifest.kom9": "2ca4b2c8bf6c32cf4459717f7b3b9e904ef17572e481dc11bdde161cc8d8e6a2",
+        "report.csv": "419e47ba895a835b948c35542255c8663db24a1c988ca98fbe2ee4ce227a0749",
+        "report.html": "92eb0c4151bee0b0b980cd26480fde05660c9864b9415db1f172dc0f6cb52a97",
+        "report.json": "2625e1156741570ff920f6fe0282c3ba48633ad4c0713819c5e6fcd2c5f9201e",
+        "search.kra9": "d7ccb02fccc1eac5fb00e656158ba05303f3955455b0cb59b0929e384ecb1edb",
+        "sensitivity.ksn9": "304f636348401646b6ffc49385d655e1cabcaa30f1d4b7420464bcfa65c9c594"
+      }
+    },
+    "coupled-demo": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "98302357ed6249e296f6bce88b7fb9951dcb27e61306445397933320c078cbff",
+        "manifest.kom9": "4a0d59ff534853a5e3a446561b9f545f8cec2b0b6e7f6b55ad3929f49cc8ab10",
+        "report.csv": "5010f746b45f33a73809a7a05d4dde6cb8ba47b5f7da9ade7fd0cc4ccc2126a8",
+        "report.html": "c5e8e5d6253514f5e0ac0e26ac59dac2377b6690c0cd56b1fe153ca5be244127",
+        "report.json": "2280276961ef66d8891c222d4751ddc3b5ac69b998bdb50d98ce37111d8e23d7",
+        "search.kra9": "a026161397e874f63942aebba2ea42ce46e202477a969ad7f1b75bfdd6a527be",
+        "sensitivity.ksn9": "9d8d7e3493f2ad1b786d6a37b59b9dd0c903060b785dadb03fdd4ae8ff8df9fe"
+      }
+    },
+    "experimental-airframe": {
+      "workers": [
+        1,
+        4,
+        8
+      ],
+      "files": {
+        "finalists.kfp9": "ee8a0d5732abe11808c52bd697675c69667a7180122dd963bd96724676f92141",
+        "manifest.kom9": "aec4c7dce29af511f7b67c7672a5fd79064a51fe5a098b5c39dc1e18734c9e31",
+        "report.csv": "7c9ef7483f6c1a0b045bc3870b9890450f43302644c5b3b812d045def540c631",
+        "report.html": "8904a369367c5b67df79b464e8e37720f1da1a82cc07d4873018b17a553d0545",
+        "report.json": "94cf956c58008a78e817bc85ce303bf94b757c42a421b87137cd49aff53c7982",
+        "search.kra9": "7d3e5757f5047b9dced4aca228bac9ff872c8fd4b54bf2bf556202e1affe5fd7",
+        "sensitivity.ksn9": "a35841e51849689103de01d59cb96eb2bb30f65347c2be59602e806e2d4e59f1"
+      }
+    }
+  }
+}
