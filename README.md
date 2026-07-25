@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–8 are complete. Phase 8 adds validated spatial hobby flight, geometry-derived vehicle modeling, deterministic wind/recovery drift, external evidence, and stock-C64 replay. Phase 9 optimization is next. Phase 6 live physical-link acceptance remains open.
+> **Project status:** Phases 0–8 are complete. Phase 8 adds validated spatial hobby flight, geometry-derived vehicle modeling, deterministic wind/recovery drift, external evidence, and stock-C64 replay. Phase 8.5 unified avionics and execution profiles are next; Phase 9 optimization follows. Phase 6 live physical-link acceptance remains open.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -97,6 +97,7 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 6 — Commodore-in-the-loop | Exact and realtime endpoint contracts, deterministic broker/replay, passive ground systems, a stock-C64 flight profile, and a complete 12,692-epoch host/VICE flight pass the software audit; physical-link validation remains open. |
 | 7 — Multi-profile evaluation | Complete: frozen legacy adapters, compiled hobby vehicle/motor/mission packs, published-data vertical ascent and dual-deploy recovery, strict evidence, deterministic campaigns, independent analysis, and an exact complete stock-C64 mission. |
 | 8 — Spatial hobby flight | Complete: geometry-derived mass properties/stability, bounded 6-DOF ascent, deterministic wind, recovery drift, strict evidence, float64/OpenRocket comparison, campaigns, host plots, and stock-C64 replay. |
+| 8.5 — Unified avionics | Planned next: non-breaking profile terminology, shared orbital/local avionics, frame-aware evaluation identity, host/VICE placement, and a preserved long-running combined-C64 path. |
 | 9 — Optimization workbench | Planned: host-side search, Pareto and sensitivity analysis, robustness campaigns, archives, and C64 finalist browsing. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
@@ -124,7 +125,7 @@ The legacy Phase 3/4 accuracy-first closed-loop path still projects to 243.7 min
 - [Phase 5](phase5/README.md), [completion audit](phase5/COMPLETION.md), [Phase 6 handoff](phase5/PHASE6_HANDOFF.md), and [deployment options](phase5/PHASE6_OPTIONS.md)
 - [Phase 6](phase6/README.md), [wire/authority contract](phase6/CONTRACT.md), and [software completion record](phase6/COMPLETION.md)
 - [Phase 7](phase7/README.md), [implementation contract](phase7/PLAN.md), and [completion audit](phase7/COMPLETION.md)
-- [Phase 8](phase8/README.md), [implementation contract](phase8/PLAN.md), [completion audit](phase8/COMPLETION.md), and [Phase 9 handoff](phase8/PHASE9_HANDOFF.md)
+- [Phase 8](phase8/README.md), [implementation contract](phase8/PLAN.md), [completion audit](phase8/COMPLETION.md), [Phase 8.5 handoff](phase8/PHASE8_5_HANDOFF.md), and [Phase 9 handoff](phase8/PHASE9_HANDOFF.md)
 
 ### Phase 4 detail
 

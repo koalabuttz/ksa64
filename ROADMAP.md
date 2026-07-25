@@ -233,9 +233,51 @@ Accepted result:
 
 Exit criteria: all pass. Phase 0–7 regressions remain exact; representative mass/stability, trajectory, external comparison, campaign determinism, stock packaging, and finite target gates are accepted.
 
+## Phase 8.5: unified avionics and execution profiles
+
+Status: planned next, before Phase 9. The implementation must be additive to every accepted Phase 0-8 artifact.
+
+Purpose: make vehicle definition, physical/model profile, avionics profile, coordinate frame, and execution placement independent choices before optimization freezes candidate identities around them.
+
+Canonical terminology going forward:
+
+- `VerticalPointMassV1` is the public name for the frozen profile identity historically exposed as `HobbyVerticalV1`.
+- `LocalEnu6DofV1` is the public name for the frozen profile identity historically exposed as `HobbySpatialV1`.
+- Existing discriminants, record bytes, checksums, and accepted parsers remain unchanged; legacy source names remain compatibility aliases.
+- Vehicle categories such as model, high-power, sounding, experimental, and orbital do not select a model profile implicitly.
+
+Candidate capabilities:
+
+- A versioned avionics profile/pack binding scheduler, reference frame, sensor suite, guidance program, actuator capabilities, mission sequencing, health monitoring, and safeing.
+- Shared 32/8/1 Hz flight-computer infrastructure with local-ENU navigation and hobby-scale mission sequencing rather than a separate minimal recovery controller.
+- Imperfect IMU, barometer, GPS, attitude-aid, actuator, continuity, and deployment feedback generated only by the world authority.
+- Optional avionics-commanded drogue/main deployment while preserving the frozen truth/event-driven Phase 8 executor as a compatibility profile.
+- Exact host-world/host-avionics and host-world/VICE-avionics placements with passive host Mission Control and a native shadow that validates but never commands.
+- An in-memory loopback endpoint for a long-running combined C64 world/avionics build using the same sensor-N, command-N, effective-N+1 ordering as split execution.
+- A frame identity and transformation contract reserving local ENU, Earth-fixed, and Earth-inertial navigation without yet implementing global atmospheric propagation.
+
+Stock-C64 policy:
+
+- The accepted Phase 8 standalone world image remains supported regardless of combined-image feasibility.
+- The combined image omits standalone transport code, links one selected profile, and is measured before optimization or banking.
+- Stock operation remains the baseline. Banking, overlays, RAM under ROM, or optional REU storage may add capability but cannot change physics, ordering, or evidence.
+- A complete combined target run is attempted only after a fresh projection and explicit confirmation under the established runtime policy; finite exact traces remain acceptable evidence for impractically long runs.
+
+Exit criteria:
+
+- Every Phase 0-8 artifact remains byte-identical and both legacy profile names retain source/wire compatibility.
+- Evaluation identity binds vehicle, world/model profile, mission, environment, avionics, actuator capabilities, uncertainty, and evaluator versions.
+- Host/host and host/VICE placements return identical ordered commands, status, navigation, alarms, and terminal evidence for the accepted local reference.
+- The original Firestorm can run navigation, telemetry, autonomous recovery sequencing, and monitor-only attitude control without pretending it has steering actuators.
+- At least one explicitly fictional controlled derivative exercises the shared attitude-command path through declared actuators.
+- The monolithic loopback path uses the same endpoint semantics as split execution; its stock memory result and timing projection are recorded without removing the existing standalone-world option.
+- Mission Control, recording, pacing, storage, and endpoint placement cannot alter physical or avionics results.
+
+Explicit deferrals: full ECEF dynamics, ENU-to-ECEF-to-ECI handoff, advanced control-device families, production optimization, and physical user-port/ACIA/Ultimate acceptance.
+
 ## Phase 9: design optimization and robustness workbench
 
-Status: ready for planning; Phase 8 has supplied the stable evaluator and evidence boundary.
+Status: planned after Phase 8.5. Optimization contracts must consume the avionics-aware evaluation identity rather than the Phase 8 truth-triggered boundary alone.
 
 Purpose: build host-side search and analysis around the portable evaluator
 without introducing a second production simulator.
@@ -254,7 +296,23 @@ Candidate capabilities:
 
 The optimizer selects candidates; the portable core only evaluates them.
 
-## Post-Phase-9 mission backlog
+## Phase 10: global atmospheric and suborbital flight
+
+Status: planned after the Phase 9 workbench establishes reproducible candidate evaluation.
+
+Purpose: cover the region where local and orbital missions overlap without forcing all vehicles into one coordinate representation.
+
+Candidate capabilities:
+
+- A separately versioned `GlobalEcef6DofV1` profile for rotating-Earth, long-range atmospheric and suborbital flight.
+- Strict local-ENU, Earth-fixed, and Earth-inertial state transforms with continuous position, velocity, attitude, angular rate, time, and identity.
+- Mission-declared deterministic frame transitions and local launch/recovery views around a global authoritative trajectory.
+- Reuse of the Phase 8.5 avionics boundary so the same flight computer can navigate local, Earth-fixed, or Earth-inertial missions through explicit frame-aware aiding and guidance.
+- Native, independent high-precision, bounded C64, and external reference evidence appropriate to the expanded model envelope.
+
+The vehicle's organizational category never selects this profile automatically. A small sounding rocket may require it, while a large vehicle may legitimately use a local profile for a bounded launch-site experiment.
+
+## Post-Phase-10 mission backlog
 
 The profile architecture may later support multiple central bodies,
 rendezvous, deorbit, entry, landing, tracking, and pass prediction. These

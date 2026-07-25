@@ -29,4 +29,4 @@ Run the bounded audit with:
 powershell -File phase8/complete.ps1
 ```
 
-See [PLAN.md](PLAN.md), [COMPLETION.md](COMPLETION.md), and [PHASE9_HANDOFF.md](PHASE9_HANDOFF.md).
+See [PLAN.md](PLAN.md), [COMPLETION.md](COMPLETION.md), [PHASE8_5_HANDOFF.md](PHASE8_5_HANDOFF.md), and [PHASE9_HANDOFF.md](PHASE9_HANDOFF.md).

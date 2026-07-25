@@ -1040,3 +1040,21 @@ Date: 2026-07-24
 Status: accepted.
 
 Embed generated pack constants, retain the exact Phase 7 environment prefix through 3 km, and link mission, exact-trace, and replay images below `$C000` without requiring an REU. Place the probe mailbox at `$C800` to avoid rust-mos static-stack storage. Measure finite PAL kernels first; because the full mission projects to 2.35 hours, do not start it without explicit user confirmation.
+
+## D-082: Name model profiles by mathematics, not user category
+
+Date: 2026-07-25
+
+Status: accepted for Phase 8.5 implementation.
+
+Use `VerticalPointMassV1` and `LocalEnu6DofV1` as the canonical public names for the frozen profile identities historically called `HobbyVerticalV1` and `HobbySpatialV1`. Preserve numeric discriminants, wire bytes, checksums, parsers, and source compatibility aliases. Model choice follows the required physics and coordinate envelope; labels such as model, high-power, sounding, experimental, and orbital describe vehicles or missions, not numerical profiles.
+
+## D-083: Stabilize shared avionics before optimization
+
+Date: 2026-07-25
+
+Status: accepted as the Phase 8.5 roadmap boundary.
+
+Insert Phase 8.5 before Phase 9. Bind every future evaluation to vehicle, physical/model profile, frame, mission, environment, avionics, actuator capabilities, uncertainty, and evaluator identity. Reuse one scheduler and avionics architecture across orbital and local vehicles through profile-specific navigation, guidance, sequencing, and capabilities.
+
+Preserve both host-world/C64-avionics operation and a deliberately long combined-C64 world/avionics option. Both use identical next-epoch endpoint semantics; the monolithic build replaces serialization with an in-memory loopback. Keep the accepted Phase 8 standalone-world image even if the combined stock image requires later optimization or banking. Reserve ECEF/ECI transformations now, but defer global atmospheric propagation to Phase 10.

@@ -1,15 +1,19 @@
 # Phase 9 handoff: design optimization and robustness workbench
 
-Phase 8 leaves a stable evaluator boundary for host-side optimization. Phase 9 should select candidates; it must not introduce a second production simulator or move search logic into the portable core.
+Phase 8 leaves a stable physical evaluator, but Phase 8.5 now deliberately precedes optimization. Phase 9 should select candidates only after the shared avionics, frame-aware identity, and execution-placement boundary in [PHASE8_5_HANDOFF.md](PHASE8_5_HANDOFF.md) is accepted. It must not introduce a second production simulator or move search logic into the portable core.
 
-## Frozen inputs available to Phase 9
+## Phase 8 inputs already frozen
 
-- `ModelProfileId::{HobbyVerticalV1,HobbySpatialV1}` and unchanged legacy adapters.
+- Frozen profile identities 3 and 4, historically exposed as `HobbyVerticalV1` and `HobbySpatialV1`; Phase 8.5 will add the canonical public names `VerticalPointMassV1` and `LocalEnu6DofV1` without changing bytes.
 - Compiled, identity-bound vehicle, motor, mission, and wind packs.
 - `EvaluationSummary` with objective/constraint-ready metrics and explicit validity.
 - Deterministic keyed uncertainty independent of worker count or catalog ordering.
 - Ordered KSC8/KRA8 evidence, strict corruption rejection, stock/REU retention, and replay.
 - Independent float64 and OpenRocket evidence for the Firestorm reference.
+
+## Phase 8.5 prerequisites for optimization
+
+Before freezing Phase 9 candidate identities, accept a versioned avionics identity, sensor/command contract, actuator-capability binding, coordinate-frame identity, host/VICE exactness evidence, and monolithic loopback placement. Phase 9 identities must include those inputs so later insertion of realistic avionics cannot silently change an already optimized design.
 
 ## Recommended Phase 9 sequence
 

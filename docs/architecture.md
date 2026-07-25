@@ -405,3 +405,13 @@ The spatial world uses local east/north/up coordinates and scalar-first Hamilton
 Geometry-derived mass properties interpolate with propellant fraction. Barrowman-compatible normal-force and CP models, geometry-based damping, and the reviewed Mach/Cd table are valid only inside the declared Firestorm envelope. Atmosphere and aerodynamics fail closed rather than extrapolating. The reference environment prefix through 3 km is embedded exactly for stock-target size; the source compiler and identity bind its meaning.
 
 The stock C64 embeds generated pack constants and links separate mission, exact-trace, and replay images below `$C000`. Rust-mos static-stack storage may extend above the PRG end, so the finite-probe result mailbox is fixed at `$C800`, outside linked program and stack memory. REU-backed history changes retention only and can never enter the simulation transition path.
+
+## Planned Phase 8.5 avionics and placement architecture
+
+Vehicle source, physical model profile, coordinate frame, avionics profile, and execution placement are orthogonal identities. `VerticalPointMassV1` and `LocalEnu6DofV1` become the canonical public names for the frozen Phase 7/8 identities while their historical `Hobby*` names remain compatibility aliases. This changes no record byte or accepted result.
+
+The common avionics kernel retains the reviewed 32/8/1 Hz scheduler, transport validation, navigation framework, guidance, control, sequencing, health monitoring, safeing, and evidence. Profile packs supply frame-aware initial conditions, sensors, guidance program, mission phases, and declared actuators. The original Firestorm therefore gains navigation and autonomous recovery sequencing without being assigned nonexistent steering authority; a separately identified controlled derivative exercises active attitude commands.
+
+Host-world/host-avionics, host-world/VICE-avionics, and combined-C64 placements share one endpoint order: world produces sensor N, avionics produces command N effective at N+1, then the world commits. Split transports serialize that seam; the combined image uses an in-memory loopback. Mission Control and native shadow avionics are observers and never substitute commands.
+
+The accepted standalone Phase 8 world image remains available for deliberately long target runs. A combined stock image is a new measured packaging gate, not permission to remove the standalone path or require an REU. Phase 8.5 reserves local ENU, ECEF, and ECI frame identities and strict transformation boundaries; global propagation and actual frame handoff belong to Phase 10.
