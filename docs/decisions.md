@@ -1121,3 +1121,25 @@ Date: 2026-07-25
 Status: accepted.
 
 Use the C64 for bounded finalist browsing, presentation, and selected exact reruns through the accepted split flight endpoint. Do not run production optimization on the target or make REU capacity part of candidate identity. The 15,391-byte stock browser satisfies packaging and its frozen finite one-instance VICE probe validates four finalists without leaving an emulator process.
+
+## D-091: Keep Phase 9.5 models native and external checks secondary
+
+Date: 2026-07-25
+
+Status: accepted for Phase 9.5 planning.
+
+Keep canard, RCS, depletion, changing mass-property, actuator, control-allocation, and authority-handoff models in the portable KSA64 evaluator. Use analytic cases and a small independent float64 implementation as primary evidence.
+
+Basilisk may provide optional frozen secondary fixtures for selected fixed-step spacecraft-attitude and RCS force, torque, pulse, depletion, or mass-property cases. It is not an oracle for KSA64-specific canard aerodynamics, the exact 32 Hz event scheduler, mixed-effector allocation, or authority handoff. It must not become a runtime, build, or CI dependency, and Phase 9.5 will not grow Phase 10 tooling solely to prepare for later global flight.
+
+## D-092: Freeze an offline Earth, time, frame, and validator contract before Phase 10 dynamics
+
+Date: 2026-07-25
+
+Status: accepted for Phase 10 planning.
+
+Keep `GlobalEcef6DofV1` authoritative for KSA64 and maintain one independent float64 implementation of its complete accepted model. Use SatKit as the preferred specialized offline reference for time, Earth orientation, frames, gravity, and selected coast cases; escalate to Orekit only for a demonstrated coverage or transform need; use GMAT occasionally for exoatmospheric or near-orbital corroboration.
+
+Before global dynamics are accepted, declare and version the reference ellipsoid, gravity and Earth-orientation models, supported time scales, continuous integration time, leap-second source, EOP dataset and validity/extrapolation policy, transform conventions, and permitted simplifications. External tools generate frozen, provenance-complete fixtures; normal tests use those fixtures without external tools, network access, or live data.
+
+Only one model owns an entity's state in any interval. External validators never co-propagate, correct, or replace the production state. Phase 10 chooses the smallest Earth/time model that meets its declared mission envelope after range and accuracy analysis; this decision records the required contract, not a premature fidelity choice.

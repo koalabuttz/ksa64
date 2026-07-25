@@ -341,3 +341,42 @@ The persistent JSONL example proves hello, ordered duplicate-aware evaluation, c
 The rust-mos finalist browser is 15,391 bytes and ends at `$441E`, below the stock `$C000` boundary without an REU. After earlier monitor-handshake failures in an overloaded emulator environment, the unchanged probe and PRG passed twice in a clean one-instance environment. The frozen result validates four finalists, manifest `e86077d4`, status zero, and complete process cleanup. This supports a transient environment/starvation diagnosis rather than a wire-format or target-program defect.
 
 The accepted physical studies remain inside the Phase 8 model envelope and promote only candidates satisfying all 64 hard-constraint cases. The broad-airframe demonstration is explicitly experimental, promotes no accepted finalists, and is never described as correlated or safety-valid.
+
+## Planned Phase 9.5 validation
+
+Phase 9.5 will validate each new physical responsibility at the narrowest useful level before composing missions:
+
+- Analytic force, torque, pulse, depletion, centre-of-mass, and inertia cases.
+- A small independent float64 implementation for canard/RCS dynamics, actuator response, allocation, and authority transitions.
+- Deterministic native/MOS vectors and bounded target probes for exact portable behavior.
+- Integrated gimbal-only, canard-only, RCS-only, and mixed-effector missions with frozen fault and handoff cases.
+
+Basilisk is optional secondary evidence only for selected fixed-step spacecraft-attitude/RCS cases. It is not used to validate canard aerodynamics, exact-event release semantics, mixed allocation, or authority handoff. Any retained comparison is a frozen, versioned fixture. Routine tests and CI remain offline and do not install or execute Basilisk.
+
+A Phase 9.5 external fixture is acceptable only when it records the generating tool and version, complete input/configuration, model assumptions, integration settings, raw output, conversion procedure, declared tolerance, content hash, and regeneration instructions.
+
+## Planned Phase 10 validation
+
+Phase 10 will use four deliberately distinct evidence layers:
+
+1. Frame/time-only transforms with force propagation disabled.
+2. Environment and force snapshots at fixed states and epochs.
+3. One-step and boundary-transition cases.
+4. Integrated atmospheric, ballistic, and near-orbital trajectories.
+
+The portable `GlobalEcef6DofV1` transition is authoritative. A separate float64 implementation covers the complete accepted global model. SatKit is the preferred specialist reference for time scales, Earth orientation, frame transformations, gravity, and selected coast fixtures. Orekit is used only when a documented SatKit gap or useful independent comparison justifies it. GMAT supplies occasional exoatmospheric trajectory corroboration.
+
+Before accepting fixtures, Phase 10 must freeze:
+
+- Reference ellipsoid and gravity identity.
+- Earth rotation/orientation plus any precession/nutation model.
+- Supported input/output time scales and the continuous internal integration scale.
+- Leap-second and Earth-orientation datasets, versions, validity windows, and out-of-range behavior.
+- Axis, transform-direction, quaternion, angular-rate, velocity-transport, and epoch conventions.
+- Permitted simplifications and their validated mission envelope.
+
+Transform cases span multiple epochs, leap-second and EOP boundaries, an explicit out-of-coverage failure, the equator, both sides of the date line, high altitude, near both poles, and exact poles with a declared reference meridian. Round-trip and transition tests cover position, velocity, attitude, angular rate, and simulation time. Quaternion comparisons use rotation equivalence so `q` and `-q` are not falsely reported as different attitudes.
+
+Every evidence report separates frame/time disagreement from force/environment disagreement and integration accumulation. External fixtures record tool/data versions, hashes, inputs, epoch and time-scale declarations, source and destination frames, transform direction, Earth/gravity/atmosphere settings, raw output, conversion code, tolerances, and regeneration instructions.
+
+Normal tests and CI consume checked-in fixtures without network access, live leap-second/EOP data, or installed external tools. No validator is permitted to own, correct, or co-propagate production state.

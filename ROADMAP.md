@@ -284,10 +284,19 @@ Candidate capabilities:
 - Host-compiled effector packs, capability identities, controller/allocation profiles, strict evidence, independent physical checks, and target-bounded exact execution.
 - Phase 9 parameter search, Pareto analysis, sensitivity work, and nested uncertainty campaigns over effector sizing, placement, authority, consumables, and controller settings.
 
+Validation policy:
+
+- KSA64 remains the sole runtime authority for canard, RCS, depletion, mass-property, actuator, allocation, and authority-handoff behavior.
+- Analytic cases and a small independent float64 implementation are the primary physical and numerical evidence.
+- Basilisk may generate optional, frozen secondary fixtures for selected fixed-step spacecraft-attitude, RCS force/torque, pulse, depletion, and mass-property cases. It is not an oracle for KSA64 canard aerodynamics, exact-event scheduling, mixed-effector allocation, or authority handoff.
+- Normal builds, tests, and CI require neither Basilisk nor network access. Every external fixture is versioned and records the generating tool, input, configuration, tolerance, and content hash.
+- Phase 9.5 does not add optional Phase 10 frame/time tooling merely to prepare for global flight.
+
 Exit criteria:
 
 - The shared Phase 8.5 scheduler, navigation, guidance, sequencing, command timing, and truth boundary remain unchanged.
 - Canard and RCS force, torque, lag, saturation, depletion, mass-property, and failure cases agree with independent analytic or float64 references within declared tolerances.
+- Any retained Basilisk comparison is reproducible from pinned inputs and remains corroborating evidence rather than a runtime dependency or acceptance authority.
 - Gimbal-only, canard-only, RCS-only, and at least one mixed-effector mission are deterministic across worker count, placement, recording, and replay.
 - The Phase 9 optimizer can compare and robustly evaluate effector designs without receiving private truth or changing the production evaluator.
 - Unsupported capability combinations and operation outside a validated aerodynamic or consumable envelope fail closed.
@@ -306,6 +315,32 @@ Candidate capabilities:
 - Reuse of the Phase 8.5 avionics boundary so the same flight computer can navigate local, Earth-fixed, or Earth-inertial missions through explicit frame-aware aiding and guidance.
 - Reuse of Phase 9.5 actuator capabilities and control allocators without coupling global coordinates to a particular effector family.
 - Native, independent high-precision, bounded C64, and external reference evidence appropriate to the expanded model envelope.
+
+Validation authority and external-reference strategy:
+
+1. The portable deterministic `GlobalEcef6DofV1` implementation is authoritative for KSA64 behavior.
+2. An independent float64 implementation covers the complete accepted atmospheric/global six-degree-of-freedom model and is the primary numerical reference.
+3. SatKit is the preferred specialized host-side fixture generator for time scales, Earth orientation, frame transformations, gravity, and selected ballistic or orbital coast cases.
+4. Orekit is the escalation path when SatKit lacks a required transform derivative, epoch/data behavior, or independently useful coverage. It is not a mandatory dependency from the beginning.
+5. GMAT supplies occasional independent exoatmospheric and near-orbital trajectory cross-checks. It does not define atmospheric forces, frame ownership, or canonical KSA64 results.
+
+SatKit, Orekit, and GMAT generate frozen evidence only. Normal tests and CI require no external tool, network access, or live Earth-orientation or leap-second data. Only one model owns an entity's state during an interval; external tools never co-propagate or correct the production trajectory at runtime.
+
+Required contract before global dynamics implementation:
+
+- Declare the reference ellipsoid, gravity model, Earth-rotation/orientation and any precession/nutation model, supported time scales, continuous internal integration scale, leap-second source, Earth-orientation-data source and validity window, extrapolation/failure policy, and every permitted simplification.
+- Compile accepted leap-second and Earth-orientation inputs into versioned offline data. UTC is an input/output representation, not a discontinuous integration clock across a leap second.
+- Freeze transform direction, axis, quaternion, angular-rate, velocity-transport, and epoch conventions before accepting force or trajectory comparisons.
+- Do not select higher-fidelity Earth/time models by prestige alone. Phase 10 range and accuracy analysis chooses the smallest declared model that satisfies its mission envelope, then versions that choice.
+
+Required transform and transition evidence:
+
+- Test multiple epochs, including leap-second and Earth-orientation-data boundaries plus an explicit out-of-coverage failure case.
+- Test the equator, both sides of the date line, high altitude, near both poles, and the exact poles. Exact-pole local frames must declare a reference meridian/longitude because ENU heading is otherwise ambiguous.
+- Prove round trips and mission transitions preserve position, velocity, attitude, angular rate, and simulation time within declared tolerances across ENU/ECEF/ECI boundaries.
+- Compare quaternion attitude as a physical rotation so equivalent `q` and `-q` encodings do not create a false failure.
+- Separate frame/time-only fixtures, force snapshots, one-step transition cases, and integrated trajectories. Evidence reports must attribute disagreement to frame/time conventions, force/environment models, or numerical integration rather than collapsing them into one trajectory delta.
+- Record fixture provenance: tool and version, source-data versions and hashes, inputs, epoch/time scales, frames and transform direction, Earth/gravity/atmosphere configuration, raw output, conversion script, tolerance rationale, fixture hash, and regeneration instructions.
 
 The vehicle's organizational category never selects this profile automatically. A small sounding rocket may require it, while a large vehicle may legitimately use a local profile for a bounded launch-site experiment.
 

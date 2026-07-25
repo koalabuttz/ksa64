@@ -10,7 +10,10 @@ Before code or data is reused, verify the current upstream source, version, and 
 |---|---|---|---|
 | RocketPy | Atmospheric rocket flight and 3-DOF or 6-DOF simulation | Compare compatible early-flight cases | No runtime dependency planned |
 | Tudat | Spaceflight dynamics and numerical propagation | Compare orbital state propagation | No runtime dependency planned |
-| GMAT | Mission analysis and orbit propagation | Compare insertion states, orbits, and mission cases | No runtime dependency planned |
+| SatKit | Time scales, Earth orientation, frame transforms, gravity, and orbit utilities | Preferred Phase 10 specialist fixture generator | Optional offline tool; no runtime or CI dependency |
+| Orekit | High-fidelity time/frame transformations and transform derivatives | Phase 10 escalation or independent comparison when SatKit coverage is insufficient | Optional offline tool; no runtime or CI dependency |
+| GMAT | Mission analysis and orbit propagation | Occasional exoatmospheric and near-orbital trajectory cross-checks | Optional offline tool; no runtime or CI dependency |
+| Basilisk | Spacecraft attitude dynamics and RCS effectors | Optional Phase 9.5 secondary fixtures for selected fixed-step RCS/attitude cases | Never a canard, scheduler, allocator, runtime, or CI authority |
 | PREDICT | SGP4 or SDP4 satellite tracking | Host-side oracle for later tracking work | Avoid direct port initially |
 | QUIKTRAK | Historical C64 satellite tracking | Historical precedent and possible pass-prediction comparison | No core foundation |
 | C64 Apollo Lunar Lander | Compact BASIC physics and telemetry presentation | Study interface and interaction techniques | Avoid copying into the core |
@@ -21,6 +24,21 @@ Before code or data is reused, verify the current upstream source, version, and 
 | Space Shuttle: A Journey into Space | Mission displays and operational flow | Presentation study | No known source reuse |
 | Apollo 18: Mission to the Moon | Mission-phase presentation | Presentation study | No known source reuse |
 | Project: Space Station | Mission-control and program UI | Presentation study | No known source reuse |
+
+## Phase 9.5 and Phase 10 validator policy
+
+Phase 9.5 keeps all canard, RCS, depletion, changing-mass, actuator, allocation, and handoff models native to KSA64. Analytic and independent float64 cases are primary evidence. Basilisk is optional corroboration for selected fixed-step spacecraft-attitude/RCS fixtures only.
+
+Phase 10 keeps `GlobalEcef6DofV1` authoritative and maintains a complete independent float64 comparison. SatKit is the preferred specialist source for frozen time/frame/EOP/gravity fixtures; Orekit is used when a documented capability gap or valuable independent comparison warrants it; GMAT is reserved for occasional exoatmospheric trajectory checks.
+
+All external results are checked in as versioned fixtures with tool and data versions, complete configuration, raw output, tolerance rationale, hashes, and regeneration instructions. Routine builds and CI do not run these programs, access the network, or download live leap-second or Earth-orientation data. No external program owns or corrects live KSA64 state.
+
+Official project documentation:
+
+- SatKit frame transformations and time/orientation support: <https://satkit.dev/api/frametransform/> and <https://satkit.dev/>
+- Orekit frame transforms and time systems: <https://www.orekit.org/site-orekit-13.1/apidocs/org/orekit/frames/Transform.html> and <https://www.orekit.org/site-orekit-13.1/apidocs/org/orekit/time/package-summary.html>
+- Basilisk simulation architecture and thruster effector: <https://avslab.github.io/basilisk/Learn/bskPrinciples/bskPrinciples-0.html> and <https://avslab.github.io/basilisk/Documentation/simulation/dynamics/Thrusters/thrusterDynamicEffector/thrusterDynamicEffector.html>
+- GMAT project and coordinate-system documentation: <https://sourceforge.net/projects/gmat/> and <https://documentation.help/gmat/CoordinateSystem.html>
 
 ## Reuse policy
 

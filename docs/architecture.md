@@ -429,3 +429,27 @@ The robustness ladder is nominal for every candidate, the same ordered eight cas
 KRA9 commits complete generation segments and embeds KRE9 copies of retained KAS8 case evidence. Resume accepts only an exact completed prefix of the desired deterministic archive, then atomically replaces it with the validated complete form. Reports, TUI state, archive paths, worker count, and C64 placement are observational.
 
 The C64 receives a bounded KFP9 finalist package and does not run production searches. Exact finalist flight may be rerun through the accepted host-world/C64-flight endpoint. The standalone finalist browser is a separate stock image; Phase 9 does not reopen the rejected monolithic Phase 8.5 packaging decision.
+
+## Planned Phase 9.5 and Phase 10 validation authority
+
+Advanced effectors and global flight preserve the existing ownership rule: during any interval, exactly one KSA64 world model owns and advances an entity's state. An external program may produce an input fixture or an independent comparison, but it never supplies live corrections, shares integration authority, or becomes a fallback dynamics path.
+
+Phase 9.5 keeps canard, RCS, depletion, changing mass properties, actuator, control-allocation, and authority-handoff models inside the portable evaluator. Analytic fixtures and a deliberately small float64 implementation are the primary independent evidence. Optional Basilisk comparisons are limited to selected fixed-step attitude/RCS cases and are committed as offline fixtures; they do not validate KSA64-specific aerodynamics, exact release scheduling, or allocator logic.
+
+Phase 10 uses a layered evidence architecture:
+
+    deterministic GlobalEcef6DofV1
+        authoritative KSA64 state transition
+
+    independent complete float64 model
+        primary numerical and physical comparison
+
+    SatKit, then Orekit where needed
+        specialist offline time/frame/EOP/gravity fixtures
+
+    GMAT
+        occasional exoatmospheric trajectory corroboration
+
+The global profile consumes versioned, compiled Earth/time data. Normal execution and CI never retrieve live leap-second or Earth-orientation data and never require an external validator. The profile contract freezes the ellipsoid, rotation/orientation model, supported time scales, leap-second and EOP sources and validity, transform conventions, and failure policy before integrated trajectory acceptance.
+
+Transform validation is intentionally separated from force-model and integration validation. Position, velocity, attitude, angular rate, and time continuity are tested at the ENU/ECEF/ECI seams before a trajectory comparison can be interpreted. This prevents a convention error from being misdiagnosed as an aerodynamic, gravity, or integrator defect.
