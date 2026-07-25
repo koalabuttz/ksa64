@@ -1,0 +1,19 @@
+{
+  "schema":"ksa64.spatial-mission-source-v1",
+  "identity":"firestorm54-i211w-spatial-calm-v1",
+  "vehicle_identity":"giant-leap-firestorm-54-spatial-v1",
+  "motor_identity":"aerotech-i211w-spatial-v1",
+  "wind_identity":"firestorm-calm-wind-v1",
+  "environment":"ksa64.environment.us76-250m-enu-wind-v1",
+  "launch_altitude_m":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Sea-level local ENU datum."}},
+  "rail_length_m":{"value":"2","provenance":{"kind":"declared_assumption","reference":"","note":"Phase 7 baseline launch rail."}},
+  "launch_azimuth_rad":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Rail points toward local north only by coordinate convention at zero azimuth."}},
+  "launch_elevation_rad":{"value":"1.5707963267948966","provenance":{"kind":"declared_assumption","reference":"","note":"Vertical rail for the calm reference mission."}},
+  "main_deployment_altitude_m":{"value":"200","provenance":{"kind":"declared_assumption","reference":"","note":"Phase 7 dual-deployment baseline."}},
+  "drogue_inflation_time_s":{"value":"0.5","provenance":{"kind":"declared_assumption","reference":"","note":"Phase 7 recovery inflation baseline."}},
+  "main_inflation_time_s":{"value":"1.0","provenance":{"kind":"declared_assumption","reference":"","note":"Phase 7 recovery inflation baseline."}},
+  "max_mission_time_s":{"value":"900","provenance":{"kind":"declared_assumption","reference":"","note":"Bounded mission duration."}},
+  "telemetry_period_s":{"value":"0.25","provenance":{"kind":"declared_assumption","reference":"","note":"Bounded replay cadence."}},
+  "minimum_rail_exit_velocity_mps":{"value":"15","provenance":{"kind":"declared_assumption","reference":"","note":"Conservative evaluation constraint, not a safety authority."}},
+  "case_seed":1263747384
+}

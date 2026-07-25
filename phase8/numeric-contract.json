@@ -20,6 +20,7 @@
     "inertia_kgm2": ["0", "2048"],
     "torque_nm": ["-200000", "200000"],
     "angular_rate_radps": ["-64", "64"],
+    "area_m2": ["0", "2"],
     "coefficient": ["-64", "64"],
     "static_margin_cal": ["-64", "64"],
     "angle_rad": ["-4", "4"],

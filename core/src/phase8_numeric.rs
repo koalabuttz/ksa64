@@ -34,6 +34,7 @@ spatial_fixed_i32!(SpatialAcceleration, SPATIAL_ACCELERATION_FRACTIONAL_BITS);
 spatial_fixed_i32!(SpatialMass, SPATIAL_MASS_FRACTIONAL_BITS);
 spatial_fixed_i32!(SpatialForce, SPATIAL_FORCE_FRACTIONAL_BITS);
 spatial_fixed_i32!(SpatialMomentArm, SPATIAL_MOMENT_ARM_FRACTIONAL_BITS);
+spatial_fixed_i32!(SpatialArea, SPATIAL_AREA_FRACTIONAL_BITS);
 spatial_fixed_i32!(SpatialInertia, SPATIAL_INERTIA_FRACTIONAL_BITS);
 spatial_fixed_i32!(SpatialTorque, SPATIAL_TORQUE_FRACTIONAL_BITS);
 spatial_fixed_i32!(SpatialAngularRate, SPATIAL_ANGULAR_RATE_FRACTIONAL_BITS);
@@ -67,6 +68,7 @@ pub const fn hobby_spatial_numeric_contract_is_valid() -> bool {
         && SPATIAL_FORCE_FRACTIONAL_BITS == 13
         && SPATIAL_MOMENT_ARM_FRACTIONAL_BITS == 28
         && SPATIAL_INERTIA_FRACTIONAL_BITS == 19
+        && SPATIAL_AREA_FRACTIONAL_BITS == 29
         && SPATIAL_TORQUE_FRACTIONAL_BITS == 12
         && SPATIAL_ANGULAR_RATE_FRACTIONAL_BITS == 24
         && SPATIAL_COEFFICIENT_FRACTIONAL_BITS == 24

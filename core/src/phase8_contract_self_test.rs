@@ -20,6 +20,7 @@ pub fn phase8_contract_signature() -> u32 {
         SPATIAL_VELOCITY_FRACTIONAL_BITS as u32,
         SPATIAL_ACCELERATION_FRACTIONAL_BITS as u32,
         SPATIAL_MASS_FRACTIONAL_BITS as u32,
+        SPATIAL_AREA_FRACTIONAL_BITS as u32,
         SPATIAL_FORCE_FRACTIONAL_BITS as u32,
         SPATIAL_MOMENT_ARM_FRACTIONAL_BITS as u32,
         SPATIAL_INERTIA_FRACTIONAL_BITS as u32,
@@ -59,6 +60,6 @@ mod tests {
     #[test]
     fn target_signature_is_frozen() {
         assert_eq!(run_phase8_contract_self_tests(), 0);
-        assert_eq!(phase8_contract_signature(), 0x0b0f_ae81);
+        assert_eq!(phase8_contract_signature(), 0x7455_7844);
     }
 }

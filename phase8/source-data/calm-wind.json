@@ -1,0 +1,13 @@
+{
+  "schema":"ksa64.wind-source-v1",
+  "identity":"firestorm-calm-wind-v1",
+  "gust_seed":0,
+  "gust_cadence_s":{"value":"1","provenance":{"kind":"declared_assumption","reference":"","note":"Cadence retained even when gust amplitude is zero."}},
+  "gust_amplitude_east_mps":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Calm reference case."}},
+  "gust_amplitude_north_mps":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Calm reference case."}},
+  "max_gust_mps":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Calm reference case."}},
+  "knots":[
+    {"altitude_m":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Launch-site wind knot."}},"east_mps":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Calm reference case."}},"north_mps":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Calm reference case."}}},
+    {"altitude_m":{"value":"100000","provenance":{"kind":"declared_assumption","reference":"","note":"Top of hobby profile."}},"east_mps":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Calm reference case."}},"north_mps":{"value":"0","provenance":{"kind":"declared_assumption","reference":"","note":"Calm reference case."}}}
+  ]
+}

@@ -14,6 +14,7 @@ pub mod phase6_tui;
 pub mod phase7_compiler;
 
 pub mod phase7;
+pub mod phase8_compiler;
 use std::io::{self, Write};
 pub mod phase7_campaign;
 pub mod phase7_plot;

@@ -7,11 +7,11 @@ use crate::phase8_format::{
     KWP8_LENGTH, KWP8_MAX_WIND_KNOTS,
 };
 use crate::phase8_numeric::{
-    SpatialAngle, SpatialCoefficient, SpatialInertia, SpatialMass, SpatialMomentArm,
+    SpatialAngle, SpatialArea, SpatialCoefficient, SpatialInertia, SpatialMass, SpatialMomentArm,
     SpatialPosition, SpatialTime, SpatialVelocity, SpatialWind, HOBBY_SPATIAL_ENVIRONMENT_ID,
-    SPATIAL_MAX_ANGLE_RAW, SPATIAL_MAX_COEFFICIENT_RAW, SPATIAL_MAX_INERTIA_RAW,
-    SPATIAL_MAX_MASS_RAW, SPATIAL_MAX_MOMENT_ARM_RAW, SPATIAL_MAX_POSITION_RAW,
-    SPATIAL_MAX_TIME_RAW, SPATIAL_MAX_VELOCITY_RAW, SPATIAL_MAX_WIND_RAW,
+    SPATIAL_MAX_ANGLE_RAW, SPATIAL_MAX_AREA_RAW, SPATIAL_MAX_COEFFICIENT_RAW,
+    SPATIAL_MAX_INERTIA_RAW, SPATIAL_MAX_MASS_RAW, SPATIAL_MAX_MOMENT_ARM_RAW,
+    SPATIAL_MAX_POSITION_RAW, SPATIAL_MAX_TIME_RAW, SPATIAL_MAX_VELOCITY_RAW, SPATIAL_MAX_WIND_RAW,
 };
 
 const VEHICLE_AERO_BASE: usize = 128;
@@ -63,14 +63,14 @@ pub struct SpatialVehiclePack {
     pub dry_mass: SpatialMass,
     pub length: SpatialPosition,
     pub diameter: SpatialPosition,
-    pub reference_area: SpatialMomentArm,
+    pub reference_area: SpatialArea,
     pub dry_cg_from_nose: SpatialMomentArm,
     pub dry_inertia: [SpatialInertia; 3],
     pub motor_aft_from_tail: SpatialPosition,
     pub aft_rail_guide_from_tail: SpatialPosition,
     pub forward_rail_guide_from_tail: SpatialPosition,
-    pub drogue_cda: SpatialMomentArm,
-    pub main_cda: SpatialMomentArm,
+    pub drogue_cda: SpatialArea,
+    pub main_cda: SpatialArea,
     pub pitch_damping: SpatialCoefficient,
     pub yaw_damping: SpatialCoefficient,
     pub roll_damping: SpatialCoefficient,
@@ -86,7 +86,7 @@ impl SpatialVehiclePack {
             || !positive_bounded(self.dry_mass.raw(), SPATIAL_MAX_MASS_RAW)
             || !positive_bounded(self.length.raw(), SPATIAL_MAX_POSITION_RAW)
             || !positive_bounded(self.diameter.raw(), self.length.raw())
-            || !positive_bounded(self.reference_area.raw(), SPATIAL_MAX_MOMENT_ARM_RAW)
+            || !positive_bounded(self.reference_area.raw(), SPATIAL_MAX_AREA_RAW)
             || self.dry_cg_from_nose.raw() <= 0
             || self.dry_cg_from_nose.raw() as i64 > (self.length.raw() as i64) << 15
             || self
@@ -97,8 +97,8 @@ impl SpatialVehiclePack {
             || !bounded_nonnegative(self.aft_rail_guide_from_tail.raw(), self.length.raw())
             || !bounded_nonnegative(self.forward_rail_guide_from_tail.raw(), self.length.raw())
             || self.forward_rail_guide_from_tail.raw() <= self.aft_rail_guide_from_tail.raw()
-            || !positive_bounded(self.drogue_cda.raw(), SPATIAL_MAX_MOMENT_ARM_RAW)
-            || !positive_bounded(self.main_cda.raw(), SPATIAL_MAX_MOMENT_ARM_RAW)
+            || !positive_bounded(self.drogue_cda.raw(), SPATIAL_MAX_AREA_RAW)
+            || !positive_bounded(self.main_cda.raw(), SPATIAL_MAX_AREA_RAW)
             || self.aero_knot_count < 2
             || self.aero_knot_count as usize > KVP8_MAX_AERO_KNOTS
         {
@@ -412,7 +412,7 @@ pub fn parse_spatial_vehicle_pack(input: &[u8]) -> Result<SpatialVehiclePack, Ph
         dry_mass: SpatialMass::from_raw(r32(input, 36)),
         length: SpatialPosition::from_raw(r32(input, 40)),
         diameter: SpatialPosition::from_raw(r32(input, 44)),
-        reference_area: SpatialMomentArm::from_raw(r32(input, 48)),
+        reference_area: SpatialArea::from_raw(r32(input, 48)),
         dry_cg_from_nose: SpatialMomentArm::from_raw(r32(input, 52)),
         dry_inertia: [
             SpatialInertia::from_raw(r32(input, 56)),
@@ -422,8 +422,8 @@ pub fn parse_spatial_vehicle_pack(input: &[u8]) -> Result<SpatialVehiclePack, Ph
         motor_aft_from_tail: SpatialPosition::from_raw(r32(input, 68)),
         aft_rail_guide_from_tail: SpatialPosition::from_raw(r32(input, 72)),
         forward_rail_guide_from_tail: SpatialPosition::from_raw(r32(input, 76)),
-        drogue_cda: SpatialMomentArm::from_raw(r32(input, 80)),
-        main_cda: SpatialMomentArm::from_raw(r32(input, 84)),
+        drogue_cda: SpatialArea::from_raw(r32(input, 80)),
+        main_cda: SpatialArea::from_raw(r32(input, 84)),
         pitch_damping: SpatialCoefficient::from_raw(r32(input, 88)),
         yaw_damping: SpatialCoefficient::from_raw(r32(input, 92)),
         roll_damping: SpatialCoefficient::from_raw(r32(input, 96)),
@@ -683,14 +683,14 @@ mod tests {
             dry_mass: SpatialMass::from_raw(4_000_000),
             length: SpatialPosition::from_raw(16_000),
             diameter: SpatialPosition::from_raw(500),
-            reference_area: SpatialMomentArm::from_raw(700_000),
+            reference_area: SpatialArea::from_raw(700_000),
             dry_cg_from_nose: SpatialMomentArm::from_raw(300_000_000),
             dry_inertia: [SpatialInertia::from_raw(50_000); 3],
             motor_aft_from_tail: SpatialPosition::ZERO,
             aft_rail_guide_from_tail: SpatialPosition::from_raw(100),
             forward_rail_guide_from_tail: SpatialPosition::from_raw(1_000),
-            drogue_cda: SpatialMomentArm::from_raw(1_000_000),
-            main_cda: SpatialMomentArm::from_raw(2_000_000),
+            drogue_cda: SpatialArea::from_raw(1_000_000),
+            main_cda: SpatialArea::from_raw(2_000_000),
             pitch_damping: SpatialCoefficient::from_raw(1),
             yaw_damping: SpatialCoefficient::from_raw(1),
             roll_damping: SpatialCoefficient::from_raw(1),

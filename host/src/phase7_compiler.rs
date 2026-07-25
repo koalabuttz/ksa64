@@ -81,7 +81,7 @@ pub struct CompiledPacks {
     pub mission: [u8; KMC7_LENGTH],
 }
 
-fn parse_scaled(text: &str, fractional_bits: u8) -> Result<i32, CompileError> {
+pub(crate) fn parse_scaled(text: &str, fractional_bits: u8) -> Result<i32, CompileError> {
     let text = text.trim();
     if text.is_empty() || text.contains(['e', 'E', '+']) {
         return Err(CompileError::Decimal);
@@ -120,7 +120,7 @@ fn parse_scaled(text: &str, fractional_bits: u8) -> Result<i32, CompileError> {
     i32::try_from(signed).map_err(|_| CompileError::Range)
 }
 
-fn identity(text: &str) -> Result<u32, CompileError> {
+pub(crate) fn identity(text: &str) -> Result<u32, CompileError> {
     if text.is_empty() || !text.is_ascii() {
         return Err(CompileError::Identity);
     }

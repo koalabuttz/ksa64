@@ -46,6 +46,7 @@ def main() -> None:
         ("TORQUE", "torque_nm"),
         ("ANGULAR_RATE", "angular_rate_radps"),
         ("COEFFICIENT", "coefficient"),
+        ("AREA", "area_m2"),
         ("STATIC_MARGIN", "static_margin_cal"),
         ("ANGLE", "angle_rad"),
         ("WIND", "wind_mps"),
