@@ -157,10 +157,21 @@ pub fn built_in_manifest(
         StudyId::PassiveRecovery => {
             variables[0] = variable(variable::FIN_SPAN_SCALE, 850_000, 1_150_000, 10_000);
             variables[1] = variable(variable::MAIN_ALTITUDE_Q13, 150 << 13, 300 << 13, 5 << 13);
-            variables[2] = variable(variable::BALLAST_MASS_Q21, 0, 419_430, 20_971);
-            variables[3] = variable(variable::DROGUE_CDA_SCALE, 800_000, 1_200_000, 25_000);
-            variables[4] = variable(variable::MAIN_CDA_SCALE, 800_000, 1_200_000, 25_000);
-            variables[5] = variable(variable::RAIL_LENGTH_Q13, 12_288, 24_576, 1_024);
+            variables[2] = variable(variable::FIN_ROOT_SCALE, 850_000, 1_150_000, 10_000);
+            variables[3] = variable(variable::FIN_TIP_SCALE, 850_000, 1_150_000, 10_000);
+            variables[4] = variable(variable::FIN_SWEEP_SCALE, 850_000, 1_150_000, 10_000);
+            variables[5] = variable(variable::BALLAST_MASS_Q21, 0, 419_430, 20_971);
+            variables[6] = variable(
+                variable::BALLAST_POSITION_Q28,
+                53_687_091,
+                214_748_365,
+                5_368_709,
+            );
+            variables[7] = variable(variable::DROGUE_CDA_SCALE, 800_000, 1_200_000, 25_000);
+            variables[8] = variable(variable::MAIN_CDA_SCALE, 800_000, 1_200_000, 25_000);
+            variables[9] = variable(variable::DROGUE_INFLATION_SCALE, 750_000, 1_250_000, 25_000);
+            variables[10] = variable(variable::MAIN_INFLATION_SCALE, 750_000, 1_250_000, 25_000);
+            variables[11] = variable(variable::RAIL_LENGTH_Q13, 12_288, 24_576, 1_024);
             objectives[0] = objective(metric::APOGEE, AggregateId::Mean, Direction::Maximize);
             objectives[1] = objective(
                 metric::LANDING_DISTANCE,
@@ -168,7 +179,7 @@ pub fn built_in_manifest(
                 Direction::Minimize,
             );
             objectives[2] = objective(metric::DRY_MASS, AggregateId::Maximum, Direction::Minimize);
-            (6, 3, common_constraints(&mut constraints))
+            (12, 3, common_constraints(&mut constraints))
         }
         StudyId::GimbalControl => {
             variables[0] = variable(variable::PROPORTIONAL_GAIN_Q15, 6_000, 24_000, 500);
@@ -202,10 +213,10 @@ pub fn built_in_manifest(
         StudyId::Coupled => {
             let a = built_in_manifest(StudyId::PassiveRecovery, engine, preset);
             let b = built_in_manifest(StudyId::GimbalControl, engine, preset);
-            for i in 0..6 {
-                variables[i] = a.variables[i];
-                variables[i + 6] = b.variables[i]
-            }
+            let ac = a.variable_count as usize;
+            let bc = b.variable_count as usize;
+            variables[..ac].copy_from_slice(&a.variables[..ac]);
+            variables[ac..ac + bc].copy_from_slice(&b.variables[..bc]);
             objectives[0] = objective(metric::APOGEE, AggregateId::Mean, Direction::Maximize);
             objectives[1] = objective(metric::DRY_MASS, AggregateId::Maximum, Direction::Minimize);
             objectives[2] = objective(
@@ -219,7 +230,7 @@ pub fn built_in_manifest(
                 Direction::Minimize,
             );
             let c = common_constraints(&mut constraints);
-            (12, 4, c)
+            (18, 4, c)
         }
         StudyId::ExperimentalAirframe => {
             variables[0] = variable(variable::FIN_ROOT_SCALE, 600_000, 1_400_000, 25_000);
@@ -308,9 +319,13 @@ fn common_constraints(c: &mut [ConstraintSpec; MAX_CONSTRAINTS]) -> usize {
 
 pub fn baseline_vector(manifest: &SearchManifest) -> DesignVector {
     let mut values = [0; 32];
-    for i in 0..manifest.variable_count as usize {
-        let v = manifest.variables[i];
-        values[i] = match v.id {
+    for (i, value) in values
+        .iter_mut()
+        .enumerate()
+        .take(manifest.variable_count as usize)
+    {
+        let spec = manifest.variables[i];
+        *value = match spec.id {
             variable::FIN_ROOT_SCALE
             | variable::FIN_SPAN_SCALE
             | variable::FIN_TIP_SCALE
@@ -321,26 +336,64 @@ pub fn baseline_vector(manifest: &SearchManifest) -> DesignVector {
             | variable::MAIN_INFLATION_SCALE => 1_000_000,
             variable::MAIN_ALTITUDE_Q13 => 200 << 13,
             variable::RAIL_LENGTH_Q13 => 2 << 13,
+            variable::BALLAST_POSITION_Q28 => spec.minimum,
             variable::GIMBAL_TRAVEL_Q16 => 5 << 16,
             variable::GIMBAL_SLEW_Q16 => 30 << 16,
             variable::GIMBAL_LAG => 2,
             variable::ACTUATOR_MASS_Q21 => 41_943,
             variable::PROPORTIONAL_GAIN_Q15 => 14_000,
             variable::DERIVATIVE_GAIN_Q15 => 4_096,
-            _ => v.minimum,
+            _ => spec.minimum,
         };
-        values[i] = quantize_clamp(values[i], v)
+    }
+    design_from_values(manifest, values)
+}
+
+pub fn design_from_values(manifest: &SearchManifest, mut values: [i32; 32]) -> DesignVector {
+    let mut ballast_zero = false;
+    for (i, value) in values
+        .iter_mut()
+        .enumerate()
+        .take(manifest.variable_count as usize)
+    {
+        *value = quantize_clamp(*value, manifest.variables[i]);
+        if manifest.variables[i].id == variable::BALLAST_MASS_Q21 && *value == 0 {
+            ballast_zero = true;
+        }
+    }
+    if ballast_zero {
+        for (i, value) in values
+            .iter_mut()
+            .enumerate()
+            .take(manifest.variable_count as usize)
+        {
+            if manifest.variables[i].id == variable::BALLAST_POSITION_Q28 {
+                *value = manifest.variables[i].minimum;
+            }
+        }
+    }
+    let mut materialized = [0u32; 4];
+    let mut bytes = Vec::with_capacity(8 + manifest.variable_count as usize * 4);
+    bytes.extend_from_slice(&manifest.identity.to_le_bytes());
+    for value in &values[..manifest.variable_count as usize] {
+        bytes.extend_from_slice(&value.to_le_bytes());
+    }
+    for (slot, identity) in materialized.iter_mut().enumerate() {
+        bytes.extend_from_slice(&(slot as u32 + 1).to_le_bytes());
+        *identity = crc32_ieee(&bytes);
+        bytes.truncate(bytes.len() - 4);
     }
     DesignVector {
         identity: 0,
         manifest_identity: manifest.identity,
         value_count: manifest.variable_count,
         values,
-        materialized_ids: [0; 4],
+        materialized_ids: materialized,
     }
     .seal()
     .unwrap()
 }
+
 fn quantize_clamp(value: i32, spec: VariableSpec) -> i32 {
     let v = value.clamp(spec.minimum, spec.maximum);
     let q = spec.quantum as i64;
@@ -350,6 +403,50 @@ fn quantize_clamp(value: i32, spec: VariableSpec) -> i32 {
 fn scale(raw: i32, ppm: i32) -> i32 {
     ((i64::from(raw) * i64::from(ppm)) / 1_000_000).clamp(i64::from(i32::MIN), i64::from(i32::MAX))
         as i32
+}
+
+fn value_for(manifest: &SearchManifest, design: &DesignVector, id: u16, default: i32) -> i32 {
+    for i in 0..design.value_count as usize {
+        if manifest.variables[i].id == id {
+            return design.values[i];
+        }
+    }
+    default
+}
+fn apply_point_mass(
+    vehicle: &mut ksa64_core::phase8_pack::SpatialVehiclePack,
+    delta_mass: i32,
+    position_q28: i32,
+) {
+    if delta_mass == 0 {
+        return;
+    }
+    let old_mass = vehicle.dry_mass.raw();
+    let new_mass = old_mass.saturating_add(delta_mass);
+    if new_mass <= 0 {
+        return;
+    }
+    let old_cg = vehicle.dry_cg_from_nose.raw();
+    let new_cg = ((i128::from(old_mass) * i128::from(old_cg)
+        + i128::from(delta_mass) * i128::from(position_q28))
+        / i128::from(new_mass))
+    .clamp(1, i128::from(i32::MAX)) as i32;
+    let old_shift = i128::from(old_cg - new_cg);
+    let point_shift = i128::from(position_q28 - new_cg);
+    let correction = ((i128::from(old_mass) * old_shift * old_shift
+        + i128::from(delta_mass) * point_shift * point_shift)
+        >> 58)
+        .clamp(i128::from(i32::MIN), i128::from(i32::MAX)) as i32;
+    for axis in 1..3 {
+        vehicle.dry_inertia[axis] = ksa64_core::phase8_numeric::SpatialInertia::from_raw(
+            vehicle.dry_inertia[axis]
+                .raw()
+                .saturating_add(correction)
+                .max(1),
+        )
+    }
+    vehicle.dry_mass = ksa64_core::phase8_numeric::SpatialMass::from_raw(new_mass);
+    vehicle.dry_cg_from_nose = ksa64_core::phase8_numeric::SpatialMomentArm::from_raw(new_cg)
 }
 
 fn materialize(
@@ -362,38 +459,49 @@ fn materialize(
         .map_err(|_| Phase9EvaluationError::Candidate)?;
     let mut r =
         checked_in_reference(study.gimbal()).map_err(|_| Phase9EvaluationError::Configuration)?;
-    let base_mass = r.vehicle.dry_mass.raw();
+    let root = value_for(manifest, design, variable::FIN_ROOT_SCALE, 1_000_000);
+    let span = value_for(manifest, design, variable::FIN_SPAN_SCALE, 1_000_000);
+    let tip = value_for(manifest, design, variable::FIN_TIP_SCALE, 1_000_000);
+    let sweep = value_for(manifest, design, variable::FIN_SWEEP_SCALE, 1_000_000);
+    let chord_mean = (i64::from(root) + i64::from(tip)) / 2;
+    let area_scale = ((i64::from(span) * chord_mean) / 1_000_000).clamp(500_000, 2_000_000) as i32;
+    let fin_mass_base = r.vehicle.dry_mass.raw() / 12;
+    let fin_delta =
+        ((i64::from(fin_mass_base) * i64::from(area_scale - 1_000_000)) / 1_000_000) as i32;
+    let fin_position_q28 = ((i64::from(r.vehicle.length.raw()) << 15) * 4 / 5) as i32;
+    apply_point_mass(&mut r.vehicle, fin_delta, fin_position_q28);
+    r.vehicle.pitch_damping = ksa64_core::phase8_numeric::SpatialCoefficient::from_raw(scale(
+        r.vehicle.pitch_damping.raw(),
+        area_scale,
+    ));
+    r.vehicle.yaw_damping = ksa64_core::phase8_numeric::SpatialCoefficient::from_raw(scale(
+        r.vehicle.yaw_damping.raw(),
+        area_scale,
+    ));
+    let length_q28 = (i64::from(r.vehicle.length.raw())) << 15;
+    let sweep_shift = length_q28 * i64::from(sweep - 1_000_000) / 10_000_000;
+    for knot in &mut r.vehicle.aero_knots[..r.vehicle.aero_knot_count as usize] {
+        knot.normal_force_slope = ksa64_core::phase8_numeric::SpatialCoefficient::from_raw(scale(
+            knot.normal_force_slope.raw(),
+            area_scale,
+        ));
+        knot.cp_from_nose = ksa64_core::phase8_numeric::SpatialMomentArm::from_raw(
+            (i64::from(knot.cp_from_nose.raw()) + sweep_shift).clamp(1, length_q28) as i32,
+        )
+    }
+    let ballast = value_for(manifest, design, variable::BALLAST_MASS_Q21, 0);
+    let ballast_position = value_for(manifest, design, variable::BALLAST_POSITION_Q28, 53_687_091);
+    apply_point_mass(&mut r.vehicle, ballast, ballast_position);
     for i in 0..design.value_count as usize {
         let id = manifest.variables[i].id;
         let v = design.values[i];
         match id {
-            variable::FIN_ROOT_SCALE => {
-                r.vehicle.pitch_damping = ksa64_core::phase8_numeric::SpatialCoefficient::from_raw(
-                    scale(r.vehicle.pitch_damping.raw(), v),
-                );
-                r.vehicle.yaw_damping = ksa64_core::phase8_numeric::SpatialCoefficient::from_raw(
-                    scale(r.vehicle.yaw_damping.raw(), v),
-                );
-            }
-            variable::FIN_SPAN_SCALE => {
-                r.vehicle.pitch_damping = ksa64_core::phase8_numeric::SpatialCoefficient::from_raw(
-                    scale(r.vehicle.pitch_damping.raw(), v),
-                );
-                r.vehicle.yaw_damping = ksa64_core::phase8_numeric::SpatialCoefficient::from_raw(
-                    scale(r.vehicle.yaw_damping.raw(), v),
-                );
-                for knot in &mut r.vehicle.aero_knots[..r.vehicle.aero_knot_count as usize] {
-                    knot.normal_force_slope =
-                        ksa64_core::phase8_numeric::SpatialCoefficient::from_raw(scale(
-                            knot.normal_force_slope.raw(),
-                            v,
-                        ));
-                }
-            }
-            variable::BALLAST_MASS_Q21 => {
-                r.vehicle.dry_mass =
-                    ksa64_core::phase8_numeric::SpatialMass::from_raw(base_mass.saturating_add(v))
-            }
+            variable::FIN_ROOT_SCALE
+            | variable::FIN_SPAN_SCALE
+            | variable::FIN_TIP_SCALE
+            | variable::FIN_SWEEP_SCALE
+            | variable::BALLAST_MASS_Q21
+            | variable::BALLAST_POSITION_Q28 => {}
             variable::DROGUE_CDA_SCALE => {
                 r.vehicle.drogue_cda = ksa64_core::phase8_numeric::SpatialArea::from_raw(scale(
                     r.vehicle.drogue_cda.raw(),
@@ -429,22 +537,23 @@ fn materialize(
             variable::ACTUATOR_MASS_Q21 => {
                 let delta = v.saturating_sub(r.capability.actuator_mass_q21);
                 r.capability.actuator_mass_q21 = v;
-                r.vehicle.dry_mass = ksa64_core::phase8_numeric::SpatialMass::from_raw(
-                    r.vehicle.dry_mass.raw().saturating_add(delta),
-                )
+                apply_point_mass(&mut r.vehicle, delta, r.capability.pivot_from_nose_q28)
             }
             variable::PROPORTIONAL_GAIN_Q15 => r.capability.proportional_gain_q15 = v,
             variable::DERIVATIVE_GAIN_Q15 => r.capability.derivative_gain_q15 = v,
             _ => {}
         }
     }
-    let identity = design.identity.rotate_left(9) ^ study.raw();
+    let identity = design.materialized_ids[0];
     r.vehicle.identity = identity;
-    r.mission.identity = identity.rotate_left(5);
+    r.mission.identity = design.materialized_ids[1];
     r.mission.vehicle_identity = identity;
-    r.capability.identity = identity.rotate_left(11);
+    r.capability.identity = design.materialized_ids[3];
     r.capability.vehicle_identity = identity;
-    r.avionics.identity = identity.rotate_left(17);
+    r.avionics.identity = design.materialized_ids[2];
+    if !r.vehicle.is_valid() || !r.mission.is_valid() {
+        return Err(Phase9EvaluationError::Candidate);
+    }
     Ok(r)
 }
 
@@ -490,15 +599,20 @@ fn extract_metrics(
     values[0] = summary.physical.metrics[MetricSlot::ApogeeAltitude as usize];
     values[1] = summary.physical.metrics[MetricSlot::LandingDistance as usize];
     values[2] = summary.physical.metrics[MetricSlot::RailExitVelocity as usize];
-    values[3] = summary.physical.metrics[MetricSlot::MinimumStaticMargin as usize];
+    values[3] = summary.physical.metrics[MetricSlot::RailExitStaticMargin as usize]
+        .min(summary.physical.metrics[MetricSlot::BurnoutStaticMargin as usize]);
     values[4] = summary.physical.metrics[MetricSlot::ImpactVelocity as usize];
     values[5] = summary.physical.metrics[MetricSlot::MaxMach as usize];
     values[6] = summary.physical.metrics[MetricSlot::MaximumAngleOfAttack as usize];
     values[7] = vehicle_mass;
     values[8] = i32::from(summary.max_attitude_error_turn16.unsigned_abs());
     values[9] = i32::from(summary.saturation_count);
-    values[10] = i32::from((summary.deployment_feedback & 3) == 3);
-    values[11] = i32::from(summary.alarms);
+    values[10] = i32::from(
+        summary.deployment_feedback
+            & (ksa64_core::phase8_mission::EVENT_DROGUE | ksa64_core::phase8_mission::EVENT_MAIN)
+            == (ksa64_core::phase8_mission::EVENT_DROGUE | ksa64_core::phase8_mission::EVENT_MAIN),
+    );
+    values[11] = i32::from(summary.alarms & (8 | 32) != 0);
     valid |= 0x0fff;
     (values, valid)
 }
@@ -604,7 +718,7 @@ fn aggregate_value(
         }
         AggregateId::Quantile95 => {
             values.sort_unstable();
-            let rank = ((95 * values.len() + 99) / 100).max(1) - 1;
+            let rank = (95 * values.len()).div_ceil(100).max(1) - 1;
             Ok(values[rank])
         }
         AggregateId::FailureRate => {
@@ -627,8 +741,12 @@ fn aggregate_candidate(
     cases: &[CaseEvidence],
 ) -> Result<CandidateAggregate, Phase9EvaluationError> {
     let mut objectives = [0; MAX_METRICS];
-    for i in 0..m.objective_count as usize {
-        objectives[i] = aggregate_value(
+    for (i, output) in objectives
+        .iter_mut()
+        .enumerate()
+        .take(m.objective_count as usize)
+    {
+        *output = aggregate_value(
             cases,
             metric_index(m.objectives[i].metric_id).ok_or(Phase9EvaluationError::Metric)?,
             m.objectives[i].aggregate,
@@ -637,14 +755,18 @@ fn aggregate_candidate(
     let mut values = [0; MAX_CONSTRAINT_RESULTS];
     let mut violated = 0u8;
     let mut normalized = 0i128;
-    for i in 0..m.constraint_count as usize {
+    for (i, output) in values
+        .iter_mut()
+        .enumerate()
+        .take(m.constraint_count as usize)
+    {
         let spec = m.constraints[i];
         let value = aggregate_value(
             cases,
             metric_index(spec.metric_id).ok_or(Phase9EvaluationError::Metric)?,
             spec.aggregate,
         )?;
-        values[i] = value;
+        *output = value;
         let delta = match spec.op {
             ConstraintOp::AtLeast => (i128::from(spec.threshold) - i128::from(value)).max(0),
             ConstraintOp::AtMost => (i128::from(value) - i128::from(spec.threshold)).max(0),

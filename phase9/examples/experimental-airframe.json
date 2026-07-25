@@ -1,0 +1,12 @@
+{
+  "study": "experimental-airframe",
+  "engine": "nsga2-v1",
+  "preset": "custom",
+  "master_seed": 1263747385,
+  "budgets": {
+    "population": 32,
+    "generations": 12,
+    "finalists": 0,
+    "max_candidates": 100000
+  }
+}

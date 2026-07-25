@@ -1,6 +1,7 @@
 //! Persistent bounded JSONL evaluator service for external optimizers.
+use crate::phase9::design_from_values;
 use crate::phase9_search::{CandidateEvaluator, SearchError};
-use ksa64_core::phase9_contract::{DesignVector, SearchManifest};
+use ksa64_core::phase9_contract::SearchManifest;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{BufRead, Write};
@@ -150,10 +151,14 @@ pub fn serve_jsonl<R: BufRead, W: Write, E: CandidateEvaluator>(
                 };
                 let mut raw = [0; 32];
                 let mut valid = supplied.len() == manifest.variable_count as usize;
-                for i in 0..manifest.variable_count as usize {
+                for (i, output) in raw
+                    .iter_mut()
+                    .enumerate()
+                    .take(manifest.variable_count as usize)
+                {
                     let spec = manifest.variables[i];
                     match supplied.get(&spec.id) {
-                        Some(v) if spec.accepts(*v) => raw[i] = *v,
+                        Some(v) if spec.accepts(*v) => *output = *v,
                         _ => valid = false,
                     }
                 }
@@ -175,15 +180,7 @@ pub fn serve_jsonl<R: BufRead, W: Write, E: CandidateEvaluator>(
                     )?;
                     continue;
                 }
-                let candidate = DesignVector {
-                    identity: 0,
-                    manifest_identity: manifest.identity,
-                    value_count: manifest.variable_count,
-                    values: raw,
-                    materialized_ids: [0; 4],
-                }
-                .seal()
-                .map_err(|_| ProtocolError::Output)?;
+                let candidate = design_from_values(manifest, raw);
                 match evaluator.evaluate(&candidate, request.tier.unwrap_or(8)) {
                     Ok(v) => respond(
                         &mut output,
@@ -308,7 +305,9 @@ fn respond<W: Write>(
 mod tests {
     use super::*;
     use crate::phase9::{baseline_vector, built_in_manifest, CandidateEvaluation, StudyId};
-    use ksa64_core::phase9_contract::{CandidateAggregate, SearchEngineId, SearchPresetId};
+    use ksa64_core::phase9_contract::{
+        CandidateAggregate, DesignVector, SearchEngineId, SearchPresetId,
+    };
     #[test]
     fn malformed_input_does_not_end_session() {
         let m = built_in_manifest(

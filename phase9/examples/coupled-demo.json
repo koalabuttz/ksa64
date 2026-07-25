@@ -1,0 +1,12 @@
+{
+  "study": "coupled",
+  "engine": "nsga2-v1",
+  "preset": "custom",
+  "master_seed": 1263747385,
+  "budgets": {
+    "population": 32,
+    "generations": 16,
+    "finalists": 16,
+    "max_candidates": 100000
+  }
+}

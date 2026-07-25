@@ -1,5 +1,5 @@
 //! Deterministic Phase 9 search engines and feasibility-first ordering.
-use crate::phase9::{baseline_vector, CandidateEvaluation};
+use crate::phase9::{baseline_vector, design_from_values, CandidateEvaluation};
 use ksa64_core::phase9_contract::{
     CandidateAggregate, DesignVector, Direction, SearchEngineId, SearchManifest, VariableKind,
 };
@@ -100,7 +100,7 @@ pub fn dominates(m: &SearchManifest, a: &CandidateAggregate, b: &CandidateAggreg
             }
         }
     }
-    better
+    better || a.candidate_identity < b.candidate_identity
 }
 pub fn pareto_front(m: &SearchManifest, values: &[CandidateAggregate]) -> Vec<usize> {
     let mut out = Vec::new();
@@ -127,15 +127,7 @@ fn quantized(spec: ksa64_core::phase9_contract::VariableSpec, numer: u64, denom:
     (i64::from(spec.minimum) + k * i64::from(spec.quantum)) as i32
 }
 fn from_values(m: &SearchManifest, values: [i32; 32]) -> DesignVector {
-    DesignVector {
-        identity: 0,
-        manifest_identity: m.identity,
-        value_count: m.variable_count,
-        values,
-        materialized_ids: [0; 4],
-    }
-    .seal()
-    .unwrap()
+    design_from_values(m, values)
 }
 pub(crate) fn generation_fingerprint(
     index: u16,
@@ -252,6 +244,7 @@ pub fn grid_candidates(
     Ok(out)
 }
 
+#[allow(clippy::needless_range_loop)]
 fn initial_population(m: &SearchManifest) -> Vec<DesignVector> {
     let n = usize::from(m.budgets.population.max(1));
     let baseline = baseline_vector(m);
@@ -286,6 +279,7 @@ fn tournament(m: &SearchManifest, a: &CandidateAggregate, b: &CandidateAggregate
         a.candidate_identity <= b.candidate_identity
     }
 }
+#[allow(clippy::needless_range_loop)]
 fn offspring(
     m: &SearchManifest,
     g: u16,
@@ -332,7 +326,7 @@ fn offspring(
                 }
             };
             let mutation = keyed_word_raw(m.master_seed, g as u32, child as u8, v as u8, 5);
-            if mutation % 8 == 0 {
+            if mutation.is_multiple_of(8) {
                 let delta = match (mutation >> 8) % 3 {
                     0 => -1,
                     1 => 1,
@@ -448,10 +442,26 @@ fn evaluate_generation<E: CandidateEvaluator + Sync>(
     candidates: Vec<DesignVector>,
     workers: usize,
 ) -> Result<SearchGeneration, SearchError> {
-    cache.prefetch(&candidates, 8, workers)?;
+    cache.prefetch(&candidates, 1, workers)?;
+    let promoted: Vec<DesignVector> = candidates
+        .iter()
+        .copied()
+        .filter(|c| {
+            cache
+                .cached(c, 1)
+                .map(|v| v.aggregate.feasible)
+                .unwrap_or(false)
+        })
+        .collect();
+    cache.prefetch(&promoted, 8, workers)?;
     let mut aggregates = Vec::with_capacity(candidates.len());
     for c in &candidates {
-        aggregates.push(cache.cached(c, 8)?.aggregate)
+        let nominal = cache.cached(c, 1)?;
+        aggregates.push(if nominal.aggregate.feasible {
+            cache.cached(c, 8)?.aggregate
+        } else {
+            nominal.aggregate
+        })
     }
     let crc = generation_fingerprint(index, &candidates, &aggregates);
     Ok(SearchGeneration {
@@ -504,6 +514,7 @@ fn reflect(mut v: i64, min: i64, max: i64) -> i64 {
     }
     v
 }
+#[allow(clippy::needless_range_loop)]
 fn run_de<E: CandidateEvaluator + Sync>(
     m: &SearchManifest,
     cache: &mut EvalCache<E>,

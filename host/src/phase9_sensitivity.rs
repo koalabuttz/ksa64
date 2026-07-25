@@ -1,4 +1,5 @@
 //! Exact one-design-quantum sensitivity records (KSN9).
+use crate::phase9::design_from_values;
 use crate::phase9_search::{CandidateEvaluator, SearchError};
 use ksa64_core::phase9_contract::{DesignVector, SearchManifest};
 use ksa64_interface::crc32_ieee;
@@ -32,15 +33,13 @@ pub fn one_at_a_time<E: CandidateEvaluator>(
             (i64::from(center) - i64::from(spec.quantum)).max(i64::from(spec.minimum)) as i32;
         let upper =
             (i64::from(center) + i64::from(spec.quantum)).min(i64::from(spec.maximum)) as i32;
-        let mut lo = *base;
-        lo.values[v] = lower;
-        lo.identity = 0;
-        lo = lo.seal().map_err(|_| SearchError::Configuration)?;
-        let mut hi = *base;
-        hi.values[v] = upper;
-        hi.identity = 0;
-        hi = hi.seal().map_err(|_| SearchError::Configuration)?;
+        let mut lo_values = base.values;
+        lo_values[v] = lower;
+        let lo = design_from_values(m, lo_values);
         let le = e.evaluate(&lo, tier)?;
+        let mut hi_values = base.values;
+        hi_values[v] = upper;
+        let hi = design_from_values(m, hi_values);
         let he = e.evaluate(&hi, tier)?;
         for o in 0..m.objective_count as usize {
             let baseline = nominal.aggregate.objectives[o];
