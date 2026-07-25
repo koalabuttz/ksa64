@@ -11,11 +11,15 @@ use crate::phase8_world::{
 };
 
 use super::forces::{
-    dynamic_pressure_q13, environment_with_wind_scale, evaluate_forces, recovery_force, ForceInput,
+    dynamic_pressure_q13, environment_with_wind_scale, evaluate_forces, evaluate_forces_controlled,
+    recovery_force, ForceInput,
 };
 use super::machine::Phase8MissionMachine;
 use super::propulsion::{burn_propellant, derive_mass_properties, sample_motor_thrust};
-use super::{HobbySpatialPhase, Phase8MissionError, SpatialAeroState, SpatialMassProperties};
+use super::{
+    HobbySpatialPhase, Phase85AppliedControl, Phase8MissionError, SpatialAeroState,
+    SpatialMassProperties,
+};
 
 pub(super) struct AdvanceOutput {
     pub state: HobbySpatialState,
@@ -28,6 +32,15 @@ pub(super) struct AdvanceOutput {
 pub(super) fn advance(
     machine: &mut Phase8MissionMachine<'_>,
     timestep: SpatialTime,
+) -> Result<AdvanceOutput, Phase8MissionError> {
+    advance_controlled(machine, timestep, Phase85AppliedControl::NEUTRAL, false)
+}
+
+pub(super) fn advance_controlled(
+    machine: &mut Phase8MissionMachine<'_>,
+    timestep: SpatialTime,
+    control: Phase85AppliedControl,
+    exact_attitude_substeps: bool,
 ) -> Result<AdvanceOutput, Phase8MissionError> {
     let phase = machine.snapshot.phase;
     let mut status = NumericStatus::CLEAR;
@@ -123,18 +136,21 @@ pub(super) fn advance(
             (state, forces.aero)
         }
         HobbySpatialPhase::PoweredFlight | HobbySpatialPhase::Coast => {
-            let forces = evaluate_forces(
-                ForceInput {
-                    vehicle: machine.vehicle,
-                    mass,
-                    state: machine.snapshot.state,
-                    environment,
-                    thrust_q13: thrust,
-                    variation: machine.variation,
-                    enforce_envelope: true,
-                },
-                &mut status,
-            )?;
+            let input = ForceInput {
+                vehicle: machine.vehicle,
+                mass,
+                state: machine.snapshot.state,
+                environment,
+                thrust_q13: thrust,
+                variation: machine.variation,
+                enforce_envelope: true,
+            };
+            let applied = if phase == HobbySpatialPhase::PoweredFlight {
+                control
+            } else {
+                Phase85AppliedControl::NEUTRAL
+            };
+            let forces = evaluate_forces_controlled(input, applied, &mut status)?;
             let acceleration = acceleration_from_force(
                 forces.force_enu,
                 mass.mass,
@@ -143,23 +159,38 @@ pub(super) fn advance(
             );
             let translated = step_free_translation(machine.snapshot.state, acceleration, timestep)
                 .map_err(|_| Phase8MissionError::Numeric)?;
-            let attitude_steps = if phase == HobbySpatialPhase::Coast {
-                2
-            } else {
-                1
-            };
-            let attitude_dt = if phase == HobbySpatialPhase::Coast {
-                SPATIAL_COAST_ATTITUDE_STEP
-            } else {
-                timestep
-            };
             let mut rotated = translated;
-            let mut index = 0;
-            while index < attitude_steps {
-                rotated =
-                    step_hobby_attitude(rotated, mass.inertia, forces.torque_body, attitude_dt)
-                        .map_err(|_| Phase8MissionError::Numeric)?;
-                index += 1;
+            if exact_attitude_substeps && phase == HobbySpatialPhase::Coast {
+                let mut remaining = timestep.raw();
+                while remaining > 0 {
+                    let raw = remaining.min(SPATIAL_COAST_ATTITUDE_STEP.raw());
+                    rotated = step_hobby_attitude(
+                        rotated,
+                        mass.inertia,
+                        forces.torque_body,
+                        SpatialTime::from_raw(raw),
+                    )
+                    .map_err(|_| Phase8MissionError::Numeric)?;
+                    remaining -= raw;
+                }
+            } else {
+                let attitude_steps = if phase == HobbySpatialPhase::Coast {
+                    2
+                } else {
+                    1
+                };
+                let attitude_dt = if phase == HobbySpatialPhase::Coast {
+                    SPATIAL_COAST_ATTITUDE_STEP
+                } else {
+                    timestep
+                };
+                let mut index = 0;
+                while index < attitude_steps {
+                    rotated =
+                        step_hobby_attitude(rotated, mass.inertia, forces.torque_body, attitude_dt)
+                            .map_err(|_| Phase8MissionError::Numeric)?;
+                    index += 1;
+                }
             }
             (rotated, forces.aero)
         }

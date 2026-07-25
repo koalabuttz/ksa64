@@ -1,6 +1,7 @@
 //! Phase 8 pre-deployment aerodynamics and recovery drag.
 
 use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericStatus};
+use crate::phase2_numeric::sin_cos_binary_q15;
 use crate::phase8_aero::{
     enforce_spatial_aero_envelope, sample_spatial_aerodynamics, small_angle_of_attack_q28,
     SpatialAeroError,
@@ -12,8 +13,8 @@ use crate::spatial_numeric::FixedVec3;
 
 use super::propulsion::scale_ppm;
 use super::{
-    magnitude3_i32, HobbySpatialPhase, Phase8MissionError, SpatialAeroState, SpatialMassProperties,
-    SpatialMissionVariation,
+    magnitude3_i32, HobbySpatialPhase, Phase85AppliedControl, Phase8MissionError, SpatialAeroState,
+    SpatialMassProperties, SpatialMissionVariation,
 };
 
 /// Below this pressure the air-relative direction becomes numerically singular
@@ -76,6 +77,14 @@ fn signed_opposing_force(
 
 pub(super) fn evaluate_forces(
     input: ForceInput<'_>,
+    status: &mut NumericStatus,
+) -> Result<ForceMoment, Phase8MissionError> {
+    evaluate_forces_controlled(input, Phase85AppliedControl::NEUTRAL, status)
+}
+
+pub(super) fn evaluate_forces_controlled(
+    input: ForceInput<'_>,
+    control: Phase85AppliedControl,
     status: &mut NumericStatus,
 ) -> Result<ForceMoment, Phase8MissionError> {
     let ForceInput {
@@ -142,9 +151,23 @@ pub(super) fn evaluate_forces(
         environment.air_speed_q19,
         status,
     );
-    let thrust = state
-        .attitude
-        .rotate(EnuForce::new(thrust_q13, 0, 0), status);
+    let thrust_body = if control.gimbal_turn16 == [0; 2] {
+        EnuForce::new(thrust_q13, 0, 0)
+    } else {
+        let (sin_pitch, cos_pitch) = sin_cos_binary_q15(control.gimbal_turn16[0] as u16);
+        let (sin_yaw, cos_yaw) = sin_cos_binary_q15(control.gimbal_turn16[1] as u16);
+        EnuForce::new(
+            multiply_scaled(
+                multiply_scaled(thrust_q13, i32::from(cos_pitch), 15, status),
+                i32::from(cos_yaw),
+                15,
+                status,
+            ),
+            multiply_scaled(thrust_q13, i32::from(sin_yaw), 15, status),
+            -multiply_scaled(thrust_q13, i32::from(sin_pitch), 15, status),
+        )
+    };
+    let thrust = state.attitude.rotate(thrust_body, status);
 
     let body = environment.air_velocity_body;
     let normal_slope = scale_ppm(
@@ -220,7 +243,19 @@ pub(super) fn evaluate_forces(
             status,
         ),
     );
-    let torque = aerodynamic_torque.checked_add(damping, status);
+    let thrust_torque = if control.gimbal_turn16 == [0; 2] {
+        BodyTorque::ZERO
+    } else {
+        let arm_q28 = subtract(control.pivot_from_nose_q28, mass.cg_from_nose.raw(), status);
+        BodyTorque::new(
+            0,
+            -multiply_scaled(arm_q28, thrust_body.z(), 29, status),
+            multiply_scaled(arm_q28, thrust_body.y(), 29, status),
+        )
+    };
+    let torque = aerodynamic_torque
+        .checked_add(damping, status)
+        .checked_add(thrust_torque, status);
     if !status.is_clear() {
         return Err(Phase8MissionError::Numeric);
     }

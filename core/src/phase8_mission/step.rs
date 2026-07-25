@@ -7,12 +7,13 @@ use crate::phase8_pack::{
     SpatialMissionPack, SpatialMotorPack, SpatialVehiclePack, WindProfilePack,
 };
 
-use super::advance::advance;
+use super::advance::{advance, advance_controlled};
 use super::machine::Phase8MissionMachine;
 use super::{
-    magnitude3_i32, phase8_snapshot_checksum, HobbySpatialPhase, Phase8Milestone,
-    Phase8MissionError, Phase8MissionResult, Phase8MissionSnapshot, SpatialMissionVariation,
-    EVENT_APOGEE, EVENT_BURNOUT, EVENT_DROGUE, EVENT_LANDING, EVENT_MAIN, EVENT_RAIL_EXIT,
+    magnitude3_i32, phase8_snapshot_checksum, HobbySpatialPhase, Phase85AppliedControl,
+    Phase85DeploymentCommand, Phase8Milestone, Phase8MissionError, Phase8MissionResult,
+    Phase8MissionSnapshot, SpatialMissionVariation, EVENT_APOGEE, EVENT_BURNOUT, EVENT_DROGUE,
+    EVENT_LANDING, EVENT_MAIN, EVENT_RAIL_EXIT,
 };
 
 impl Phase8MissionMachine<'_> {
@@ -76,6 +77,129 @@ impl Phase8MissionMachine<'_> {
             && successor.velocity.z() < 0
             && successor.position.z() <= self.mission.main_deployment_altitude.raw()
         {
+            next_phase = HobbySpatialPhase::MainRecovery;
+            events |= EVENT_MAIN;
+            self.main = Phase8Milestone::from_state(successor);
+            self.deployment_started_raw = successor.time.raw();
+        }
+        if matches!(
+            phase,
+            HobbySpatialPhase::DrogueRecovery | HobbySpatialPhase::MainRecovery
+        ) && successor.position.z() <= self.mission.launch_altitude.raw()
+            && successor.velocity.z() < 0
+        {
+            successor.position = EnuPosition::new(
+                successor.position.x(),
+                successor.position.y(),
+                self.mission.launch_altitude.raw(),
+            );
+            next_phase = HobbySpatialPhase::Complete;
+            events |= EVENT_LANDING;
+            self.landing = Phase8Milestone::from_state(successor);
+            self.terminal_outcome = Some(EvaluationOutcome::GroundContact);
+        }
+        self.previous_vertical_velocity = successor.velocity.z();
+        self.event_history |= events;
+        self.steps = self.steps.saturating_add(1);
+        self.snapshot = Phase8MissionSnapshot {
+            state: successor,
+            phase: next_phase,
+            events,
+            mass: advanced.mass,
+            thrust_q13: advanced.thrust_q13,
+            aero: advanced.aero,
+            wind_q22: [
+                advanced.environment.wind.total.x(),
+                advanced.environment.wind.total.y(),
+                advanced.environment.wind.total.z(),
+            ],
+        };
+        self.update_extrema(advanced.environment);
+        if events & EVENT_RAIL_EXIT != 0 {
+            self.rail_exit_static_margin = self.snapshot.aero.static_margin_q24;
+        }
+        if events & EVENT_BURNOUT != 0 {
+            self.burnout_static_margin = self.snapshot.aero.static_margin_q24;
+        }
+        self.checksum = phase8_snapshot_checksum(self.checksum, self.snapshot);
+        Ok(self.snapshot)
+    }
+
+    /// Advance the separately identified Phase 8.5 world by one exact segment.
+    /// Recovery transitions occur only from accepted avionics commands.
+    pub fn step_avionics(
+        &mut self,
+        timestep: crate::phase8_numeric::SpatialTime,
+        control: Phase85AppliedControl,
+        deployment: Phase85DeploymentCommand,
+    ) -> Result<Phase8MissionSnapshot, Phase8MissionError> {
+        if self.is_complete() {
+            return Err(Phase8MissionError::Complete);
+        }
+        let maximum = self.timestep()?;
+        if timestep.raw() <= 0 || timestep.raw() > maximum.raw() {
+            return Err(Phase8MissionError::Configuration);
+        }
+        if self
+            .snapshot
+            .state
+            .time
+            .raw()
+            .saturating_add(timestep.raw())
+            > self.mission.max_mission_time.raw()
+        {
+            return Err(Phase8MissionError::Configuration);
+        }
+        let phase = self.snapshot.phase;
+        let advanced = match advance_controlled(self, timestep, control, true) {
+            Ok(value) => value,
+            Err(Phase8MissionError::ModelEnvelopeExceeded) => {
+                return Err(self.fail(
+                    EvaluationOutcome::ModelEnvelopeExceeded,
+                    Phase8MissionError::ModelEnvelopeExceeded,
+                ))
+            }
+            Err(_) => {
+                return Err(self.fail(EvaluationOutcome::NumericFault, Phase8MissionError::Numeric))
+            }
+        };
+        let mut successor = advanced.state;
+        let mut events = 0u16;
+        let mut next_phase = phase;
+        if phase == HobbySpatialPhase::ConstrainedPowered
+            && self.rail.distance.raw() >= self.rail_exit_distance.raw()
+        {
+            next_phase = HobbySpatialPhase::PoweredFlight;
+            events |= EVENT_RAIL_EXIT;
+            self.rail_exit = Phase8Milestone::from_state(successor);
+        }
+        if matches!(
+            phase,
+            HobbySpatialPhase::ConstrainedPowered | HobbySpatialPhase::PoweredFlight
+        ) && successor.time.raw() >= self.motor.burn_time.raw()
+        {
+            next_phase = HobbySpatialPhase::Coast;
+            events |= EVENT_BURNOUT;
+            self.burnout = Phase8Milestone::from_state(successor);
+        }
+        if phase == HobbySpatialPhase::Coast
+            && self.previous_vertical_velocity >= 0
+            && successor.velocity.z() < 0
+        {
+            events |= EVENT_APOGEE;
+            self.apogee = Phase8Milestone::from_state(successor);
+        }
+        if phase == HobbySpatialPhase::Coast
+            && deployment.drogue
+            && self.event_history & EVENT_BURNOUT != 0
+        {
+            next_phase = HobbySpatialPhase::DrogueRecovery;
+            events |= EVENT_DROGUE;
+            self.drogue = Phase8Milestone::from_state(successor);
+            self.deployment_started_raw = successor.time.raw();
+            successor.angular_rate = BodyAngularRate::ZERO;
+        }
+        if phase == HobbySpatialPhase::DrogueRecovery && deployment.main {
             next_phase = HobbySpatialPhase::MainRecovery;
             events |= EVENT_MAIN;
             self.main = Phase8Milestone::from_state(successor);

@@ -23,6 +23,26 @@ pub const EVENT_MAIN: u16 = 1 << 4;
 pub const EVENT_LANDING: u16 = 1 << 5;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase85AppliedControl {
+    /// Signed full-turn binary angles: 65536 units per revolution.
+    pub gimbal_turn16: [i16; 2],
+    pub pivot_from_nose_q28: i32,
+}
+
+impl Phase85AppliedControl {
+    pub const NEUTRAL: Self = Self {
+        gimbal_turn16: [0; 2],
+        pivot_from_nose_q28: 0,
+    };
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Phase85DeploymentCommand {
+    pub drogue: bool,
+    pub main: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum HobbySpatialPhase {
     ConstrainedPowered = 0,
