@@ -109,13 +109,13 @@ fn receive_frame<S: Read>(stream: &mut S) -> Result<OwnedFrame, Phase85LinkError
         payload: frame.payload.to_vec(),
     })
 }
-fn capabilities(gimbal: bool) -> LinkCapabilities {
+fn capabilities(vehicle_identity: u32) -> LinkCapabilities {
     LinkCapabilities {
         role: EndpointRole::Flight,
         mode: LinkMode::ExactPaced,
         flags: CAP_EXACT_PACED | CAP_MISSION_CONTROL | CAP_TRANSCRIPT,
         link_contract_id: PHASE6_LINK_CONTRACT_ID,
-        vehicle_contract_id: if gimbal { 0x8500_1001 } else { 0x8500_0001 },
+        vehicle_contract_id: vehicle_identity,
         avionics_contract_id: KLR8_CONTRACT_ID,
         max_payload: 512,
         fast_hz: 32,
@@ -148,7 +148,7 @@ pub fn run_native_flight_endpoint<S: Read + Write>(
     )
     .ok_or(Phase85LinkError::Protocol)?;
     let mut cap_bytes = [0; CAPABILITY_PAYLOAD_LENGTH];
-    write_capabilities(&capabilities(gimbal), &mut cap_bytes)
+    write_capabilities(&capabilities(reference.vehicle.identity), &mut cap_bytes)
         .map_err(|_| Phase85LinkError::Codec)?;
     send_frame(stream, LinkRecordType::Capabilities, 0, 0, 0, 0, &cap_bytes)?;
     let start = receive_frame(stream)?;
@@ -214,6 +214,7 @@ pub fn run_host_external_with_limit<S: Read + Write>(
         || cap.mode != LinkMode::ExactPaced
         || cap.link_contract_id != PHASE6_LINK_CONTRACT_ID
         || cap.avionics_contract_id != KLR8_CONTRACT_ID
+        || cap.vehicle_contract_id != reference.capability.vehicle_identity
     {
         return Err(Phase85LinkError::Protocol);
     }
@@ -278,6 +279,7 @@ pub fn run_host_external_with_limit<S: Read + Write>(
         let expected = shadow.tick(Some(release.inertial), release.aid);
         let command_frame = receive_frame(stream)?;
         if command_frame.record != LinkRecordType::CanonicalCommand
+            || command_frame.sequence != epoch * 2 + 1
             || command_frame.measurement != epoch
             || command_frame.production != epoch
             || command_frame.effective != epoch + 1
@@ -291,7 +293,12 @@ pub fn run_host_external_with_limit<S: Read + Write>(
         }
         let status: Option<LocalStatusCell> = if epoch & 3 == 0 {
             let status_frame = receive_frame(stream)?;
-            if status_frame.record != LinkRecordType::CanonicalTelemetry {
+            if status_frame.record != LinkRecordType::CanonicalTelemetry
+                || status_frame.sequence != epoch * 2 + 2
+                || status_frame.measurement != epoch
+                || status_frame.production != epoch
+                || status_frame.effective != KLF6_NONE
+            {
                 return Err(Phase85LinkError::Protocol);
             }
             let value =

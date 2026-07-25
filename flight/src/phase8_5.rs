@@ -67,7 +67,7 @@ impl LocalNavigation {
             checksum: 0x811c_9dc5,
         }
     }
-    fn inertial(&mut self, cell: LocalInertialCell) {
+    fn inertial(&mut self, cell: &LocalInertialCell) {
         let mut a = 0;
         while a < 3 {
             let dv = (cell.delta_velocity[a] as i32) << 7;
@@ -86,7 +86,7 @@ impl LocalNavigation {
             &self.velocity_q19,
         )
     }
-    fn aid(&mut self, cell: LocalAidCell) {
+    fn aid(&mut self, cell: &LocalAidCell) {
         if cell.validity & LOCAL_AID_BAROMETER != 0 {
             self.position_q13[2] = blend(self.position_q13[2], cell.barometer_q13, 2)
         }
@@ -142,6 +142,7 @@ pub struct LocalFlightComputer {
     drogue_time_q18: i32,
     last_aid: Option<LocalAidCell>,
     last_command: LocalCommandCell,
+    last_status: Option<LocalStatusCell>,
     flight_checksum: u32,
     deadline_misses: u16,
 }
@@ -181,6 +182,7 @@ impl LocalFlightComputer {
                 control_demand: [0; 2],
                 status: 0,
             },
+            last_status: None,
             flight_checksum: 0x811c_9dc5,
             deadline_misses: 0,
         })
@@ -199,16 +201,20 @@ impl LocalFlightComputer {
             self.alarms |= LOCAL_ALARM_SAFE
         }
     }
-    pub fn tick(
+    pub fn tick_in_place(
         &mut self,
-        inertial: Option<LocalInertialCell>,
-        aid: Option<LocalAidCell>,
-    ) -> LocalFlightEvidence {
+        inertial: &LocalInertialCell,
+        inertial_present: bool,
+        aid: &LocalAidCell,
+        aid_present: bool,
+    ) {
         let epoch = self.epoch;
-        let valid_inertial = matches!(inertial,Some(v)if v.session==self.config.session&&v.measurement_epoch==epoch&&v.production_epoch==epoch);
+        let valid_inertial = inertial_present
+            && inertial.session == self.config.session
+            && inertial.measurement_epoch == epoch
+            && inertial.production_epoch == epoch;
         if valid_inertial {
-            let value = inertial.unwrap();
-            self.navigation.inertial(value);
+            self.navigation.inertial(inertial);
             self.missing = 0
         } else {
             self.missing = self.missing.saturating_add(1);
@@ -218,28 +224,31 @@ impl LocalFlightComputer {
                 self.alarms |= LOCAL_ALARM_SAFE
             }
         }
-        let valid_aid = matches!(aid, Some(v) if v.session == self.config.session
-            && v.measurement_epoch <= v.production_epoch
-            && v.production_epoch <= epoch
-            && epoch.wrapping_sub(v.production_epoch) <= 32);
-        if let Some(value) = if valid_aid { aid } else { None } {
-            self.navigation.aid(value);
-            self.last_aid = Some(value)
-        } else if aid.is_some() {
+        let valid_aid = aid_present
+            && aid.session == self.config.session
+            && aid.measurement_epoch <= aid.production_epoch
+            && aid.production_epoch <= epoch
+            && epoch.wrapping_sub(aid.production_epoch) <= 32;
+        if valid_aid {
+            self.navigation.aid(aid);
+            self.last_aid = Some(*aid)
+        } else if aid_present {
             self.alarms |= LOCAL_ALARM_AID
         }
         let time_q18 = (epoch as i32).saturating_mul(8192);
-        let measured_powered = inertial
-            .map(|v| v.vehicle_status & 2 != 0)
-            .unwrap_or(self.last_powered);
-        if inertial.is_some() {
+        let measured_powered = if inertial_present {
+            inertial.vehicle_status & 2 != 0
+        } else {
+            self.last_powered
+        };
+        if inertial_present {
             self.last_powered = measured_powered;
         }
         self.seen_powered |= measured_powered;
-        if let Some(sample) = inertial {
-            let acceleration_indicator = sample.delta_velocity[0].unsigned_abs() as u32
-                + sample.delta_velocity[1].unsigned_abs() as u32
-                + sample.delta_velocity[2].unsigned_abs() as u32;
+        if inertial_present {
+            let acceleration_indicator = inertial.delta_velocity[0].unsigned_abs() as u32
+                + inertial.delta_velocity[1].unsigned_abs() as u32
+                + inertial.delta_velocity[2].unsigned_abs() as u32;
             if time_q18 >= (1 << 16) && acceleration_indicator > 1_800 {
                 self.launched = true
             }
@@ -308,13 +317,14 @@ impl LocalFlightComputer {
             }
         }
         let mut demand = self.last_command.control_demand;
-        if let Some(value) = inertial {
+        if inertial_present {
+            let value = inertial;
             let mut a = 0;
             while a < 2 {
                 let angle = value.platform_angle[a + 1] as i32;
                 let rate = value.angular_rate[a + 1] as i32;
-                let p = ((-(angle as i64) * self.config.proportional_gain_q15 as i64) >> 15) as i32;
-                let d = ((-(rate as i64) * self.config.derivative_gain_q15 as i64) >> 15) as i32;
+                let p = (-angle * i32::from(self.config.proportional_gain_q15)) >> 15;
+                let d = (-rate * i32::from(self.config.derivative_gain_q15)) >> 15;
                 demand[a] = clamp_i16(p.saturating_add(d));
                 a += 1
             }
@@ -378,10 +388,19 @@ impl LocalFlightComputer {
         } else {
             None
         };
+        self.last_status = status;
         self.epoch = self.epoch.wrapping_add(1);
+    }
+    pub const fn command(&self) -> LocalCommandCell {
+        self.last_command
+    }
+    pub const fn status(&self) -> Option<LocalStatusCell> {
+        self.last_status
+    }
+    pub const fn evidence(&self) -> LocalFlightEvidence {
         LocalFlightEvidence {
-            command,
-            status,
+            command: self.last_command,
+            status: self.last_status,
             navigation: self.navigation,
             safe: self.safe,
             armed: self.armed,
@@ -392,19 +411,54 @@ impl LocalFlightComputer {
             deadline_misses: self.deadline_misses,
         }
     }
+    pub fn tick(
+        &mut self,
+        inertial: Option<LocalInertialCell>,
+        aid: Option<LocalAidCell>,
+    ) -> LocalFlightEvidence {
+        let missing_inertial = LocalInertialCell {
+            session: 0,
+            measurement_epoch: 0,
+            production_epoch: 0,
+            validity: 0,
+            flags: 0,
+            platform_angle: [0; 3],
+            angular_rate: [0; 3],
+            delta_velocity: [0; 3],
+            gimbal_applied: [0; 2],
+            vehicle_status: 0,
+            actuator_feedback: 0,
+        };
+        let missing_aid = LocalAidCell {
+            session: 0,
+            measurement_epoch: 0,
+            production_epoch: 0,
+            validity: 0,
+            events: 0,
+            onboard_time_q18: 0,
+            barometer_q13: 0,
+            gps_position_q13: [0; 3],
+            gps_velocity_q19: [0; 3],
+            attitude_vector: [0; 3],
+            continuity: 0,
+            deployment_feedback: 0,
+            vehicle_status: 0,
+            clock_flags: 0,
+        };
+        self.tick_in_place(
+            inertial.as_ref().unwrap_or(&missing_inertial),
+            inertial.is_some(),
+            aid.as_ref().unwrap_or(&missing_aid),
+            aid.is_some(),
+        );
+        self.evidence()
+    }
 }
 fn clamp_i16(v: i32) -> i16 {
     v.clamp(i16::MIN as i32, i16::MAX as i32) as i16
 }
-fn hb(mut h: u32, b: u8) -> u32 {
-    h ^= b as u32;
-    h.wrapping_mul(16_777_619)
-}
-fn hw(mut h: u32, v: u32) -> u32 {
-    for b in v.to_le_bytes() {
-        h = hb(h, b)
-    }
-    h
+fn hw(h: u32, value: u32) -> u32 {
+    h.rotate_left(5).wrapping_add(0x9e37_79b9) ^ value
 }
 fn hash_nav(mut h: u32, e: u16, p: &[i32; 3], v: &[i32; 3]) -> u32 {
     h = hw(h, e as u32);

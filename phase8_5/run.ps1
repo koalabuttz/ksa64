@@ -32,9 +32,6 @@ try {
         return
     }
 
-    if ($Display -eq "tui") {
-        throw "The bounded VICE acceptance probe is noninteractive. Live host/VICE TUI is enabled by the Phase 8.5 bridge after the finite exactness gate."
-    }
     $running = Get-Process -Name "x64sc" -ErrorAction SilentlyContinue
     if ($running) { throw "Refusing to launch another VICE instance; close PID(s) $($running.Id -join ', ')." }
     $versions = Get-Content -Raw -LiteralPath "toolchains/versions.json" | ConvertFrom-Json
@@ -51,8 +48,11 @@ try {
     }
     if (-not (Test-Path -LiteralPath $prg)) { throw "missing C64 endpoint: $prg" }
     if (-not (Test-Path -LiteralPath $broker)) { throw "missing host bridge: $broker" }
-    $output = Join-Path $projectRoot "phase8_5/reference/vice-probe-$ProbeReleases.json"
-    & python -B phase8_5/reference/vice_mailbox_bridge.py --vice $vice --prg $prg --broker $broker --max-releases $ProbeReleases --output $output
+    $probeName = if ($Gimbal) { "vice-probe-gimbal-$ProbeReleases.json" } else { "vice-probe-$ProbeReleases.json" }
+    $output = Join-Path $projectRoot "phase8_5/reference/$probeName"
+    $relayArgs = @("-B", "phase8_5/reference/vice_mailbox_bridge.py", "--vice", $vice, "--prg", $prg, "--broker", $broker, "--max-releases", $ProbeReleases, "--display", $Display, "--pace", $Pace, "--output", $output)
+    if ($Gimbal) { $relayArgs += "--gimbal" }
+    & python @relayArgs
     if ($LASTEXITCODE -ne 0) { throw "VICE acceptance probe failed with exit code $LASTEXITCODE" }
 } finally {
     Pop-Location

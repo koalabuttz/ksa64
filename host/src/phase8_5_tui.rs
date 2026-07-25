@@ -516,9 +516,13 @@ fn restore(terminal: &mut Terminal<CrosstermBackend<Stderr>>) -> io::Result<()> 
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()
 }
-pub fn run_local_console(
+pub fn run_local_console_with_worker<F>(
     config: LocalConsoleConfig,
-) -> Result<Phase85RunEvidence, LocalConsoleError> {
+    worker: F,
+) -> Result<Phase85RunEvidence, LocalConsoleError>
+where
+    F: FnOnce(&mut dyn Phase85Sink) -> Result<(), ()> + Send + 'static,
+{
     let (tx, rx): (Sender<LiveEvent>, Receiver<LiveEvent>) = mpsc::channel();
     let worker_config = config.clone();
     thread::spawn(move || {
@@ -526,7 +530,7 @@ pub fn run_local_console(
             tx: tx.clone(),
             pace: worker_config.pace,
         };
-        if run_host_host(worker_config.gimbal, Some(&mut sink)).is_err() {
+        if worker(&mut sink).is_err() {
             let _ = tx.send(LiveEvent::Failed);
         }
     });
@@ -577,6 +581,18 @@ pub fn run_local_console(
     restore(&mut terminal)?;
     result
 }
+
+pub fn run_local_console(
+    config: LocalConsoleConfig,
+) -> Result<Phase85RunEvidence, LocalConsoleError> {
+    let gimbal = config.gimbal;
+    run_local_console_with_worker(config, move |sink| {
+        run_host_host(gimbal, Some(sink))
+            .map(|_| ())
+            .map_err(|_| ())
+    })
+}
+
 pub fn recording_from_updates(
     updates: Vec<Phase85Update>,
     evidence: Phase85RunEvidence,

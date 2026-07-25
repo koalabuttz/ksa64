@@ -11,9 +11,9 @@
   "runs": 64,
   "saturated": 64,
   "schema": "ksa64.phase8_5.campaign-evidence-v1",
-  "wall_seconds": 3.5187734,
+  "wall_seconds": 2.6981466,
   "workers": 4,
-  "sha256": "97577e9352e51c42317d638f3d00a57458a9422bb4dc107494dfe5e33d061fdf",
+  "sha256": "790bfb691df087338d61ea7a9e56b7f2a2825ac9087510b02562f39a1ffb5119",
   "worker_exactness": [
     1,
     4

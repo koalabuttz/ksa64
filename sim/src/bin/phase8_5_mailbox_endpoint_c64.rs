@@ -71,9 +71,15 @@ pub extern "C" fn main() -> isize {
         }
         w32(BOX, 0, BOX_MAGIC)
     }
+    while unsafe { r(4) } == 0 && unsafe { r(10) } == 0 {}
+    let gimbal = unsafe { r(11) } != 0;
     let config = LocalFlightConfig {
         session: 0x8501,
-        capability: LocalControlCapability::MonitorOnly,
+        capability: if gimbal {
+            LocalControlCapability::TwoAxisGimbal
+        } else {
+            LocalControlCapability::MonitorOnly
+        },
         minimum_arming_time_q18: 1 << 18,
         minimum_arming_altitude_q13: 10 << 13,
         burnout_qualification_time_q18: ksa64_core::phase8_fixtures::I211W_SPATIAL_MOTOR
@@ -83,9 +89,9 @@ pub extern "C" fn main() -> isize {
         main_backup_time_q18: 65 << 18,
         main_altitude_q13: 200 << 13,
         minimum_deployment_separation_q18: 2 << 18,
-        proportional_gain_q15: 0,
-        derivative_gain_q15: 0,
-        gimbal_limit_q15: 0,
+        proportional_gain_q15: if gimbal { 8_192 } else { 0 },
+        derivative_gain_q15: if gimbal { 4_096 } else { 0 },
+        gimbal_limit_q15: if gimbal { 910 } else { 0 },
     };
     let mut numeric = ksa64_core::numeric::NumericStatus::CLEAR;
     let axis = match ksa64_core::phase8_world::rail_axis_from_mission(
@@ -117,14 +123,31 @@ pub extern "C" fn main() -> isize {
         Some(value) => value,
         None => stop(12, 0, 0, 0),
     };
+    let absent_aid = LocalAidCell {
+        session: 0,
+        measurement_epoch: 0,
+        production_epoch: 0,
+        validity: 0,
+        events: 0,
+        onboard_time_q18: 0,
+        barometer_q13: 0,
+        gps_position_q13: [0; 3],
+        gps_velocity_q19: [0; 3],
+        attitude_vector: [0; 3],
+        continuity: 0,
+        deployment_feedback: 0,
+        vehicle_status: 0,
+        clock_flags: 0,
+    };
     let mut seen = 0u8;
+    let mut epochs = 0u16;
     loop {
         if unsafe { r(10) } != 0 {
             stop(
                 0,
-                flight.navigation().checksum as u16,
+                epochs,
                 flight.navigation().checksum,
-                0,
+                flight.evidence().flight_checksum,
             )
         }
         let sequence = unsafe { r(4) };
@@ -145,26 +168,41 @@ pub extern "C" fn main() -> isize {
             Ok(value) => value,
             Err(_) => stop(2, 0, flight.navigation().checksum, 0),
         };
-        let output = flight.tick(Some(inertial), aid);
+        let aid_present = aid.is_some();
+        let aid_ref = aid.as_ref().unwrap_or(&absent_aid);
+        flight.tick_in_place(&inertial, true, aid_ref, aid_present);
+        epochs = inertial.measurement_epoch;
+        let command_cell = flight.command();
+        let status_cell = flight.status();
+        let flight_checksum = flight.evidence().flight_checksum;
         let mut command = [0; LOCAL_COMMAND_LENGTH];
-        if write_local_command(&output.command, &mut command).is_err() {
+        if write_local_command(&command_cell, &mut command).is_err() {
             stop(
                 3,
                 inertial.measurement_epoch,
                 flight.navigation().checksum,
-                output.flight_checksum,
+                flight_checksum,
             )
         }
         copy_out(128, &command);
         unsafe { w(9, 0) };
-        if let Some(status) = output.status {
+        if inertial.measurement_epoch & 3 == 0 {
+            let status = match status_cell {
+                Some(value) => value,
+                None => stop(
+                    5,
+                    inertial.measurement_epoch,
+                    flight.navigation().checksum,
+                    flight_checksum,
+                ),
+            };
             let mut bytes = [0; LOCAL_STATUS_LENGTH];
             if write_local_status(&status, &mut bytes).is_err() {
                 stop(
                     4,
                     inertial.measurement_epoch,
                     flight.navigation().checksum,
-                    output.flight_checksum,
+                    flight_checksum,
                 )
             }
             copy_out(152, &bytes);

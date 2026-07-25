@@ -1,0 +1,62 @@
+{
+  "schema": "ksa64.phase8_5.stock-fit-decision-v1",
+  "toolchain": "ghcr.io/koalabuttz/rust-mos:ac2fb2277-4537158-4aaa40e16",
+  "profile": "c64 opt-level=z lto=true codegen-units=1",
+  "flat_region": {
+    "origin": 2049,
+    "end_exclusive": 53248,
+    "bytes": 51199
+  },
+  "required_linked_bytes": 71295,
+  "flat_overflow_bytes": 20096,
+  "below_c000_overflow_bytes": 24192,
+  "hidden_ram_best_case": {
+    "io_window_bytes": 4096,
+    "kernal_window_bytes": 8192,
+    "total_addressable_bytes": 63487,
+    "remaining_deficit_bytes": 7808
+  },
+  "absolute_64k_deficit_bytes": 5759,
+  "static_stack_bytes": 3465,
+  "measured_noinline_experiment": {
+    "overflow_bytes": 22520,
+    "delta_bytes": 2424,
+    "accepted": false
+  },
+  "largest_symbols": [
+    [
+      "combined main/inlined executor",
+      28272
+    ],
+    [
+      "force evaluation",
+      6004
+    ],
+    [
+      "attitude step",
+      2758
+    ],
+    [
+      "mass-property derivation",
+      1852
+    ],
+    [
+      "vehicle validation",
+      1450
+    ],
+    [
+      "world result",
+      1287
+    ],
+    [
+      "scaled division",
+      1006
+    ],
+    [
+      "gust target",
+      1004
+    ]
+  ],
+  "decision": "stop_at_explicit_stock_fit_boundary",
+  "reason": "The linked resident image exceeds both the ordinary C64 region and total physical 64 KiB before reserving zero page, stack, screen, I/O, or mailboxes. Banking changes visibility, not capacity."
+}
