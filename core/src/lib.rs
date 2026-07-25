@@ -26,6 +26,8 @@ pub mod phase8_format;
 pub mod phase8_mission;
 pub mod phase8_numeric;
 pub mod phase8_pack;
+pub mod phase8_result;
+pub mod phase8_telemetry;
 pub mod phase8_world;
 pub mod planar;
 pub mod planar_dynamics;

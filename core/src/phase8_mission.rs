@@ -108,6 +108,7 @@ pub struct Phase8MissionSnapshot {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Phase8MissionResult {
     pub outcome: EvaluationOutcome,
+    pub steps: u32,
     pub final_snapshot: Phase8MissionSnapshot,
     pub rail_exit: Phase8Milestone,
     pub burnout: Phase8Milestone,
@@ -122,6 +123,10 @@ pub struct Phase8MissionResult {
     pub max_aoa_raw_q28: i32,
     pub max_angular_rate_raw_q24: i32,
     pub max_wind_raw_q22: i32,
+    pub minimum_static_margin_raw_q24: i32,
+    pub rail_exit_static_margin_raw_q24: i32,
+    pub burnout_static_margin_raw_q24: i32,
+    pub max_lateral_acceleration_raw_q19: i32,
     pub checksum: u32,
 }
 

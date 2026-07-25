@@ -46,6 +46,11 @@ pub struct Phase8MissionMachine<'a> {
     pub(super) max_aoa: i32,
     pub(super) max_rate: i32,
     pub(super) max_wind: i32,
+    pub(super) min_static_margin: i32,
+    pub(super) rail_exit_static_margin: i32,
+    pub(super) burnout_static_margin: i32,
+    pub(super) max_lateral_acceleration: i32,
+    pub(super) steps: u32,
     pub(super) checksum: u32,
     pub(super) terminal_outcome: Option<EvaluationOutcome>,
 }
@@ -132,6 +137,11 @@ impl<'a> Phase8MissionMachine<'a> {
             max_aoa: 0,
             max_rate: 0,
             max_wind: 0,
+            min_static_margin: i32::MAX,
+            rail_exit_static_margin: 0,
+            burnout_static_margin: 0,
+            max_lateral_acceleration: 0,
+            steps: 0,
             checksum: 0x811c_9dc5,
             terminal_outcome: None,
         })
@@ -174,6 +184,7 @@ impl<'a> Phase8MissionMachine<'a> {
         let outcome = self.terminal_outcome?;
         Some(Phase8MissionResult {
             outcome,
+            steps: self.steps,
             final_snapshot: self.snapshot,
             rail_exit: self.rail_exit,
             burnout: self.burnout,
@@ -188,6 +199,10 @@ impl<'a> Phase8MissionMachine<'a> {
             max_aoa_raw_q28: self.max_aoa,
             max_angular_rate_raw_q24: self.max_rate,
             max_wind_raw_q22: self.max_wind,
+            minimum_static_margin_raw_q24: self.min_static_margin,
+            rail_exit_static_margin_raw_q24: self.rail_exit_static_margin,
+            burnout_static_margin_raw_q24: self.burnout_static_margin,
+            max_lateral_acceleration_raw_q19: self.max_lateral_acceleration,
             checksum: self.checksum,
         })
     }

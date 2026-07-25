@@ -23,6 +23,13 @@ use ksa64_core::phase7_mission::{
     execute_hobby_mission, HobbyMissionExecutionError, HobbyMissionOutcome, HobbyMissionResult,
 };
 use ksa64_core::phase7_pack::{HobbyMissionPack, MotorPack, VerticalVehiclePack};
+use ksa64_core::phase8_mission::{
+    run_phase8_mission, Phase8MissionError, Phase8MissionResult, SpatialMissionVariation,
+};
+use ksa64_core::phase8_numeric::{HOBBY_SPATIAL_ENVIRONMENT_ID, HOBBY_SPATIAL_NUMERIC_CONTRACT_ID};
+use ksa64_core::phase8_pack::{
+    SpatialMissionPack, SpatialMotorPack, SpatialVehiclePack, WindProfilePack,
+};
 use ksa64_core::planar::OrbitClass;
 
 pub enum EvaluationRequest<'a> {
@@ -33,6 +40,14 @@ pub enum EvaluationRequest<'a> {
         motor: &'a MotorPack,
         mission: HobbyMissionPack,
     },
+    HobbySpatialV1 {
+        vehicle: &'a SpatialVehiclePack,
+        motor: &'a SpatialMotorPack,
+        mission: SpatialMissionPack,
+        wind: &'a WindProfilePack,
+        variation: SpatialMissionVariation,
+        variation_checksum: u32,
+    },
 }
 
 impl EvaluationRequest<'_> {
@@ -41,6 +56,7 @@ impl EvaluationRequest<'_> {
             Self::LegacyKsa2PlanarV1(_) => ModelProfileId::LegacyKsa2PlanarV1,
             Self::LegacyKsa5SpatialV1(_) => ModelProfileId::LegacyKsa5SpatialV1,
             Self::HobbyVerticalV1 { .. } => ModelProfileId::HobbyVerticalV1,
+            Self::HobbySpatialV1 { .. } => ModelProfileId::HobbySpatialV1,
         }
     }
 }
@@ -50,6 +66,7 @@ pub enum EvaluationError {
     LegacyKsa2(Phase2MissionError),
     LegacyKsa5(Phase5ClosedLoopError),
     HobbyConfiguration,
+    HobbySpatial(Phase8MissionError),
 }
 
 pub fn evaluate(request: EvaluationRequest<'_>) -> Result<EvaluationSummary, EvaluationError> {
@@ -70,6 +87,18 @@ pub fn evaluate(request: EvaluationRequest<'_>) -> Result<EvaluationSummary, Eva
                 HobbyMissionExecutionError::Configuration => EvaluationError::HobbyConfiguration,
                 HobbyMissionExecutionError::Observer(never) => match never {},
             }),
+        EvaluationRequest::HobbySpatialV1 {
+            vehicle,
+            motor,
+            mission,
+            wind,
+            variation,
+            variation_checksum,
+        } => run_phase8_mission(vehicle, motor, mission, wind, variation)
+            .map(|result| {
+                adapt_hobby_spatial(vehicle, motor, mission, wind, variation_checksum, result)
+            })
+            .map_err(EvaluationError::HobbySpatial),
     }
 }
 
@@ -291,5 +320,130 @@ fn adapt_hobby(
         0,
     ];
     summary.source_checksums[0] = result.state_checksum;
+    summary
+}
+
+fn adapt_hobby_spatial(
+    vehicle: &SpatialVehiclePack,
+    motor: &SpatialMotorPack,
+    mission: SpatialMissionPack,
+    wind: &WindProfilePack,
+    variation_checksum: u32,
+    result: Phase8MissionResult,
+) -> EvaluationSummary {
+    use ksa64_core::numeric::{magnitude3_floor, NumericStatus};
+    let mut summary = EvaluationSummary::empty(ModelProfileId::HobbySpatialV1);
+    summary.outcome = result.outcome;
+    summary.steps = result.steps;
+    let final_state = result.final_snapshot.state;
+    summary.terminal_state_a = [
+        final_state.position.x(),
+        final_state.position.y(),
+        final_state.position.z(),
+    ];
+    summary.terminal_state_b = [
+        final_state.velocity.x(),
+        final_state.velocity.y(),
+        final_state.velocity.z(),
+    ];
+    summary.set_metric(MetricSlot::ApogeeAltitude, result.max_altitude_raw_q13);
+    summary.set_metric(
+        MetricSlot::MaxDynamicPressure,
+        result.max_dynamic_pressure_raw_q13,
+    );
+    summary.set_metric(MetricSlot::MaxAcceleration, result.max_acceleration_raw_q19);
+    summary.set_metric(MetricSlot::MaxSpeed, result.max_speed_raw_q19);
+    summary.set_metric(MetricSlot::MaximumAngleOfAttack, result.max_aoa_raw_q28);
+    summary.set_metric(
+        MetricSlot::MaximumAngularRate,
+        result.max_angular_rate_raw_q24,
+    );
+    summary.set_metric(
+        MetricSlot::MaximumLateralAcceleration,
+        result.max_lateral_acceleration_raw_q19,
+    );
+    summary.set_metric(
+        MetricSlot::MinimumStaticMargin,
+        result.minimum_static_margin_raw_q24,
+    );
+    summary.set_metric(
+        MetricSlot::RailExitStaticMargin,
+        result.rail_exit_static_margin_raw_q24,
+    );
+    summary.set_metric(
+        MetricSlot::BurnoutStaticMargin,
+        result.burnout_static_margin_raw_q24,
+    );
+    summary.set_metric(MetricSlot::MaximumWindSpeed, result.max_wind_raw_q22);
+    summary.set_metric(
+        MetricSlot::TerminalMass,
+        result.final_snapshot.mass.mass.raw(),
+    );
+    let mut status = NumericStatus::CLEAR;
+    let magnitude = |v: ksa64_core::phase8_numeric::EnuVelocity, status: &mut NumericStatus| {
+        magnitude3_floor(v.x(), v.y(), v.z(), status).min(i32::MAX as u32) as i32
+    };
+    for (time_slot, altitude_slot, velocity_slot, milestone) in [
+        (
+            MetricSlot::RailExitTime,
+            None,
+            Some(MetricSlot::RailExitVelocity),
+            result.rail_exit,
+        ),
+        (
+            MetricSlot::BurnoutTime,
+            Some(MetricSlot::BurnoutAltitude),
+            Some(MetricSlot::BurnoutVelocity),
+            result.burnout,
+        ),
+        (MetricSlot::ApogeeTime, None, None, result.apogee),
+        (
+            MetricSlot::DrogueTime,
+            Some(MetricSlot::DrogueAltitude),
+            Some(MetricSlot::DrogueVelocity),
+            result.drogue,
+        ),
+        (
+            MetricSlot::MainTime,
+            Some(MetricSlot::MainAltitude),
+            Some(MetricSlot::MainVelocity),
+            result.main,
+        ),
+        (
+            MetricSlot::GroundContactTime,
+            None,
+            Some(MetricSlot::ImpactVelocity),
+            result.landing,
+        ),
+    ] {
+        if milestone.time.raw() != 0 {
+            summary.set_metric(time_slot, milestone.time.raw());
+            if let Some(slot) = altitude_slot {
+                summary.set_metric(slot, milestone.position.z());
+            }
+            if let Some(slot) = velocity_slot {
+                summary.set_metric(slot, magnitude(milestone.velocity, &mut status));
+            }
+        }
+    }
+    let landing_distance = magnitude3_floor(
+        result.landing.position.x(),
+        result.landing.position.y(),
+        0,
+        &mut status,
+    )
+    .min(i32::MAX as u32) as i32;
+    summary.set_metric(MetricSlot::LandingDistance, landing_distance);
+    summary.numeric_faults = status.bits();
+    summary.events = result.final_snapshot.events as u32;
+    summary.identities = [
+        HOBBY_SPATIAL_NUMERIC_CONTRACT_ID,
+        HOBBY_SPATIAL_ENVIRONMENT_ID,
+        vehicle.identity,
+        motor.identity,
+        mission.identity,
+        wind.identity,
+    ];
+    summary.source_checksums = [result.checksum, mission.case_seed, variation_checksum, 0, 0];
     summary
 }

@@ -169,12 +169,12 @@ pub(super) fn evaluate_forces(
         multiply_scaled(cp_aft_of_cg_q28, state.angular_rate.y(), 28, status) >> 5,
         status,
     );
-    let alpha_y_q24 = if body.x() > 0 {
+    let alpha_y_q24 = if directional_aero_active && body.x() > 0 {
         divide_scaled(local_y_q19, body.x(), 24, status)
     } else {
         0
     };
-    let alpha_z_q24 = if body.x() > 0 {
+    let alpha_z_q24 = if directional_aero_active && body.x() > 0 {
         divide_scaled(local_z_q19, body.x(), 24, status)
     } else {
         0
@@ -294,4 +294,104 @@ pub(super) fn environment_with_wind_scale(
         .rotate(environment.air_velocity_enu, status);
     environment.air_speed_q19 = magnitude3_i32(environment.air_velocity_enu, status);
     environment
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::phase8_format::KWP8_MAX_WIND_KNOTS;
+    use crate::phase8_mission::Phase8MissionMachine;
+    use crate::phase8_numeric::{SpatialPosition, SpatialTime, SpatialWind};
+    use crate::phase8_pack::{
+        parse_spatial_mission_pack, parse_spatial_motor_pack, parse_spatial_vehicle_pack, WindKnot,
+        WindProfilePack,
+    };
+    use crate::phase8_world::{
+        acceleration_from_force, evaluate_hobby_spatial_environment, step_rail_constrained,
+    };
+    #[test]
+    fn initial_cardinal_wind_force_path_is_symmetric() {
+        let vehicle =
+            parse_spatial_vehicle_pack(include_bytes!("../../../phase8/examples/firestorm54.kvp8"))
+                .unwrap();
+        let motor = parse_spatial_motor_pack(include_bytes!(
+            "../../../phase8/examples/aerotech-i211w.kmp8"
+        ))
+        .unwrap();
+        let base = parse_spatial_mission_pack(include_bytes!(
+            "../../../phase8/examples/firestorm-i211.kmc8"
+        ))
+        .unwrap();
+        for east in [2, -2] {
+            let mut knots = [WindKnot::ZERO; KWP8_MAX_WIND_KNOTS];
+            knots[0] = WindKnot {
+                altitude: SpatialPosition::ZERO,
+                east: SpatialWind::from_raw(east << 22),
+                north: SpatialWind::ZERO,
+            };
+            knots[1] = WindKnot {
+                altitude: SpatialPosition::from_raw(1_000 << 13),
+                east: SpatialWind::from_raw(east << 22),
+                north: SpatialWind::ZERO,
+            };
+            let wind = WindProfilePack {
+                identity: 0x8200_0000 + u32::from(east < 0),
+                gust_seed: 0,
+                gust_cadence: SpatialTime::from_raw(1 << 18),
+                gust_amplitude_east: SpatialWind::ZERO,
+                gust_amplitude_north: SpatialWind::ZERO,
+                max_gust: SpatialWind::ZERO,
+                knot_count: 2,
+                knots,
+            };
+            let mission = SpatialMissionPack {
+                wind_identity: wind.identity,
+                ..base
+            };
+            let machine = Phase8MissionMachine::new(&vehicle, &motor, mission, &wind).unwrap();
+            let raw = evaluate_hobby_spatial_environment(
+                machine.snapshot.state,
+                &wind,
+                mission.case_seed,
+            )
+            .unwrap();
+            let mut status = NumericStatus::CLEAR;
+            let environment =
+                environment_with_wind_scale(raw, machine.snapshot.state, 1_000_000, &mut status);
+            assert!(status.is_clear(), "environment {east}: {:?}", status);
+            let forces_result = evaluate_forces(
+                ForceInput {
+                    vehicle: &vehicle,
+                    mass: machine.snapshot.mass,
+                    state: machine.snapshot.state,
+                    environment,
+                    thrust_q13: 0,
+                    variation: SpatialMissionVariation::NOMINAL,
+                    enforce_envelope: false,
+                },
+                &mut status,
+            );
+            assert!(
+                forces_result.is_ok(),
+                "forces {east}: {status:?} {forces_result:?}"
+            );
+            let forces = forces_result.unwrap();
+            assert!(status.is_clear(), "forces {east}: {:?}", status);
+            let acceleration = acceleration_from_force(
+                forces.force_enu,
+                machine.snapshot.mass.mass,
+                environment.gravity_q19,
+                &mut status,
+            );
+            assert!(
+                status.is_clear(),
+                "acceleration {east}: {:?} {:?}",
+                status,
+                forces.force_enu
+            );
+            let axial =
+                multiply_scaled(acceleration.z(), machine.rail_axis.z(), 30, &mut status).max(0);
+            step_rail_constrained(machine.snapshot.state,machine.rail,machine.rail_axis,axial,SpatialTime::from_raw(2621)).unwrap_or_else(|error|panic!("rail {east}: {error:?}, status={status:?}, force={:?}, acceleration={acceleration:?}",forces.force_enu));
+        }
+    }
 }

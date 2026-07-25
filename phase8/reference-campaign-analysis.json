@@ -1,0 +1,16 @@
+{
+  "apogee_raw_q13": {
+    "maximum": 6490258,
+    "mean": 6180211,
+    "minimum": 5884668
+  },
+  "archive_sha256": "0d5bee8be74591fef3f914d989d226111bd91e1fd1a1569bfba78d9cc23cd2b9",
+  "maximum_landing_distance_raw_q13": 825086,
+  "ordered_summary_crc32": "0xe4792560",
+  "outcomes": {
+    "3": 1024
+  },
+  "runs": 1024,
+  "schema": "ksa64.phase8-campaign-analysis-v1",
+  "seed": 1263747384
+}

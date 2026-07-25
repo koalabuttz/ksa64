@@ -98,6 +98,7 @@ impl Phase8MissionMachine<'_> {
             self.terminal_outcome = Some(EvaluationOutcome::GroundContact);
         }
         self.previous_vertical_velocity = successor.velocity.z();
+        self.steps = self.steps.saturating_add(1);
         self.snapshot = Phase8MissionSnapshot {
             state: successor,
             phase: next_phase,
@@ -112,6 +113,12 @@ impl Phase8MissionMachine<'_> {
             ],
         };
         self.update_extrema(advanced.environment);
+        if events & EVENT_RAIL_EXIT != 0 {
+            self.rail_exit_static_margin = self.snapshot.aero.static_margin_q24;
+        }
+        if events & EVENT_BURNOUT != 0 {
+            self.burnout_static_margin = self.snapshot.aero.static_margin_q24;
+        }
         self.checksum = update_checksum(self.checksum, self.snapshot);
         Ok(self.snapshot)
     }
@@ -134,6 +141,19 @@ impl Phase8MissionMachine<'_> {
             self.snapshot.state.angular_rate,
             &mut status,
         ));
+        if self.snapshot.aero.dynamic_pressure_q13 >= super::forces::MIN_DIRECTIONAL_AERO_Q13 {
+            self.min_static_margin = self
+                .min_static_margin
+                .min(self.snapshot.aero.static_margin_q24);
+        }
+        let lateral = crate::numeric::magnitude3_floor(
+            self.snapshot.state.acceleration.x(),
+            self.snapshot.state.acceleration.y(),
+            0,
+            &mut status,
+        )
+        .min(i32::MAX as u32) as i32;
+        self.max_lateral_acceleration = self.max_lateral_acceleration.max(lateral);
         self.max_wind = self
             .max_wind
             .max(magnitude3_i32(environment.wind.total, &mut status));
@@ -264,6 +284,53 @@ mod tests {
             );
             assert!(a.final_snapshot.state.position.x() > 0);
             assert!(a.max_wind_raw_q22 >= speed_mps << 22);
+        }
+    }
+    #[test]
+    fn cardinal_crosswinds_are_symmetric_and_complete() {
+        let (vehicle, motor, mission, _) = fixtures();
+        for (index, (east, north)) in [(2, 0), (-2, 0), (0, 2), (0, -2)].into_iter().enumerate() {
+            let mut knots = [WindKnot::ZERO; KWP8_MAX_WIND_KNOTS];
+            knots[0] = WindKnot {
+                altitude: SpatialPosition::ZERO,
+                east: SpatialWind::from_raw(east << 22),
+                north: SpatialWind::from_raw(north << 22),
+            };
+            knots[1] = WindKnot {
+                altitude: SpatialPosition::from_raw(1_000 << 13),
+                east: SpatialWind::from_raw(east << 22),
+                north: SpatialWind::from_raw(north << 22),
+            };
+            let wind = WindProfilePack {
+                identity: 0x8100_0000 + index as u32,
+                gust_seed: 0,
+                gust_cadence: SpatialTime::from_raw(1 << 18),
+                gust_amplitude_east: SpatialWind::ZERO,
+                gust_amplitude_north: SpatialWind::ZERO,
+                max_gust: SpatialWind::ZERO,
+                knot_count: 2,
+                knots,
+            };
+            let bound = SpatialMissionPack {
+                wind_identity: wind.identity,
+                ..mission
+            };
+            let mut machine = Phase8MissionMachine::new(&vehicle, &motor, bound, &wind).unwrap();
+            while !machine.is_complete() {
+                match machine.step() {
+                    Ok(_) | Err(Phase8MissionError::Complete) => {}
+                    Err(error) => panic!(
+                        "cardinal case {index} at {:?}: {error:?}",
+                        machine.snapshot()
+                    ),
+                }
+            }
+            let result = machine.result().unwrap();
+            assert_eq!(
+                result.outcome,
+                EvaluationOutcome::GroundContact,
+                "cardinal case {index}: {result:?}"
+            );
         }
     }
     #[test]
