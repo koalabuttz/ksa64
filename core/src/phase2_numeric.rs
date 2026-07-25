@@ -51,6 +51,20 @@ pub fn sin_cos_phase3_pitch_q15(angle: PitchAngle) -> Option<(i16, i16)> {
     ))
 }
 
+/// Full-circle Q15 sine and cosine for an unsigned binary angle where one turn is 65536.
+/// Existing phase-specific helpers retain their accepted domains and exact results.
+pub fn sin_cos_binary_q15(raw: u16) -> (i16, i16) {
+    let quadrant = raw >> 14;
+    let offset = raw & 0x3fff;
+    let forward = quarter_wave_q15(offset);
+    let reverse = quarter_wave_q15(0x4000 - offset);
+    match quadrant {
+        0 => (forward, reverse),
+        1 => (reverse, -forward),
+        2 => (-forward, -reverse),
+        _ => (-reverse, forward),
+    }
+}
 fn quarter_wave_q15(raw: u16) -> i16 {
     let index = (raw >> 6) as usize;
     if index >= 256 {

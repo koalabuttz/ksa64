@@ -25,6 +25,7 @@ pub mod phase8_aero;
 pub mod phase8_format;
 pub mod phase8_numeric;
 pub mod phase8_pack;
+pub mod phase8_world;
 pub mod planar;
 pub mod planar_dynamics;
 pub mod planar_environment;

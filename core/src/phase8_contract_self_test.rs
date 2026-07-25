@@ -4,12 +4,41 @@ use crate::numeric::NumericStatus;
 use crate::phase8_aero::{
     sample_spatial_aerodynamics, small_angle_of_attack_q28, SpatialAeroError,
 };
+use crate::phase8_format::KWP8_MAX_WIND_KNOTS;
 use crate::phase8_numeric::*;
-use crate::phase8_pack::parse_spatial_vehicle_pack;
+use crate::phase8_pack::{parse_spatial_vehicle_pack, WindKnot, WindProfilePack};
+use crate::phase8_world::sample_spatial_wind;
 use crate::spatial_numeric::FixedVec3;
 
 mod aero_vectors {
     include!("../../phase8/generated/aero_vectors_v1.rs");
+}
+mod wind_vectors {
+    include!("../../phase8/generated/wind_vectors_v1.rs");
+}
+
+fn target_wind() -> WindProfilePack {
+    let mut knots = [WindKnot::ZERO; KWP8_MAX_WIND_KNOTS];
+    knots[0] = WindKnot {
+        altitude: SpatialPosition::ZERO,
+        east: SpatialWind::from_raw(1 << 22),
+        north: SpatialWind::from_raw(-2 << 22),
+    };
+    knots[1] = WindKnot {
+        altitude: SpatialPosition::from_raw(1_000 << 13),
+        east: SpatialWind::from_raw(5 << 22),
+        north: SpatialWind::from_raw(2 << 22),
+    };
+    WindProfilePack {
+        identity: wind_vectors::IDENTITY,
+        gust_seed: wind_vectors::GUST_SEED,
+        gust_cadence: SpatialTime::from_raw(1 << 18),
+        gust_amplitude_east: SpatialWind::from_raw(3 << 22),
+        gust_amplitude_north: SpatialWind::from_raw(2 << 22),
+        max_gust: SpatialWind::from_raw(4 << 22),
+        knot_count: 2,
+        knots,
+    }
 }
 fn mix(mut hash: u32, value: u32) -> u32 {
     hash ^= value;
@@ -83,6 +112,30 @@ pub fn phase8_contract_signature() -> u32 {
     } else {
         hash = mix(hash, u32::MAX);
     }
+    let wind = target_wind();
+    for vector in wind_vectors::WIND_VECTORS {
+        match sample_spatial_wind(
+            &wind,
+            SpatialPosition::from_raw(vector.altitude_q13),
+            SpatialTime::from_raw(vector.time_q18),
+            wind_vectors::CASE_SEED,
+            &mut status,
+        ) {
+            Ok(sample) => {
+                for value in [
+                    sample.mean.x(),
+                    sample.mean.y(),
+                    sample.gust.x(),
+                    sample.gust.y(),
+                    sample.total.x(),
+                    sample.total.y(),
+                ] {
+                    hash = mix(hash, value as u32);
+                }
+            }
+            Err(_) => hash = mix(hash, u32::MAX),
+        }
+    }
     mix(hash, status.bits() as u32)
 }
 
@@ -114,6 +167,23 @@ pub fn run_phase8_contract_self_tests() -> u32 {
         },
         Err(_) => failures += 1,
     }
+    let wind = target_wind();
+    for vector in wind_vectors::WIND_VECTORS {
+        match sample_spatial_wind(
+            &wind,
+            SpatialPosition::from_raw(vector.altitude_q13),
+            SpatialTime::from_raw(vector.time_q18),
+            wind_vectors::CASE_SEED,
+            &mut status,
+        ) {
+            Ok(sample)
+                if [sample.mean.x(), sample.mean.y(), sample.mean.z()] == vector.mean_q22
+                    && [sample.gust.x(), sample.gust.y(), sample.gust.z()] == vector.gust_q22
+                    && [sample.total.x(), sample.total.y(), sample.total.z()]
+                        == vector.total_q22 => {}
+            _ => failures += 1,
+        }
+    }
     failures + u32::from(!status.is_clear())
 }
 
@@ -124,6 +194,6 @@ mod tests {
     #[test]
     fn target_signature_is_frozen() {
         assert_eq!(run_phase8_contract_self_tests(), 0);
-        assert_eq!(phase8_contract_signature(), 0xf8dd_1f41);
+        assert_eq!(phase8_contract_signature(), 0xbeeb_d9b1);
     }
 }

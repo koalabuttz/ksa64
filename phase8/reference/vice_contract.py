@@ -14,7 +14,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "phase0" / "reference"))
 from vice_timing import run_prg_until_result  # noqa: E402
 
 MAGIC = 0x38504B53
-EXPECTED_SIGNATURE = 0xF8DD1F41
+EXPECTED_SIGNATURE = 0xBEEBD9B1
 
 
 def parse_result(memory: bytes) -> dict[str, int] | None:
