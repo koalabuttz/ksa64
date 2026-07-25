@@ -52,7 +52,7 @@ fn draw(run: u32, parameter: u8, minimum: i32, maximum: i32) -> i32 {
         maximum,
     )
 }
-fn derive_avionics_case(run: u32) -> (LocalAvionicsVariation, [i32; 4], u32) {
+pub(crate) fn derive_avionics_case(run: u32) -> (LocalAvionicsVariation, [i32; 4], u32) {
     if run == 0 {
         return (LocalAvionicsVariation::NOMINAL, [0; 4], 0);
     }
