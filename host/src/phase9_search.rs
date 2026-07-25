@@ -6,6 +6,8 @@ use ksa64_core::phase9_contract::{
 use ksa64_sim::phase4::campaign::keyed_word_raw;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
+use std::sync::mpsc;
+use std::thread;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SearchGeneration {
@@ -155,7 +157,7 @@ struct EvalCache<'a, E> {
     hits: u32,
     calls: u32,
 }
-impl<'a, E: CandidateEvaluator> EvalCache<'a, E> {
+impl<'a, E: CandidateEvaluator + Sync> EvalCache<'a, E> {
     fn new(e: &'a E) -> Self {
         Self {
             evaluator: e,
@@ -164,15 +166,62 @@ impl<'a, E: CandidateEvaluator> EvalCache<'a, E> {
             calls: 0,
         }
     }
-    fn get(&mut self, c: &DesignVector, tier: u8) -> Result<CandidateEvaluation, SearchError> {
-        if let Some(v) = self.values.get(&(c.identity, tier)) {
-            self.hits += 1;
-            return Ok(v.clone());
+    fn prefetch(
+        &mut self,
+        candidates: &[DesignVector],
+        tier: u8,
+        workers: usize,
+    ) -> Result<(), SearchError> {
+        let mut missing = BTreeMap::new();
+        for candidate in candidates {
+            if !self.values.contains_key(&(candidate.identity, tier)) {
+                missing.entry(candidate.identity).or_insert(*candidate);
+            } else {
+                self.hits = self.hits.saturating_add(1);
+            }
         }
-        let v = self.evaluator.evaluate(c, tier)?;
-        self.calls += 1;
-        self.values.insert((c.identity, tier), v.clone());
-        Ok(v)
+        let jobs: Vec<DesignVector> = missing.into_values().collect();
+        if jobs.is_empty() {
+            return Ok(());
+        }
+        let worker_count = workers.max(1).min(jobs.len());
+        let mut ordered: BTreeMap<u32, CandidateEvaluation> = BTreeMap::new();
+        if worker_count == 1 {
+            for c in &jobs {
+                ordered.insert(c.identity, self.evaluator.evaluate(c, tier)?);
+            }
+        } else {
+            let (tx, rx) = mpsc::channel();
+            thread::scope(|scope| {
+                for worker in 0..worker_count {
+                    let tx = tx.clone();
+                    let eval = self.evaluator;
+                    let jobs = &jobs;
+                    scope.spawn(move || {
+                        for index in (worker..jobs.len()).step_by(worker_count) {
+                            let c = jobs[index];
+                            let _ = tx.send((c.identity, eval.evaluate(&c, tier)));
+                        }
+                    });
+                }
+            });
+            drop(tx);
+            for _ in 0..jobs.len() {
+                let (id, result) = rx.recv().map_err(|_| SearchError::Evaluation)?;
+                ordered.insert(id, result?);
+            }
+        }
+        self.calls = self.calls.saturating_add(jobs.len() as u32);
+        for (id, value) in ordered {
+            self.values.insert((id, tier), value);
+        }
+        Ok(())
+    }
+    fn cached(&self, c: &DesignVector, tier: u8) -> Result<CandidateEvaluation, SearchError> {
+        self.values
+            .get(&(c.identity, tier))
+            .cloned()
+            .ok_or(SearchError::Evaluation)
     }
 }
 
@@ -393,14 +442,16 @@ fn select_nsga(
     (c, a)
 }
 
-fn evaluate_generation<E: CandidateEvaluator>(
+fn evaluate_generation<E: CandidateEvaluator + Sync>(
     cache: &mut EvalCache<E>,
     index: u16,
     candidates: Vec<DesignVector>,
+    workers: usize,
 ) -> Result<SearchGeneration, SearchError> {
+    cache.prefetch(&candidates, 8, workers)?;
     let mut aggregates = Vec::with_capacity(candidates.len());
     for c in &candidates {
-        aggregates.push(cache.get(c, 8)?.aggregate)
+        aggregates.push(cache.cached(c, 8)?.aggregate)
     }
     let crc = generation_fingerprint(index, &candidates, &aggregates);
     Ok(SearchGeneration {
@@ -411,16 +462,17 @@ fn evaluate_generation<E: CandidateEvaluator>(
     })
 }
 
-fn run_nsga<E: CandidateEvaluator>(
+fn run_nsga<E: CandidateEvaluator + Sync>(
     m: &SearchManifest,
     cache: &mut EvalCache<E>,
+    workers: usize,
 ) -> Result<Vec<SearchGeneration>, SearchError> {
     let mut generations = Vec::new();
-    let mut current = evaluate_generation(cache, 0, initial_population(m))?;
+    let mut current = evaluate_generation(cache, 0, initial_population(m), workers)?;
     generations.push(current.clone());
     for g in 1..=m.budgets.generations {
         let children = offspring(m, g, &current.candidates, &current.aggregates);
-        let child = evaluate_generation(cache, g, children)?;
+        let child = evaluate_generation(cache, g, children, workers)?;
         let mut all_c = current.candidates.clone();
         all_c.extend_from_slice(&child.candidates);
         let mut all_a = current.aggregates.clone();
@@ -452,12 +504,13 @@ fn reflect(mut v: i64, min: i64, max: i64) -> i64 {
     }
     v
 }
-fn run_de<E: CandidateEvaluator>(
+fn run_de<E: CandidateEvaluator + Sync>(
     m: &SearchManifest,
     cache: &mut EvalCache<E>,
+    workers: usize,
 ) -> Result<Vec<SearchGeneration>, SearchError> {
     let mut generations = Vec::new();
-    let mut current = evaluate_generation(cache, 0, initial_population(m))?;
+    let mut current = evaluate_generation(cache, 0, initial_population(m), workers)?;
     generations.push(current.clone());
     let n = current.candidates.len();
     if n < 4 {
@@ -505,7 +558,7 @@ fn run_de<E: CandidateEvaluator>(
             }
             trials.push(from_values(m, values))
         }
-        let trial = evaluate_generation(cache, g, trials)?;
+        let trial = evaluate_generation(cache, g, trials, workers)?;
         let mut next_c = Vec::with_capacity(n);
         let mut next_a = Vec::with_capacity(n);
         for i in 0..n {
@@ -560,10 +613,19 @@ fn lex_objectives(m: &SearchManifest, a: &CandidateAggregate, b: &CandidateAggre
     a.candidate_identity.cmp(&b.candidate_identity)
 }
 
-pub fn run_search<E: CandidateEvaluator>(
+pub fn run_search<E: CandidateEvaluator + Sync>(
     m: &SearchManifest,
     evaluator: &E,
     grid_axes: &[usize],
+) -> Result<SearchResult, SearchError> {
+    run_search_with_workers(m, evaluator, grid_axes, 1)
+}
+
+pub fn run_search_with_workers<E: CandidateEvaluator + Sync>(
+    m: &SearchManifest,
+    evaluator: &E,
+    grid_axes: &[usize],
+    workers: usize,
 ) -> Result<SearchResult, SearchError> {
     m.validate().map_err(|_| SearchError::Configuration)?;
     let mut cache = EvalCache::new(evaluator);
@@ -572,9 +634,10 @@ pub fn run_search<E: CandidateEvaluator>(
             &mut cache,
             0,
             grid_candidates(m, grid_axes)?,
+            workers,
         )?],
-        SearchEngineId::Nsga2V1 => run_nsga(m, &mut cache)?,
-        SearchEngineId::DifferentialEvolutionV1 => run_de(m, &mut cache)?,
+        SearchEngineId::Nsga2V1 => run_nsga(m, &mut cache, workers)?,
+        SearchEngineId::DifferentialEvolutionV1 => run_de(m, &mut cache, workers)?,
     };
     let last = generations.last().ok_or(SearchError::Configuration)?;
     let pareto = pareto_front(m, &last.aggregates);
@@ -586,9 +649,12 @@ pub fn run_search<E: CandidateEvaluator>(
         pareto.clone()
     };
     terminal.truncate(m.budgets.finalists.min(terminal.len() as u16) as usize);
+    let finalist_candidates: Vec<DesignVector> =
+        terminal.iter().map(|i| last.candidates[*i]).collect();
+    cache.prefetch(&finalist_candidates, 64, workers)?;
     let mut finalists = Vec::new();
-    for i in terminal {
-        finalists.push(cache.get(&last.candidates[i], 64)?)
+    for candidate in &finalist_candidates {
+        finalists.push(cache.cached(candidate, 64)?)
     }
     Ok(SearchResult {
         manifest_identity: m.identity,
@@ -677,8 +743,10 @@ mod tests {
             m.variables[1].id = 999;
             m = m.seal().unwrap();
             let a = run_search(&m, &synthetic(m), &[]).unwrap();
-            let b = run_search(&m, &synthetic(m), &[]).unwrap();
-            assert_eq!(a, b)
+            let b = run_search_with_workers(&m, &synthetic(m), &[], 4).unwrap();
+            let c = run_search_with_workers(&m, &synthetic(m), &[], 8).unwrap();
+            assert_eq!(a, b);
+            assert_eq!(a, c)
         }
     }
 }

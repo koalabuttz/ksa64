@@ -334,4 +334,5 @@ pub mod phase9_archive;
 pub mod phase9_protocol;
 pub mod phase9_report;
 pub mod phase9_search;
+pub mod phase9_sensitivity;
 pub mod phase9_tui;
