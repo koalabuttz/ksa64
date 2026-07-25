@@ -135,7 +135,11 @@ fn from_values(m: &SearchManifest, values: [i32; 32]) -> DesignVector {
     .seal()
     .unwrap()
 }
-fn generation_crc(index: u16, c: &[DesignVector], a: &[CandidateAggregate]) -> u32 {
+pub(crate) fn generation_fingerprint(
+    index: u16,
+    c: &[DesignVector],
+    a: &[CandidateAggregate],
+) -> u32 {
     let mut bytes = Vec::with_capacity(2 + c.len() * 8);
     bytes.extend_from_slice(&index.to_le_bytes());
     for (x, y) in c.iter().zip(a) {
@@ -398,7 +402,7 @@ fn evaluate_generation<E: CandidateEvaluator>(
     for c in &candidates {
         aggregates.push(cache.get(c, 8)?.aggregate)
     }
-    let crc = generation_crc(index, &candidates, &aggregates);
+    let crc = generation_fingerprint(index, &candidates, &aggregates);
     Ok(SearchGeneration {
         index,
         candidates,
@@ -422,7 +426,7 @@ fn run_nsga<E: CandidateEvaluator>(
         let mut all_a = current.aggregates.clone();
         all_a.extend_from_slice(&child.aggregates);
         let (c, a) = select_nsga(m, all_c, all_a, m.budgets.population as usize);
-        let crc = generation_crc(g, &c, &a);
+        let crc = generation_fingerprint(g, &c, &a);
         current = SearchGeneration {
             index: g,
             candidates: c,
@@ -522,7 +526,7 @@ fn run_de<E: CandidateEvaluator>(
                 next_a.push(current.aggregates[i])
             }
         }
-        let crc = generation_crc(g, &next_c, &next_a);
+        let crc = generation_fingerprint(g, &next_c, &next_a);
         current = SearchGeneration {
             index: g,
             candidates: next_c,

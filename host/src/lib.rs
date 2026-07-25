@@ -330,4 +330,8 @@ pub mod phase8_5_link;
 pub mod phase8_5_tui;
 
 pub mod phase9;
+pub mod phase9_archive;
+pub mod phase9_protocol;
+pub mod phase9_report;
 pub mod phase9_search;
+pub mod phase9_tui;

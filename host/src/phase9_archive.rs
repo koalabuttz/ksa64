@@ -1,0 +1,322 @@
+//! Segmented append-only Phase 9 archives and finalist packages.
+use crate::phase9_search::SearchGeneration;
+use ksa64_core::phase9_contract::{CandidateAggregate, DesignVector, KDV9_LENGTH, KOE9_LENGTH};
+use ksa64_interface::crc32_ieee;
+use std::fs::{self, File, OpenOptions};
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+
+pub const KRA9_HEADER: usize = 32;
+pub const KRA9_RECORD: usize = KDV9_LENGTH + KOE9_LENGTH;
+pub const KFP9_HEADER: usize = 64;
+pub const KFP9_MAX_FINALISTS: usize = 32;
+#[derive(Debug)]
+pub enum ArchiveError {
+    Io,
+    Length,
+    Magic,
+    Version,
+    Identity,
+    Reserved,
+    Checksum,
+    Decode,
+    Sequence,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArchiveScan {
+    pub manifest_identity: u32,
+    pub generations: Vec<SearchGeneration>,
+    pub valid_length: u64,
+}
+
+fn segment(g: &SearchGeneration, manifest: u32) -> Result<Vec<u8>, ArchiveError> {
+    if g.candidates.len() != g.aggregates.len() || g.candidates.len() > u16::MAX as usize {
+        return Err(ArchiveError::Length);
+    }
+    let len = KRA9_HEADER + g.candidates.len() * KRA9_RECORD + 4;
+    let mut b = vec![0; len];
+    b[0..4].copy_from_slice(b"KRA9");
+    w16(&mut b, 4, 9);
+    w16(&mut b, 6, KRA9_HEADER as u16);
+    w32(&mut b, 8, len as u32);
+    w32(&mut b, 12, manifest);
+    w16(&mut b, 16, g.index);
+    w16(&mut b, 18, g.candidates.len() as u16);
+    w32(&mut b, 20, g.crc32);
+    let mut o = KRA9_HEADER;
+    for (c, a) in g.candidates.iter().zip(&g.aggregates) {
+        let cb = c.encode().map_err(|_| ArchiveError::Decode)?;
+        let ab = a.encode().map_err(|_| ArchiveError::Decode)?;
+        b[o..o + KDV9_LENGTH].copy_from_slice(&cb);
+        o += KDV9_LENGTH;
+        b[o..o + KOE9_LENGTH].copy_from_slice(&ab);
+        o += KOE9_LENGTH
+    }
+    let crc = crc32_ieee(&b[..len - 4]);
+    w32(&mut b, len - 4, crc);
+    Ok(b)
+}
+pub fn encode_archive(
+    manifest: u32,
+    generations: &[SearchGeneration],
+) -> Result<Vec<u8>, ArchiveError> {
+    let mut out = Vec::new();
+    for g in generations {
+        out.extend_from_slice(&segment(g, manifest)?)
+    }
+    Ok(out)
+}
+pub fn scan_archive(input: &[u8]) -> Result<ArchiveScan, ArchiveError> {
+    let mut o = 0usize;
+    let mut manifest = 0;
+    let mut generations = Vec::new();
+    while o < input.len() {
+        if input.len() - o < KRA9_HEADER {
+            return Err(ArchiveError::Length);
+        }
+        if &input[o..o + 4] != b"KRA9" {
+            return Err(ArchiveError::Magic);
+        }
+        if r16(input, o + 4) != 9 || r16(input, o + 6) as usize != KRA9_HEADER {
+            return Err(ArchiveError::Version);
+        }
+        let len = r32(input, o + 8) as usize;
+        if len < KRA9_HEADER + 4 || o + len > input.len() {
+            return Err(ArchiveError::Length);
+        }
+        let id = r32(input, o + 12);
+        if manifest == 0 {
+            manifest = id
+        } else if manifest != id {
+            return Err(ArchiveError::Identity);
+        }
+        let index = r16(input, o + 16);
+        if index as usize != generations.len() {
+            return Err(ArchiveError::Sequence);
+        }
+        let count = r16(input, o + 18) as usize;
+        if len != KRA9_HEADER + count * KRA9_RECORD + 4 {
+            return Err(ArchiveError::Length);
+        }
+        if input[o + 24..o + KRA9_HEADER].iter().any(|v| *v != 0) {
+            return Err(ArchiveError::Reserved);
+        }
+        if r32(input, o + len - 4) != crc32_ieee(&input[o..o + len - 4]) {
+            return Err(ArchiveError::Checksum);
+        }
+        let mut candidates = Vec::with_capacity(count);
+        let mut aggregates = Vec::with_capacity(count);
+        let mut p = o + KRA9_HEADER;
+        for _ in 0..count {
+            candidates.push(
+                DesignVector::parse(&input[p..p + KDV9_LENGTH])
+                    .map_err(|_| ArchiveError::Decode)?,
+            );
+            p += KDV9_LENGTH;
+            aggregates.push(
+                CandidateAggregate::parse(&input[p..p + KOE9_LENGTH])
+                    .map_err(|_| ArchiveError::Decode)?,
+            );
+            p += KOE9_LENGTH
+        }
+        let crc = r32(input, o + 20);
+        let actual = super::phase9_search::generation_fingerprint(index, &candidates, &aggregates);
+        if crc != actual {
+            return Err(ArchiveError::Checksum);
+        }
+        generations.push(SearchGeneration {
+            index,
+            candidates,
+            aggregates,
+            crc32: crc,
+        });
+        o += len
+    }
+    Ok(ArchiveScan {
+        manifest_identity: manifest,
+        generations,
+        valid_length: o as u64,
+    })
+}
+pub fn write_archive_atomic(
+    path: &Path,
+    manifest: u32,
+    generations: &[SearchGeneration],
+) -> Result<(), ArchiveError> {
+    let bytes = encode_archive(manifest, generations)?;
+    let temp = temp_path(path);
+    {
+        let mut f = File::create(&temp).map_err(|_| ArchiveError::Io)?;
+        f.write_all(&bytes).map_err(|_| ArchiveError::Io)?;
+        f.sync_all().map_err(|_| ArchiveError::Io)?
+    }
+    fs::rename(temp, path).map_err(|_| ArchiveError::Io)
+}
+pub fn resume_append(
+    path: &Path,
+    manifest: u32,
+    generations: &[SearchGeneration],
+) -> Result<(), ArchiveError> {
+    let existing = if path.exists() {
+        let mut b = Vec::new();
+        File::open(path)
+            .map_err(|_| ArchiveError::Io)?
+            .read_to_end(&mut b)
+            .map_err(|_| ArchiveError::Io)?;
+        let scan = scan_archive(&b)?;
+        if scan.manifest_identity != 0 && scan.manifest_identity != manifest {
+            return Err(ArchiveError::Identity);
+        }
+        scan.generations.len()
+    } else {
+        0
+    };
+    let mut f = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|_| ArchiveError::Io)?;
+    for g in &generations[existing..] {
+        f.write_all(&segment(g, manifest)?)
+            .map_err(|_| ArchiveError::Io)?;
+        f.sync_data().map_err(|_| ArchiveError::Io)?
+    }
+    Ok(())
+}
+fn temp_path(path: &Path) -> PathBuf {
+    let mut p = path.as_os_str().to_os_string();
+    p.push(".tmp");
+    PathBuf::from(p)
+}
+
+pub fn encode_kpf9(
+    manifest: u32,
+    study: u32,
+    finalists: &[(DesignVector, CandidateAggregate)],
+) -> Result<Vec<u8>, ArchiveError> {
+    if finalists.len() > KFP9_MAX_FINALISTS {
+        return Err(ArchiveError::Length);
+    }
+    let len = KFP9_HEADER + finalists.len() * KRA9_RECORD + 4;
+    let mut b = vec![0; len];
+    b[0..4].copy_from_slice(b"KFP9");
+    w16(&mut b, 4, 9);
+    w16(&mut b, 6, KFP9_HEADER as u16);
+    w32(&mut b, 8, len as u32);
+    w32(&mut b, 12, manifest);
+    w32(&mut b, 16, study);
+    w16(&mut b, 20, finalists.len() as u16);
+    let mut o = KFP9_HEADER;
+    for (c, a) in finalists {
+        b[o..o + KDV9_LENGTH].copy_from_slice(&c.encode().map_err(|_| ArchiveError::Decode)?);
+        o += KDV9_LENGTH;
+        b[o..o + KOE9_LENGTH].copy_from_slice(&a.encode().map_err(|_| ArchiveError::Decode)?);
+        o += KOE9_LENGTH
+    }
+    let crc = crc32_ieee(&b[..len - 4]);
+    w32(&mut b, len - 4, crc);
+    Ok(b)
+}
+pub fn validate_kfp9(input: &[u8]) -> Result<usize, ArchiveError> {
+    if input.len() < KFP9_HEADER + 4 || &input[..4] != b"KFP9" {
+        return Err(ArchiveError::Magic);
+    }
+    if r16(input, 4) != 9
+        || r16(input, 6) as usize != KFP9_HEADER
+        || r32(input, 8) as usize != input.len()
+    {
+        return Err(ArchiveError::Version);
+    }
+    let count = r16(input, 20) as usize;
+    if count > KFP9_MAX_FINALISTS || input.len() != KFP9_HEADER + count * KRA9_RECORD + 4 {
+        return Err(ArchiveError::Length);
+    }
+    if input[22..KFP9_HEADER].iter().any(|v| *v != 0) {
+        return Err(ArchiveError::Reserved);
+    }
+    if r32(input, input.len() - 4) != crc32_ieee(&input[..input.len() - 4]) {
+        return Err(ArchiveError::Checksum);
+    }
+    Ok(count)
+}
+fn r16(b: &[u8], o: usize) -> u16 {
+    u16::from_le_bytes([b[o], b[o + 1]])
+}
+fn r32(b: &[u8], o: usize) -> u32 {
+    u32::from_le_bytes(b[o..o + 4].try_into().unwrap())
+}
+fn w16(b: &mut [u8], o: usize, v: u16) {
+    b[o..o + 2].copy_from_slice(&v.to_le_bytes())
+}
+fn w32(b: &mut [u8], o: usize, v: u32) {
+    b[o..o + 4].copy_from_slice(&v.to_le_bytes())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::phase9::{baseline_vector, built_in_manifest, StudyId};
+    use ksa64_core::phase9_contract::{SearchEngineId, SearchPresetId};
+    fn fixture() -> (u32, SearchGeneration) {
+        let m = built_in_manifest(
+            StudyId::PassiveRecovery,
+            SearchEngineId::GridV1,
+            SearchPresetId::Quick,
+        );
+        let d = baseline_vector(&m);
+        let a = CandidateAggregate {
+            identity: 0,
+            manifest_identity: m.identity,
+            candidate_identity: d.identity,
+            uncertainty_tier: 8,
+            case_count: 8,
+            fatal_class: 0,
+            violated_constraints: 0,
+            feasible: true,
+            case_crc: 1,
+            normalized_violation: 0,
+            objective_count: 1,
+            constraint_count: 0,
+            objectives: [0; 8],
+            constraint_values: [0; 16],
+        }
+        .seal();
+        let c = super::super::phase9_search::generation_fingerprint(0, &[d], &[a]);
+        (
+            m.identity,
+            SearchGeneration {
+                index: 0,
+                candidates: vec![d],
+                aggregates: vec![a],
+                crc32: c,
+            },
+        )
+    }
+    #[test]
+    fn archive_roundtrip_and_corruption() {
+        let (m, g) = fixture();
+        let b = encode_archive(m, &[g.clone()]).unwrap();
+        assert_eq!(scan_archive(&b).unwrap().generations, vec![g]);
+        let mut bad = b;
+        bad[50] ^= 1;
+        assert!(scan_archive(&bad).is_err())
+    }
+    #[test]
+    fn interrupted_resume_is_byte_identical() {
+        let (m, g) = fixture();
+        let dir = std::env::temp_dir();
+        let p = dir.join(format!("ksa64-kra9-{}.bin", std::process::id()));
+        let _ = fs::remove_file(&p);
+        resume_append(&p, m, &[g.clone()]).unwrap();
+        resume_append(&p, m, &[g.clone()]).unwrap();
+        let got = fs::read(&p).unwrap();
+        assert_eq!(got, encode_archive(m, &[g]).unwrap());
+        fs::remove_file(p).unwrap()
+    }
+    #[test]
+    fn finalist_pack_is_strict() {
+        let (m, g) = fixture();
+        let b = encode_kpf9(m, 1, &[(g.candidates[0], g.aggregates[0])]).unwrap();
+        assert_eq!(validate_kfp9(&b).unwrap(), 1)
+    }
+}
