@@ -317,3 +317,15 @@ The 1,024-run seed-`0x4b534138` campaign is byte-identical with one and four hos
 Target evidence consists of all three programs linking below `$C000`, a 17-state field-exact native/MOS trace, and a seven-page replay with a frozen screen checksum. The finite trace measured 59,421,528 PAL cycles, approximately 3.71 million cycles per powered step. A complete mission conservatively projects to 2.35 hours, so it was not started under the established 30-minute projection-and-confirmation rule.
 
 These results are engineering-model evidence only. Neither KSA64 nor the OpenRocket comparison provides launch approval, certification, regulatory advice, or safety authority.
+
+## Accepted Phase 8.5 validation
+
+Exact-clock analytic tests cover retained physical deadlines, arbitrary split points, scheduled events, release epochs at N times 8,192 Q18 units, and command effects first visible at N+1. Format tests cover identity, reserved bytes, CRC, truncation, duplicate/stale/reordered epochs, and unsupported frames or actuator capabilities.
+
+Truth-blind avionics tests cover deterministic bias/noise, quantization, delay, dropout, stale/invalid samples, barometer/GPS correction, recovery arming, one-shot feedback, timer backups, deadline alarms, bounded link loss, and third-epoch safeing. The original Firestorm never receives a physical attitude command. The fictional 20 g derivative respects rail, slew, lag, saturation, jam, and burnout boundaries and passes the 5 m/s crosswind <=3 degree settling gate within 0.25 seconds.
+
+The 64-run seed-0x4b534185 campaign is byte-identical with one and four workers and independently parsed. Host/host and native external placements agree exactly; finite monitor and gimbal VICE probes validate the generic stock endpoint. The standalone C64 kernel costs 21,184 aided and 10,843 fast PAL cycles, passing the 24,631-cycle budget.
+
+The self-contained combined build is validation evidence of an explicit packaging limit: 71,500 resident bytes, 20,301 bytes beyond the ordinary region and at least 5,964 bytes beyond total physical RAM before reservations. No full combined mission was started. The completion audit validates the preserved Phase 0-8 artifacts and never silently launches long target work or multiple VICE instances.
+
+These results are engineering simulation evidence, not launch approval, certification, regulatory evidence, or safety authority.

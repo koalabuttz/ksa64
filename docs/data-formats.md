@@ -296,3 +296,17 @@ Phase 8 preserves every earlier format and introduces a strict version-8 family 
 - KRA8: append-only campaign archive of independently protected summaries.
 
 All multibyte fields are little-endian. Headers bind kind, version, profile/numeric identity, logical identity, payload size, reserved-zero regions, and CRC-32. Parsers reject unknown flags, nonzero reserved bytes, mismatched identities, truncation, trailing bytes where forbidden, and the first corrupt record. KSR7 keeps its original 24 metric slots and rejects Phase 8 profiles or flags; it was not widened in place.
+
+## Phase 8.5 avionics formats
+
+Phase 8.5 is additive to KVP8-KRA8:
+
+- KAP8 is a fixed 512-byte avionics profile pack.
+- KAC8 is a fixed 256-byte actuator capability and installation pack.
+- KLE8 is a fixed 128-byte avionics-aware evaluation request.
+- KLR8 is the local-ENU raw-cell family: 40-byte inertial, 24-byte command, 64-byte aid, and 48-byte status records.
+- KAT8 is 256-byte canonical avionics-aware telemetry.
+- KAS8 is a fixed 256-byte avionics evaluation summary wrapping the unchanged physical summary.
+- KMR8 is a host-only noncanonical Mission Control recording.
+
+KLF6 remains the outer split-endpoint transport. KLR8's distinct contract identity prevents it from being parsed as KLR6 despite the intentionally reused bounded cell lengths. Every canonical format is little-endian, identity-bound, CRC-protected, and reserved-zero strict. KMR8 is passive presentation evidence and cannot replace canonical telemetry.

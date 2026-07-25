@@ -49,7 +49,7 @@ This does **not** prevent stock-C64 avionics operation:
 The plan forbids selecting these automatically:
 
 1. **Phase overlays from disk:** keep world state and avionics resident, load powered/coast/recovery kernels at phase boundaries. This preserves a stock machine but makes the combined target disk-assisted rather than a single self-contained image.
-2. **A separate stock-specialized executor:** aggressively fuse and hand-rewrite the local world and avionics loop, likely including assembly. This may recover the remaining 7.8 KB, but carries meaningful verification and maintenance cost.
+2. **A separate stock-specialized executor:** aggressively fuse and hand-rewrite the local world and avionics loop, likely including assembly. This may recover the remaining 8.0 KB, but carries meaningful verification and maintenance cost.
 3. **Optional expansion memory:** use an REU or cartridge for cold code/tables. This is easiest technically but cannot replace the promised stock baseline without explicit approval.
 4. **Feature partitioning:** remove functionality from the combined build while retaining it in host/VICE placements. The Phase 8.5 plan explicitly forbids doing this silently.
 

@@ -1070,3 +1070,20 @@ Run the Phase 8.5 avionics-aware local executor from an exact 32 Hz event clock.
 Prove active local control with an explicitly fictional two-axis motor-gimbaled Firestorm derivative while the real Firestorm remains monitor-only for attitude. Separate common guidance and body-control demand from a statically selected, capability-bound control allocator. Phase 8.5 implements only monitor-only and motor-gimbal allocation; unsupported effector families fail closed.
 
 Add Phase 9.5 after the optimization workbench and before global flight to implement aerodynamic canards, cold-gas RCS, and mixed-effector allocation. Use Phase 9 to size, tune, compare, and robustly evaluate these models rather than expanding Phase 8.5 into multiple new vehicle-physics projects.
+
+
+## D-085: Stop the combined stock image at the physical-capacity boundary
+
+Date: 2026-07-25
+
+Status: accepted.
+
+The smallest self-contained combined Phase 8.5 world-plus-avionics link requires 71,500 resident bytes. RAM hidden beneath I/O and KERNAL cannot make this fit in 64 KiB, and forcing major boundaries out of line increased size. Stop at the plan's explicit decision boundary. Preserve the stock Phase 8 world and 15,412-byte stock flight endpoint; do not silently require an REU, remove avionics, or select disk overlays or a separate hand-specialized executor.
+
+## D-086: Hold launch-rail attitude and declare a bounded fictional gimbal installation
+
+Date: 2026-07-25
+
+Status: accepted.
+
+The active local controller holds the measured initial launch-rail attitude rather than coordinate-zero attitude. The fictional derivative declares a 20 g actuator installation, Q15 proportional gain 14,000, Q15 derivative gain 4,096, plus the frozen travel, slew, lag, pivot, rail, and burnout limits. This assumption-backed derivative is separate from the published Firestorm and exists to exercise the allocator. Its 5 m/s crosswind case must remain inside the Phase 8 envelope and reach <=3 degrees rail-relative error within eight releases.
