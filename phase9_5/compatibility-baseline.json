@@ -1,0 +1,13 @@
+{
+  "schema": "ksa64.phase9_5.compatibility-baseline-v1",
+  "source_commit": "d539c01042afb3a3b94feb66fe162d6ebc3f247d",
+  "phase9_implementation_commit": "32014af",
+  "audit_command": "phase9/complete.ps1 -SkipMos",
+  "audit_result": "pass",
+  "vice_used": false,
+  "frozen_through_phase": 9,
+  "notes": [
+    "All Phase 0-9 tests and checked artifacts passed before Phase 9.5 implementation.",
+    "MOS and VICE are deferred to the target gates; no emulator ran during this baseline audit."
+  ]
+}

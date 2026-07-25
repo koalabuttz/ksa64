@@ -272,7 +272,7 @@ The optimizer selects candidates; the portable core only evaluates them.
 
 ## Phase 9.5: advanced control effectors
 
-Status: next planned phase, now that the Phase 9 workbench is implemented; it remains before Phase 10 global flight.
+Status: implementation in progress. The additive contract is frozen in `phase9_5/CONTRACT.md`; Phase 9.5 remains before Phase 10 global flight.
 
 Purpose: extend the Phase 8.5 control-allocation boundary with physically modeled aerodynamic and reaction-control effectors, using the Phase 9 workbench to size, tune, compare, and robustly evaluate them.
 

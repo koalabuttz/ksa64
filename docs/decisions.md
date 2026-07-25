@@ -1143,3 +1143,41 @@ Keep `GlobalEcef6DofV1` authoritative for KSA64 and maintain one independent flo
 Before global dynamics are accepted, declare and version the reference ellipsoid, gravity and Earth-orientation models, supported time scales, continuous integration time, leap-second source, EOP dataset and validity/extrapolation policy, transform conventions, and permitted simplifications. External tools generate frozen, provenance-complete fixtures; normal tests use those fixtures without external tools, network access, or live data.
 
 Only one model owns an entity's state in any interval. External validators never co-propagate, correct, or replace the production state. Phase 10 chooses the smallest Earth/time model that meets its declared mission envelope after range and accuracy analysis; this decision records the required contract, not a premature fidelity choice.
+
+## D-093: Use exact pulse edges and physical per-jet RCS forces
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Represent RCS commands as zero through eight 1/256-second quanta per jet in each 32 Hz successor interval. Valve edges and exact depletion are world split points. One-shot pulses are never replayed. Apply every installed jet force at its physical location; nominally balanced pairs do not erase residual translation caused by mismatch, failure, or quantization.
+
+Compile both regulated and ideal-isothermal blowdown sources into bounded remaining-propellant supply tables consumed by one portable interpolation path. The accepted Firestorm RCS derivative uses blowdown and protects a 20-percent reserve.
+
+## D-094: Freeze PriorityResidualV1 as the accepted mixed allocator
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Keep the Phase 8.5 local flight computer unchanged. An additive advanced wrapper translates its two-axis demand, adds roll demand, and creates a physical three-axis torque request. `PriorityResidualV1` consumes vehicle-compiled effectiveness and authority tables, allocates in a declared group order, predicts achieved torque after quantization and saturation, and passes the exact residual onward.
+
+Use motor gimbal, canards, then RCS during powered flight; canards then RCS after burnout while aerodynamic authority exists; and RCS at low dynamic pressure. Pitot loss selects a conservative truth-blind navigation/atmosphere fallback. If that estimate is invalid, canard authority fails unavailable and the residual passes onward.
+
+## D-095: Require two separate stock-C64 advanced endpoints
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Support host-world/C64-flight and C64-world/host-flight in addition to host/host. The flight and world remain separate stock images so a user with one physical C64 can choose either role. Neither endpoint may require an REU. The advanced flight endpoint retains the 24,631-cycle PAL release gate; the world endpoint may execute slower than simulated real time.
+
+Do not reopen the impossible combined stock world-plus-avionics image. Do not silently lower rates, move allocation to the host, remove effectors, or require expansion if a stock endpoint misses its gate.
+
+## D-096: Defer deliberate six-axis guidance
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Phase 9.5 guidance commands physical roll, pitch, and yaw torque only. RCS translation remains a physical consequence of individual jet forces but is not intentionally commanded. Reserve `SixAxisWrenchV1` for future docking, station keeping, rendezvous, and propulsive-landing missions so those uses can define their own translation, authority, navigation, and safety contracts.
