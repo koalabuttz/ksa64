@@ -1,5 +1,7 @@
 //! Segmented append-only Phase 9 archives and finalist packages.
+use crate::phase9::CandidateEvaluation;
 use crate::phase9_search::SearchGeneration;
+use ksa64_core::phase8_5_contract::{parse_avionics_summary, KAS8_LENGTH};
 use ksa64_core::phase9_contract::{CandidateAggregate, DesignVector, KDV9_LENGTH, KOE9_LENGTH};
 use ksa64_interface::crc32_ieee;
 use std::fs::{self, File, OpenOptions};
@@ -8,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 pub const KRA9_HEADER: usize = 32;
 pub const KRA9_RECORD: usize = KDV9_LENGTH + KOE9_LENGTH;
+pub const KRE9_HEADER: usize = 32;
 pub const KFP9_HEADER: usize = 64;
 pub const KFP9_MAX_FINALISTS: usize = 32;
 #[derive(Debug)]
@@ -26,6 +29,19 @@ pub enum ArchiveError {
 pub struct ArchiveScan {
     pub manifest_identity: u32,
     pub generations: Vec<SearchGeneration>,
+    pub valid_length: u64,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArchivedCandidateEvidence {
+    pub candidate_identity: u32,
+    pub uncertainty_tier: u8,
+    pub records: Vec<[u8; KAS8_LENGTH]>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SearchArchiveScan {
+    pub manifest_identity: u32,
+    pub generations: Vec<SearchGeneration>,
+    pub evidence: Vec<ArchivedCandidateEvidence>,
     pub valid_length: u64,
 }
 
@@ -187,6 +203,150 @@ fn temp_path(path: &Path) -> PathBuf {
     let mut p = path.as_os_str().to_os_string();
     p.push(".tmp");
     PathBuf::from(p)
+}
+
+fn evidence_segment(manifest: u32, value: &CandidateEvaluation) -> Result<Vec<u8>, ArchiveError> {
+    let count = value.cases.len();
+    if count != usize::from(value.aggregate.uncertainty_tier) || !matches!(count, 1 | 8 | 64) {
+        return Err(ArchiveError::Length);
+    }
+    let len = KRE9_HEADER + count * KAS8_LENGTH + 4;
+    let mut bytes = vec![0; len];
+    bytes[0..4].copy_from_slice(b"KRE9");
+    w16(&mut bytes, 4, 9);
+    w16(&mut bytes, 6, KRE9_HEADER as u16);
+    w32(&mut bytes, 8, len as u32);
+    w32(&mut bytes, 12, manifest);
+    w32(&mut bytes, 16, value.aggregate.candidate_identity);
+    bytes[20] = value.aggregate.uncertainty_tier;
+    bytes[21] = count as u8;
+    let mut offset = KRE9_HEADER;
+    for case in &value.cases {
+        parse_avionics_summary(&case.kas8).map_err(|_| ArchiveError::Decode)?;
+        bytes[offset..offset + KAS8_LENGTH].copy_from_slice(&case.kas8);
+        offset += KAS8_LENGTH;
+    }
+    let crc = crc32_ieee(&bytes[..len - 4]);
+    w32(&mut bytes, len - 4, crc);
+    Ok(bytes)
+}
+
+pub fn encode_search_archive(
+    manifest: u32,
+    generations: &[SearchGeneration],
+    evidence: &[CandidateEvaluation],
+) -> Result<Vec<u8>, ArchiveError> {
+    let mut output = encode_archive(manifest, generations)?;
+    let mut ordered: Vec<&CandidateEvaluation> = evidence.iter().collect();
+    ordered.sort_by_key(|value| value.aggregate.candidate_identity);
+    let mut previous = None;
+    for value in ordered {
+        let identity = value.aggregate.candidate_identity;
+        if previous == Some(identity) {
+            return Err(ArchiveError::Sequence);
+        }
+        previous = Some(identity);
+        output.extend_from_slice(&evidence_segment(manifest, value)?);
+    }
+    Ok(output)
+}
+
+pub fn scan_search_archive(input: &[u8]) -> Result<SearchArchiveScan, ArchiveError> {
+    let mut generation_end = 0usize;
+    while generation_end < input.len() && input[generation_end..].starts_with(b"KRA9") {
+        if input.len() - generation_end < KRA9_HEADER {
+            return Err(ArchiveError::Length);
+        }
+        let length = r32(input, generation_end + 8) as usize;
+        if length < KRA9_HEADER + 4 || generation_end + length > input.len() {
+            return Err(ArchiveError::Length);
+        }
+        generation_end += length;
+    }
+    let base = scan_archive(&input[..generation_end])?;
+    let known: std::collections::BTreeSet<u32> = base
+        .generations
+        .iter()
+        .flat_map(|generation| generation.candidates.iter().map(|value| value.identity))
+        .collect();
+    let mut offset = generation_end;
+    let mut evidence = Vec::new();
+    let mut previous = None;
+    while offset < input.len() {
+        if input.len() - offset < KRE9_HEADER + 4 || &input[offset..offset + 4] != b"KRE9" {
+            return Err(ArchiveError::Magic);
+        }
+        if r16(input, offset + 4) != 9 || r16(input, offset + 6) as usize != KRE9_HEADER {
+            return Err(ArchiveError::Version);
+        }
+        let length = r32(input, offset + 8) as usize;
+        let manifest = r32(input, offset + 12);
+        let candidate = r32(input, offset + 16);
+        let tier = input[offset + 20];
+        let count = input[offset + 21] as usize;
+        if manifest != base.manifest_identity || !known.contains(&candidate) {
+            return Err(ArchiveError::Identity);
+        }
+        if previous.is_some_and(|value| candidate <= value) {
+            return Err(ArchiveError::Sequence);
+        }
+        previous = Some(candidate);
+        if input[offset + 22..offset + KRE9_HEADER]
+            .iter()
+            .any(|value| *value != 0)
+            || !matches!(count, 1 | 8 | 64)
+            || tier as usize != count
+            || length != KRE9_HEADER + count * KAS8_LENGTH + 4
+            || offset + length > input.len()
+        {
+            return Err(ArchiveError::Length);
+        }
+        if r32(input, offset + length - 4) != crc32_ieee(&input[offset..offset + length - 4]) {
+            return Err(ArchiveError::Checksum);
+        }
+        let mut records = Vec::with_capacity(count);
+        let mut record_offset = offset + KRE9_HEADER;
+        for _ in 0..count {
+            let record: [u8; KAS8_LENGTH] = input[record_offset..record_offset + KAS8_LENGTH]
+                .try_into()
+                .map_err(|_| ArchiveError::Length)?;
+            parse_avionics_summary(&record).map_err(|_| ArchiveError::Decode)?;
+            records.push(record);
+            record_offset += KAS8_LENGTH;
+        }
+        evidence.push(ArchivedCandidateEvidence {
+            candidate_identity: candidate,
+            uncertainty_tier: tier,
+            records,
+        });
+        offset += length;
+    }
+    Ok(SearchArchiveScan {
+        manifest_identity: base.manifest_identity,
+        generations: base.generations,
+        evidence,
+        valid_length: offset as u64,
+    })
+}
+
+pub fn write_search_archive_atomic(
+    path: &Path,
+    manifest: u32,
+    generations: &[SearchGeneration],
+    evidence: &[CandidateEvaluation],
+) -> Result<(), ArchiveError> {
+    let bytes = encode_search_archive(manifest, generations, evidence)?;
+    let scan = scan_search_archive(&bytes)?;
+    if scan.valid_length != bytes.len() as u64 {
+        return Err(ArchiveError::Length);
+    }
+    let temp = temp_path(path);
+    {
+        let mut file = File::create(&temp).map_err(|_| ArchiveError::Io)?;
+        file.write_all(&bytes).map_err(|_| ArchiveError::Io)?;
+        file.sync_all().map_err(|_| ArchiveError::Io)?;
+    }
+    fs::rename(temp, path).map_err(|_| ArchiveError::Io)
 }
 
 pub fn encode_kpf9(

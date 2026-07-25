@@ -1,7 +1,7 @@
 //! KSA64 Phase 9 optimization workbench CLI.
 use ksa64_core::phase9_contract::{SearchEngineId, SearchManifest, SearchPresetId};
 use ksa64_host::phase9::{baseline_vector, built_in_manifest, evaluate_candidate, StudyId};
-use ksa64_host::phase9_archive::{encode_kpf9, write_archive_atomic};
+use ksa64_host::phase9_archive::{encode_kpf9, write_search_archive_atomic};
 use ksa64_host::phase9_manifest::compile_manifest_json;
 use ksa64_host::phase9_protocol::serve_jsonl;
 use ksa64_host::phase9_report::{report_csv, report_html, report_json};
@@ -109,10 +109,11 @@ fn execute_search(
         manifest.encode().map_err(|e| format!("manifest: {e:?}"))?,
     )
     .map_err(|e| e.to_string())?;
-    write_archive_atomic(
+    write_search_archive_atomic(
         &output.join("search.kra9"),
         manifest.identity,
         &result.generations,
+        &result.evidence,
     )
     .map_err(|e| format!("archive: {e:?}"))?;
     fs::write(
@@ -123,16 +124,18 @@ fn execute_search(
     fs::write(output.join("report.csv"), report_csv(&result)).map_err(|e| e.to_string())?;
     fs::write(output.join("report.html"), report_html(&manifest, &result))
         .map_err(|e| e.to_string())?;
-    let last = result.generations.last().ok_or("empty search")?;
+    result.generations.last().ok_or("empty search")?;
+    let mut candidate_history = std::collections::BTreeMap::new();
+    for generation in &result.generations {
+        for (candidate, aggregate) in generation.candidates.iter().zip(&generation.aggregates) {
+            candidate_history.insert(candidate.identity, (*candidate, *aggregate));
+        }
+    }
     let mut finalists = Vec::new();
-    for f in &result.finalists {
-        if let Some((i, c)) = last
-            .candidates
-            .iter()
-            .enumerate()
-            .find(|(_, c)| c.identity == f.aggregate.candidate_identity)
+    for finalist in &result.finalists {
+        if let Some((candidate, _)) = candidate_history.get(&finalist.aggregate.candidate_identity)
         {
-            finalists.push((*c, last.aggregates[i]))
+            finalists.push((*candidate, finalist.aggregate))
         }
     }
     fs::write(

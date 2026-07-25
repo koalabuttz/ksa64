@@ -5,7 +5,7 @@ use ksa64_core::phase9_contract::{
 };
 use ksa64_sim::phase4::campaign::keyed_word_raw;
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::mpsc;
 use std::thread;
 
@@ -22,6 +22,7 @@ pub struct SearchResult {
     pub generations: Vec<SearchGeneration>,
     pub pareto_indices: Vec<usize>,
     pub finalists: Vec<CandidateEvaluation>,
+    pub evidence: Vec<CandidateEvaluation>,
     pub cache_hits: u32,
     pub evaluations: u32,
 }
@@ -104,8 +105,9 @@ pub fn dominates(m: &SearchManifest, a: &CandidateAggregate, b: &CandidateAggreg
 }
 pub fn pareto_front(m: &SearchManifest, values: &[CandidateAggregate]) -> Vec<usize> {
     let mut out = Vec::new();
+    let mut seen = BTreeSet::new();
     for i in 0..values.len() {
-        if !values[i].feasible {
+        if !values[i].feasible || !seen.insert(values[i].candidate_identity) {
             continue;
         }
         if !(0..values.len()).any(|j| j != i && dominates(m, &values[j], &values[i])) {
@@ -412,6 +414,17 @@ fn select_nsga(
     aggregates: Vec<CandidateAggregate>,
     n: usize,
 ) -> (Vec<DesignVector>, Vec<CandidateAggregate>) {
+    let mut seen = BTreeSet::new();
+    let mut unique_candidates = Vec::new();
+    let mut unique_aggregates = Vec::new();
+    for (candidate, aggregate) in candidates.into_iter().zip(aggregates) {
+        if seen.insert(candidate.identity) {
+            unique_candidates.push(candidate);
+            unique_aggregates.push(aggregate);
+        }
+    }
+    let candidates = unique_candidates;
+    let aggregates = unique_aggregates;
     let ranks = nondominated_ranks(m, &aggregates);
     let mut indices: Vec<usize> = (0..candidates.len()).collect();
     let mut scores = BTreeMap::new();
@@ -652,26 +665,52 @@ pub fn run_search_with_workers<E: CandidateEvaluator + Sync>(
     };
     let last = generations.last().ok_or(SearchError::Configuration)?;
     let pareto = pareto_front(m, &last.aggregates);
-    let mut terminal: Vec<usize> = if pareto.is_empty() {
-        let mut x: Vec<usize> = (0..last.candidates.len()).collect();
-        x.sort_by(|a, b| feasibility_cmp(&last.aggregates[*a], &last.aggregates[*b]));
-        x
-    } else {
-        pareto.clone()
-    };
-    terminal.truncate(m.budgets.finalists.min(terminal.len() as u16) as usize);
-    let finalist_candidates: Vec<DesignVector> =
-        terminal.iter().map(|i| last.candidates[*i]).collect();
+    let target = usize::from(m.budgets.finalists);
+    let mut finalist_candidates: Vec<DesignVector> =
+        pareto.iter().map(|i| last.candidates[*i]).collect();
+    let mut selected: BTreeSet<u32> = finalist_candidates.iter().map(|c| c.identity).collect();
+    let mut history: BTreeMap<u32, (DesignVector, CandidateAggregate)> = BTreeMap::new();
+    for generation in &generations {
+        for (candidate, aggregate) in generation.candidates.iter().zip(&generation.aggregates) {
+            history.insert(candidate.identity, (*candidate, *aggregate));
+        }
+    }
+    let mut remaining: Vec<(DesignVector, CandidateAggregate)> = history
+        .into_values()
+        .filter(|(candidate, _)| !selected.contains(&candidate.identity))
+        .collect();
+    remaining.sort_by(|a, b| lex_objectives(m, &a.1, &b.1));
+    for (candidate, _) in remaining {
+        if finalist_candidates.len() >= target {
+            break;
+        }
+        if selected.insert(candidate.identity) {
+            finalist_candidates.push(candidate);
+        }
+    }
     cache.prefetch(&finalist_candidates, 64, workers)?;
     let mut finalists = Vec::new();
     for candidate in &finalist_candidates {
         finalists.push(cache.cached(candidate, 64)?)
     }
+    let mut highest_evidence: BTreeMap<u32, CandidateEvaluation> = BTreeMap::new();
+    for ((candidate_identity, _), value) in &cache.values {
+        let replace = highest_evidence
+            .get(candidate_identity)
+            .is_none_or(|current| {
+                value.aggregate.uncertainty_tier > current.aggregate.uncertainty_tier
+            });
+        if replace {
+            highest_evidence.insert(*candidate_identity, value.clone());
+        }
+    }
+    let evidence = highest_evidence.into_values().collect();
     Ok(SearchResult {
         manifest_identity: m.identity,
         generations,
         pareto_indices: pareto,
         finalists,
+        evidence,
         cache_hits: cache.hits,
         evaluations: cache.calls,
     })
@@ -757,7 +796,15 @@ mod tests {
             let b = run_search_with_workers(&m, &synthetic(m), &[], 4).unwrap();
             let c = run_search_with_workers(&m, &synthetic(m), &[], 8).unwrap();
             assert_eq!(a, b);
-            assert_eq!(a, c)
+            assert_eq!(a, c);
+            assert!(!a.finalists.is_empty());
+            assert!(a.finalists.len() <= usize::from(m.budgets.finalists));
+            let ids: BTreeSet<u32> = a
+                .finalists
+                .iter()
+                .map(|x| x.aggregate.candidate_identity)
+                .collect();
+            assert_eq!(ids.len(), a.finalists.len())
         }
     }
 }

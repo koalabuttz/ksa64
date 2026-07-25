@@ -198,6 +198,9 @@ fn variable_id(v: &str) -> Result<u16, ManifestCompileError> {
         "actuator-mass-q21" => Ok(variable::ACTUATOR_MASS_Q21),
         "proportional-gain-q15" => Ok(variable::PROPORTIONAL_GAIN_Q15),
         "derivative-gain-q15" => Ok(variable::DERIVATIVE_GAIN_Q15),
+        "body-length-scale" => Ok(variable::BODY_LENGTH_SCALE),
+        "body-diameter-scale" => Ok(variable::BODY_DIAMETER_SCALE),
+        "ogive-fineness-q16" => Ok(variable::OGIVE_FINENESS_Q16),
         _ => Err(ManifestCompileError::Variable),
     }
 }
@@ -215,6 +218,7 @@ fn metric_id(v: &str) -> Result<u16, ManifestCompileError> {
         "saturation-count" => Ok(metric::SATURATION_COUNT),
         "deployment-acknowledged" => Ok(metric::DEPLOYMENT_ACK),
         "fatal-avionics-alarm" => Ok(metric::ALARMS),
+        "five-mps-settling-error" => Ok(metric::SETTLING_ERROR),
         _ => Err(ManifestCompileError::Metric),
     }
 }

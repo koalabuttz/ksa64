@@ -221,6 +221,7 @@ mod tests {
             generations: vec![],
             pareto_indices: vec![],
             finalists: vec![],
+            evidence: vec![],
             cache_hits: 0,
             evaluations: 0,
         };

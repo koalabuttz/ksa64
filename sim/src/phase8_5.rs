@@ -14,7 +14,7 @@ use ksa64_core::phase8_numeric::{
     SpatialTime, SPATIAL_COAST_TRANSLATION_STEP, SPATIAL_POWERED_STEP, SPATIAL_RECOVERY_STEP,
 };
 use ksa64_core::phase8_pack::{
-    SpatialMissionPack, SpatialMotorPack, SpatialVehiclePack, WindProfilePack,
+    SpatialMissionPack, SpatialMotorPack, SpatialVehiclePack, WindKnot, WindProfilePack,
 };
 use ksa64_core::phase8_result::spatial_evaluation_identity;
 use ksa64_flight::phase8_5::{
@@ -899,6 +899,91 @@ pub struct AvionicsEvaluationRequest<'a> {
     pub avionics: AvionicsProfilePack,
     pub capability: ActuatorCapabilityPack,
     pub uncertainty_case: LocalAvionicsVariation,
+}
+
+/// Evaluate the accepted Phase 8.5 five-metre-per-second crosswind settling gate.
+/// This is a bounded named-case probe, not a replacement mission evaluator.
+pub fn five_mps_crosswind_settling_error(
+    vehicle: &SpatialVehiclePack,
+    motor: &SpatialMotorPack,
+    mut mission: SpatialMissionPack,
+    avionics: AvionicsProfilePack,
+    capability: ActuatorCapabilityPack,
+) -> Result<i16, LocalWorldError> {
+    if capability.capability != ActuatorCapabilityId::TwoAxisMotorGimbalV1
+        || capability.vehicle_identity != vehicle.identity
+    {
+        return Err(LocalWorldError::Capability);
+    }
+    let mut knots = [WindKnot::ZERO; ksa64_core::phase8_format::KWP8_MAX_WIND_KNOTS];
+    knots[0] = WindKnot {
+        altitude: ksa64_core::phase8_numeric::SpatialPosition::ZERO,
+        east: ksa64_core::phase8_numeric::SpatialWind::from_raw(5 << 22),
+        north: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+    };
+    knots[1] = WindKnot {
+        altitude: ksa64_core::phase8_numeric::SpatialPosition::from_raw(100_000 << 13),
+        east: ksa64_core::phase8_numeric::SpatialWind::from_raw(5 << 22),
+        north: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+    };
+    let wind = WindProfilePack {
+        identity: 0x3957_0005,
+        gust_seed: 0,
+        gust_cadence: SpatialTime::from_raw(1 << 18),
+        gust_amplitude_east: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+        gust_amplitude_north: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+        max_gust: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+        knot_count: 2,
+        knots,
+    };
+    mission.vehicle_identity = vehicle.identity;
+    mission.wind_identity = wind.identity;
+    let config = local_flight_config(avionics, capability, motor)?;
+    let mut world = LocalWorldEndpoint::new(
+        vehicle,
+        motor,
+        mission,
+        &wind,
+        SpatialMissionVariation::NOMINAL,
+        capability,
+    )?;
+    let initial = world.snapshot().state;
+    let q = initial.attitude;
+    let target = [
+        clamp_i16(q.x() >> 15),
+        clamp_i16(q.y() >> 15),
+        clamp_i16(q.z() >> 15),
+    ];
+    let mut flight = LocalFlightComputer::new(
+        config,
+        [
+            initial.position.x(),
+            initial.position.y(),
+            initial.position.z(),
+        ],
+        target,
+    )
+    .ok_or(LocalWorldError::Capability)?;
+    let mut rail_exit = None;
+    while let Some(release) = world.release()? {
+        let epoch = release.inertial.measurement_epoch;
+        if release.inertial.vehicle_status & 1 == 0 && rail_exit.is_none() {
+            rail_exit = Some(epoch);
+        }
+        let output = flight.tick(Some(release.inertial), release.aid);
+        world.accept_command(output.command)?;
+        if rail_exit.is_some_and(|exit| epoch == exit.wrapping_add(8)) {
+            return Ok(release.inertial.platform_angle[1]
+                .saturating_sub(target[1])
+                .saturating_abs()
+                .max(
+                    release.inertial.platform_angle[2]
+                        .saturating_sub(target[2])
+                        .saturating_abs(),
+                ));
+        }
+    }
+    Err(LocalWorldError::Incomplete)
 }
 
 pub fn evaluate_with_avionics(
