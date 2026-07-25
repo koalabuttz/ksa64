@@ -1,6 +1,6 @@
 # Phase 9 — deterministic design optimization and robustness workbench
 
-Status: implemented and accepted in software on 2026-07-25. The finite VICE finalist-browser screen probe remains an explicitly recorded environment limitation because the configured binary monitor did not answer its initial PING; the stock MOS image itself builds and fits.
+Status: complete on 2026-07-25. The stock MOS finalist browser builds, fits, and passes its frozen finite one-instance VICE probe.
 
 Phase 9 keeps candidate selection on the host and reuses the accepted Phase 8.5 avionics-aware evaluator. It does not add another physics simulator.
 
@@ -59,7 +59,7 @@ Run the bounded audit:
 powershell -File phase9/complete.ps1
 ```
 
-The normal audit validates frozen evidence and finite target packaging. It does not rerun every accepted search or silently start VICE. Add `-RunVice` only to retry the finite finalist-browser probe after diagnosing the binary-monitor handshake.
+The normal audit validates frozen evidence and finite target packaging. It does not rerun every accepted search or silently start VICE. Add `-RunVice` to revalidate the checked finalist-browser evidence through one sequential emulator instance.
 
 ## Evidence boundary
 

@@ -60,7 +60,7 @@ try {
             NoVice
             $versions = Get-Content toolchains/versions.json -Raw | ConvertFrom-Json
             $vice = (Resolve-Path $versions.vice.projectRelativeExecutable).Path
-            python -B phase9/reference/vice_phase9_finalist.py --vice $vice --prg target/mos-c64-none/c64/ksa64-phase9-finalist-c64 --output (Join-Path $auditRoot "vice-finalist.json"); Check
+            python -B phase9/reference/vice_phase9_finalist.py --vice $vice --prg target/mos-c64-none/c64/ksa64-phase9-finalist-c64 --output phase9/reference/vice-finalist.json --check; Check
             NoVice
         }
     }

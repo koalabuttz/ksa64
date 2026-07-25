@@ -338,6 +338,6 @@ Independent Python verification parses KOM9/KDV9/KOE9/KRA9/KRE9/KAS8 without Rus
 
 The persistent JSONL example proves hello, ordered duplicate-aware evaluation, checkpoint, malformed-input isolation, and close behavior. Reports are self-contained and passive; progress observers and renderers cannot alter SearchResult.
 
-The rust-mos finalist browser is 15,391 bytes and ends at `$441E`, below the stock `$C000` boundary without an REU. Its finite VICE screen probe remains unresolved because the configured binary monitor failed its initial PING twice; both emulators were closed after proven failure. This unpassed presentation gate is recorded rather than inferred from the MOS build.
+The rust-mos finalist browser is 15,391 bytes and ends at `$441E`, below the stock `$C000` boundary without an REU. After earlier monitor-handshake failures in an overloaded emulator environment, the unchanged probe and PRG passed twice in a clean one-instance environment. The frozen result validates four finalists, manifest `e86077d4`, status zero, and complete process cleanup. This supports a transient environment/starvation diagnosis rather than a wire-format or target-program defect.
 
 The accepted physical studies remain inside the Phase 8 model envelope and promote only candidates satisfying all 64 hard-constraint cases. The broad-airframe demonstration is explicitly experimental, promotes no accepted finalists, and is never described as correlated or safety-valid.

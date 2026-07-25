@@ -12,7 +12,10 @@ def parse(memory:bytes):
  if status!=0:raise RuntimeError(f'finalist browser failed: {code}')
  return {'status':status,'code':code,'finalist_count':count,'manifest_identity':f'{manifest:08x}'}
 def main():
- p=argparse.ArgumentParser();p.add_argument('--vice',type=Path,required=True);p.add_argument('--prg',type=Path,required=True);p.add_argument('--output',type=Path);a=p.parse_args();r=run_prg_until_result(a.vice.resolve(strict=True),a.prg.resolve(strict=True),30.0,START,END,parse);data={'schema':'ksa64.phase9.finalist-browser-v1',**r};text=json.dumps(data,indent=2)+'\n';print(text,end='');
- if a.output:a.output.write_text(text)
+ p=argparse.ArgumentParser();p.add_argument('--vice',type=Path,required=True);p.add_argument('--prg',type=Path,required=True);p.add_argument('--output',type=Path);p.add_argument('--check',action='store_true');a=p.parse_args();r=run_prg_until_result(a.vice.resolve(strict=True),a.prg.resolve(strict=True),30.0,START,END,parse);data={'schema':'ksa64.phase9.finalist-browser-v1',**r};text=json.dumps(data,indent=2)+'\n';print(text,end='');
+ if a.check:
+  if not a.output:raise RuntimeError('--check requires --output')
+  if json.loads(a.output.read_text())!=data:raise RuntimeError(f'evidence differs from {a.output}')
+ elif a.output:a.output.write_text(text)
  return 0
 if __name__=='__main__':raise SystemExit(main())

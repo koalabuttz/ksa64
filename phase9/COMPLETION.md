@@ -1,6 +1,6 @@
 # Phase 9 completion record
 
-Status: software implementation and deterministic evidence accepted on 2026-07-25. One finite VICE presentation probe remains blocked at monitor handshake and is not claimed as passed.
+Status: accepted on 2026-07-25. The deterministic host evidence, stock-C64 packaging, and finite one-instance VICE finalist-browser probe pass.
 
 ## Accepted implementation
 
@@ -42,7 +42,7 @@ The pinned David/koalabuttz rust-mos container builds `ksa64-phase9-finalist-c64
 - SHA-256 `b953f152daafdcf98d15407241f3029f5f9aecfdc222ace08875025c1ffd275d`.
 - No REU required.
 
-Two sequential finite VICE attempts were closed after the binary monitor failed to answer its initial PING. No emulator process remains. This is presentation/automation evidence still to repair, not a physics or optimizer failure, and the completion record does not mislabel it as accepted. Selected finalists can still use the already accepted Phase 8.5 split host/C64 flight endpoint.
+Two earlier finite attempts encountered a binary-monitor PING timeout while the host had been overloaded by stale/multiple VICE instances. With every prior instance closed, the unchanged helper and PRG passed on the first clean diagnostic and again in checked-evidence mode. The accepted result reports status/code zero, four finalists, manifest `e86077d4`, and zero remaining VICE processes. The evidence therefore supports transient emulator starvation rather than a protocol or PRG defect. Selected finalists can also use the accepted Phase 8.5 split host/C64 flight endpoint.
 
 ## Scope and limitations
 

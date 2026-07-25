@@ -266,7 +266,7 @@ Accepted result:
 - Persistent bounded JSONL integration for external optimizers.
 - Live seven-page host workbench, self-contained HTML/JSON/CSV reporting, and a stock-C64 finalist browser below `$C000`.
 
-The finite automated VICE browser probe remains blocked at its binary-monitor PING and is not claimed as passed. The stock browser builds and fits; selected exact reruns continue through the accepted Phase 8.5 host-world/C64-flight endpoint.
+The 15,391-byte stock browser builds below `$C000` and its finite one-instance VICE probe validates four finalists bound to manifest `e86077d4`. Selected exact reruns continue through the accepted Phase 8.5 host-world/C64-flight endpoint.
 
 The optimizer selects candidates; the portable core only evaluates them.
 

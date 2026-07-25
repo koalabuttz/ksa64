@@ -1120,4 +1120,4 @@ Date: 2026-07-25
 
 Status: accepted.
 
-Use the C64 for bounded finalist browsing, presentation, and selected exact reruns through the accepted split flight endpoint. Do not run production optimization on the target or make REU capacity part of candidate identity. The 15,391-byte stock browser satisfies packaging; the unresolved VICE binary-monitor screen probe remains an explicit presentation limitation rather than a reason to infer success.
+Use the C64 for bounded finalist browsing, presentation, and selected exact reruns through the accepted split flight endpoint. Do not run production optimization on the target or make REU capacity part of candidate identity. The 15,391-byte stock browser satisfies packaging and its frozen finite one-instance VICE probe validates four finalists without leaving an emulator process.
