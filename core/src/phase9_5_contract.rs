@@ -337,6 +337,7 @@ pub struct AdvancedEffectorPack {
     pub tank_dry_mass_q21: i32,
     pub propellant_wet_mass_q21: i32,
     pub reserve_q15: u16,
+    pub canard_hinge_limits_q24: [i32; 4],
     pub canard_count: u8,
     pub jet_count: u8,
     pub coefficient_count: u8,
@@ -366,6 +367,7 @@ impl AdvancedEffectorPack {
         }
         if self.set.has_canards() {
             if self.coefficient_count < 2
+                || self.canard_hinge_limits_q24.iter().any(|value| *value <= 0)
                 || !self.canards[..self.canard_count as usize]
                     .iter()
                     .all(CanardInstallation::is_valid)
@@ -520,6 +522,9 @@ pub fn write_effector_pack(
     pi32(o, 72, v.propellant_wet_mass_q21);
     p16(o, 76, v.reserve_q15);
     for i in 0..MAX_CANARDS {
+        pi32(o, 80 + i * 4, v.canard_hinge_limits_q24[i])
+    }
+    for i in 0..MAX_CANARDS {
         put_canard(o, 96 + i * 64, &v.canards[i])
     }
     for i in 0..MAX_CANARD_COEFFICIENT_KNOTS {
@@ -546,7 +551,7 @@ pub fn write_effector_pack(
 }
 pub fn parse_effector_pack(b: &[u8]) -> Result<AdvancedEffectorPack, Phase95ContractError> {
     let identity = validate(b, Kind::Effector)?;
-    zero(b, 78, 96)?;
+    zero(b, 78, 80)?;
     zero(b, 1312, KPE9_LENGTH - 4)?;
     let mut canards = [CanardInstallation::EMPTY; MAX_CANARDS];
     for i in 0..MAX_CANARDS {
@@ -593,6 +598,7 @@ pub fn parse_effector_pack(b: &[u8]) -> Result<AdvancedEffectorPack, Phase95Cont
         tank_dry_mass_q21: gi32(b, 68),
         propellant_wet_mass_q21: gi32(b, 72),
         reserve_q15: g16(b, 76),
+        canard_hinge_limits_q24: [gi32(b, 80), gi32(b, 84), gi32(b, 88), gi32(b, 92)],
         canards,
         coefficient_knots,
         jets,
@@ -914,6 +920,7 @@ mod tests {
             tank_dry_mass_q21: 1 << 18,
             propellant_wet_mass_q21: 1 << 20,
             reserve_q15: 6554,
+            canard_hinge_limits_q24: [1 << 23; 4],
             canard_count: 4,
             jet_count: 12,
             coefficient_count: 2,

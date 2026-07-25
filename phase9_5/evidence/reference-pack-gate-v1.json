@@ -1,0 +1,28 @@
+{
+  "schema": "ksa64.phase9_5.reference-pack-gate-v1",
+  "source_sha256": "226ae8256640ba9dd85bfefa9027540e9dd0f1d545ea6e48b2964fea7f134bd1",
+  "base_kvp8_sha256": "0f309912a00772081baa4031cad97fe881ab3787b31288ceea657c45cb81f0d0",
+  "provenance_identity": "0x9c633107",
+  "variants": 4,
+  "independent_reconstruction": "pass",
+  "formats": {
+    "KVP8": 1024,
+    "KPE9": 2048,
+    "KPA9": 512
+  },
+  "files": {
+    "compile-report.json": "d0ce0b5faf6d6b70b9dbfc13748ba5f99ba153ed81de5fcbd730e4e8accd6cc9",
+    "firestorm-c9.kvp8": "592a2073d75ce439db4d583848a92765f58922d707ab439f16e3681f5d5b803d",
+    "firestorm-c9.kpe9": "59c3691cbab1657469e2b2ef264d9ce8bc981b5a5360d0924b7cda728200d67c",
+    "firestorm-c9.kpa9": "698f0aae22cc76792d1d543621cbdf912481f088cd31d56fbcfb8ead746790e3",
+    "firestorm-r9.kvp8": "b5e89adcdc9d0689edeadec2a1453931bacafa2e9bb07adebf622adaac5fe0eb",
+    "firestorm-r9.kpe9": "9012f50485d6f54606748b42f2758961434b4a19b8dd5577f7124fd09b4d024e",
+    "firestorm-r9.kpa9": "cb52bc1287c984b2041ab443c2c5a3b39098b38609583746b49e9b2a39030a59",
+    "firestorm-m9.kvp8": "849c45a0a55cb0635106ac86763d4a9c6c033cf9f4a0cb692be11beacfa71137",
+    "firestorm-m9.kpe9": "6a922a527cc11dd28155ef8d36d38331229e45e6e6efbf3c3acacc46417a7342",
+    "firestorm-m9.kpa9": "c2c2ea9d89f3abe5d486115d79d38fc1c7d87c1d49d82b4ff638a452b4fe3455",
+    "ksa-x1.kvp8": "fc4b46f1d754ea0a56fcd19f1b3a021cc3cb4e2f5983df660a846a9eff36188a",
+    "ksa-x1.kpe9": "cfe951ea44207e9b6d2771c1b7c463e5e86cf814f250ad1c5be2361bb9fafe95",
+    "ksa-x1.kpa9": "e5d54155827a189a869b1556e71bd8b7203817513d68e46f495a213e5e059094"
+  }
+}

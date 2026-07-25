@@ -1,0 +1,78 @@
+[
+  {
+    "name": "Firestorm-C9",
+    "experimental": false,
+    "base_vehicle_identity": 3569682864,
+    "vehicle_identity": 4064272410,
+    "effector_identity": 1311242345,
+    "allocator_identity": 888063346,
+    "dry_mass_kg": 2.2120395660400387,
+    "dry_cg_from_nose_m": 0.8757240245286324,
+    "dry_inertia_kgm2": [
+      0.0014372881162874997,
+      0.5237845043250116,
+      0.5237845043250116
+    ],
+    "canard_count": 4,
+    "jet_count": 0,
+    "supply_source": "none",
+    "provenance_identity": 2623746311
+  },
+  {
+    "name": "Firestorm-R9",
+    "experimental": false,
+    "base_vehicle_identity": 3569682864,
+    "vehicle_identity": 605773533,
+    "effector_identity": 2518818278,
+    "allocator_identity": 4151968293,
+    "dry_mass_kg": 2.3820395660400364,
+    "dry_cg_from_nose_m": 0.9020153241035794,
+    "dry_inertia_kgm2": [
+      0.001366212841107499,
+      0.5296678977194913,
+      0.5296678977194913
+    ],
+    "canard_count": 0,
+    "jet_count": 12,
+    "supply_source": "ideal_isothermal_blowdown_v1",
+    "provenance_identity": 2623746311
+  },
+  {
+    "name": "Firestorm-M9",
+    "experimental": false,
+    "base_vehicle_identity": 3569682864,
+    "vehicle_identity": 1166510380,
+    "effector_identity": 258105403,
+    "allocator_identity": 1205647032,
+    "dry_mass_kg": 2.502039566040036,
+    "dry_cg_from_nose_m": 0.8917669494413782,
+    "dry_inertia_kgm2": [
+      0.0015370214652074988,
+      0.5690513807077549,
+      0.5690513807077549
+    ],
+    "canard_count": 4,
+    "jet_count": 12,
+    "supply_source": "ideal_isothermal_blowdown_v1",
+    "provenance_identity": 2623746311
+  },
+  {
+    "name": "KSA-X1",
+    "experimental": true,
+    "base_vehicle_identity": 3569682864,
+    "vehicle_identity": 3220895599,
+    "effector_identity": 1551456208,
+    "allocator_identity": 1054274539,
+    "dry_mass_kg": 2.556039566040039,
+    "dry_cg_from_nose_m": 0.8894761338579136,
+    "dry_inertia_kgm2": [
+      0.001728888116287501,
+      0.5790788242082692,
+      0.5790788242082692
+    ],
+    "canard_count": 4,
+    "jet_count": 12,
+    "supply_source": "regulated_v1",
+    "provenance_identity": 2623746311
+  }
+]

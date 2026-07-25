@@ -1,0 +1,379 @@
+{
+  "schema": "ksa64.advanced-effector-source-v1",
+  "canard": {
+    "provenance": {
+      "kind": "declared_assumption",
+      "reference": "",
+      "note": "Reference four-surface forward cruciform installation from the accepted Phase 9.5 contract."
+    },
+    "root_m": {
+      "value": "0.060",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Assumption-backed reference canard root chord."
+      }
+    },
+    "tip_m": {
+      "value": "0.030",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Assumption-backed reference canard tip chord."
+      }
+    },
+    "span_m": {
+      "value": "0.025",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Assumption-backed reference canard semi-span."
+      }
+    },
+    "sweep_m": {
+      "value": "0.020",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Assumption-backed reference canard leading-edge sweep."
+      }
+    },
+    "station_from_nose_m": {
+      "value": "0.450",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Reference aerodynamic-center station from the nose."
+      }
+    },
+    "radial_station_m": {
+      "value": "0.041329",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Body radius plus half canard span."
+      }
+    },
+    "mass_each_kg": {
+      "value": "0.025",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Surface and servo point-mass allocation."
+      }
+    },
+    "travel_deg": {
+      "value": "10",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted symmetric actuator travel."
+      }
+    },
+    "slew_deg_per_s": {
+      "value": "120",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted actuator slew limit."
+      }
+    },
+    "lag_releases": 1,
+    "hinge_limit_nm": {
+      "value": "0.50",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted hinge load limit."
+      }
+    },
+    "coefficient_knots": [
+      [
+        "0",
+        "2.40",
+        "0.050",
+        "0.22"
+      ],
+      [
+        "0.4",
+        "2.30",
+        "0.060",
+        "0.24"
+      ],
+      [
+        "0.8",
+        "2.10",
+        "0.080",
+        "0.28"
+      ]
+    ]
+  },
+  "firestorm_rcs": {
+    "provenance": {
+      "kind": "declared_assumption",
+      "reference": "",
+      "note": "Accepted twelve-jet Firestorm blowdown installation; component values are explicit engineering assumptions."
+    },
+    "fore_station_m": {
+      "value": "0.400",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Forward RCS station."
+      }
+    },
+    "aft_station_m": {
+      "value": "1.500",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Aft RCS station."
+      }
+    },
+    "radial_station_m": {
+      "value": "0.028829",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Jet moment arm at the Firestorm body radius."
+      }
+    },
+    "tank_station_m": {
+      "value": "0.950",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Central tank station."
+      }
+    },
+    "tank_dry_mass_kg": {
+      "value": "0.150",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Tank, plumbing, and manifold dry allocation."
+      }
+    },
+    "propellant_mass_kg": {
+      "value": "0.100",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted cold-gas load."
+      }
+    },
+    "jet_hardware_mass_kg": {
+      "value": "0.010",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Each jet and local valve hardware allocation."
+      }
+    },
+    "nominal_thrust_n": {
+      "value": "1.0",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted nominal jet thrust."
+      }
+    },
+    "specific_impulse_s": {
+      "value": "55",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted nominal cold-gas specific impulse."
+      }
+    },
+    "full_pressure_pa": {
+      "value": "5000000",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted full-tank pressure."
+      }
+    },
+    "empty_pressure_pa": {
+      "value": "1000000",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Bounded zero-propellant table endpoint; depletion remains authoritative."
+      }
+    },
+    "reserve_fraction": {
+      "value": "0.20",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Protected normal-allocation propellant reserve."
+      }
+    }
+  },
+  "research_rcs": {
+    "provenance": {
+      "kind": "declared_assumption",
+      "reference": "",
+      "note": "KSA-X1 regulated research installation; explicitly experimental and assumption-backed."
+    },
+    "fore_station_m": {
+      "value": "0.350",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental forward RCS station."
+      }
+    },
+    "aft_station_m": {
+      "value": "1.550",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental aft RCS station."
+      }
+    },
+    "radial_station_m": {
+      "value": "0.045",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental larger moment arm."
+      }
+    },
+    "tank_station_m": {
+      "value": "0.900",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental tank station."
+      }
+    },
+    "tank_dry_mass_kg": {
+      "value": "0.180",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental regulated tank and manifold dry allocation."
+      }
+    },
+    "propellant_mass_kg": {
+      "value": "0.120",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental cold-gas load."
+      }
+    },
+    "jet_hardware_mass_kg": {
+      "value": "0.012",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental jet hardware allocation."
+      }
+    },
+    "nominal_thrust_n": {
+      "value": "1.2",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental nominal jet thrust."
+      }
+    },
+    "specific_impulse_s": {
+      "value": "58",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental nominal specific impulse."
+      }
+    },
+    "full_pressure_pa": {
+      "value": "4500000",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental regulated source pressure."
+      }
+    },
+    "empty_pressure_pa": {
+      "value": "4500000",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Regulated table remains flat until depletion."
+      }
+    },
+    "reserve_fraction": {
+      "value": "0.20",
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Protected experimental reserve."
+      }
+    }
+  },
+  "variants": [
+    {
+      "name": "Firestorm-C9",
+      "vehicle_identity": "firestorm-c9-vehicle-v1",
+      "effector_identity": "firestorm-c9-effectors-v1",
+      "allocator_identity": "firestorm-c9-priority-residual-v1",
+      "set": "canard_only",
+      "supply": "none",
+      "include_gimbal": false,
+      "experimental": false,
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted Firestorm-derived canard-only research configuration."
+      }
+    },
+    {
+      "name": "Firestorm-R9",
+      "vehicle_identity": "firestorm-r9-vehicle-v1",
+      "effector_identity": "firestorm-r9-effectors-v1",
+      "allocator_identity": "firestorm-r9-priority-residual-v1",
+      "set": "rcs_only",
+      "supply": "ideal_isothermal_blowdown_v1",
+      "include_gimbal": false,
+      "experimental": false,
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted Firestorm-derived twelve-jet blowdown RCS configuration."
+      }
+    },
+    {
+      "name": "Firestorm-M9",
+      "vehicle_identity": "firestorm-m9-vehicle-v1",
+      "effector_identity": "firestorm-m9-effectors-v1",
+      "allocator_identity": "firestorm-m9-priority-residual-v1",
+      "set": "gimbal_canard_rcs",
+      "supply": "ideal_isothermal_blowdown_v1",
+      "include_gimbal": true,
+      "experimental": false,
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Accepted Firestorm-derived gimbal, canard, and RCS configuration."
+      }
+    },
+    {
+      "name": "KSA-X1",
+      "vehicle_identity": "ksa-x1-vehicle-v1",
+      "effector_identity": "ksa-x1-effectors-v1",
+      "allocator_identity": "ksa-x1-priority-residual-v1",
+      "set": "gimbal_canard_rcs",
+      "supply": "regulated_v1",
+      "include_gimbal": true,
+      "experimental": true,
+      "provenance": {
+        "kind": "declared_assumption",
+        "reference": "",
+        "note": "Experimental broader-reuse research vehicle; excluded from accepted physical Pareto fronts."
+      }
+    }
+  ]
+}

@@ -33,3 +33,16 @@ search, and frozen artifact remains unchanged.
 
 See [PLAN.md](PLAN.md) for the implementation gates and
 [CONTRACT.md](CONTRACT.md) for the frozen public behavior.
+
+## Implemented gates
+
+- Gate 1 froze the additive contract and proved the complete Phase 0–9 audit.
+- Gate 2 froze the numeric and binary contracts and matched native and MOS vectors.
+- Gate 3 adds the offline provenance-bearing compiler and four reconstructible reference pack sets under `phase9_5/examples/`. Static hardware is compiled into each derivative KVP8; KPE9 carries only active effector and supply behavior. `reference/verify_reference_packs.py` independently checks identities, CRCs, mass moments, hinge limits, and pack links.
+
+Regenerate Gate 3 outputs with:
+
+```powershell
+cargo run -p ksa64-host --bin phase9_5_compile -- phase8/examples/firestorm54.kvp8 phase9_5/source-data/advanced-effectors-v1.json phase9_5/examples
+python phase9_5/reference/verify_reference_packs.py
+```

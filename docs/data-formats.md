@@ -328,7 +328,7 @@ KRA9 readers reject truncation, trailing data, bad CRCs, identity or tier mismat
 
 Phase 9.5 leaves every Phase 8.5 and Phase 9 record unchanged and adds:
 
-- KPE9: 2,048-byte canard, RCS, tank, supply, failure, and authority installation pack.
+- KPE9: 2,048-byte canard, RCS, tank, supply, failure, and authority installation pack, including four fixed Q24 hinge-load limits.
 - KPA9: 512-byte PriorityResidualV1 allocator and compiled mixing pack.
 - KLE9: 256-byte advanced-effector evaluation request.
 - KLR9: 64-byte fast-sensor, 64-byte command, 64-byte aid, and 80-byte status cells.

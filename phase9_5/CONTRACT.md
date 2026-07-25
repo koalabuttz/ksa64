@@ -7,7 +7,7 @@ Phase 9.5 adds, without reinterpreting any earlier identity:
 - `AdvancedEffectorSetId`
 - `RcsSupplySourceId`
 - `ControlAllocatorId::PriorityResidualV1`
-- `KPE9` (2,048 bytes)
+- `KPE9` (2,048 bytes), including four Q24 hinge-load limits in the fixed header
 - `KPA9` (512 bytes)
 - `KLE9` (256 bytes)
 - `KLR9` (64-byte fast sensor, 64-byte command, 64-byte aid, 80-byte status)
