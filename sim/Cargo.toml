@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [features]
-fixtures = ["ksa64-core/fixtures"]
+fixtures = ["ksa64-core/fixtures", "ksa64-flight/fixtures"]
 sim = ["fixtures"]
 c64 = ["fixtures", "ksa64-core/c64"]
 
@@ -133,4 +133,9 @@ required-features = ["c64"]
 [[bin]]
 name = "ksa64-phase9-5-avionics-probe-c64"
 path = "src/bin/phase9_5_avionics_probe_c64.rs"
+required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase9-5-allocator-probe-c64"
+path = "src/bin/phase9_5_allocator_probe_c64.rs"
 required-features = ["c64"]

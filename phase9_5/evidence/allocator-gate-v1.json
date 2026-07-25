@@ -1,0 +1,40 @@
+{
+  "schema": "ksa64.phase9_5.allocator-gate-v1",
+  "allocator": "PriorityResidualV1",
+  "semantics": "physical torque demand with ordered achieved-torque residual handoff",
+  "independent": {
+    "generator": "phase9_5/reference/generate_allocator_vectors.py",
+    "cases": 4,
+    "signature": "0xc262ed33",
+    "failures": 0
+  },
+  "native": {
+    "flight_tests": 5,
+    "composition_tests": 3,
+    "failures": 0
+  },
+  "mos": {
+    "probe": "ksa64-phase9-5-allocator-probe-c64",
+    "prg_bytes": 30438,
+    "sha256": "1f8ebb05c3becbbab9cec6d7c9a4bd032fa67a484e8610fc86eeb3c245b8a94a",
+    "vice_version": "3.10",
+    "failures": 0,
+    "signature": "0xc262ed33",
+    "instances": 1,
+    "closed": true
+  },
+  "coverage": [
+    "pack-to-runtime identity and set binding",
+    "full-scale direct gimbal pitch/yaw mixing",
+    "orthogonal cruciform canard roll/pitch/yaw mixing",
+    "bidirectional twelve-jet RCS mixing",
+    "gimbal to canard to RCS residual handoff",
+    "canard dynamic-pressure hysteresis and conservative air-data disable",
+    "RCS protected-reserve cutoff",
+    "rail, recovery, and safe-state inhibition",
+    "failed-effector health masks",
+    "continuous-command hold without pulse replay",
+    "third-epoch safeing"
+  ],
+  "target_note": "The finite target probe uses scalar public results and unrolled cases to avoid rust-mos aggregate-return ABI corruption; production allocator output remains a typed AllocationResult."
+}

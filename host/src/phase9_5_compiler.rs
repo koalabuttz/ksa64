@@ -438,15 +438,15 @@ fn compile_allocator(
 ) -> PriorityResidualAllocatorPack {
     let mut canard_mix = [[0i16; 4]; 3];
     canard_mix[0] = [16384, 16384, -16384, -16384];
-    canard_mix[1] = [16384, 16384, 0, 0];
-    canard_mix[2] = [0, 0, 16384, 16384];
+    canard_mix[1] = [32767, -32767, 0, 0];
+    canard_mix[2] = [0, 0, -32767, 32767];
     let mut rcs_mix = [[0i16; 12]; 3];
     for (axis, mix) in rcs_mix.iter_mut().enumerate() {
         let at = axis * 4;
-        mix[at] = 16384;
-        mix[at + 1] = 16384;
-        mix[at + 2] = -16384;
-        mix[at + 3] = -16384;
+        mix[at] = 32767;
+        mix[at + 1] = 32767;
+        mix[at + 2] = -32767;
+        mix[at + 3] = -32767;
     }
     PriorityResidualAllocatorPack {
         identity: identity_value,
@@ -463,7 +463,7 @@ fn compile_allocator(
         roll_kp_q15: 14_000,
         roll_kd_q15: 4_096,
         group_authority_q12: [[0, 1638, 2048], [2048, 2458, 2048], [2048, 2458, 2048]],
-        gimbal_mix_q15: [[0, 0], [16384, 0], [0, 16384]],
+        gimbal_mix_q15: [[0, 0], [32767, 0], [0, 32767]],
         canard_mix_q15: canard_mix,
         rcs_mix_q15: rcs_mix,
         safe_canards: [0; 4],

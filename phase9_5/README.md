@@ -42,6 +42,7 @@ See [PLAN.md](PLAN.md) for the implementation gates and
 - Gate 4 implements four independently actuated canards with incremental force, torque, induced drag, hinge-load limiting, lag/slew/saturation, and fail-closed aerodynamic envelopes. Native exact vectors match an independent float64 model within 0.213%; the three-vector stock-C64 VICE probe passes without an REU.
 - Gate 5 implements twelve individual cold-gas jets, exact 1/256-second valve edges, one-shot pulse scheduling and accumulation, shared regulated/blowdown supply interpolation, exact depletion, residual translation, and changing propellant mass properties. Native exact vectors agree with independent float64 torque and mass-flow results well within 0.5%; the three-vector stock-C64 VICE probe passes without an REU.
 - Gate 6 adds a truth-blind advanced wrapper around the frozen local flight computer, three-axis torque demand with roll control, deterministic 32 Hz pitot sensing, conservative navigation/wind fallback, bounded link-loss behavior, and independent checksum chains. Native and stock-C64 probes produce the same `0x8c165977` signature; the C64 probe is 18,700 bytes and requires no REU.
+- Gate 7 implements `PriorityResidualV1` with pack-bound full-scale gimbal, orthogonal cruciform-canard, and bidirectional RCS mixing. It records requested, achieved, and exact residual torque; performs deterministic dynamic-pressure, reserve, health, rail, recovery, and safe-state handoffs; and never replays one-shot pulses. Four independent exact vectors produce signature `0xc262ed33` natively and in a 30,438-byte stock-C64 VICE probe.
 
 Regenerate Gate 3 outputs with:
 
@@ -50,4 +51,5 @@ cargo run -p ksa64-host --bin phase9_5_compile -- phase8/examples/firestorm54.kv
 python phase9_5/reference/verify_reference_packs.py
 python phase9_5/reference/generate_canard_vectors.py --check --report
 python phase9_5/reference/generate_rcs_vectors.py --check --report
+python phase9_5/reference/generate_allocator_vectors.py --check --report
 ```
