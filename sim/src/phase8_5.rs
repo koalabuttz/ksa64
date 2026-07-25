@@ -776,6 +776,94 @@ fn hash_bytes(mut hash: u32, bytes: &[u8]) -> u32 {
     }
     hash
 }
+pub fn reference_monitor_capability(vehicle_identity: u32) -> ActuatorCapabilityPack {
+    ActuatorCapabilityPack {
+        identity: 0x8500_0001,
+        capability: ActuatorCapabilityId::MonitorOnlyV1,
+        flags: 0,
+        lag_releases: 0,
+        vehicle_identity,
+        gimbal_limit_q16_deg: 0,
+        slew_q16_deg_per_s: 0,
+        pivot_from_nose_q28: 0,
+        actuator_mass_q21: 0,
+        proportional_gain_q15: 0,
+        derivative_gain_q15: 0,
+    }
+}
+pub fn reference_gimbal_capability(vehicle_identity: u32) -> ActuatorCapabilityPack {
+    ActuatorCapabilityPack {
+        identity: 0x8500_0002,
+        capability: ActuatorCapabilityId::TwoAxisMotorGimbalV1,
+        flags: 0,
+        lag_releases: 2,
+        vehicle_identity,
+        gimbal_limit_q16_deg: 5 * 65_536,
+        slew_q16_deg_per_s: 30 * 65_536,
+        pivot_from_nose_q28: 510_000_000,
+        actuator_mass_q21: 314_573,
+        proportional_gain_q15: 8_192,
+        derivative_gain_q15: 4_096,
+    }
+}
+pub fn reference_avionics_profile(gimbal: bool) -> AvionicsProfilePack {
+    AvionicsProfilePack {
+        identity: if gimbal { 0x8500_2002 } else { 0x8500_2001 },
+        profile: if gimbal {
+            AvionicsProfileId::LocalEnuGimbalV1
+        } else {
+            AvionicsProfileId::LocalEnuRecoveryV1
+        },
+        frame: ksa64_core::phase8_5_contract::ReferenceFrameId::LocalEnuV1,
+        fast_hz: 32,
+        navigation_hz: 8,
+        guidance_hz: 1,
+        flags: 0,
+        sensor_flags: 0,
+        minimum_arming_time_q18: 1 << 18,
+        minimum_arming_altitude_q13: 10 << 13,
+        drogue_backup_time_q18: 15 << 18,
+        main_backup_time_q18: 65 << 18,
+        main_altitude_q13: 200 << 13,
+        minimum_deployment_separation_q18: 2 << 18,
+        sensor_seed: 0x4b53_4185,
+        hold_epochs: 2,
+        safe_epochs: 3,
+        barometer_delay_epochs: 0,
+        gps_delay_epochs: 0,
+    }
+}
+pub fn local_flight_config(
+    avionics: AvionicsProfilePack,
+    capability: ActuatorCapabilityPack,
+    motor: &SpatialMotorPack,
+) -> Result<LocalFlightConfig, LocalWorldError> {
+    let expected_profile = match capability.capability {
+        ActuatorCapabilityId::MonitorOnlyV1 => AvionicsProfileId::LocalEnuRecoveryV1,
+        ActuatorCapabilityId::TwoAxisMotorGimbalV1 => AvionicsProfileId::LocalEnuGimbalV1,
+    };
+    if !avionics.is_valid() || !capability.is_valid() || avionics.profile != expected_profile {
+        return Err(LocalWorldError::Capability);
+    }
+    Ok(LocalFlightConfig {
+        session: LOCAL_SESSION,
+        capability: match capability.capability {
+            ActuatorCapabilityId::MonitorOnlyV1 => LocalControlCapability::MonitorOnly,
+            ActuatorCapabilityId::TwoAxisMotorGimbalV1 => LocalControlCapability::TwoAxisGimbal,
+        },
+        minimum_arming_time_q18: avionics.minimum_arming_time_q18,
+        minimum_arming_altitude_q13: avionics.minimum_arming_altitude_q13,
+        burnout_qualification_time_q18: motor.burn_time.raw(),
+        drogue_backup_time_q18: avionics.drogue_backup_time_q18,
+        main_backup_time_q18: avionics.main_backup_time_q18,
+        main_altitude_q13: avionics.main_altitude_q13,
+        minimum_deployment_separation_q18: avionics.minimum_deployment_separation_q18,
+        proportional_gain_q15: capability.proportional_gain_q15.clamp(0, i16::MAX as i32) as i16,
+        derivative_gain_q15: capability.derivative_gain_q15.clamp(0, i16::MAX as i32) as i16,
+        gimbal_limit_q15: degrees_q16_to_turn16(capability.gimbal_limit_q16_deg),
+    })
+}
+
 #[derive(Clone, Copy)]
 pub struct AvionicsEvaluationRequest<'a> {
     pub vehicle: &'a SpatialVehiclePack,
@@ -792,40 +880,10 @@ pub struct AvionicsEvaluationRequest<'a> {
 pub fn evaluate_with_avionics(
     request: AvionicsEvaluationRequest<'_>,
 ) -> Result<AvionicsEvaluationSummary, LocalWorldError> {
-    let expected_profile = match request.capability.capability {
-        ActuatorCapabilityId::MonitorOnlyV1 => AvionicsProfileId::LocalEnuRecoveryV1,
-        ActuatorCapabilityId::TwoAxisMotorGimbalV1 => AvionicsProfileId::LocalEnuGimbalV1,
-    };
-    if !request.avionics.is_valid()
-        || !request.capability.is_valid()
-        || request.avionics.profile != expected_profile
-        || request.capability.vehicle_identity != request.vehicle.identity
-    {
+    if request.capability.vehicle_identity != request.vehicle.identity {
         return Err(LocalWorldError::Capability);
     }
-    let flight_config = LocalFlightConfig {
-        session: LOCAL_SESSION,
-        capability: match request.capability.capability {
-            ActuatorCapabilityId::MonitorOnlyV1 => LocalControlCapability::MonitorOnly,
-            ActuatorCapabilityId::TwoAxisMotorGimbalV1 => LocalControlCapability::TwoAxisGimbal,
-        },
-        minimum_arming_time_q18: request.avionics.minimum_arming_time_q18,
-        minimum_arming_altitude_q13: request.avionics.minimum_arming_altitude_q13,
-        burnout_qualification_time_q18: request.motor.burn_time.raw(),
-        drogue_backup_time_q18: request.avionics.drogue_backup_time_q18,
-        main_backup_time_q18: request.avionics.main_backup_time_q18,
-        main_altitude_q13: request.avionics.main_altitude_q13,
-        minimum_deployment_separation_q18: request.avionics.minimum_deployment_separation_q18,
-        proportional_gain_q15: request
-            .capability
-            .proportional_gain_q15
-            .clamp(0, i16::MAX as i32) as i16,
-        derivative_gain_q15: request
-            .capability
-            .derivative_gain_q15
-            .clamp(0, i16::MAX as i32) as i16,
-        gimbal_limit_q15: degrees_q16_to_turn16(request.capability.gimbal_limit_q16_deg),
-    };
+    let flight_config = local_flight_config(request.avionics, request.capability, request.motor)?;
     let evidence = run_local_loopback_with_faults(LocalLoopbackRequest {
         vehicle: request.vehicle,
         motor: request.motor,
