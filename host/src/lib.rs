@@ -318,3 +318,5 @@ pub fn format_inspection(inspection: StreamInspection) -> String {
 }
 
 pub mod phase5_history;
+
+pub mod phase8;

@@ -1,0 +1,40 @@
+{
+  "host_deltas": {
+    "apogee_m": 0.0196598993227326,
+    "apogee_time_s": 0.00011917114235693305,
+    "burnout_time_s": 0.0003910827636661729,
+    "drogue_time_s": 0.00011917114235693305,
+    "landing_time_s": 0.001558074946856891,
+    "main_time_s": 0.0010797119115295573,
+    "max_acceleration_mps2": -0.00037505718772479213,
+    "max_dynamic_pressure_pa": -0.39558817104261834,
+    "max_speed_mps": 0.0015147695070254485,
+    "rail_exit_time_s": 3.692626953130662e-05
+  },
+  "host_predeployment_attitude_excursion_deg": 0.008024974529099126,
+  "limits": {
+    "apogee_fraction": 0.005,
+    "attitude_deg": 0.5,
+    "event_time_s": 0.051,
+    "landing_position_m": 5.0
+  },
+  "method": "independent float64 US76 vertical ascent and point-mass recovery",
+  "metrics": {
+    "apogee_m": 986.3122624383852,
+    "apogee_time_s": 14.209999999999779,
+    "burnout_time_s": 2.3299999999999943,
+    "drogue_time_s": 14.209999999999779,
+    "landing_position_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "landing_time_s": 108.50999999999569,
+    "main_time_s": 77.15999999999747,
+    "max_acceleration_mps2": 107.77136871722634,
+    "max_dynamic_pressure_pa": 12981.65385030552,
+    "max_speed_mps": 146.75730166525898,
+    "rail_exit_time_s": 0.22000000000000006
+  },
+  "schema": "ksa64.phase8-float64-analysis-v1"
+}
