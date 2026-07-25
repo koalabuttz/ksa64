@@ -1,5 +1,6 @@
 //! Strict additive Phase 8.5 avionics, capability, and evaluation packs.
 
+use crate::evaluation::{EvaluationOutcome, EvaluationSummary, MetricSlot, ModelProfileId};
 use crate::scenario::crc32_ieee;
 
 pub const PHASE85_AVIONICS_CONTRACT_ID: u32 = 0x0850_0001;
@@ -71,6 +72,7 @@ enum RecordKind {
     Avionics = 1,
     Capability = 2,
     Evaluation = 3,
+    AvionicsSummary = 4,
 }
 impl RecordKind {
     const fn magic(self) -> [u8; 4] {
@@ -78,6 +80,7 @@ impl RecordKind {
             Self::Avionics => *b"KAP8",
             Self::Capability => *b"KAC8",
             Self::Evaluation => *b"KLE8",
+            Self::AvionicsSummary => *b"KAS8",
         }
     }
     const fn length(self) -> usize {
@@ -85,6 +88,7 @@ impl RecordKind {
             Self::Avionics => KAP8_LENGTH,
             Self::Capability => KAC8_LENGTH,
             Self::Evaluation => KLE8_LENGTH,
+            Self::AvionicsSummary => KAS8_LENGTH,
         }
     }
 }
@@ -523,5 +527,224 @@ mod tests {
         let mut a = av();
         a.frame = ReferenceFrameId::EarthFixedEcefV1;
         assert!(!a.is_valid());
+    }
+}
+
+/// Portable result returned by the additive avionics evaluator. The accepted
+/// physical summary is retained in memory; KAS8 binds it by identity and stores
+/// the avionics evidence that is not present in KSR8.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AvionicsEvaluationSummary {
+    pub physical: EvaluationSummary,
+    pub physical_summary_identity: u32,
+    pub avionics_identity: u32,
+    pub actuator_identity: u32,
+    pub max_navigation_error_q13: i32,
+    pub max_attitude_error_turn16: i16,
+    pub saturation_count: u16,
+    pub deployment_decisions: u16,
+    pub deployment_feedback: u16,
+    pub alarms: u16,
+    pub deadline_misses: u16,
+    pub link_losses: u16,
+    pub checksum_chains: [u32; 6],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Kas8Record {
+    pub identity: u32,
+    pub profile: ModelProfileId,
+    pub outcome: EvaluationOutcome,
+    pub physical_summary_identity: u32,
+    pub avionics_identity: u32,
+    pub actuator_identity: u32,
+    pub steps: u32,
+    pub events: u32,
+    pub selected_metrics: [i32; 8],
+    pub max_navigation_error_q13: i32,
+    pub max_attitude_error_turn16: i16,
+    pub saturation_count: u16,
+    pub deployment_decisions: u16,
+    pub deployment_feedback: u16,
+    pub alarms: u16,
+    pub deadline_misses: u16,
+    pub link_losses: u16,
+    pub checksum_chains: [u32; 6],
+    pub terminal_position_q13: [i32; 3],
+    pub terminal_velocity_q19: [i32; 3],
+}
+
+fn phase85_outcome(value: u8) -> Result<EvaluationOutcome, Phase85ContractError> {
+    match value {
+        0 => Ok(EvaluationOutcome::Complete),
+        1 => Ok(EvaluationOutcome::StableOrbit),
+        2 => Ok(EvaluationOutcome::CompleteNotOrbit),
+        3 => Ok(EvaluationOutcome::GroundContact),
+        4 => Ok(EvaluationOutcome::Aborted),
+        5 => Ok(EvaluationOutcome::NumericFault),
+        6 => Ok(EvaluationOutcome::StepLimit),
+        7 => Ok(EvaluationOutcome::NoLiftoff),
+        8 => Ok(EvaluationOutcome::ConfigurationFault),
+        9 => Ok(EvaluationOutcome::RecoveryIncomplete),
+        10 => Ok(EvaluationOutcome::ModelEnvelopeExceeded),
+        _ => Err(Phase85ContractError::Enum),
+    }
+}
+
+pub fn write_avionics_summary(
+    value: AvionicsEvaluationSummary,
+    output: &mut [u8],
+) -> Result<(), Phase85ContractError> {
+    if value.physical.profile != ModelProfileId::LocalEnu6DofV1
+        || value.physical_summary_identity == 0
+        || value.avionics_identity == 0
+        || value.actuator_identity == 0
+    {
+        return Err(Phase85ContractError::Identity);
+    }
+    let identity = value
+        .checksum_chains
+        .into_iter()
+        .fold(value.physical_summary_identity, |hash, word| {
+            hash.rotate_left(5) ^ word
+        });
+    write_header(output, RecordKind::AvionicsSummary, identity.max(1))?;
+    output[32] = value.physical.profile as u8;
+    output[33] = value.physical.outcome as u8;
+    p32(output, 36, value.physical_summary_identity);
+    p32(output, 40, value.avionics_identity);
+    p32(output, 44, value.actuator_identity);
+    p32(output, 48, value.physical.steps);
+    p32(output, 52, value.physical.events);
+    let slots = [
+        MetricSlot::ApogeeAltitude,
+        MetricSlot::MaxDynamicPressure,
+        MetricSlot::MaxAcceleration,
+        MetricSlot::MaxSpeed,
+        MetricSlot::MaximumAngleOfAttack,
+        MetricSlot::LandingDistance,
+        MetricSlot::DrogueTime,
+        MetricSlot::MainTime,
+    ];
+    for (index, slot) in slots.into_iter().enumerate() {
+        pi32(
+            output,
+            56 + index * 4,
+            value.physical.metric(slot).unwrap_or(i32::MIN),
+        );
+    }
+    pi32(output, 88, value.max_navigation_error_q13);
+    p16(output, 92, value.max_attitude_error_turn16 as u16);
+    p16(output, 94, value.saturation_count);
+    p16(output, 96, value.deployment_decisions);
+    p16(output, 98, value.deployment_feedback);
+    p16(output, 100, value.alarms);
+    p16(output, 102, value.deadline_misses);
+    p16(output, 104, value.link_losses);
+    for (index, word) in value.checksum_chains.into_iter().enumerate() {
+        p32(output, 108 + index * 4, word);
+    }
+    for index in 0..3 {
+        pi32(
+            output,
+            132 + index * 4,
+            value.physical.terminal_state_a[index],
+        );
+        pi32(
+            output,
+            144 + index * 4,
+            value.physical.terminal_state_b[index],
+        );
+    }
+    seal(output);
+    Ok(())
+}
+
+pub fn parse_avionics_summary(input: &[u8]) -> Result<Kas8Record, Phase85ContractError> {
+    let identity = validate(input, RecordKind::AvionicsSummary)?;
+    if input[34] != 0 || input[35] != 0 || input[106] != 0 || input[107] != 0 {
+        return Err(Phase85ContractError::Reserved);
+    }
+    reserved(input, 156)?;
+    if input[32] != ModelProfileId::LocalEnu6DofV1 as u8 {
+        return Err(Phase85ContractError::Unsupported);
+    }
+    let mut selected_metrics = [0; 8];
+    for (index, metric) in selected_metrics.iter_mut().enumerate() {
+        *metric = gi32(input, 56 + index * 4);
+    }
+    let mut checksum_chains = [0; 6];
+    for (index, checksum) in checksum_chains.iter_mut().enumerate() {
+        *checksum = g32(input, 108 + index * 4);
+    }
+    let mut terminal_position_q13 = [0; 3];
+    let mut terminal_velocity_q19 = [0; 3];
+    for index in 0..3 {
+        terminal_position_q13[index] = gi32(input, 132 + index * 4);
+        terminal_velocity_q19[index] = gi32(input, 144 + index * 4);
+    }
+    Ok(Kas8Record {
+        identity,
+        profile: ModelProfileId::LocalEnu6DofV1,
+        outcome: phase85_outcome(input[33])?,
+        physical_summary_identity: g32(input, 36),
+        avionics_identity: g32(input, 40),
+        actuator_identity: g32(input, 44),
+        steps: g32(input, 48),
+        events: g32(input, 52),
+        selected_metrics,
+        max_navigation_error_q13: gi32(input, 88),
+        max_attitude_error_turn16: g16(input, 92) as i16,
+        saturation_count: g16(input, 94),
+        deployment_decisions: g16(input, 96),
+        deployment_feedback: g16(input, 98),
+        alarms: g16(input, 100),
+        deadline_misses: g16(input, 102),
+        link_losses: g16(input, 104),
+        checksum_chains,
+        terminal_position_q13,
+        terminal_velocity_q19,
+    })
+}
+
+#[cfg(test)]
+mod avionics_summary_tests {
+    use super::*;
+    #[test]
+    fn kas8_round_trip_rejects_corruption_and_reserved_bytes() {
+        let mut physical = EvaluationSummary::empty(ModelProfileId::LocalEnu6DofV1);
+        physical.outcome = EvaluationOutcome::GroundContact;
+        physical.steps = 42;
+        physical.events = 7;
+        physical.terminal_state_a = [1, 2, 3];
+        physical.terminal_state_b = [4, 5, 6];
+        physical.set_metric(MetricSlot::ApogeeAltitude, 123);
+        let value = AvionicsEvaluationSummary {
+            physical,
+            physical_summary_identity: 1,
+            avionics_identity: 2,
+            actuator_identity: 3,
+            max_navigation_error_q13: 4,
+            max_attitude_error_turn16: 5,
+            saturation_count: 6,
+            deployment_decisions: 3,
+            deployment_feedback: 3,
+            alarms: 0,
+            deadline_misses: 0,
+            link_losses: 0,
+            checksum_chains: [7, 8, 9, 10, 11, 12],
+        };
+        let mut bytes = [0; KAS8_LENGTH];
+        write_avionics_summary(value, &mut bytes).unwrap();
+        let parsed = parse_avionics_summary(&bytes).unwrap();
+        assert_eq!(parsed.outcome, EvaluationOutcome::GroundContact);
+        assert_eq!(parsed.selected_metrics[0], 123);
+        assert_eq!(parsed.checksum_chains, value.checksum_chains);
+        bytes[200] = 1;
+        seal(&mut bytes);
+        assert_eq!(
+            parse_avionics_summary(&bytes),
+            Err(Phase85ContractError::Reserved)
+        );
     }
 }

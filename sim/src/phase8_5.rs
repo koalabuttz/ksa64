@@ -1,7 +1,10 @@
 //! Phase 8.5 exact local world endpoint and in-memory loopback.
 
 use ksa64_core::phase8_5_clock::{ExactClockError, ExactEventClock};
-use ksa64_core::phase8_5_contract::{ActuatorCapabilityId, ActuatorCapabilityPack};
+use ksa64_core::phase8_5_contract::{
+    ActuatorCapabilityId, ActuatorCapabilityPack, AvionicsEvaluationSummary, AvionicsProfileId,
+    AvionicsProfilePack,
+};
 use ksa64_core::phase8_mission::{
     HobbySpatialPhase, Phase85AppliedControl, Phase85DeploymentCommand, Phase8MissionError,
     Phase8MissionMachine, Phase8MissionResult, Phase8MissionSnapshot, SpatialMissionVariation,
@@ -13,9 +16,13 @@ use ksa64_core::phase8_numeric::{
 use ksa64_core::phase8_pack::{
     SpatialMissionPack, SpatialMotorPack, SpatialVehiclePack, WindProfilePack,
 };
-use ksa64_flight::phase8_5::{LocalFlightComputer, LocalFlightConfig, LocalFlightEvidence};
+use ksa64_core::phase8_result::spatial_evaluation_identity;
+use ksa64_flight::phase8_5::{
+    LocalControlCapability, LocalFlightComputer, LocalFlightConfig, LocalFlightEvidence,
+};
 use ksa64_interface::phase8_5::{
-    LocalAidCell, LocalCommandCell, LocalInertialCell, LOCAL_AID_ATTITUDE, LOCAL_AID_BAROMETER,
+    write_local_aid, write_local_command, write_local_inertial, write_local_status, LocalAidCell,
+    LocalCommandCell, LocalInertialCell, LOCAL_AID_ATTITUDE, LOCAL_AID_BAROMETER,
     LOCAL_AID_CONTINUITY, LOCAL_AID_DEPLOYMENT_FEEDBACK, LOCAL_AID_GPS, LOCAL_INERTIAL_VALID_MASK,
 };
 
@@ -38,6 +45,79 @@ impl From<ExactClockError> for LocalWorldError {
         Self::Clock(v)
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LocalAvionicsVariation {
+    pub seed: u32,
+    pub imu_delta_bias: [i16; 3],
+    pub gyro_bias: [i16; 3],
+    pub barometer_bias_q13: i32,
+    pub gps_position_bias_q13: [i32; 3],
+    pub gps_velocity_bias_q19: [i32; 3],
+    pub sensor_noise_scale: u16,
+    pub aid_delay_epochs: u8,
+    pub imu_dropout_start: u16,
+    pub imu_dropout_epochs: u8,
+    pub barometer_dropout_start: u16,
+    pub barometer_dropout_epochs: u8,
+    pub gps_dropout_start: u16,
+    pub gps_dropout_epochs: u8,
+    pub link_dropout_start: u16,
+    pub link_dropout_epochs: u8,
+    pub clock_drift_ppm: i16,
+    pub continuity_open: bool,
+    pub feedback_fail_mask: u16,
+    pub gimbal_jam_epoch: u16,
+    pub missed_deadline_epoch: u16,
+}
+impl LocalAvionicsVariation {
+    pub const NOMINAL: Self = Self {
+        seed: 0x4b53_4185,
+        imu_delta_bias: [0; 3],
+        gyro_bias: [0; 3],
+        barometer_bias_q13: 0,
+        gps_position_bias_q13: [0; 3],
+        gps_velocity_bias_q19: [0; 3],
+        sensor_noise_scale: 0,
+        aid_delay_epochs: 0,
+        imu_dropout_start: 0,
+        imu_dropout_epochs: 0,
+        barometer_dropout_start: 0,
+        barometer_dropout_epochs: 0,
+        gps_dropout_start: 0,
+        gps_dropout_epochs: 0,
+        link_dropout_start: 0,
+        link_dropout_epochs: 0,
+        clock_drift_ppm: 0,
+        continuity_open: false,
+        feedback_fail_mask: 0,
+        gimbal_jam_epoch: u16::MAX,
+        missed_deadline_epoch: u16::MAX,
+    };
+    pub const fn is_valid(self) -> bool {
+        self.aid_delay_epochs <= 32
+            && self.sensor_noise_scale <= 4096
+            && self.clock_drift_ppm >= -10_000
+            && self.clock_drift_ppm <= 10_000
+    }
+}
+fn epoch_in_window(epoch: u16, start: u16, count: u8) -> bool {
+    count != 0 && epoch.wrapping_sub(start) < u16::from(count)
+}
+fn keyed_noise(seed: u32, epoch: u16, sensor: u8, axis: u8, amplitude: i32) -> i32 {
+    if amplitude == 0 {
+        return 0;
+    }
+    let mut value = seed
+        ^ (u32::from(epoch).wrapping_mul(0x9e37_79b9))
+        ^ (u32::from(sensor) << 16)
+        ^ u32::from(axis);
+    value ^= value << 13;
+    value ^= value >> 17;
+    value ^= value << 5;
+    let span = amplitude.saturating_mul(2).saturating_add(1).max(1) as u32;
+    (value % span) as i32 - amplitude
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LocalDirectorSample {
     pub epoch: u16,
@@ -131,6 +211,7 @@ pub struct LocalWorldEndpoint<'a> {
     motor: &'a SpatialMotorPack,
     clock: ExactEventClock,
     physical_deadline: SpatialTime,
+    max_mission_time: SpatialTime,
     last_release_state: ksa64_core::phase8_world::HobbySpatialState,
     last_release_epoch: Option<u16>,
     command: LocalCommandCell,
@@ -159,7 +240,14 @@ impl<'a> LocalWorldEndpoint<'a> {
             machine,
             motor,
             clock: ExactEventClock::new(),
-            physical_deadline: SpatialTime::from_raw(state.time.raw() + first.raw()),
+            physical_deadline: SpatialTime::from_raw(
+                state
+                    .time
+                    .raw()
+                    .saturating_add(first.raw())
+                    .min(mission.max_mission_time.raw()),
+            ),
+            max_mission_time: mission.max_mission_time,
             last_release_state: state,
             last_release_epoch: None,
             command: LocalCommandCell {
@@ -202,8 +290,15 @@ impl<'a> LocalWorldEndpoint<'a> {
             };
             let deployment = self.pending_deployment;
             self.pending_deployment = Phase85DeploymentCommand::default();
-            self.machine
-                .step_avionics(segment.duration(), applied, deployment)?;
+            if let Err(error) = self
+                .machine
+                .step_avionics(segment.duration(), applied, deployment)
+            {
+                if self.machine.is_complete() {
+                    return Ok(None);
+                }
+                return Err(LocalWorldError::Mission(error));
+            }
             let snapshot = self.machine.snapshot();
             if snapshot.events & EVENT_DROGUE != 0 {
                 self.deployment_feedback |= 1
@@ -224,7 +319,8 @@ impl<'a> LocalWorldEndpoint<'a> {
                 {
                     deadline = deadline.min(self.motor.burn_time.raw())
                 }
-                self.physical_deadline = SpatialTime::from_raw(deadline)
+                self.physical_deadline =
+                    SpatialTime::from_raw(deadline.min(self.max_mission_time.raw()))
             }
         }
         let state = self.machine.snapshot().state;
@@ -338,6 +434,13 @@ impl<'a> LocalWorldEndpoint<'a> {
         }))
     }
     pub fn accept_command(&mut self, cell: LocalCommandCell) -> Result<(), LocalWorldError> {
+        self.accept_command_faulted(cell, false)
+    }
+    pub fn accept_command_faulted(
+        &mut self,
+        cell: LocalCommandCell,
+        gimbal_jammed: bool,
+    ) -> Result<(), LocalWorldError> {
         let source = self.last_release_epoch.ok_or(LocalWorldError::Epoch)?;
         if cell.session != LOCAL_SESSION
             || cell.source_epoch != source
@@ -355,7 +458,9 @@ impl<'a> LocalWorldEndpoint<'a> {
             phase,
             HobbySpatialPhase::ConstrainedPowered | HobbySpatialPhase::PoweredFlight
         ) && self.machine.snapshot().state.time.raw() < self.motor.burn_time.raw();
-        self.actuator.release(cell.gimbal, powered);
+        if !gimbal_jammed {
+            self.actuator.release(cell.gimbal, powered);
+        }
         Ok(())
     }
 }
@@ -404,7 +509,97 @@ pub struct LocalLoopbackEvidence {
     pub result: Phase8MissionResult,
     pub last_flight: LocalFlightEvidence,
     pub cell_checksum: u32,
+    pub max_navigation_error_q13: i32,
+    pub max_attitude_error_turn16: i16,
+    pub saturation_count: u16,
+    pub deployment_decisions: u16,
+    pub link_losses: u16,
+    pub checksum_chains: [u32; 6],
 }
+fn apply_inertial_variation(
+    mut cell: LocalInertialCell,
+    faults: LocalAvionicsVariation,
+) -> Option<LocalInertialCell> {
+    let epoch = cell.measurement_epoch;
+    if epoch_in_window(epoch, faults.imu_dropout_start, faults.imu_dropout_epochs) {
+        return None;
+    }
+    for axis in 0..3 {
+        let noise = keyed_noise(
+            faults.seed,
+            epoch,
+            1,
+            axis as u8,
+            i32::from(faults.sensor_noise_scale) / 32,
+        );
+        cell.delta_velocity[axis] = cell.delta_velocity[axis]
+            .saturating_add(faults.imu_delta_bias[axis])
+            .saturating_add(clamp_i16(noise));
+        cell.angular_rate[axis] = cell.angular_rate[axis]
+            .saturating_add(faults.gyro_bias[axis])
+            .saturating_add(clamp_i16(noise / 2));
+    }
+    Some(cell)
+}
+fn apply_aid_variation(mut cell: LocalAidCell, faults: LocalAvionicsVariation) -> LocalAidCell {
+    let epoch = cell.measurement_epoch;
+    if epoch_in_window(
+        epoch,
+        faults.barometer_dropout_start,
+        faults.barometer_dropout_epochs,
+    ) {
+        cell.validity &= !LOCAL_AID_BAROMETER;
+    } else {
+        cell.barometer_q13 = cell
+            .barometer_q13
+            .saturating_add(faults.barometer_bias_q13)
+            .saturating_add(keyed_noise(
+                faults.seed,
+                epoch,
+                2,
+                2,
+                i32::from(faults.sensor_noise_scale) << 4,
+            ));
+    }
+    if epoch_in_window(epoch, faults.gps_dropout_start, faults.gps_dropout_epochs) {
+        cell.validity &= !LOCAL_AID_GPS;
+    } else if cell.validity & LOCAL_AID_GPS != 0 {
+        for axis in 0..3 {
+            cell.gps_position_q13[axis] = cell.gps_position_q13[axis]
+                .saturating_add(faults.gps_position_bias_q13[axis])
+                .saturating_add(keyed_noise(
+                    faults.seed,
+                    epoch,
+                    3,
+                    axis as u8,
+                    i32::from(faults.sensor_noise_scale) << 5,
+                ));
+            cell.gps_velocity_q19[axis] =
+                cell.gps_velocity_q19[axis].saturating_add(faults.gps_velocity_bias_q19[axis]);
+        }
+    }
+    if faults.continuity_open {
+        cell.continuity = 0;
+    }
+    cell.deployment_feedback &= !faults.feedback_fail_mask;
+    let drift = (i64::from(cell.onboard_time_q18) * i64::from(faults.clock_drift_ppm)) / 1_000_000;
+    cell.onboard_time_q18 = cell.onboard_time_q18.saturating_add(drift as i32);
+    cell.clock_flags = u16::from(faults.clock_drift_ppm != 0);
+    cell
+}
+
+#[derive(Clone, Copy)]
+pub struct LocalLoopbackRequest<'a> {
+    pub vehicle: &'a SpatialVehiclePack,
+    pub motor: &'a SpatialMotorPack,
+    pub mission: SpatialMissionPack,
+    pub wind: &'a WindProfilePack,
+    pub physical_variation: SpatialMissionVariation,
+    pub capability: ActuatorCapabilityPack,
+    pub flight_config: LocalFlightConfig,
+    pub avionics_variation: LocalAvionicsVariation,
+}
+
 pub fn run_local_loopback(
     vehicle: &SpatialVehiclePack,
     motor: &SpatialMotorPack,
@@ -414,7 +609,42 @@ pub fn run_local_loopback(
     capability: ActuatorCapabilityPack,
     flight_config: LocalFlightConfig,
 ) -> Result<LocalLoopbackEvidence, LocalWorldError> {
-    let mut world = LocalWorldEndpoint::new(vehicle, motor, mission, wind, variation, capability)?;
+    run_local_loopback_with_faults(LocalLoopbackRequest {
+        vehicle,
+        motor,
+        mission,
+        wind,
+        physical_variation: variation,
+        capability,
+        flight_config,
+        avionics_variation: LocalAvionicsVariation::NOMINAL,
+    })
+}
+
+pub fn run_local_loopback_with_faults(
+    request: LocalLoopbackRequest<'_>,
+) -> Result<LocalLoopbackEvidence, LocalWorldError> {
+    let LocalLoopbackRequest {
+        vehicle,
+        motor,
+        mission,
+        wind,
+        physical_variation,
+        capability,
+        flight_config,
+        avionics_variation: faults,
+    } = request;
+    if !faults.is_valid() {
+        return Err(LocalWorldError::Capability);
+    }
+    let mut world = LocalWorldEndpoint::new(
+        vehicle,
+        motor,
+        mission,
+        wind,
+        physical_variation,
+        capability,
+    )?;
     let initial = world.snapshot().state;
     let q = initial.attitude;
     let mut flight = LocalFlightComputer::new(
@@ -432,42 +662,205 @@ pub fn run_local_loopback(
     )
     .ok_or(LocalWorldError::Capability)?;
     let mut releases = 0u32;
-    let mut checksum = 0x811c_9dc5;
+    let mut command_checksum = 0x811c_9dc5;
+    let mut sensor_checksum = 0x811c_9dc5;
+    let mut status_checksum = 0x811c_9dc5;
+    let mut max_navigation_error_q13 = 0i32;
+    let mut max_attitude_error_turn16 = 0i16;
+    let mut saturation_count = 0u16;
+    let mut deployment_decisions = 0u16;
+    let mut link_losses = 0u16;
+    let mut aid_queue = [None; 33];
     let mut last = None;
     while !world.is_complete() {
         let Some(release) = world.release()? else {
             break;
         };
-        let out = flight.tick(Some(release.inertial), release.aid);
-        world.accept_command(out.command)?;
-        checksum = hash_cell(checksum, release.inertial.measurement_epoch, out.command);
+        let epoch = release.inertial.measurement_epoch;
+        let mut delivered_aid = aid_queue[usize::from(epoch) % aid_queue.len()].take();
+        if let Some(aid) = release.aid {
+            let varied = apply_aid_variation(aid, faults);
+            if faults.aid_delay_epochs == 0 {
+                delivered_aid = Some(varied);
+            } else {
+                let delivery = epoch.wrapping_add(u16::from(faults.aid_delay_epochs));
+                aid_queue[usize::from(delivery) % aid_queue.len()] = Some(varied);
+            }
+        }
+        let varied_inertial = apply_inertial_variation(release.inertial, faults);
+        let link_missing =
+            epoch_in_window(epoch, faults.link_dropout_start, faults.link_dropout_epochs);
+        if epoch == faults.missed_deadline_epoch {
+            flight.record_deadline_miss();
+        }
+        let out = flight.tick(
+            if link_missing { None } else { varied_inertial },
+            if link_missing { None } else { delivered_aid },
+        );
+        if link_missing {
+            link_losses = link_losses.saturating_add(1);
+        } else {
+            world.accept_command_faulted(out.command, epoch >= faults.gimbal_jam_epoch)?;
+        }
+        let mut command_bytes = [0; ksa64_interface::phase8_5::LOCAL_COMMAND_LENGTH];
+        write_local_command(&out.command, &mut command_bytes)
+            .map_err(|_| LocalWorldError::Capability)?;
+        command_checksum = hash_bytes(command_checksum, &command_bytes);
+        let mut inertial_bytes = [0; ksa64_interface::phase8_5::LOCAL_INERTIAL_LENGTH];
+        if let Some(inertial) = varied_inertial {
+            write_local_inertial(&inertial, &mut inertial_bytes)
+                .map_err(|_| LocalWorldError::Capability)?;
+            sensor_checksum = hash_bytes(sensor_checksum, &inertial_bytes);
+        }
+        if let Some(aid) = delivered_aid {
+            let mut aid_bytes = [0; ksa64_interface::phase8_5::LOCAL_AID_LENGTH];
+            write_local_aid(&aid, &mut aid_bytes).map_err(|_| LocalWorldError::Capability)?;
+            sensor_checksum = hash_bytes(sensor_checksum, &aid_bytes);
+        }
+        if let Some(status) = out.status {
+            let mut status_bytes = [0; ksa64_interface::phase8_5::LOCAL_STATUS_LENGTH];
+            write_local_status(&status, &mut status_bytes)
+                .map_err(|_| LocalWorldError::Capability)?;
+            status_checksum = hash_bytes(status_checksum, &status_bytes);
+        }
+        let truth = release.director.snapshot.state;
+        for axis in 0..3 {
+            max_navigation_error_q13 = max_navigation_error_q13.max(
+                out.navigation.position_q13[axis]
+                    .saturating_sub(truth.position.component(axis))
+                    .saturating_abs(),
+            );
+        }
+        if let Some(inertial) = varied_inertial {
+            max_attitude_error_turn16 = max_attitude_error_turn16.max(
+                inertial.platform_angle[1]
+                    .saturating_abs()
+                    .max(inertial.platform_angle[2].saturating_abs()),
+            );
+        }
+        if out.command.gimbal[0].saturating_abs() >= flight_config.gimbal_limit_q15
+            || out.command.gimbal[1].saturating_abs() >= flight_config.gimbal_limit_q15
+        {
+            saturation_count = saturation_count.saturating_add(1);
+        }
+        deployment_decisions |= u16::from(out.command.discrete & 3);
         releases = releases.saturating_add(1);
-        last = Some(out)
+        last = Some(out);
     }
     let result = world.result().ok_or(LocalWorldError::Incomplete)?;
+    let last_flight = last.ok_or(LocalWorldError::Incomplete)?;
     Ok(LocalLoopbackEvidence {
         releases,
         result,
-        last_flight: last.ok_or(LocalWorldError::Incomplete)?,
-        cell_checksum: checksum,
+        last_flight,
+        cell_checksum: command_checksum ^ sensor_checksum.rotate_left(7),
+        max_navigation_error_q13,
+        max_attitude_error_turn16,
+        saturation_count,
+        deployment_decisions,
+        link_losses,
+        checksum_chains: [
+            result.checksum,
+            sensor_checksum,
+            last_flight.navigation.checksum,
+            command_checksum,
+            status_checksum,
+            world.snapshot().state.time.raw() as u32,
+        ],
     })
 }
-fn hash_cell(mut h: u32, epoch: u16, c: LocalCommandCell) -> u32 {
-    for v in [
-        epoch as u32,
-        c.source_epoch as u32,
-        c.effective_epoch as u32,
-        c.gimbal[0] as u16 as u32,
-        c.gimbal[1] as u16 as u32,
-        c.discrete as u32,
-    ] {
-        for b in v.to_le_bytes() {
-            h ^= b as u32;
-            h = h.wrapping_mul(16_777_619)
-        }
+fn hash_bytes(mut hash: u32, bytes: &[u8]) -> u32 {
+    for byte in bytes {
+        hash ^= *byte as u32;
+        hash = hash.wrapping_mul(16_777_619);
     }
-    h
+    hash
 }
+#[derive(Clone, Copy)]
+pub struct AvionicsEvaluationRequest<'a> {
+    pub vehicle: &'a SpatialVehiclePack,
+    pub motor: &'a SpatialMotorPack,
+    pub mission: SpatialMissionPack,
+    pub wind: &'a WindProfilePack,
+    pub variation: SpatialMissionVariation,
+    pub variation_checksum: u32,
+    pub avionics: AvionicsProfilePack,
+    pub capability: ActuatorCapabilityPack,
+    pub uncertainty_case: LocalAvionicsVariation,
+}
+
+pub fn evaluate_with_avionics(
+    request: AvionicsEvaluationRequest<'_>,
+) -> Result<AvionicsEvaluationSummary, LocalWorldError> {
+    let expected_profile = match request.capability.capability {
+        ActuatorCapabilityId::MonitorOnlyV1 => AvionicsProfileId::LocalEnuRecoveryV1,
+        ActuatorCapabilityId::TwoAxisMotorGimbalV1 => AvionicsProfileId::LocalEnuGimbalV1,
+    };
+    if !request.avionics.is_valid()
+        || !request.capability.is_valid()
+        || request.avionics.profile != expected_profile
+        || request.capability.vehicle_identity != request.vehicle.identity
+    {
+        return Err(LocalWorldError::Capability);
+    }
+    let flight_config = LocalFlightConfig {
+        session: LOCAL_SESSION,
+        capability: match request.capability.capability {
+            ActuatorCapabilityId::MonitorOnlyV1 => LocalControlCapability::MonitorOnly,
+            ActuatorCapabilityId::TwoAxisMotorGimbalV1 => LocalControlCapability::TwoAxisGimbal,
+        },
+        minimum_arming_time_q18: request.avionics.minimum_arming_time_q18,
+        minimum_arming_altitude_q13: request.avionics.minimum_arming_altitude_q13,
+        burnout_qualification_time_q18: request.motor.burn_time.raw(),
+        drogue_backup_time_q18: request.avionics.drogue_backup_time_q18,
+        main_backup_time_q18: request.avionics.main_backup_time_q18,
+        main_altitude_q13: request.avionics.main_altitude_q13,
+        minimum_deployment_separation_q18: request.avionics.minimum_deployment_separation_q18,
+        proportional_gain_q15: request
+            .capability
+            .proportional_gain_q15
+            .clamp(0, i16::MAX as i32) as i16,
+        derivative_gain_q15: request
+            .capability
+            .derivative_gain_q15
+            .clamp(0, i16::MAX as i32) as i16,
+        gimbal_limit_q15: degrees_q16_to_turn16(request.capability.gimbal_limit_q16_deg),
+    };
+    let evidence = run_local_loopback_with_faults(LocalLoopbackRequest {
+        vehicle: request.vehicle,
+        motor: request.motor,
+        mission: request.mission,
+        wind: request.wind,
+        physical_variation: request.variation,
+        capability: request.capability,
+        flight_config,
+        avionics_variation: request.uncertainty_case,
+    })?;
+    let physical = crate::evaluation::adapt_hobby_spatial(
+        request.vehicle,
+        request.motor,
+        request.mission,
+        request.wind,
+        request.variation_checksum,
+        evidence.result,
+    );
+    Ok(AvionicsEvaluationSummary {
+        physical,
+        physical_summary_identity: spatial_evaluation_identity(physical),
+        avionics_identity: request.avionics.identity,
+        actuator_identity: request.capability.identity,
+        max_navigation_error_q13: evidence.max_navigation_error_q13,
+        max_attitude_error_turn16: evidence.max_attitude_error_turn16,
+        saturation_count: evidence.saturation_count,
+        deployment_decisions: evidence.deployment_decisions,
+        deployment_feedback: evidence.result.event_history & (EVENT_DROGUE | EVENT_MAIN),
+        alarms: evidence.last_flight.alarms,
+        deadline_misses: evidence.last_flight.deadline_misses,
+        link_losses: evidence.link_losses,
+        checksum_chains: evidence.checksum_chains,
+    })
+}
+
 trait Component {
     fn component(self, index: usize) -> i32;
 }
@@ -600,6 +993,130 @@ mod tests {
         assert_eq!(
             evidence.result.outcome,
             ksa64_core::evaluation::EvaluationOutcome::GroundContact
+        );
+    }
+    #[test]
+    fn public_avionics_evaluator_wraps_the_physical_summary() {
+        let (vehicle, motor, mission, wind) = fixtures();
+        let cap = capability(vehicle.identity, false);
+        let avionics = AvionicsProfilePack {
+            identity: 0x8500_2001,
+            profile: AvionicsProfileId::LocalEnuRecoveryV1,
+            frame: ksa64_core::phase8_5_contract::ReferenceFrameId::LocalEnuV1,
+            fast_hz: 32,
+            navigation_hz: 8,
+            guidance_hz: 1,
+            flags: 0,
+            sensor_flags: 0,
+            minimum_arming_time_q18: 1 << 18,
+            minimum_arming_altitude_q13: 10 << 13,
+            drogue_backup_time_q18: 15 << 18,
+            main_backup_time_q18: 65 << 18,
+            main_altitude_q13: 200 << 13,
+            minimum_deployment_separation_q18: 2 << 18,
+            sensor_seed: 0x4b53_4185,
+            hold_epochs: 2,
+            safe_epochs: 3,
+            barometer_delay_epochs: 0,
+            gps_delay_epochs: 0,
+        };
+        let summary = evaluate_with_avionics(AvionicsEvaluationRequest {
+            vehicle: &vehicle,
+            motor: &motor,
+            mission,
+            wind: &wind,
+            variation: SpatialMissionVariation::NOMINAL,
+            variation_checksum: 0,
+            avionics,
+            capability: cap,
+            uncertainty_case: LocalAvionicsVariation::NOMINAL,
+        })
+        .unwrap();
+        assert_eq!(
+            summary.physical.outcome,
+            ksa64_core::evaluation::EvaluationOutcome::GroundContact
+        );
+        assert_eq!(summary.deployment_decisions, 3);
+        assert_eq!(summary.deployment_feedback, EVENT_DROGUE | EVENT_MAIN);
+        assert_ne!(summary.checksum_chains[1], 0);
+    }
+    fn run_fault_case(faults: LocalAvionicsVariation) -> LocalLoopbackEvidence {
+        let (vehicle, motor, mission, wind) = fixtures();
+        run_local_loopback_with_faults(LocalLoopbackRequest {
+            vehicle: &vehicle,
+            motor: &motor,
+            mission,
+            wind: &wind,
+            physical_variation: SpatialMissionVariation::NOMINAL,
+            capability: capability(vehicle.identity, false),
+            flight_config: flight(false),
+            avionics_variation: faults,
+        })
+        .unwrap()
+    }
+    #[test]
+    fn bounded_link_loss_holds_then_third_epoch_safes() {
+        let mut two = LocalAvionicsVariation::NOMINAL;
+        two.link_dropout_start = 2_100;
+        two.link_dropout_epochs = 2;
+        let held = run_fault_case(two);
+        assert!(!held.last_flight.safe);
+        assert_eq!(held.link_losses, 2);
+        let mut three = two;
+        three.link_dropout_epochs = 3;
+        let safe = run_fault_case(three);
+        assert!(safe.last_flight.safe);
+        assert_eq!(safe.link_losses, 3);
+        assert_ne!(
+            safe.last_flight.alarms & ksa64_flight::phase8_5::LOCAL_ALARM_LINK,
+            0
+        );
+    }
+    #[test]
+    fn recovery_backups_do_not_require_truth_or_feedback() {
+        let mut faults = LocalAvionicsVariation::NOMINAL;
+        faults.barometer_dropout_start = 1;
+        faults.barometer_dropout_epochs = u8::MAX;
+        faults.gps_dropout_start = 1;
+        faults.gps_dropout_epochs = u8::MAX;
+        faults.feedback_fail_mask = 3;
+        let evidence = run_fault_case(faults);
+        assert_eq!(evidence.deployment_decisions, 3);
+        assert_eq!(
+            evidence.result.outcome,
+            ksa64_core::evaluation::EvaluationOutcome::GroundContact
+        );
+    }
+    #[test]
+    fn sensor_noise_latency_and_clock_drift_are_repeatable() {
+        let mut faults = LocalAvionicsVariation::NOMINAL;
+        faults.sensor_noise_scale = 256;
+        faults.aid_delay_epochs = 3;
+        faults.clock_drift_ppm = 500;
+        faults.imu_delta_bias = [1, -2, 3];
+        faults.gyro_bias = [1, 1, -1];
+        let a = run_fault_case(faults);
+        let b = run_fault_case(faults);
+        assert_eq!(a.checksum_chains, b.checksum_chains);
+        assert_ne!(
+            a.checksum_chains[1],
+            run_fault_case(LocalAvionicsVariation::NOMINAL).checksum_chains[1]
+        );
+    }
+    #[test]
+    fn deadline_and_open_continuity_fail_closed() {
+        let mut deadline = LocalAvionicsVariation::NOMINAL;
+        deadline.missed_deadline_epoch = 2_100;
+        let missed = run_fault_case(deadline);
+        assert!(missed.last_flight.safe);
+        assert_eq!(missed.last_flight.deadline_misses, 1);
+        let mut open = LocalAvionicsVariation::NOMINAL;
+        open.continuity_open = true;
+        let incomplete = run_fault_case(open);
+        assert_eq!(incomplete.deployment_decisions, 0);
+        assert_eq!(
+            incomplete.result.outcome,
+            ksa64_core::evaluation::EvaluationOutcome::RecoveryIncomplete
         );
     }
 }

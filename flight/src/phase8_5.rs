@@ -119,6 +119,9 @@ pub struct LocalFlightEvidence {
     pub armed: bool,
     pub drogue_latched: bool,
     pub main_latched: bool,
+    pub alarms: u16,
+    pub flight_checksum: u32,
+    pub deadline_misses: u16,
 }
 
 pub struct LocalFlightComputer {
@@ -215,7 +218,10 @@ impl LocalFlightComputer {
                 self.alarms |= LOCAL_ALARM_SAFE
             }
         }
-        let valid_aid = matches!(aid,Some(v)if v.session==self.config.session&&v.measurement_epoch==epoch&&v.production_epoch==epoch);
+        let valid_aid = matches!(aid, Some(v) if v.session == self.config.session
+            && v.measurement_epoch <= v.production_epoch
+            && v.production_epoch <= epoch
+            && epoch.wrapping_sub(v.production_epoch) <= 32);
         if let Some(value) = if valid_aid { aid } else { None } {
             self.navigation.aid(value);
             self.last_aid = Some(value)
@@ -381,6 +387,9 @@ impl LocalFlightComputer {
             armed: self.armed,
             drogue_latched: self.drogue_latched,
             main_latched: self.main_latched,
+            alarms: self.alarms,
+            flight_checksum: self.flight_checksum,
+            deadline_misses: self.deadline_misses,
         }
     }
 }

@@ -389,3 +389,214 @@ mod tests {
         assert_eq!(parse_local_status(&sb), Ok(s));
     }
 }
+
+pub const KAT8_HEADER_LENGTH: usize = 128;
+pub const KAT8_FRAME_LENGTH: usize = 160;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Kat8Header {
+    pub identity: u32,
+    pub evaluation_request_identity: u32,
+    pub session: u16,
+    pub release_count: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Kat8Frame {
+    pub epoch: u16,
+    pub phase: u8,
+    pub flags: u8,
+    pub time_q18: i32,
+    pub director_checksum: u32,
+    pub inertial: LocalInertialCell,
+    pub command: LocalCommandCell,
+    pub status: Option<LocalStatusCell>,
+    pub aid_crc16: u16,
+    pub aid_validity: u16,
+    pub truth_altitude_q13: i32,
+    pub truth_velocity_q19: [i32; 3],
+    pub applied_gimbal: [i16; 2],
+    pub events: u16,
+    pub deployment_feedback: u16,
+}
+
+fn crc32_ieee_local(bytes: &[u8]) -> u32 {
+    let mut crc = 0xffff_ffffu32;
+    for byte in bytes {
+        crc ^= *byte as u32;
+        let mut bit = 0;
+        while bit < 8 {
+            crc = (crc >> 1) ^ (0xedb8_8320 & 0u32.wrapping_sub(crc & 1));
+            bit += 1;
+        }
+    }
+    !crc
+}
+
+pub fn write_kat8_header(value: Kat8Header, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KAT8_HEADER_LENGTH || value.identity == 0 || value.session == 0 {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    output[..4].copy_from_slice(b"KAT8");
+    p16(output, 4, 8);
+    p16(output, 6, KAT8_HEADER_LENGTH as u16);
+    p16(output, 8, KAT8_FRAME_LENGTH as u16);
+    p32(output, 12, value.identity);
+    p32(output, 16, value.evaluation_request_identity);
+    p32(output, 20, KLR8_CONTRACT_ID);
+    p16(output, 24, value.session);
+    p32(output, 28, value.release_count);
+    p32(output, 124, crc32_ieee_local(&output[..124]));
+    Ok(())
+}
+
+pub fn parse_kat8_header(input: &[u8]) -> Result<Kat8Header, CodecError> {
+    if input.len() != KAT8_HEADER_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if &input[..4] != b"KAT8" || g16(input, 4) != 8 || g16(input, 6) != 128 || g16(input, 8) != 160
+    {
+        return Err(CodecError::Enum);
+    }
+    if input[10..12]
+        .iter()
+        .chain(input[26..28].iter())
+        .chain(input[32..124].iter())
+        .any(|v| *v != 0)
+    {
+        return Err(CodecError::Flags);
+    }
+    if g32(input, 20) != KLR8_CONTRACT_ID || g32(input, 124) != crc32_ieee_local(&input[..124]) {
+        return Err(CodecError::Checksum);
+    }
+    Ok(Kat8Header {
+        identity: g32(input, 12),
+        evaluation_request_identity: g32(input, 16),
+        session: g16(input, 24),
+        release_count: g32(input, 28),
+    })
+}
+
+pub fn write_kat8_frame(value: &Kat8Frame, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KAT8_FRAME_LENGTH {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    output[..4].copy_from_slice(b"KTF8");
+    p16(output, 4, value.epoch);
+    output[6] = value.flags;
+    output[7] = value.phase;
+    pi32(output, 8, value.time_q18);
+    p32(output, 12, value.director_checksum);
+    write_local_inertial(&value.inertial, &mut output[16..56])?;
+    write_local_command(&value.command, &mut output[56..80])?;
+    if let Some(status) = value.status {
+        write_local_status(&status, &mut output[80..128])?;
+    }
+    p16(output, 128, value.aid_crc16);
+    p16(output, 130, value.aid_validity);
+    pi32(output, 132, value.truth_altitude_q13);
+    for (index, velocity) in value.truth_velocity_q19.iter().enumerate() {
+        pi32(output, 136 + index * 4, *velocity);
+    }
+    pi16(output, 148, value.applied_gimbal[0]);
+    pi16(output, 150, value.applied_gimbal[1]);
+    p16(output, 152, value.events);
+    p16(output, 154, value.deployment_feedback);
+    p32(output, 156, crc32_ieee_local(&output[..156]));
+    Ok(())
+}
+
+pub fn parse_kat8_frame(input: &[u8]) -> Result<Kat8Frame, CodecError> {
+    if input.len() != KAT8_FRAME_LENGTH || &input[..4] != b"KTF8" {
+        return Err(CodecError::Length);
+    }
+    if g32(input, 156) != crc32_ieee_local(&input[..156]) {
+        return Err(CodecError::Checksum);
+    }
+    let status = if input[80..128].iter().all(|value| *value == 0) {
+        None
+    } else {
+        Some(parse_local_status(&input[80..128])?)
+    };
+    Ok(Kat8Frame {
+        epoch: g16(input, 4),
+        flags: input[6],
+        phase: input[7],
+        time_q18: gi32(input, 8),
+        director_checksum: g32(input, 12),
+        inertial: parse_local_inertial(&input[16..56])?,
+        command: parse_local_command(&input[56..80])?,
+        status,
+        aid_crc16: g16(input, 128),
+        aid_validity: g16(input, 130),
+        truth_altitude_q13: gi32(input, 132),
+        truth_velocity_q19: [gi32(input, 136), gi32(input, 140), gi32(input, 144)],
+        applied_gimbal: [gi16(input, 148), gi16(input, 150)],
+        events: g16(input, 152),
+        deployment_feedback: g16(input, 154),
+    })
+}
+
+#[cfg(test)]
+mod kat8_tests {
+    use super::*;
+    #[test]
+    fn kat8_header_and_frame_are_strict() {
+        let header = Kat8Header {
+            identity: 1,
+            evaluation_request_identity: 2,
+            session: 3,
+            release_count: 4,
+        };
+        let mut hb = [0; KAT8_HEADER_LENGTH];
+        write_kat8_header(header, &mut hb).unwrap();
+        assert_eq!(parse_kat8_header(&hb), Ok(header));
+        let inertial = LocalInertialCell {
+            session: 3,
+            measurement_epoch: 0,
+            production_epoch: 0,
+            validity: LOCAL_INERTIAL_VALID_MASK,
+            flags: 0,
+            platform_angle: [0; 3],
+            angular_rate: [0; 3],
+            delta_velocity: [0; 3],
+            gimbal_applied: [0; 2],
+            vehicle_status: 0,
+            actuator_feedback: 0,
+        };
+        let command = LocalCommandCell {
+            session: 3,
+            source_epoch: 0,
+            effective_epoch: 1,
+            flags: 0,
+            discrete: 0,
+            gimbal: [0; 2],
+            control_demand: [0; 2],
+            status: 0,
+        };
+        let frame = Kat8Frame {
+            epoch: 0,
+            phase: 1,
+            flags: 0,
+            time_q18: 0,
+            director_checksum: 4,
+            inertial,
+            command,
+            status: None,
+            aid_crc16: 0,
+            aid_validity: 0,
+            truth_altitude_q13: 0,
+            truth_velocity_q19: [0; 3],
+            applied_gimbal: [0; 2],
+            events: 0,
+            deployment_feedback: 0,
+        };
+        let mut fb = [0; KAT8_FRAME_LENGTH];
+        write_kat8_frame(&frame, &mut fb).unwrap();
+        assert_eq!(parse_kat8_frame(&fb), Ok(frame));
+        fb[140] ^= 1;
+        assert_eq!(parse_kat8_frame(&fb), Err(CodecError::Checksum));
+    }
+}

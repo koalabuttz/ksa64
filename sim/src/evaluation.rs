@@ -357,7 +357,7 @@ fn adapt_hobby(
     summary
 }
 
-fn adapt_hobby_spatial(
+pub(crate) fn adapt_hobby_spatial(
     vehicle: &SpatialVehiclePack,
     motor: &SpatialMotorPack,
     mission: SpatialMissionPack,

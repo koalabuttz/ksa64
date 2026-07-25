@@ -154,10 +154,14 @@ impl Phase8MissionMachine<'_> {
         let advanced = match advance_controlled(self, timestep, control, true) {
             Ok(value) => value,
             Err(Phase8MissionError::ModelEnvelopeExceeded) => {
-                return Err(self.fail(
-                    EvaluationOutcome::ModelEnvelopeExceeded,
-                    Phase8MissionError::ModelEnvelopeExceeded,
-                ))
+                let outcome = if self.event_history & EVENT_APOGEE != 0
+                    && self.event_history & EVENT_DROGUE == 0
+                {
+                    EvaluationOutcome::RecoveryIncomplete
+                } else {
+                    EvaluationOutcome::ModelEnvelopeExceeded
+                };
+                return Err(self.fail(outcome, Phase8MissionError::ModelEnvelopeExceeded));
             }
             Err(_) => {
                 return Err(self.fail(EvaluationOutcome::NumericFault, Phase8MissionError::Numeric))
@@ -220,6 +224,12 @@ impl Phase8MissionMachine<'_> {
             events |= EVENT_LANDING;
             self.landing = Phase8Milestone::from_state(successor);
             self.terminal_outcome = Some(EvaluationOutcome::GroundContact);
+        }
+        if successor.time.raw() >= self.mission.max_mission_time.raw()
+            && next_phase != HobbySpatialPhase::Complete
+        {
+            next_phase = HobbySpatialPhase::Failed;
+            self.terminal_outcome = Some(EvaluationOutcome::RecoveryIncomplete);
         }
         self.previous_vertical_velocity = successor.velocity.z();
         self.event_history |= events;
