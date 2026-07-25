@@ -650,6 +650,11 @@ pub fn run_local_loopback_with_faults(
     )?;
     let initial = world.snapshot().state;
     let q = initial.attitude;
+    let attitude_target = [
+        clamp_i16(q.x() >> 15),
+        clamp_i16(q.y() >> 15),
+        clamp_i16(q.z() >> 15),
+    ];
     let mut flight = LocalFlightComputer::new(
         flight_config,
         [
@@ -657,11 +662,7 @@ pub fn run_local_loopback_with_faults(
             initial.position.y(),
             initial.position.z(),
         ],
-        [
-            clamp_i16(q.x() >> 15),
-            clamp_i16(q.y() >> 15),
-            clamp_i16(q.z() >> 15),
-        ],
+        attitude_target,
     )
     .ok_or(LocalWorldError::Capability)?;
     let mut releases = 0u32;
@@ -752,8 +753,13 @@ pub fn run_local_loopback_with_faults(
         if let Some(inertial) = varied_inertial {
             max_attitude_error_turn16 = max_attitude_error_turn16.max(
                 inertial.platform_angle[1]
+                    .saturating_sub(attitude_target[1])
                     .saturating_abs()
-                    .max(inertial.platform_angle[2].saturating_abs()),
+                    .max(
+                        inertial.platform_angle[2]
+                            .saturating_sub(attitude_target[2])
+                            .saturating_abs(),
+                    ),
             );
         }
         if out.command.gimbal[0].saturating_abs() >= flight_config.gimbal_limit_q15
@@ -819,8 +825,8 @@ pub fn reference_gimbal_capability(vehicle_identity: u32) -> ActuatorCapabilityP
         gimbal_limit_q16_deg: 5 * 65_536,
         slew_q16_deg_per_s: 30 * 65_536,
         pivot_from_nose_q28: 510_000_000,
-        actuator_mass_q21: 314_573,
-        proportional_gain_q15: 8_192,
+        actuator_mass_q21: 41_943,
+        proportional_gain_q15: 14_000,
         derivative_gain_q15: 4_096,
     }
 }
@@ -991,8 +997,8 @@ mod tests {
             gimbal_limit_q16_deg: if active { 5 * 65_536 } else { 0 },
             slew_q16_deg_per_s: if active { 30 * 65_536 } else { 0 },
             pivot_from_nose_q28: if active { 510_000_000 } else { 0 },
-            actuator_mass_q21: if active { 314_573 } else { 0 },
-            proportional_gain_q15: if active { 8_192 } else { 0 },
+            actuator_mass_q21: if active { 41_943 } else { 0 },
+            proportional_gain_q15: if active { 14_000 } else { 0 },
             derivative_gain_q15: if active { 4_096 } else { 0 },
         }
     }
@@ -1011,7 +1017,7 @@ mod tests {
             main_backup_time_q18: 65 << 18,
             main_altitude_q13: 200 << 13,
             minimum_deployment_separation_q18: 2 << 18,
-            proportional_gain_q15: 8_192,
+            proportional_gain_q15: 14_000,
             derivative_gain_q15: 4_096,
             gimbal_limit_q15: 910,
         }
@@ -1215,6 +1221,99 @@ mod tests {
         let biased = run_fault_case(imu);
         assert_ne!(biased.checksum_chains[1], gps_a.checksum_chains[1]);
     }
+    #[test]
+    fn gimbal_derivative_settles_after_rail_exit_in_five_mps_crosswind() {
+        let (base, motor, mut mission, _) = fixtures();
+        let cap = capability(0x8500_1001, true);
+        let vehicle = derive_gimbal_derivative_vehicle(base, cap).unwrap();
+        let mut knots = [ksa64_core::phase8_pack::WindKnot::ZERO;
+            ksa64_core::phase8_format::KWP8_MAX_WIND_KNOTS];
+        knots[0] = ksa64_core::phase8_pack::WindKnot {
+            altitude: ksa64_core::phase8_numeric::SpatialPosition::ZERO,
+            east: ksa64_core::phase8_numeric::SpatialWind::from_raw(5 << 22),
+            north: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+        };
+        knots[1] = ksa64_core::phase8_pack::WindKnot {
+            altitude: ksa64_core::phase8_numeric::SpatialPosition::from_raw(100_000 << 13),
+            east: ksa64_core::phase8_numeric::SpatialWind::from_raw(5 << 22),
+            north: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+        };
+        let wind = WindProfilePack {
+            identity: 0x3557_0005,
+            gust_seed: 0,
+            gust_cadence: ksa64_core::phase8_numeric::SpatialTime::from_raw(1 << 18),
+            gust_amplitude_east: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+            gust_amplitude_north: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+            max_gust: ksa64_core::phase8_numeric::SpatialWind::ZERO,
+            knot_count: 2,
+            knots,
+        };
+        mission.vehicle_identity = vehicle.identity;
+        mission.wind_identity = wind.identity;
+        let mut world = LocalWorldEndpoint::new(
+            &vehicle,
+            &motor,
+            mission,
+            &wind,
+            SpatialMissionVariation::NOMINAL,
+            cap,
+        )
+        .unwrap();
+        let initial = world.snapshot().state;
+        let q = initial.attitude;
+        let target_attitude = [
+            (q.x() >> 15) as i16,
+            (q.y() >> 15) as i16,
+            (q.z() >> 15) as i16,
+        ];
+        let mut computer = LocalFlightComputer::new(
+            flight(true),
+            [
+                initial.position.x(),
+                initial.position.y(),
+                initial.position.z(),
+            ],
+            [
+                (q.x() >> 15) as i16,
+                (q.y() >> 15) as i16,
+                (q.z() >> 15) as i16,
+            ],
+        )
+        .unwrap();
+        let mut rail_exit = None;
+        let mut error_after_eight_releases = None;
+        while let Some(release) = world.release().unwrap() {
+            let epoch = release.inertial.measurement_epoch;
+            if release.inertial.vehicle_status & 1 == 0 && rail_exit.is_none() {
+                rail_exit = Some(epoch);
+            }
+            let out = computer.tick(Some(release.inertial), release.aid);
+            world.accept_command(out.command).unwrap();
+            if rail_exit.is_some_and(|exit| epoch == exit + 8) {
+                error_after_eight_releases = Some(
+                    release.inertial.platform_angle[1]
+                        .saturating_sub(target_attitude[1])
+                        .saturating_abs()
+                        .max(
+                            release.inertial.platform_angle[2]
+                                .saturating_sub(target_attitude[2])
+                                .saturating_abs(),
+                        ),
+                );
+                break;
+            }
+        }
+        let error = error_after_eight_releases.unwrap_or_else(|| {
+            panic!(
+                "eight post-rail releases: exit={rail_exit:?} phase={:?} result={:?}",
+                world.snapshot().phase,
+                world.result().map(|value| value.outcome)
+            )
+        });
+        let three_degrees_turn16 = 547;
+        assert!(error <= three_degrees_turn16, "attitude error {error}");
+    }
+
     #[test]
     fn deadline_and_open_continuity_fail_closed() {
         let mut deadline = LocalAvionicsVariation::NOMINAL;

@@ -7,21 +7,22 @@
     "end_exclusive": 53248,
     "bytes": 51199
   },
-  "required_linked_bytes": 71295,
-  "flat_overflow_bytes": 20096,
-  "below_c000_overflow_bytes": 24192,
+  "required_linked_bytes": 71500,
+  "flat_overflow_bytes": 20301,
+  "below_c000_overflow_bytes": 24397,
   "hidden_ram_best_case": {
     "io_window_bytes": 4096,
     "kernal_window_bytes": 8192,
     "total_addressable_bytes": 63487,
-    "remaining_deficit_bytes": 7808
+    "remaining_deficit_bytes": 8013
   },
-  "absolute_64k_deficit_bytes": 5759,
+  "absolute_64k_deficit_bytes": 5964,
   "static_stack_bytes": 3465,
   "measured_noinline_experiment": {
     "overflow_bytes": 22520,
     "delta_bytes": 2424,
-    "accepted": false
+    "accepted": false,
+    "note": "Measured before the final rail-reference correction; it established the direction was harmful and was reverted."
   },
   "largest_symbols": [
     [

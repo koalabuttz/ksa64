@@ -128,6 +128,7 @@ pub struct LocalFlightComputer {
     config: LocalFlightConfig,
     epoch: u16,
     navigation: LocalNavigation,
+    attitude_target: [i16; 3],
     alarms: u16,
     missing: u8,
     safe: bool,
@@ -159,6 +160,7 @@ impl LocalFlightComputer {
             config,
             epoch: 0,
             navigation: LocalNavigation::new(position_q13, attitude_vector),
+            attitude_target: attitude_vector,
             alarms: 0,
             missing: 0,
             safe: false,
@@ -321,7 +323,8 @@ impl LocalFlightComputer {
             let value = inertial;
             let mut a = 0;
             while a < 2 {
-                let angle = value.platform_angle[a + 1] as i32;
+                let angle =
+                    value.platform_angle[a + 1].saturating_sub(self.attitude_target[a + 1]) as i32;
                 let rate = value.angular_rate[a + 1] as i32;
                 let p = (-angle * i32::from(self.config.proportional_gain_q15)) >> 15;
                 let d = (-rate * i32::from(self.config.derivative_gain_q15)) >> 15;

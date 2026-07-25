@@ -1,15 +1,15 @@
 {
   "schema": "ksa64.phase8_5.vice-mailbox-probe-v1",
+  "capability": "monitor-only",
   "releases": 8,
-  "wall_seconds": 4.35999999998603,
+  "wall_seconds": 4.2810000000172295,
   "target": "PAL stock C64 via one pinned VICE instance, binary-monitor mailbox, KLF6 outer / KLR8 inner",
   "artifact": {
-    "bytes": 15354,
-    "sha256": "0bb51310497b3b443c390c4ef17a4964b52767a56fc93ce31d540ac646be98f3",
+    "bytes": 15412,
+    "sha256": "4eff1d9e3336af1e571dda981239c133f0414496dbcd1ad05784feab1522c111",
     "load_address": 2049,
-    "load_end_exclusive": 17401,
+    "load_end_exclusive": 17459,
     "stock_fit": true
   },
-  "result_raw": "4b4c4638010000000700000033dd01b960e4de51",
-  "capability": "monitor-only"
+  "result_raw": "4b4c4638010000000700000033dd01b960e4de51"
 }

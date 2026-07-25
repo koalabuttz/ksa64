@@ -5,18 +5,18 @@
   "cycles": {
     "status": 0,
     "overhead": 24,
-    "aided_cycles": 20613,
-    "fast_cycles": 10492,
+    "aided_cycles": 21184,
+    "fast_cycles": 10843,
     "budget_cycles": 24631,
     "navigation_checksum": 714215262,
     "flight_checksum": 61854199
   },
   "deadline_pass": true,
-  "release_budget_fraction": 0.6694923511643769,
-  "headroom_cycles": 4018,
+  "release_budget_fraction": 0.6880379356263601,
+  "headroom_cycles": 3447,
   "artifact": {
-    "bytes": 7671,
-    "sha256": "4a607060592297859bf0893b5b1ac57e82ba9ad80ac0558fdf0d50fec403931c",
+    "bytes": 8037,
+    "sha256": "d3af36bef18a91b6c5ab2348ca407cafa2b30c2549dca14c1518694dce687f78",
     "load_address": 2049
   }
 }

@@ -7,19 +7,19 @@ The required self-contained combined world-plus-avionics image reached the plan'
 - Pinned toolchain: `ghcr.io/koalabuttz/rust-mos:ac2fb2277-4537158-4aaa40e16`.
 - Smallest configured profile: `opt-level = "z"`, whole-program LTO, one code-generation unit.
 - Ordinary C64 linker region: 51,199 bytes (`$0801-$CFFF`).
-- Required resident image: 71,295 bytes.
-- Ordinary-region deficit: 20,096 bytes.
-- The stricter original flat-image gate below `$C000` is short by 24,192 bytes.
-- RAM hidden beneath I/O and KERNAL adds at most 12,288 bytes, leaving a best-case deficit of 7,808 bytes.
-- Even the impossible assumption that all 65,536 physical bytes were available leaves a 5,759-byte deficit before zero page, the hardware stack, screen memory, I/O, or the mailbox/result area are reserved.
+- Required resident image: 71,500 bytes.
+- Ordinary-region deficit: 20,301 bytes.
+- The stricter original flat-image gate below `$C000` is short by 24,397 bytes.
+- RAM hidden beneath I/O and KERNAL adds at most 12,288 bytes, leaving a best-case deficit of 8,013 bytes.
+- Even the impossible assumption that all 65,536 physical bytes were available leaves a 5,964-byte deficit before zero page, the hardware stack, screen memory, I/O, or the mailbox/result area are reserved.
 
-The custom banking step was therefore ruled out before writing unsafe trampolines: banking changes which RAM is visible, but cannot make a 71,295-byte resident payload fit in 65,536 physical bytes.
+The custom banking step was therefore ruled out before writing unsafe trampolines: banking changes which RAM is visible, but cannot make a 71,500-byte resident payload fit in 65,536 physical bytes.
 
 ## Measured optimization evidence
 
-The standalone avionics kernel was optimized where timing evidence identified the real hotspot. It now costs 20,613 cycles for an aided release and 10,492 cycles for a fast release, passing the 24,631-cycle PAL 80% budget with 4,018 cycles of aided-path headroom.
+The standalone avionics kernel was optimized where timing evidence identified the real hotspot. It now costs 21,184 cycles for an aided release and 10,843 cycles for a fast release, passing the 24,631-cycle PAL 80% budget with 3,447 cycles of aided-path headroom.
 
-For size, forcing the two largest boundaries out of line made the deficit **worse**, increasing it from 20,096 to 22,520 bytes. That experiment was reverted. The remaining largest linked contributions are:
+For size, forcing the two largest boundaries out of line made the deficit **worse**, increasing the then-current deficit from 20,096 to 22,520 bytes. That experiment was reverted. The remaining largest linked contributions are:
 
 | Contribution | Bytes |
 |---|---:|
@@ -38,7 +38,7 @@ Further compression is no longer a small packaging task. It means hand-specializ
 
 This does **not** prevent stock-C64 avionics operation:
 
-- The generic monitor/gimbal flight-computer endpoint is 15,354 bytes and fits at `$0801-$43F8`.
+- The generic monitor/gimbal flight-computer endpoint is 15,412 bytes and fits at `$0801-$4432`.
 - Monitor-only and gimbal finite host/VICE exchanges pass with identical KLF6/KLR8 ordering and close VICE immediately afterward.
 - The standalone kernel meets its real-time PAL release budget.
 - The frozen Phase 8 physical world remains independently runnable on stock hardware.

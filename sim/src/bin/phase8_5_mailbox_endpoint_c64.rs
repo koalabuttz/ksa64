@@ -89,7 +89,7 @@ pub extern "C" fn main() -> isize {
         main_backup_time_q18: 65 << 18,
         main_altitude_q13: 200 << 13,
         minimum_deployment_separation_q18: 2 << 18,
-        proportional_gain_q15: if gimbal { 8_192 } else { 0 },
+        proportional_gain_q15: if gimbal { 14_000 } else { 0 },
         derivative_gain_q15: if gimbal { 4_096 } else { 0 },
         gimbal_limit_q15: if gimbal { 910 } else { 0 },
     };
