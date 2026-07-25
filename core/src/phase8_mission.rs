@@ -127,6 +127,17 @@ pub struct Phase8MissionResult {
     pub rail_exit_static_margin_raw_q24: i32,
     pub burnout_static_margin_raw_q24: i32,
     pub max_lateral_acceleration_raw_q19: i32,
+    pub event_history: u16,
+    pub checksum: u32,
+}
+
+/// Small completion view for memory-constrained target runners.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase8CompactResult {
+    pub outcome: EvaluationOutcome,
+    pub steps: u32,
+    pub max_altitude_raw_q13: i32,
+    pub event_history: u16,
     pub checksum: u32,
 }
 
@@ -176,7 +187,11 @@ impl SpatialMissionVariation {
     }
 }
 
-pub(super) fn update_checksum(mut hash: u32, snapshot: Phase8MissionSnapshot) -> u32 {
+/// Advance the canonical exact-arithmetic trace checksum by one snapshot.
+///
+/// This is public solely so bounded host and MOS acceptance probes can compare
+/// the portable evaluator without duplicating its frozen operation order.
+pub fn phase8_snapshot_checksum(mut hash: u32, snapshot: Phase8MissionSnapshot) -> u32 {
     for value in [
         snapshot.state.time.raw(),
         snapshot.state.position.x(),

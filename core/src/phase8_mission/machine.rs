@@ -17,8 +17,8 @@ use crate::spatial_numeric::FixedVec3;
 
 use super::propulsion::derive_mass_properties;
 use super::{
-    HobbySpatialPhase, Phase8Milestone, Phase8MissionError, Phase8MissionResult,
-    Phase8MissionSnapshot, SpatialAeroState, SpatialMissionVariation,
+    HobbySpatialPhase, Phase8CompactResult, Phase8Milestone, Phase8MissionError,
+    Phase8MissionResult, Phase8MissionSnapshot, SpatialAeroState, SpatialMissionVariation,
 };
 
 pub struct Phase8MissionMachine<'a> {
@@ -51,6 +51,7 @@ pub struct Phase8MissionMachine<'a> {
     pub(super) burnout_static_margin: i32,
     pub(super) max_lateral_acceleration: i32,
     pub(super) steps: u32,
+    pub(super) event_history: u16,
     pub(super) checksum: u32,
     pub(super) terminal_outcome: Option<EvaluationOutcome>,
 }
@@ -142,6 +143,7 @@ impl<'a> Phase8MissionMachine<'a> {
             burnout_static_margin: 0,
             max_lateral_acceleration: 0,
             steps: 0,
+            event_history: 0,
             checksum: 0x811c_9dc5,
             terminal_outcome: None,
         })
@@ -153,6 +155,22 @@ impl<'a> Phase8MissionMachine<'a> {
 
     pub const fn is_complete(&self) -> bool {
         self.terminal_outcome.is_some()
+    }
+    pub const fn trace_checksum(&self) -> u32 {
+        self.checksum
+    }
+
+    pub const fn compact_result(&self) -> Option<Phase8CompactResult> {
+        match self.terminal_outcome {
+            Some(outcome) => Some(Phase8CompactResult {
+                outcome,
+                steps: self.steps,
+                max_altitude_raw_q13: self.max_altitude,
+                event_history: self.event_history,
+                checksum: self.checksum,
+            }),
+            None => None,
+        }
     }
 
     pub(super) fn timestep(&self) -> Result<SpatialTime, Phase8MissionError> {
@@ -203,6 +221,7 @@ impl<'a> Phase8MissionMachine<'a> {
             rail_exit_static_margin_raw_q24: self.rail_exit_static_margin,
             burnout_static_margin_raw_q24: self.burnout_static_margin,
             max_lateral_acceleration_raw_q19: self.max_lateral_acceleration,
+            event_history: self.event_history,
             checksum: self.checksum,
         })
     }

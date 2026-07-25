@@ -4,8 +4,6 @@ use crate::numeric::{
     add, divide_scaled, magnitude3_floor, multiply_scaled, subtract, NumericFault, NumericStatus,
 };
 use crate::phase2_numeric::sin_cos_binary_q15;
-use crate::phase7_environment::sample_hobby_environment;
-use crate::phase7_numeric::HobbyAltitude;
 use crate::phase8_numeric::{
     BodyAngularRate, BodyToEnuQuaternion, BodyTorque, EnuAcceleration, EnuForce, EnuPosition,
     EnuVelocity, EnuWind, SpatialInertia, SpatialMass, SpatialPosition, SpatialTime,
@@ -17,10 +15,80 @@ use crate::spatial_numeric::{FixedVec3, QuaternionQ30};
 
 const PI_Q28: i32 = 843_314_857;
 const Q30_ONE: i32 = 1 << 30;
+const PHASE8_ENVIRONMENT_STEP_RAW: i32 = 250 << 13;
+pub const PHASE8_ENVIRONMENT_TOP_M: i32 = 3_000;
+const PHASE8_DENSITY_Q29: [i32; 13] = [
+    657_666_877,
+    642_027_311,
+    626_675_068,
+    611_606_433,
+    596_817_722,
+    582_305_276,
+    568_065_463,
+    554_094_682,
+    540_389_355,
+    526_945_936,
+    513_760_903,
+    500_830_764,
+    488_152_051,
+];
+const PHASE8_SOUND_SPEED_Q19: [i32; 13] = [
+    178_412_054,
+    177_908_292,
+    177_403_139,
+    176_896_584,
+    176_388_613,
+    175_879_216,
+    175_368_379,
+    174_856_090,
+    174_342_336,
+    173_827_104,
+    173_310_381,
+    172_792_153,
+    172_272_407,
+];
+const PHASE8_GRAVITY_Q19: [i32; 13] = [
+    5_141_509, 5_141_105, 5_140_702, 5_140_299, 5_139_895, 5_139_492, 5_139_089, 5_138_686,
+    5_138_282, 5_137_879, 5_137_476, 5_137_073, 5_136_670,
+];
+
+fn sample_phase8_environment(
+    altitude_raw: i32,
+    status: &mut NumericStatus,
+) -> Result<(i32, i32, i32), Phase8WorldError> {
+    let altitude_raw = altitude_raw.max(0);
+    if altitude_raw > PHASE8_ENVIRONMENT_TOP_M << 13 {
+        return Err(Phase8WorldError::ModelEnvelopeExceeded);
+    }
+    let index = (altitude_raw / PHASE8_ENVIRONMENT_STEP_RAW) as usize;
+    if index >= PHASE8_DENSITY_Q29.len() - 1 {
+        let last = PHASE8_DENSITY_Q29.len() - 1;
+        return Ok((
+            PHASE8_DENSITY_Q29[last],
+            PHASE8_SOUND_SPEED_Q19[last],
+            PHASE8_GRAVITY_Q19[last],
+        ));
+    }
+    let remainder = altitude_raw - index as i32 * PHASE8_ENVIRONMENT_STEP_RAW;
+    let fraction_q16 = divide_scaled(remainder, PHASE8_ENVIRONMENT_STEP_RAW, 16, status);
+    let interpolate = |values: &[i32; 13], status: &mut NumericStatus| {
+        add(
+            values[index],
+            multiply_scaled(values[index + 1] - values[index], fraction_q16, 16, status),
+            status,
+        )
+    };
+    Ok((
+        interpolate(&PHASE8_DENSITY_Q29, status),
+        interpolate(&PHASE8_SOUND_SPEED_Q19, status),
+        interpolate(&PHASE8_GRAVITY_Q19, status),
+    ))
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase8WorldError {
     InvalidConfiguration,
+    ModelEnvelopeExceeded,
     Numeric,
 }
 
@@ -569,10 +637,8 @@ pub fn evaluate_hobby_spatial_environment(
         air_velocity_enu.z(),
         &mut status,
     );
-    let environment = sample_hobby_environment(
-        HobbyAltitude::from_raw(state.position.z().max(0)),
-        &mut status,
-    );
+    let (density_q29, sound_speed_q19, gravity_q19) =
+        sample_phase8_environment(state.position.z(), &mut status)?;
     if !status.is_clear() || speed > i32::MAX as u32 {
         return Err(Phase8WorldError::Numeric);
     }
@@ -581,9 +647,9 @@ pub fn evaluate_hobby_spatial_environment(
         air_velocity_body: body_velocity,
         air_velocity_enu,
         air_speed_q19: speed as i32,
-        density_q29: environment.density.raw(),
-        sound_speed_q19: environment.sound_speed.map_or(0, |value| value.raw()),
-        gravity_q19: environment.gravity.raw(),
+        density_q29,
+        sound_speed_q19,
+        gravity_q19,
     })
 }
 
@@ -782,5 +848,38 @@ mod tests {
         assert_eq!(environment.air_speed_q19, 10 << 19);
         assert!(environment.density_q29 > 0);
         assert!(environment.gravity_q19 > 0);
+    }
+}
+
+#[cfg(test)]
+mod phase8_environment_prefix_tests {
+    use super::*;
+    use crate::phase7_environment::sample_hobby_environment;
+    use crate::phase7_numeric::HobbyAltitude;
+    #[test]
+    fn compact_environment_is_exact_and_fails_above_its_declared_envelope() {
+        for metres in [0, 125, 754, 3_000] {
+            let mut expected_status = NumericStatus::CLEAR;
+            let expected = sample_hobby_environment(
+                HobbyAltitude::from_raw(metres << 13),
+                &mut expected_status,
+            );
+            let mut actual_status = NumericStatus::CLEAR;
+            let actual = sample_phase8_environment(metres << 13, &mut actual_status).unwrap();
+            assert_eq!(
+                actual,
+                (
+                    expected.density.raw(),
+                    expected.sound_speed.unwrap().raw(),
+                    expected.gravity.raw()
+                )
+            );
+            assert!(expected_status.is_clear() && actual_status.is_clear());
+        }
+        let mut status = NumericStatus::CLEAR;
+        assert_eq!(
+            sample_phase8_environment((PHASE8_ENVIRONMENT_TOP_M + 1) << 13, &mut status),
+            Err(Phase8WorldError::ModelEnvelopeExceeded)
+        );
     }
 }

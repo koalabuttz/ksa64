@@ -22,6 +22,8 @@ pub mod phase7_pack;
 pub mod phase7_result;
 pub mod phase7_telemetry;
 pub mod phase8_aero;
+#[cfg(feature = "fixtures")]
+pub mod phase8_fixtures;
 pub mod phase8_format;
 pub mod phase8_mission;
 pub mod phase8_numeric;

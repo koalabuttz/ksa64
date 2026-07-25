@@ -435,7 +435,7 @@ fn adapt_hobby_spatial(
     .min(i32::MAX as u32) as i32;
     summary.set_metric(MetricSlot::LandingDistance, landing_distance);
     summary.numeric_faults = status.bits();
-    summary.events = result.final_snapshot.events as u32;
+    summary.events = result.event_history as u32;
     summary.identities = [
         HOBBY_SPATIAL_NUMERIC_CONTRACT_ID,
         HOBBY_SPATIAL_ENVIRONMENT_ID,

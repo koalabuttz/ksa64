@@ -7,6 +7,7 @@ use crate::phase8_numeric::{
 use crate::phase8_world::{
     acceleration_from_force, evaluate_hobby_spatial_environment, step_free_translation,
     step_hobby_attitude, step_rail_constrained, HobbySpatialEnvironment, HobbySpatialState,
+    Phase8WorldError,
 };
 
 use super::forces::{
@@ -38,7 +39,10 @@ pub(super) fn advance(
         machine.wind,
         machine.mission.case_seed,
     )
-    .map_err(|_| Phase8MissionError::Numeric)?;
+    .map_err(|error| match error {
+        Phase8WorldError::ModelEnvelopeExceeded => Phase8MissionError::ModelEnvelopeExceeded,
+        _ => Phase8MissionError::Numeric,
+    })?;
     let environment = environment_with_wind_scale(
         raw_environment,
         machine.snapshot.state,

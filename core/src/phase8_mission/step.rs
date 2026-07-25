@@ -10,9 +10,9 @@ use crate::phase8_pack::{
 use super::advance::advance;
 use super::machine::Phase8MissionMachine;
 use super::{
-    magnitude3_i32, update_checksum, HobbySpatialPhase, Phase8Milestone, Phase8MissionError,
-    Phase8MissionResult, Phase8MissionSnapshot, SpatialMissionVariation, EVENT_APOGEE,
-    EVENT_BURNOUT, EVENT_DROGUE, EVENT_LANDING, EVENT_MAIN, EVENT_RAIL_EXIT,
+    magnitude3_i32, phase8_snapshot_checksum, HobbySpatialPhase, Phase8Milestone,
+    Phase8MissionError, Phase8MissionResult, Phase8MissionSnapshot, SpatialMissionVariation,
+    EVENT_APOGEE, EVENT_BURNOUT, EVENT_DROGUE, EVENT_LANDING, EVENT_MAIN, EVENT_RAIL_EXIT,
 };
 
 impl Phase8MissionMachine<'_> {
@@ -98,6 +98,7 @@ impl Phase8MissionMachine<'_> {
             self.terminal_outcome = Some(EvaluationOutcome::GroundContact);
         }
         self.previous_vertical_velocity = successor.velocity.z();
+        self.event_history |= events;
         self.steps = self.steps.saturating_add(1);
         self.snapshot = Phase8MissionSnapshot {
             state: successor,
@@ -119,7 +120,7 @@ impl Phase8MissionMachine<'_> {
         if events & EVENT_BURNOUT != 0 {
             self.burnout_static_margin = self.snapshot.aero.static_margin_q24;
         }
-        self.checksum = update_checksum(self.checksum, self.snapshot);
+        self.checksum = phase8_snapshot_checksum(self.checksum, self.snapshot);
         Ok(self.snapshot)
     }
 

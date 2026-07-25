@@ -105,3 +105,17 @@ required-features = ["c64"]
 name = "ksa64-phase7-trace-c64"
 path = "src/bin/phase7_trace_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase8-trace-c64"
+path = "src/bin/phase8_trace_c64.rs"
+required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase8-full-c64"
+path = "src/bin/phase8_full_c64.rs"
+required-features = ["c64"]
+[[bin]]
+name = "ksa64-phase8-replay-c64"
+path = "src/bin/phase8_replay_c64.rs"
+required-features = ["c64"]
