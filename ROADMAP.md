@@ -250,11 +250,15 @@ Candidate capabilities:
 
 - A versioned avionics profile/pack binding scheduler, reference frame, sensor suite, guidance program, actuator capabilities, mission sequencing, health monitoring, and safeing.
 - Shared 32/8/1 Hz flight-computer infrastructure with local-ENU navigation and hobby-scale mission sequencing rather than a separate minimal recovery controller.
+- An exact event clock: existing physical timesteps become maximum steps and split at exact 31.25 ms avionics releases and mission events. The new avionics-aware executor is separately identified; the frozen Phase 8 executor remains unchanged.
 - Imperfect IMU, barometer, GPS, attitude-aid, actuator, continuity, and deployment feedback generated only by the world authority.
 - Optional avionics-commanded drogue/main deployment while preserving the frozen truth/event-driven Phase 8 executor as a compatibility profile.
+- A common guidance-to-control-demand boundary followed by a profile-specific control allocator, keeping navigation, guidance, sequencing, and health logic independent of the installed control effector.
+- A monitor-only original Firestorm plus an explicitly fictional derivative with a bounded two-axis motor gimbal during powered flight. The solid motor has no invented cutoff capability and becomes passive after burnout.
 - Exact host-world/host-avionics and host-world/VICE-avionics placements with passive host Mission Control and a native shadow that validates but never commands.
 - An in-memory loopback endpoint for a long-running combined C64 world/avionics build using the same sensor-N, command-N, effective-N+1 ordering as split execution.
 - A frame identity and transformation contract reserving local ENU, Earth-fixed, and Earth-inertial navigation without yet implementing global atmospheric propagation.
+- A versioned actuator-capability and control-allocation identity that can later add aerodynamic canards, cold-gas RCS, and mixed-effector vehicles without changing the shared scheduler or navigation layers. Unsupported effector families fail closed in Phase 8.5.
 
 Stock-C64 policy:
 
@@ -268,12 +272,13 @@ Exit criteria:
 - Every Phase 0-8 artifact remains byte-identical and both legacy profile names retain source/wire compatibility.
 - Evaluation identity binds vehicle, world/model profile, mission, environment, avionics, actuator capabilities, uncertainty, and evaluator versions.
 - Host/host and host/VICE placements return identical ordered commands, status, navigation, alarms, and terminal evidence for the accepted local reference.
+- Exact 32 Hz release times, split-step ordering, held-command intervals, and sensor-N/command-N/effective-N+1 behavior agree across host, VICE, and loopback placements.
 - The original Firestorm can run navigation, telemetry, autonomous recovery sequencing, and monitor-only attitude control without pretending it has steering actuators.
-- At least one explicitly fictional controlled derivative exercises the shared attitude-command path through declared actuators.
+- The fictional two-axis-gimbal derivative exercises the shared attitude-command and control-allocation path while respecting rail constraint, actuator limits, powered-flight availability, and post-burnout loss of authority.
 - The monolithic loopback path uses the same endpoint semantics as split execution; its stock memory result and timing projection are recorded without removing the existing standalone-world option.
 - Mission Control, recording, pacing, storage, and endpoint placement cannot alter physical or avionics results.
 
-Explicit deferrals: full ECEF dynamics, ENU-to-ECEF-to-ECI handoff, advanced control-device families, production optimization, and physical user-port/ACIA/Ultimate acceptance.
+Explicit deferrals: full ECEF dynamics, ENU-to-ECEF-to-ECI handoff, implemented canard/RCS physics, production optimization, and physical user-port/ACIA/Ultimate acceptance. Phase 9.5 owns advanced control effectors.
 
 ## Phase 9: design optimization and robustness workbench
 
@@ -296,9 +301,31 @@ Candidate capabilities:
 
 The optimizer selects candidates; the portable core only evaluates them.
 
+## Phase 9.5: advanced control effectors
+
+Status: planned after the Phase 9 workbench and before Phase 10 global flight.
+
+Purpose: extend the Phase 8.5 control-allocation boundary with physically modeled aerodynamic and reaction-control effectors, using the Phase 9 workbench to size, tune, compare, and robustly evaluate them.
+
+Candidate capabilities:
+
+- Geometry-, Mach-, angle-of-attack-, and dynamic-pressure-aware aerodynamic canards with bounded deflection, slew, lag, force/moment, drag, hinge-load, authority, and model-envelope contracts.
+- Cold-gas RCS thruster sets with explicit placement, controlled axes, valve and minimum-impulse behavior, deterministic pulse allocation, consumable depletion, and changing mass properties.
+- Phase- and regime-aware control allocation across motor gimbal, canards, and RCS, including blended vehicles and deterministic authority handoff.
+- Host-compiled effector packs, capability identities, controller/allocation profiles, strict evidence, independent physical checks, and target-bounded exact execution.
+- Phase 9 parameter search, Pareto analysis, sensitivity work, and nested uncertainty campaigns over effector sizing, placement, authority, consumables, and controller settings.
+
+Exit criteria:
+
+- The shared Phase 8.5 scheduler, navigation, guidance, sequencing, command timing, and truth boundary remain unchanged.
+- Canard and RCS force, torque, lag, saturation, depletion, mass-property, and failure cases agree with independent analytic or float64 references within declared tolerances.
+- Gimbal-only, canard-only, RCS-only, and at least one mixed-effector mission are deterministic across worker count, placement, recording, and replay.
+- The Phase 9 optimizer can compare and robustly evaluate effector designs without receiving private truth or changing the production evaluator.
+- Unsupported capability combinations and operation outside a validated aerodynamic or consumable envelope fail closed.
+
 ## Phase 10: global atmospheric and suborbital flight
 
-Status: planned after the Phase 9 workbench establishes reproducible candidate evaluation.
+Status: planned after Phase 9.5 establishes the advanced control-effector library.
 
 Purpose: cover the region where local and orbital missions overlap without forcing all vehicles into one coordinate representation.
 
@@ -308,6 +335,7 @@ Candidate capabilities:
 - Strict local-ENU, Earth-fixed, and Earth-inertial state transforms with continuous position, velocity, attitude, angular rate, time, and identity.
 - Mission-declared deterministic frame transitions and local launch/recovery views around a global authoritative trajectory.
 - Reuse of the Phase 8.5 avionics boundary so the same flight computer can navigate local, Earth-fixed, or Earth-inertial missions through explicit frame-aware aiding and guidance.
+- Reuse of Phase 9.5 actuator capabilities and control allocators without coupling global coordinates to a particular effector family.
 - Native, independent high-precision, bounded C64, and external reference evidence appropriate to the expanded model envelope.
 
 The vehicle's organizational category never selects this profile automatically. A small sounding rocket may require it, while a large vehicle may legitimately use a local profile for a bounded launch-site experiment.

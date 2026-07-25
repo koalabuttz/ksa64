@@ -1058,3 +1058,15 @@ Status: accepted as the Phase 8.5 roadmap boundary.
 Insert Phase 8.5 before Phase 9. Bind every future evaluation to vehicle, physical/model profile, frame, mission, environment, avionics, actuator capabilities, uncertainty, and evaluator identity. Reuse one scheduler and avionics architecture across orbital and local vehicles through profile-specific navigation, guidance, sequencing, and capabilities.
 
 Preserve both host-world/C64-avionics operation and a deliberately long combined-C64 world/avionics option. Both use identical next-epoch endpoint semantics; the monolithic build replaces serialization with an in-memory loopback. Keep the accepted Phase 8 standalone-world image even if the combined stock image requires later optimization or banking. Reserve ECEF/ECI transformations now, but defer global atmospheric propagation to Phase 10.
+
+## D-084: Use an exact event clock and defer advanced effectors
+
+Date: 2026-07-25
+
+Status: accepted for the Phase 8.5 and Phase 9.5 roadmap.
+
+Run the Phase 8.5 avionics-aware local executor from an exact 32 Hz event clock. Treat the existing physical timesteps as maxima and split them at exact avionics releases and mission-event boundaries. Preserve the frozen Phase 8 executor as a separate compatibility path. Sensor N produces command N, command N becomes effective at release N+1, and continuous commands remain held between releases across host, VICE, and monolithic loopback placements.
+
+Prove active local control with an explicitly fictional two-axis motor-gimbaled Firestorm derivative while the real Firestorm remains monitor-only for attitude. Separate common guidance and body-control demand from a statically selected, capability-bound control allocator. Phase 8.5 implements only monitor-only and motor-gimbal allocation; unsupported effector families fail closed.
+
+Add Phase 9.5 after the optimization workbench and before global flight to implement aerodynamic canards, cold-gas RCS, and mixed-effector allocation. Use Phase 9 to size, tune, compare, and robustly evaluate these models rather than expanding Phase 8.5 into multiple new vehicle-physics projects.

@@ -61,6 +61,40 @@ impl EvaluationRequest<'_> {
     }
 }
 
+impl<'a> EvaluationRequest<'a> {
+    /// Canonical constructor for the Phase 7 vertical point-mass evaluator.
+    pub const fn vertical_point_mass_v1(
+        vehicle: VerticalVehiclePack,
+        motor: &'a MotorPack,
+        mission: HobbyMissionPack,
+    ) -> Self {
+        Self::HobbyVerticalV1 {
+            vehicle,
+            motor,
+            mission,
+        }
+    }
+
+    /// Canonical constructor for the frozen Phase 8 local-ENU 6-DOF evaluator.
+    pub const fn local_enu_6dof_v1(
+        vehicle: &'a SpatialVehiclePack,
+        motor: &'a SpatialMotorPack,
+        mission: SpatialMissionPack,
+        wind: &'a WindProfilePack,
+        variation: SpatialMissionVariation,
+        variation_checksum: u32,
+    ) -> Self {
+        Self::HobbySpatialV1 {
+            vehicle,
+            motor,
+            mission,
+            wind,
+            variation,
+            variation_checksum,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
     LegacyKsa2(Phase2MissionError),

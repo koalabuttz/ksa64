@@ -15,6 +15,8 @@ Phase 8 leaves a stable physical evaluator, but Phase 8.5 now deliberately prece
 
 Before freezing Phase 9 candidate identities, accept a versioned avionics identity, sensor/command contract, actuator-capability binding, coordinate-frame identity, host/VICE exactness evidence, and monolithic loopback placement. Phase 9 identities must include those inputs so later insertion of realistic avionics cannot silently change an already optimized design.
 
+Phase 9 must treat actuator capabilities and control-allocation profiles as versioned evaluator inputs rather than baking the initial two-axis gimbal into optimizer logic. Its search, checkpoint, archive, and Pareto contracts must therefore accept future canard, RCS, and mixed-effector identities without reinterpretation. Phase 9.5 will add those physical models and use this workbench to size, tune, and robustly compare them.
+
 ## Recommended Phase 9 sequence
 
 1. Freeze design-variable, constraint-policy, optimizer-manifest, candidate-summary, Pareto-front, checkpoint, and archive contracts.
@@ -30,6 +32,6 @@ Before freezing Phase 9 candidate identities, accept a versioned avionics identi
 - Do not mutate KVP7–KRA8 or accepted Phase 0–8 artifacts.
 - Geometry is compiled and validated before evaluation; no JSON or arbitrary allocation enters the portable path.
 - Optimizers consume summaries and validity bits, never private truth or presentation state.
-- A candidate identity binds source, compiler, model profile, mission, environment, uncertainty, and evaluator versions.
+- A candidate identity binds source, compiler, model profile, mission, environment, avionics, actuator capabilities, control allocation, uncertainty, and evaluator versions.
 - Unsupported geometry or model conditions fail closed; search must not reward numerical faults.
 - Large searches remain host-native. C64 execution is for bounded finalists, replay, and small demonstrations.

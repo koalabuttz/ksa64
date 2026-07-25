@@ -18,6 +18,16 @@ pub enum ModelProfileId {
     HobbySpatialV1 = 4,
 }
 
+impl ModelProfileId {
+    /// Canonical scale-neutral name for the accepted Phase 7 profile.
+    #[allow(non_upper_case_globals)]
+    pub const VerticalPointMassV1: Self = Self::HobbyVerticalV1;
+
+    /// Canonical frame/model name for the accepted Phase 8 profile.
+    #[allow(non_upper_case_globals)]
+    pub const LocalEnu6DofV1: Self = Self::HobbySpatialV1;
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum EvaluationOutcome {
@@ -178,6 +188,18 @@ mod tests {
         assert_eq!(
             MetricSlot::MaximumWindSpeed as usize,
             EVALUATION_METRIC_COUNT - 1
+        );
+    }
+
+    #[test]
+    fn canonical_profile_aliases_preserve_frozen_wire_identities() {
+        assert_eq!(
+            ModelProfileId::VerticalPointMassV1 as u8,
+            ModelProfileId::HobbyVerticalV1 as u8
+        );
+        assert_eq!(
+            ModelProfileId::LocalEnu6DofV1 as u8,
+            ModelProfileId::HobbySpatialV1 as u8
         );
     }
 }
