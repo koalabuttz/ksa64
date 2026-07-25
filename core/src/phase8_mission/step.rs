@@ -196,18 +196,19 @@ mod tests {
     fn crosswind(
         _base: WindProfilePack,
         identity: u32,
+        speed_mps: i32,
         layered: bool,
         gust: bool,
     ) -> WindProfilePack {
         let mut knots = [WindKnot::ZERO; KWP8_MAX_WIND_KNOTS];
         knots[0] = WindKnot {
             altitude: SpatialPosition::ZERO,
-            east: SpatialWind::from_raw(2 << 22),
+            east: SpatialWind::from_raw(speed_mps << 22),
             north: SpatialWind::ZERO,
         };
         knots[1] = WindKnot {
             altitude: SpatialPosition::from_raw(1_000 << 13),
-            east: SpatialWind::from_raw((if layered { 4 } else { 2 }) << 22),
+            east: SpatialWind::from_raw((speed_mps + if layered { 2 } else { 0 }) << 22),
             north: SpatialWind::ZERO,
         };
         WindProfilePack {
@@ -225,11 +226,16 @@ mod tests {
     #[test]
     fn crosswind_layered_and_gust_missions_are_repeatable() {
         let (vehicle, motor, mission, calm) = fixtures();
-        for (index, (layered, gust)) in [(false, false), (true, false), (true, true)]
-            .into_iter()
-            .enumerate()
+        for (index, (speed_mps, layered, gust)) in [
+            (2, false, false),
+            (2, true, false),
+            (2, true, true),
+            (5, false, false),
+        ]
+        .into_iter()
+        .enumerate()
         {
-            let wind = crosswind(calm, 0x8000_0000 + index as u32, layered, gust);
+            let wind = crosswind(calm, 0x8000_0000 + index as u32, speed_mps, layered, gust);
             let bound = SpatialMissionPack {
                 wind_identity: wind.identity,
                 ..mission
@@ -253,11 +259,11 @@ mod tests {
             assert_eq!(a, b);
             assert_eq!(
                 a.outcome,
-                EvaluationOutcome::ModelEnvelopeExceeded,
-                "case {index}"
+                EvaluationOutcome::GroundContact,
+                "case {index}: {a:?}"
             );
-            assert!(a.final_snapshot.state.position.x() < 0);
-            assert!(a.max_wind_raw_q22 >= 2 << 22);
+            assert!(a.final_snapshot.state.position.x() > 0);
+            assert!(a.max_wind_raw_q22 >= speed_mps << 22);
         }
     }
     #[test]

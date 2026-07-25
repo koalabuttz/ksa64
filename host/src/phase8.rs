@@ -1,12 +1,15 @@
 //! Host trace/export wrapper for the one portable Phase 8 mission machine.
 
+use ksa64_core::phase8_format::KWP8_MAX_WIND_KNOTS;
 use ksa64_core::phase8_mission::{
     Phase8MissionError, Phase8MissionMachine, Phase8MissionResult, Phase8MissionSnapshot,
     SpatialMissionVariation,
 };
+use ksa64_core::phase8_numeric::{SpatialPosition, SpatialWind};
 use ksa64_core::phase8_pack::{
     parse_spatial_mission_pack, parse_spatial_motor_pack, parse_spatial_vehicle_pack,
-    parse_wind_profile_pack,
+    parse_wind_profile_pack, SpatialMissionPack, SpatialMotorPack, SpatialVehiclePack, WindKnot,
+    WindProfilePack,
 };
 use serde::Serialize;
 
@@ -142,25 +145,15 @@ fn evidence(
     }
 }
 
-pub fn run_checked_in_phase8() -> Result<Phase8RunEvidence, Phase8MissionError> {
-    let vehicle =
-        parse_spatial_vehicle_pack(include_bytes!("../../phase8/examples/firestorm54.kvp8"))
-            .map_err(|_| Phase8MissionError::Configuration)?;
-    let motor =
-        parse_spatial_motor_pack(include_bytes!("../../phase8/examples/aerotech-i211w.kmp8"))
-            .map_err(|_| Phase8MissionError::Configuration)?;
-    let mission =
-        parse_spatial_mission_pack(include_bytes!("../../phase8/examples/firestorm-i211.kmc8"))
-            .map_err(|_| Phase8MissionError::Configuration)?;
-    let wind = parse_wind_profile_pack(include_bytes!("../../phase8/examples/firestorm-calm.kwp8"))
-        .map_err(|_| Phase8MissionError::Configuration)?;
-    let mut machine = Phase8MissionMachine::new_with_variation(
-        &vehicle,
-        &motor,
-        mission,
-        &wind,
-        SpatialMissionVariation::NOMINAL,
-    )?;
+pub fn run_phase8_evidence(
+    vehicle: &SpatialVehiclePack,
+    motor: &SpatialMotorPack,
+    mission: SpatialMissionPack,
+    wind: &WindProfilePack,
+    variation: SpatialMissionVariation,
+) -> Result<Phase8RunEvidence, Phase8MissionError> {
+    let mut machine =
+        Phase8MissionMachine::new_with_variation(vehicle, motor, mission, wind, variation)?;
     let mut trace = Vec::new();
     let mut next_trace_raw = 0;
     while !machine.is_complete() {
@@ -186,4 +179,74 @@ pub fn run_checked_in_phase8() -> Result<Phase8RunEvidence, Phase8MissionError> 
         ],
         trace,
     ))
+}
+
+fn checked_in_packs() -> Result<
+    (
+        SpatialVehiclePack,
+        SpatialMotorPack,
+        SpatialMissionPack,
+        WindProfilePack,
+    ),
+    Phase8MissionError,
+> {
+    Ok((
+        parse_spatial_vehicle_pack(include_bytes!("../../phase8/examples/firestorm54.kvp8"))
+            .map_err(|_| Phase8MissionError::Configuration)?,
+        parse_spatial_motor_pack(include_bytes!("../../phase8/examples/aerotech-i211w.kmp8"))
+            .map_err(|_| Phase8MissionError::Configuration)?,
+        parse_spatial_mission_pack(include_bytes!("../../phase8/examples/firestorm-i211.kmc8"))
+            .map_err(|_| Phase8MissionError::Configuration)?,
+        parse_wind_profile_pack(include_bytes!("../../phase8/examples/firestorm-calm.kwp8"))
+            .map_err(|_| Phase8MissionError::Configuration)?,
+    ))
+}
+
+pub fn run_checked_in_phase8() -> Result<Phase8RunEvidence, Phase8MissionError> {
+    let (vehicle, motor, mission, wind) = checked_in_packs()?;
+    run_phase8_evidence(
+        &vehicle,
+        &motor,
+        mission,
+        &wind,
+        SpatialMissionVariation::NOMINAL,
+    )
+}
+
+pub fn run_checked_in_phase8_crosswind(
+    east_wind_mps: i32,
+) -> Result<Phase8RunEvidence, Phase8MissionError> {
+    if !(0..=25).contains(&east_wind_mps) {
+        return Err(Phase8MissionError::Configuration);
+    }
+    let (vehicle, motor, mut mission, _) = checked_in_packs()?;
+    let mut knots = [WindKnot::ZERO; KWP8_MAX_WIND_KNOTS];
+    knots[0] = WindKnot {
+        altitude: SpatialPosition::ZERO,
+        east: SpatialWind::from_raw(east_wind_mps << 22),
+        north: SpatialWind::ZERO,
+    };
+    knots[1] = WindKnot {
+        altitude: SpatialPosition::from_raw(100_000 << 13),
+        east: SpatialWind::from_raw(east_wind_mps << 22),
+        north: SpatialWind::ZERO,
+    };
+    let wind = WindProfilePack {
+        identity: 0x3557_0000 | east_wind_mps as u32,
+        gust_seed: 0,
+        gust_cadence: ksa64_core::phase8_numeric::SpatialTime::from_raw(1 << 18),
+        gust_amplitude_east: SpatialWind::ZERO,
+        gust_amplitude_north: SpatialWind::ZERO,
+        max_gust: SpatialWind::ZERO,
+        knot_count: 2,
+        knots,
+    };
+    mission.wind_identity = wind.identity;
+    run_phase8_evidence(
+        &vehicle,
+        &motor,
+        mission,
+        &wind,
+        SpatialMissionVariation::NOMINAL,
+    )
 }

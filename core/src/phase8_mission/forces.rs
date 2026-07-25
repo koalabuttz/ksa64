@@ -16,6 +16,11 @@ use super::{
     SpatialMissionVariation,
 };
 
+/// Below this pressure the air-relative direction becomes numerically singular
+/// while aerodynamic forces are no longer mission-significant. The attitude
+/// state remains live, but the small-angle normal-force model is retired.
+pub const MIN_DIRECTIONAL_AERO_Q13: i32 = 50 << 13;
+
 #[derive(Clone, Copy, Debug)]
 pub(super) struct ForceMoment {
     pub force_enu: EnuForce,
@@ -97,7 +102,9 @@ pub(super) fn evaluate_forces(
             SpatialAeroError::ModelEnvelopeExceeded => Phase8MissionError::ModelEnvelopeExceeded,
             _ => Phase8MissionError::Numeric,
         })?;
-    let angle = if enforce_envelope {
+    let q_q13 = dynamic_pressure_q13(environment, variation.density_scale_ppm, status);
+    let directional_aero_active = enforce_envelope && q_q13 >= MIN_DIRECTIONAL_AERO_Q13;
+    let angle = if directional_aero_active {
         let value = small_angle_of_attack_q28(
             [
                 environment.air_velocity_body.x(),
@@ -116,7 +123,6 @@ pub(super) fn evaluate_forces(
     } else {
         0
     };
-    let q_q13 = dynamic_pressure_q13(environment, variation.density_scale_ppm, status);
     let q_area_q13 = multiply_scaled(q_q13, vehicle.reference_area.raw(), 29, status);
     let cp = add(sample.cp_from_nose.raw(), variation.cp_offset_q28, status);
     let cp_aft_of_cg_q28 = subtract(cp, mass.cg_from_nose.raw(), status);
@@ -146,7 +152,11 @@ pub(super) fn evaluate_forces(
         variation.normal_force_scale_ppm,
         status,
     );
-    let normal_per_alpha = multiply_scaled(q_area_q13, normal_slope, 24, status);
+    let normal_per_alpha = if directional_aero_active {
+        multiply_scaled(q_area_q13, normal_slope, 24, status)
+    } else {
+        0
+    };
     // Evaluate lateral flow at CP, not only at CG. The omega cross r term
     // provides geometry-consistent pitch/yaw rate damping.
     let local_y_q19 = subtract(

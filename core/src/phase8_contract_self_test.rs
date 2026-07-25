@@ -194,6 +194,6 @@ mod tests {
     #[test]
     fn target_signature_is_frozen() {
         assert_eq!(run_phase8_contract_self_tests(), 0);
-        assert_eq!(phase8_contract_signature(), 0xbeeb_d9b1);
+        assert_eq!(phase8_contract_signature(), 0x74f3_f6c9);
     }
 }

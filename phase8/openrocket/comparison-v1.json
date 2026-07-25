@@ -1,0 +1,194 @@
+{
+  "all_passed": true,
+  "checks": [
+    {
+      "error": 0.0067872403365453185,
+      "kind": "relative",
+      "ksa64": 19.163841247558594,
+      "limit": 0.05,
+      "metric": "calm.rail_exit_velocity_mps",
+      "openrocket": 19.03464851337664,
+      "passed": true
+    },
+    {
+      "error": 0.013930595889352228,
+      "kind": "relative",
+      "ksa64": 139.25483512878418,
+      "limit": 0.05,
+      "metric": "calm.max_velocity_mps",
+      "openrocket": 137.34158500921765,
+      "passed": true
+    },
+    {
+      "error": 0.011966789349290219,
+      "kind": "relative",
+      "ksa64": 754.2340087890625,
+      "limit": 0.05,
+      "metric": "calm.apogee_m",
+      "openrocket": 745.3149814076866,
+      "passed": true
+    },
+    {
+      "error": 0.0024134755750121694,
+      "kind": "relative",
+      "ksa64": 2.329608917236328,
+      "limit": 0.05,
+      "metric": "calm.burnout_time_s",
+      "openrocket": 2.324,
+      "passed": true
+    },
+    {
+      "error": 0.027635888329195942,
+      "kind": "relative",
+      "ksa64": 11704.330200195312,
+      "limit": 0.1,
+      "metric": "calm.max_dynamic_pressure_pa",
+      "openrocket": 11389.569333964242,
+      "passed": true
+    },
+    {
+      "error": 0.060022796631356456,
+      "kind": "absolute",
+      "ksa64": 12.04983139038086,
+      "limit": 0.5,
+      "metric": "calm.time_to_apogee_s",
+      "openrocket": 11.989808593749503,
+      "passed": true
+    },
+    {
+      "error": 0.058549411804944794,
+      "kind": "absolute",
+      "ksa64": 0.0022546027563388965,
+      "limit": 2.0,
+      "metric": "calm.max_aoa_deg",
+      "openrocket": 0.06080401456128369,
+      "passed": true
+    },
+    {
+      "error": 0.007093725978565081,
+      "kind": "relative",
+      "ksa64": 19.162303924560547,
+      "limit": 0.05,
+      "metric": "crosswind5.rail_exit_velocity_mps",
+      "openrocket": 19.027329264653165,
+      "passed": true
+    },
+    {
+      "error": 0.015102235050951925,
+      "kind": "relative",
+      "ksa64": 138.91953659057617,
+      "limit": 0.05,
+      "metric": "crosswind5.max_velocity_mps",
+      "openrocket": 136.8527541303298,
+      "passed": true
+    },
+    {
+      "error": 0.018753354517855512,
+      "kind": "relative",
+      "ksa64": 742.2200927734375,
+      "limit": 0.05,
+      "metric": "crosswind5.apogee_m",
+      "openrocket": 728.5572012910891,
+      "passed": true
+    },
+    {
+      "error": 0.0024134755750121694,
+      "kind": "relative",
+      "ksa64": 2.329608917236328,
+      "limit": 0.05,
+      "metric": "crosswind5.burnout_time_s",
+      "openrocket": 2.324,
+      "passed": true
+    },
+    {
+      "error": 0.04038205771997838,
+      "kind": "relative",
+      "ksa64": 11767.74951171875,
+      "limit": 0.1,
+      "metric": "crosswind5.max_dynamic_pressure_pa",
+      "openrocket": 11310.988520417248,
+      "passed": true
+    },
+    {
+      "error": 0.1000209655766664,
+      "kind": "absolute",
+      "ksa64": 11.969829559326172,
+      "limit": 0.5,
+      "metric": "crosswind5.time_to_apogee_s",
+      "openrocket": 11.869808593749505,
+      "passed": true
+    },
+    {
+      "error": 0.08075967627151392,
+      "kind": "absolute",
+      "ksa64": 14.61257629287745,
+      "limit": 2.0,
+      "metric": "crosswind5.max_aoa_deg",
+      "openrocket": 14.693335969148963,
+      "passed": true
+    },
+    {
+      "error": 2.574420527058976,
+      "kind": "absolute",
+      "ksa64": 234.6724853515625,
+      "limit": 50.0,
+      "metric": "crosswind5.landing_distance_m",
+      "openrocket": 232.09806482450352,
+      "passed": true
+    },
+    {
+      "error": 0.0,
+      "kind": "relative",
+      "ksa64": 2.1120394728125,
+      "limit": 0.005,
+      "metric": "geometry.dry_mass_kg",
+      "openrocket": 2.1120394728125,
+      "passed": true
+    },
+    {
+      "error": 0.0007086591371079365,
+      "kind": "absolute",
+      "ksa64": 1.5669162818628921,
+      "limit": 0.0144145,
+      "metric": "geometry.cp_caliber_delta",
+      "openrocket": 1.567624941,
+      "passed": true
+    },
+    {
+      "error": 0.0009397748563078068,
+      "kind": "absolute",
+      "ksa64": 0.9726060361436922,
+      "limit": 0.0144145,
+      "metric": "geometry.cg_caliber_delta",
+      "openrocket": 0.973545811,
+      "passed": true
+    },
+    {
+      "error": 0.004008397368826522,
+      "kind": "absolute",
+      "ksa64": 10.307507123368827,
+      "limit": 0.25,
+      "metric": "geometry.static_margin_calibers",
+      "openrocket": 10.303498726,
+      "passed": true
+    }
+  ],
+  "direction_passed": true,
+  "directions": {
+    "landing_drift": {
+      "ksa64_east_m": 234.6724853515625,
+      "openrocket_mapped_east_m": 232.097261055
+    },
+    "weathercocking": {
+      "ksa64_east_m": -121.784423828125,
+      "openrocket_mapped_east_m": -142.338944312
+    }
+  },
+  "interpretation": {
+    "authority": "Engineering comparison only; not launch approval, certification, regulatory, or safety authority.",
+    "drag_correction": "KSA64 Cd knots were replaced with rounded effective coefficients read from the aligned OpenRocket export before rerunning KSA64. This is a documented model-source correction, not a fit against trajectory outcomes.",
+    "low_q_scope": "Directional small-angle aerodynamics are active only after rail clearance and at q >= 50 Pa. Both tools show AoA becoming singular near apogee as airspeed approaches zero."
+  },
+  "schema": "ksa64.openrocket-comparison-v1",
+  "tool": "OpenRocket 24.12"
+}

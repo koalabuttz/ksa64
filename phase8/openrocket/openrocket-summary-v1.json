@@ -1,0 +1,10 @@
+{
+  "schema": "ksa64.openrocket-summary-v1",
+  "tool": "OpenRocket 24.12",
+  "aligned_dry_mass_kg": 2.1120394728125,
+  "rocket_length_m": 1.8923,
+  "cases": [
+    {"name":"calm","apogee_m":745.3149814076866,"max_velocity_mps":137.34158500921765,"max_acceleration_mps2":106.68035464145801,"max_mach":0.40419362901094963,"time_to_apogee_s":11.989808593749503,"flight_time_s":91.99010037817884,"rail_exit_velocity_mps":19.03464851337664,"landing_velocity_mps":5.501961966472412,"max_aoa_rad":0.0010612302525249758,"max_dynamic_pressure_pa":11389.569333964242,"landing_distance_m":0.7098514443266593},
+    {"name":"steady-crosswind-5mps","apogee_m":728.5572012910891,"max_velocity_mps":136.8527541303298,"max_acceleration_mps2":106.61704340979486,"max_mach":0.40503819446213013,"time_to_apogee_s":11.869808593749505,"flight_time_s":90.71686097746455,"rail_exit_velocity_mps":19.027329264653165,"landing_velocity_mps":7.434485899794748,"max_aoa_rad":0.25644709076336136,"max_dynamic_pressure_pa":11310.988520417248,"landing_distance_m":232.09806482450352}
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "artifacts": {
+    "phase8/examples/aerotech-i211w.kmp8": "1eababe7ac27aebad0f413e3c6f45d4ba3a2aec235f1d5657ac5217ca30fa646",
+    "phase8/examples/firestorm54.kvp8": "0f309912a00772081baa4031cad97fe881ab3787b31288ceea657c45cb81f0d0",
+    "phase8/openrocket/firestorm54-i211w-v1.ork": "60ee05ac5bd01576634100a4ef0f9a25137a8dcc4df8d285fa0da93a464d26ed",
+    "phase8/openrocket/openrocket-calm-v1.csv": "08673443dce6d4a4832ddb7ddd9be925acb8fe5adbe559ede36914a5e39168e4",
+    "phase8/openrocket/openrocket-crosswind-5mps-v1.csv": "99c0cd8a1acbc9284af36ead9286320af1efecc37651f6b4c7522404f7c86456",
+    "phase8/openrocket/openrocket-summary-v1.json": "a29935102521626c4233c32ec7b50d5ca7c09ac05faba1230a3e468d1c865cb6",
+    "phase8/reference/openrocket/FirestormEvidence.java": "a3782e5cd54e41bd51b09d5bd1de299cc4c156320c99a738aba704fb0424d3c8",
+    "phase8/source-data/aerotech-i211w-spatial.json": "01901c09cce6ba7a86c74bbb30a48998599a2dbff4dfd76b020308636872e58d",
+    "phase8/source-data/firestorm-i211-spatial-mission.json": "a60fc3383ba93488c858866daf79e86c6972d4f6e5e93e6434d4209811caa5d1",
+    "phase8/source-data/firestorm54-spatial.json": "c53f3078ad26909470c05c0ca37e06662da90f836983641a1396b7888178b78a"
+  },
+  "model": {
+    "aft_guide_from_tail_m": 0.2794,
+    "calm_wind_mps": 0.0,
+    "coordinate_mapping": "KSA64 +east = OpenRocket -Y for the accepted direction=0 steady-wind case.",
+    "crosswind_mps": 5.0,
+    "directional_aero_min_dynamic_pressure_pa": 50.0,
+    "directional_aero_note": "AoA acceptance begins after rail clearance and ends when q falls below 50 Pa; below that threshold the air-relative direction is singular and directional forces are mission-insignificant.",
+    "integration_step_s": 0.01,
+    "isa_atmosphere": true,
+    "launch_altitude_m": 0.0,
+    "launch_rod_alignment_note": "OpenRocket launch-rod length is displacement to its LAUNCHROD event; KSA64 clears the aft guide from a physical 2 m rail, so the aligned OpenRocket displacement is 2.0 - 0.2794 m.",
+    "openrocket_effective_launch_rod_m": 1.7206,
+    "physical_rail_length_m": 2.0,
+    "random_seed": 1263747384,
+    "turbulence_intensity": 0.0,
+    "vehicle": "Giant Leap Firestorm 54 / AeroTech I211W",
+    "wind_deviation_mps": 0.0
+  },
+  "schema": "ksa64.openrocket-settings-v1",
+  "tool": {
+    "jar_sha256": "4959b72f52f5f607941e9722abbb7b7f0c4a38ebbbf84204a329db9f31c4f897",
+    "java_runtime": "openjdk version \"17.0.20\" 2026-07-21 LTS; OpenJDK Runtime Environment Microsoft-14653939 (build 17.0.20+8-LTS); OpenJDK 64-Bit Server VM Microsoft-14653939 (build 17.0.20+8-LTS, mixed mode, sharing)",
+    "name": "OpenRocket",
+    "release": "https://github.com/openrocket/openrocket/releases/tag/release-24.12",
+    "version": "24.12"
+  }
+}

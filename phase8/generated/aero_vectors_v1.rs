@@ -9,4 +9,4 @@ pub const AOA_VECTORS: &[AoaVector] = &[
 ];
 pub const AOA_16_VELOCITY_Q19: [i32; 3] = [52428800, 15033716, 0];
 pub const MACH_02_Q24: i32 = 3355443;
-pub const CD_02_Q24: i32 = 9898557;
+pub const CD_02_Q24: i32 = 21474837;
