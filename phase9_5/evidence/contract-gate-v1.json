@@ -1,0 +1,25 @@
+{
+  "schema": "ksa64.phase9_5.contract-gate-v1",
+  "native_signature": "0xde42a746",
+  "mos_signature": "0xde42a746",
+  "failures": 0,
+  "probe_bytes": 12442,
+  "probe_sha256": "3f1e276d777b11b9bb6340b810d7fa19ec25f272381b032e272a90973f8446f4",
+  "vice": "3.10",
+  "vice_instances": 1,
+  "vice_closed": true,
+  "numeric_contract_id": "0xc07a32d4",
+  "formats": {
+    "KPE9": 2048,
+    "KPA9": 512,
+    "KLE9": 256,
+    "KLR9": {
+      "fast": 64,
+      "command": 64,
+      "aid": 64,
+      "status": 80
+    },
+    "KAS9": 512,
+    "KSC9": 512
+  }
+}

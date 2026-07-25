@@ -1,0 +1,35 @@
+{
+  "contract": "ksa64.numeric.advanced-effector-v1",
+  "headroom_percent": 25,
+  "envelopes": {
+    "effector_force_n": [
+      -128,
+      128
+    ],
+    "hinge_moment_nm": [
+      -64,
+      64
+    ],
+    "supply_pressure_pa": [
+      0,
+      5000000
+    ],
+    "pulse_impulse_ns": [
+      0,
+      16
+    ],
+    "mass_flow_kgps": [
+      0,
+      4
+    ],
+    "supply_scale": [
+      0,
+      1.25
+    ]
+  },
+  "fixed_compatibility": {
+    "body_torque_demand_fractional_bits": 12,
+    "time_fractional_bits": 18,
+    "pulse_quantum_q18": 1024
+  }
+}

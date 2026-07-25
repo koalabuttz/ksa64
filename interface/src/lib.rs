@@ -5,6 +5,7 @@ pub mod phase5;
 pub mod phase6;
 pub mod phase6_transport;
 pub mod phase8_5;
+pub mod phase9_5;
 
 pub const SENSOR_FRAME_LENGTH: usize = 56;
 pub const ACTUATOR_COMMAND_LENGTH: usize = 16;

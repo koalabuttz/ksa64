@@ -124,3 +124,8 @@ required-features = ["c64"]
 name = "ksa64-phase8-5-combined-c64"
 path = "src/bin/phase8_5_combined_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase9-5-contract-c64"
+path = "src/bin/phase9_5_contract_c64.rs"
+required-features = ["c64"]

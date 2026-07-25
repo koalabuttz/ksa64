@@ -323,3 +323,19 @@ Phase 9 adds strict little-endian, CRC-protected optimization records while reus
 - KSN9 contains fixed sensitivity records for baseline/finalist one-quantum derivatives.
 
 KRA9 readers reject truncation, trailing data, bad CRCs, identity or tier mismatch, malformed embedded KDV9/KOE9/KAS8 records, and incomplete generation boundaries. Resume accepts only a byte-exact complete-segment prefix. JSON manifests, JSONL optimizer messages, CSV, HTML, and report JSON are host interfaces or derived presentation—not canonical simulation formats.
+
+## Phase 9.5 advanced-effector formats
+
+Phase 9.5 leaves every Phase 8.5 and Phase 9 record unchanged and adds:
+
+- KPE9: 2,048-byte canard, RCS, tank, supply, failure, and authority installation pack.
+- KPA9: 512-byte PriorityResidualV1 allocator and compiled mixing pack.
+- KLE9: 256-byte advanced-effector evaluation request.
+- KLR9: 64-byte fast-sensor, 64-byte command, 64-byte aid, and 80-byte status cells.
+- KAT9: 128-byte header followed by 320-byte advanced telemetry frames.
+- KAS9: 512-byte advanced evaluation summary.
+- KSC9: 512-byte deterministic advanced campaign configuration.
+- KAE9: segmented campaign/search archive containing KAS9 evidence.
+- KFE9: bounded host/C64 finalist package.
+
+KLR9 uses CRC-16-CCITT and a distinct sync/version prefix; KLF6 remains its outer transport. The fixed packs use strict version-9 headers, little-endian fields, identity binding, reserved-zero enforcement, and CRC-32. A pulse quantum is exactly 1/256 second (1,024 Q18 units), and a command carries zero through eight quanta for each of twelve jets.

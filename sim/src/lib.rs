@@ -51,7 +51,13 @@ pub mod phase8_5;
 pub mod phase8_campaign;
 pub mod phase8_storage;
 #[cfg(feature = "fixtures")]
+mod phase9_5_contract_self_test;
+#[cfg(feature = "fixtures")]
 pub use phase5_vehicle_self_test::{phase5_vehicle_signature, run_phase5_vehicle_self_tests};
+#[cfg(feature = "fixtures")]
+pub use phase9_5_contract_self_test::{
+    phase95_contract_signature, run_phase95_contract_self_tests,
+};
 #[cfg(feature = "fixtures")]
 mod phase5_avionics_self_test;
 #[cfg(feature = "fixtures")]
