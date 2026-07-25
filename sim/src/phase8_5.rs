@@ -68,6 +68,7 @@ pub struct LocalAvionicsVariation {
     pub feedback_fail_mask: u16,
     pub gimbal_jam_epoch: u16,
     pub missed_deadline_epoch: u16,
+    pub deployment_actuation_delay_epochs: u8,
 }
 impl LocalAvionicsVariation {
     pub const NOMINAL: Self = Self {
@@ -92,12 +93,14 @@ impl LocalAvionicsVariation {
         feedback_fail_mask: 0,
         gimbal_jam_epoch: u16::MAX,
         missed_deadline_epoch: u16::MAX,
+        deployment_actuation_delay_epochs: 0,
     };
     pub const fn is_valid(self) -> bool {
         self.aid_delay_epochs <= 32
             && self.sensor_noise_scale <= 4096
             && self.clock_drift_ppm >= -10_000
             && self.clock_drift_ppm <= 10_000
+            && self.deployment_actuation_delay_epochs <= 32
     }
 }
 fn epoch_in_window(epoch: u16, start: u16, count: u8) -> bool {
@@ -671,6 +674,7 @@ pub fn run_local_loopback_with_faults(
     let mut deployment_decisions = 0u16;
     let mut link_losses = 0u16;
     let mut aid_queue = [None; 33];
+    let mut deployment_queue = [0u8; 33];
     let mut last = None;
     while !world.is_complete() {
         let Some(release) = world.release()? else {
@@ -700,7 +704,21 @@ pub fn run_local_loopback_with_faults(
         if link_missing {
             link_losses = link_losses.saturating_add(1);
         } else {
-            world.accept_command_faulted(out.command, epoch >= faults.gimbal_jam_epoch)?;
+            let mut physical_command = out.command;
+            let queued = deployment_queue[usize::from(epoch) % deployment_queue.len()];
+            deployment_queue[usize::from(epoch) % deployment_queue.len()] = 0;
+            if faults.deployment_actuation_delay_epochs == 0 {
+                physical_command.discrete |= queued;
+            } else {
+                if out.command.discrete != 0 {
+                    let delivery =
+                        epoch.wrapping_add(u16::from(faults.deployment_actuation_delay_epochs));
+                    deployment_queue[usize::from(delivery) % deployment_queue.len()] |=
+                        out.command.discrete;
+                }
+                physical_command.discrete = queued;
+            }
+            world.accept_command_faulted(physical_command, epoch >= faults.gimbal_jam_epoch)?;
         }
         let mut command_bytes = [0; ksa64_interface::phase8_5::LOCAL_COMMAND_LENGTH];
         write_local_command(&out.command, &mut command_bytes)
@@ -1160,6 +1178,42 @@ mod tests {
             a.checksum_chains[1],
             run_fault_case(LocalAvionicsVariation::NOMINAL).checksum_chains[1]
         );
+    }
+    #[test]
+    fn one_epoch_loss_and_deployment_delay_remain_bounded() {
+        let mut one = LocalAvionicsVariation::NOMINAL;
+        one.link_dropout_start = 2_100;
+        one.link_dropout_epochs = 1;
+        let held = run_fault_case(one);
+        assert!(!held.last_flight.safe);
+        assert_eq!(held.link_losses, 1);
+        let mut delayed = LocalAvionicsVariation::NOMINAL;
+        delayed.deployment_actuation_delay_epochs = 4;
+        let a = run_fault_case(delayed);
+        let b = run_fault_case(delayed);
+        assert_eq!(a.checksum_chains, b.checksum_chains);
+        assert_eq!(
+            a.result.outcome,
+            ksa64_core::evaluation::EvaluationOutcome::GroundContact
+        );
+        assert_ne!(
+            a.checksum_chains,
+            run_fault_case(LocalAvionicsVariation::NOMINAL).checksum_chains
+        );
+    }
+    #[test]
+    fn gps_outage_and_imu_bias_are_deterministic_named_cases() {
+        let mut gps = LocalAvionicsVariation::NOMINAL;
+        gps.gps_dropout_start = 1;
+        gps.gps_dropout_epochs = u8::MAX;
+        let gps_a = run_fault_case(gps);
+        let gps_b = run_fault_case(gps);
+        assert_eq!(gps_a.checksum_chains, gps_b.checksum_chains);
+        let mut imu = LocalAvionicsVariation::NOMINAL;
+        imu.imu_delta_bias = [3, -2, 4];
+        imu.gyro_bias = [2, -1, 1];
+        let biased = run_fault_case(imu);
+        assert_ne!(biased.checksum_chains[1], gps_a.checksum_chains[1]);
     }
     #[test]
     fn deadline_and_open_continuity_fail_closed() {

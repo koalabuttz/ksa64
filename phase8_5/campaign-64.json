@@ -1,0 +1,21 @@
+{
+  "alarmed": 5,
+  "completed": 64,
+  "master_seed": "0x4b534185",
+  "maximum_attitude_error_turn16": 32767,
+  "maximum_navigation_error_q13": 462940,
+  "model_envelope_exceeded": 0,
+  "record_bytes": 16896,
+  "records_crc32": "0xa4d42479",
+  "recovery_incomplete": 0,
+  "runs": 64,
+  "saturated": 64,
+  "schema": "ksa64.phase8_5.campaign-evidence-v1",
+  "wall_seconds": 3.5187734,
+  "workers": 4,
+  "sha256": "97577e9352e51c42317d638f3d00a57458a9422bb4dc107494dfe5e33d061fdf",
+  "worker_exactness": [
+    1,
+    4
+  ]
+}
