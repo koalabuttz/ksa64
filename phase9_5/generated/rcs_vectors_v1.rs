@@ -1,0 +1,20 @@
+// Generated independently by phase9_5/reference/generate_rcs_vectors.py. Do not edit.
+pub const BALANCED_FORCE_Q23: [i32; 3] = [0, 0, 0];
+pub const BALANCED_TORQUE_Q12: [i32; 3] = [0, 4506, 0];
+pub const BALANCED_MASS_FLOW_Q28: i32 = 995374;
+pub const BALANCED_IMPULSE_Q26: i32 = 524288;
+pub const BALANCED_CONSUMED_Q21: i32 = 30;
+pub const BALANCED_THRUST_SCALE_Q30: i32 = 1073741824;
+pub const SINGLE_FORCE_Q23: [i32; 3] = [0, 0, 8388608];
+pub const SINGLE_TORQUE_Q12: [i32; 3] = [118, 0, 0];
+pub const SINGLE_MASS_FLOW_Q28: i32 = 497687;
+pub const SINGLE_IMPULSE_Q26: i32 = 262144;
+pub const SINGLE_CONSUMED_Q21: i32 = 15;
+pub const SINGLE_THRUST_SCALE_Q30: i32 = 1073741824;
+pub const HALF_SUPPLY_FORCE_Q23: [i32; 3] = [0, 0, 0];
+pub const HALF_SUPPLY_TORQUE_Q12: [i32; 3] = [0, 2704, 0];
+pub const HALF_SUPPLY_MASS_FLOW_Q28: i32 = 597222;
+pub const HALF_SUPPLY_IMPULSE_Q26: i32 = 314572;
+pub const HALF_SUPPLY_CONSUMED_Q21: i32 = 18;
+pub const HALF_SUPPLY_THRUST_SCALE_Q30: i32 = 644241817;
+pub const FULL_PROPELLANT_Q21: i32 = 209715;

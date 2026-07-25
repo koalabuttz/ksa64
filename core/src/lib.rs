@@ -36,6 +36,7 @@ pub mod phase8_world;
 pub mod phase9_5_canard;
 pub mod phase9_5_contract;
 pub mod phase9_5_numeric;
+pub mod phase9_5_rcs;
 pub mod phase9_contract;
 pub mod phase9_finalist;
 pub mod planar;

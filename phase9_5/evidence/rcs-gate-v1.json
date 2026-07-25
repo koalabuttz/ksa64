@@ -1,0 +1,42 @@
+{
+  "schema": "ksa64.phase9_5.rcs-gate-v1",
+  "model": "twelve-jet cold-gas RCS with table-driven supply",
+  "pulse_quantum_q18": 1024,
+  "pulse_quantum_seconds": 0.00390625,
+  "native": {
+    "tests": 8,
+    "failures": 0
+  },
+  "independent_float64": {
+    "torque_relative_error": 0.00008877840909082833,
+    "mass_flow_relative_error": 4.991134630261553e-7,
+    "acceptance_limit": 0.005
+  },
+  "mos": {
+    "probe": "ksa64-phase9-5-rcs-c64",
+    "prg_bytes": 21767,
+    "sha256": "d6ac9177b162183255f0a8eec013719c93178c18d888a6d5f5c795f58b2a6d9c",
+    "vice_version": "3.10",
+    "failures": 0,
+    "stage": 259,
+    "instances": 1,
+    "closed": true
+  },
+  "coverage": [
+    "balanced bidirectional torque pairs",
+    "individual residual translation",
+    "exact 1/256-second valve edges",
+    "one-shot duplicate rejection",
+    "deterministic sub-minimum accumulation",
+    "regulated supply",
+    "ideal-isothermal blowdown supply",
+    "exact depletion split",
+    "remaining-propellant mass first moment and inertia",
+    "stuck closed",
+    "stuck open",
+    "leak",
+    "half-thrust degradation",
+    "one-quantum valve delay",
+    "safe-state physical stuck-open behavior"
+  ]
+}

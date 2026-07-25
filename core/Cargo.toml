@@ -128,3 +128,8 @@ required-features = ["c64"]
 name = "ksa64-phase9-5-canard-c64"
 path = "src/bin/phase9_5_canard_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase9-5-rcs-c64"
+path = "src/bin/phase9_5_rcs_c64.rs"
+required-features = ["c64"]
