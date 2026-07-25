@@ -22,6 +22,10 @@ impl C64AciaRegisters {
         self.base
     }
     /// Resets and selects polled 8-N-1 SwiftLink 38,400 baud mode.
+    ///
+    /// # Safety
+    /// A SwiftLink-compatible ACIA must be present at the configured base
+    /// address, and no other code may access it concurrently.
     pub unsafe fn configure_swiftlink_38400(&mut self) {
         let p = self.base as usize as *mut u8;
         core::ptr::write_volatile(p.add(1), 0);
@@ -30,6 +34,10 @@ impl C64AciaRegisters {
     }
     /// Resets and selects polled 8-N-1 Turbo232 enhanced 57,600 baud mode.
     /// Caller must ensure a compatible cartridge or VICE ACIA is present.
+    ///
+    /// # Safety
+    /// A Turbo232-compatible ACIA must be present at the configured base
+    /// address, and no other code may access it concurrently.
     pub unsafe fn configure_turbo232_57k6(&mut self) {
         let p = self.base as usize as *mut u8;
         core::ptr::write_volatile(p.add(1), 0);

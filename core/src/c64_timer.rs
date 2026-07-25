@@ -30,6 +30,10 @@ unsafe fn wait_for_frame_start() {
 }
 
 /// Disables display DMA, sprites, and CIA interrupts before a measurement.
+///
+/// # Safety
+/// The caller must run on a C64-compatible target with the standard VIC-II and
+/// CIA register map, and must accept that display DMA and interrupts are changed.
 pub unsafe fn prepare_cia_timing() {
     write_register(CIA1_INTERRUPT_CONTROL, 0x7f);
     let _ = read_register(CIA1_INTERRUPT_CONTROL);
@@ -40,6 +44,10 @@ pub unsafe fn prepare_cia_timing() {
 }
 
 /// Starts the cascaded 32-bit CIA1 clock at a PAL frame boundary.
+///
+/// # Safety
+/// `prepare_cia_timing` must have been called on a C64-compatible target. No
+/// other code may concurrently reprogram CIA1 or the VIC-II raster state.
 pub unsafe fn start_cia_timer() {
     wait_for_frame_start();
     write_register(CIA1_CONTROL_A, 0x00);
@@ -55,6 +63,10 @@ pub unsafe fn start_cia_timer() {
 }
 
 /// Stops the timer and returns elapsed processor clocks.
+///
+/// # Safety
+/// The cascaded timer must have been started by `start_cia_timer`, and no
+/// interrupt or concurrent code may modify CIA1 timer registers.
 pub unsafe fn stop_cia_timer() -> u32 {
     write_register(CIA1_CONTROL_A, 0x00);
     write_register(CIA1_CONTROL_B, TIMER_B_COUNTS_TIMER_A);
@@ -66,6 +78,10 @@ pub unsafe fn stop_cia_timer() -> u32 {
 }
 
 /// Measures the timer start/stop boundary cost for subtraction from a run.
+///
+/// # Safety
+/// The caller must satisfy the requirements of `prepare_cia_timing` and must
+/// allow this function to start and stop CIA1's timers.
 pub unsafe fn measure_cia_boundary_overhead() -> u32 {
     start_cia_timer();
     stop_cia_timer()

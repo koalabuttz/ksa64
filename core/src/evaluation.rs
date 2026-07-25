@@ -4,7 +4,8 @@
 //! validity bitmap keeps unsupported or unavailable metrics distinct from a
 //! legitimate numeric zero without requiring floating point or allocation.
 
-pub const EVALUATION_METRIC_COUNT: usize = 24;
+pub const EVALUATION_V1_METRIC_COUNT: usize = 24;
+pub const EVALUATION_METRIC_COUNT: usize = 32;
 pub const EVALUATION_IDENTITY_COUNT: usize = 6;
 pub const EVALUATION_CHECKSUM_COUNT: usize = 5;
 
@@ -14,6 +15,7 @@ pub enum ModelProfileId {
     LegacyKsa2PlanarV1 = 1,
     LegacyKsa5SpatialV1 = 2,
     HobbyVerticalV1 = 3,
+    HobbySpatialV1 = 4,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -29,6 +31,7 @@ pub enum EvaluationOutcome {
     NoLiftoff = 7,
     ConfigurationFault = 8,
     RecoveryIncomplete = 9,
+    ModelEnvelopeExceeded = 10,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,6 +61,14 @@ pub enum MetricSlot {
     ImpactVelocity = 21,
     MaxNavigationError = 22,
     TerminalMass = 23,
+    MinimumStaticMargin = 24,
+    MaximumAngleOfAttack = 25,
+    MaximumAngularRate = 26,
+    MaximumLateralAcceleration = 27,
+    LandingDistance = 28,
+    RailExitStaticMargin = 29,
+    BurnoutStaticMargin = 30,
+    MaximumWindSpeed = 31,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -68,7 +79,7 @@ impl MetricValidity {
     pub const NONE: Self = Self(0);
 
     pub const fn from_bits(bits: u32) -> Self {
-        Self(bits & ((1u32 << EVALUATION_METRIC_COUNT) - 1))
+        Self(bits)
     }
 
     pub const fn bits(self) -> u32 {
@@ -151,6 +162,22 @@ mod tests {
     #[test]
     fn reserved_validity_bits_are_discarded() {
         let validity = MetricValidity::from_bits(u32::MAX);
-        assert_eq!(validity.bits(), (1u32 << EVALUATION_METRIC_COUNT) - 1);
+        assert_eq!(validity.bits(), u32::MAX);
+    }
+
+    #[test]
+    fn phase8_uses_the_upper_metric_word_without_moving_phase7_slots() {
+        assert_eq!(
+            MetricSlot::TerminalMass as usize,
+            EVALUATION_V1_METRIC_COUNT - 1
+        );
+        assert_eq!(
+            MetricSlot::MinimumStaticMargin as usize,
+            EVALUATION_V1_METRIC_COUNT
+        );
+        assert_eq!(
+            MetricSlot::MaximumWindSpeed as usize,
+            EVALUATION_METRIC_COUNT - 1
+        );
     }
 }

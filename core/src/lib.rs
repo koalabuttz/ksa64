@@ -21,6 +21,9 @@ pub mod phase7_numeric;
 pub mod phase7_pack;
 pub mod phase7_result;
 pub mod phase7_telemetry;
+pub mod phase8_format;
+pub mod phase8_numeric;
+pub mod phase8_pack;
 pub mod planar;
 pub mod planar_dynamics;
 pub mod planar_environment;
@@ -58,6 +61,8 @@ mod phase2_mission_self_test;
 
 #[cfg(feature = "fixtures")]
 mod phase5_flexible_self_test;
+#[cfg(feature = "fixtures")]
+mod phase8_contract_self_test;
 
 #[cfg(feature = "fixtures")]
 mod phase5_rigid_self_test;
@@ -95,5 +100,7 @@ pub use phase5_rigid_self_test::{
 pub use phase5_spatial_self_test::run_phase5_spatial_self_tests;
 #[cfg(feature = "fixtures")]
 pub use phase5_world_self_test::{phase5_world_signature, run_phase5_world_self_tests};
+#[cfg(feature = "fixtures")]
+pub use phase8_contract_self_test::{phase8_contract_signature, run_phase8_contract_self_tests};
 #[cfg(feature = "fixtures")]
 pub use self_test::{run_c64_acceptance_self_tests, run_numeric_self_tests};

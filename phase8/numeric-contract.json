@@ -1,0 +1,28 @@
+{
+  "contract": "ksa64.numeric.hobby-spatial-v1",
+  "environment": "ksa64.environment.us76-250m-enu-wind-v1",
+  "headroom_percent": 25,
+  "raw_storage": "signed-i32",
+  "cadence_seconds": {
+    "powered": "0.01",
+    "coast_translation": "0.02",
+    "coast_attitude": "0.01",
+    "recovery": "0.05"
+  },
+  "envelopes": {
+    "time_s": ["0", "4096"],
+    "position_m": ["-150000", "150000"],
+    "velocity_mps": ["-2500", "2500"],
+    "acceleration_mps2": ["-2000", "2000"],
+    "mass_kg": ["0", "512"],
+    "force_n": ["-100000", "100000"],
+    "moment_arm_m": ["-4", "4"],
+    "inertia_kgm2": ["0", "2048"],
+    "torque_nm": ["-200000", "200000"],
+    "angular_rate_radps": ["-64", "64"],
+    "coefficient": ["-64", "64"],
+    "static_margin_cal": ["-64", "64"],
+    "angle_rad": ["-4", "4"],
+    "wind_mps": ["-250", "250"]
+  }
+}

@@ -2,7 +2,7 @@
 
 use crate::evaluation::{
     EvaluationOutcome, EvaluationSummary, MetricValidity, ModelProfileId,
-    EVALUATION_CHECKSUM_COUNT, EVALUATION_METRIC_COUNT,
+    EVALUATION_CHECKSUM_COUNT, EVALUATION_V1_METRIC_COUNT,
 };
 use crate::phase7_format::{
     seal_phase7_record, validate_phase7_record, write_phase7_header, Phase7RecordError,
@@ -57,6 +57,12 @@ pub fn encode_ksr7(
     summary: EvaluationSummary,
     output: &mut [u8; KSR7_LENGTH],
 ) -> Result<(), Ksr7Error> {
+    if summary.profile == ModelProfileId::HobbySpatialV1 {
+        return Err(Ksr7Error::Profile);
+    }
+    if summary.metric_validity.bits() & !((1u32 << EVALUATION_V1_METRIC_COUNT) - 1) != 0 {
+        return Err(Ksr7Error::Validity);
+    }
     write_phase7_header(
         output,
         Phase7RecordKind::EvaluationSummary,
@@ -73,7 +79,12 @@ pub fn encode_ksr7(
     for (index, value) in summary.terminal_state_b.iter().enumerate() {
         w32(output, 56 + index * 4, *value);
     }
-    for (index, value) in summary.metrics.iter().enumerate() {
+    for (index, value) in summary
+        .metrics
+        .iter()
+        .take(EVALUATION_V1_METRIC_COUNT)
+        .enumerate()
+    {
         w32(output, 68 + index * 4, *value);
     }
     wu32(output, 164, summary.events);
@@ -115,7 +126,7 @@ pub fn parse_ksr7(input: &[u8]) -> Result<Ksr7Record, Ksr7Error> {
         return Err(Ksr7Error::Reserved);
     }
     let validity_bits = ru32(input, 40);
-    if validity_bits & !((1u32 << EVALUATION_METRIC_COUNT) - 1) != 0 {
+    if validity_bits & !((1u32 << EVALUATION_V1_METRIC_COUNT) - 1) != 0 {
         return Err(Ksr7Error::Validity);
     }
     let mut summary = EvaluationSummary::empty(parse_profile(input[32])?);
@@ -127,7 +138,7 @@ pub fn parse_ksr7(input: &[u8]) -> Result<Ksr7Record, Ksr7Error> {
         summary.terminal_state_a[index] = r32(input, 44 + index * 4);
         summary.terminal_state_b[index] = r32(input, 56 + index * 4);
     }
-    for index in 0..EVALUATION_METRIC_COUNT {
+    for index in 0..EVALUATION_V1_METRIC_COUNT {
         summary.metrics[index] = r32(input, 68 + index * 4);
     }
     summary.events = ru32(input, 164);
@@ -159,5 +170,16 @@ mod tests {
         assert_eq!(decoded.input_identity, evaluation_input_identity(summary));
         assert_eq!(decoded.summary.metric(MetricSlot::ApogeeAltitude), Some(42));
         assert_eq!(decoded.summary.source_checksums, summary.source_checksums);
+    }
+
+    #[test]
+    fn ksr7_rejects_phase8_profile_and_upper_metrics() {
+        let mut output = [0u8; KSR7_LENGTH];
+        let spatial = EvaluationSummary::empty(ModelProfileId::HobbySpatialV1);
+        assert_eq!(encode_ksr7(spatial, &mut output), Err(Ksr7Error::Profile));
+
+        let mut vertical = EvaluationSummary::empty(ModelProfileId::HobbyVerticalV1);
+        vertical.set_metric(MetricSlot::MinimumStaticMargin, 1);
+        assert_eq!(encode_ksr7(vertical, &mut output), Err(Ksr7Error::Validity));
     }
 }
