@@ -1,0 +1,33 @@
+{
+  "schema": "ksa64.phase9_5.mission-control-gate-v1",
+  "host_host_releases": 64,
+  "placement": "HostHost",
+  "checksums": {
+    "truth": "0xcb6ebf10",
+    "navigation": "0x6707790c",
+    "flight": "0x8067d230",
+    "allocator": "0x592bdbe7"
+  },
+  "kmr9": {
+    "schema": "ksa64.kmr9-v1",
+    "bytes": 176921,
+    "sha256": "8e2f91af7f4ea9af117be3379073ea83cf11553223fc3b63066d4ef22b22357c"
+  },
+  "presentation": {
+    "pages": [
+      "F1 Flight Director",
+      "F2 Trajectory",
+      "F3 Control",
+      "F4 Navigation",
+      "F5 Vehicle",
+      "F6 Link",
+      "F7 Truth"
+    ],
+    "tested_sizes": [
+      "140x45",
+      "80x24"
+    ],
+    "passive_render_invariance": true
+  },
+  "note": "KMR9 is noncanonical presentation evidence. It does not affect simulation identity or physics."
+}

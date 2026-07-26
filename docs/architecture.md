@@ -436,6 +436,8 @@ Advanced effectors and global flight preserve the existing ownership rule: durin
 
 Phase 9.5 keeps canard, RCS, depletion, changing mass properties, actuator, control-allocation, and authority-handoff models inside the portable evaluator. Its interim stock baseline places the authoritative world on the host and the genuine flight/allocation endpoint on a stock C64 using exact externally paced KLF6/KLR9 step-and-ack cells. Wall-clock pacing is observational and may pause; this placement is not a realtime claim. Analytic fixtures and a deliberately small float64 implementation are the primary independent evidence. Optional Basilisk comparisons are limited to selected fixed-step attitude/RCS cases and are committed as offline fixtures; they do not validate KSA64-specific aerodynamics, exact release scheduling, or allocator logic.
 
+Selected optimized candidates cross the same seam through a strict KFB9 Start bootstrap. The host materializes and validates the KPE9/KPA9-bound candidate, the C64 receives only its bounded flight and allocation configuration, and both sides instantiate the same portable kernels. The original reference endpoint remains frozen. The host shadow compares every returned command/status cell before the world advances. F1–F7 Mission Control, KMR9 recording, KFE9 browsing, and stock/REU retention are passive consumers and cannot alter candidate materialization, command order, or physics.
+
 Phase 10 uses a layered evidence architecture:
 
     deterministic GlobalEcef6DofV1

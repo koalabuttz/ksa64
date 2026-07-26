@@ -1,0 +1,18 @@
+{
+  "schema": "ksa64.phase9_5.finalist-split-probe-v1",
+  "finalist_index": 0,
+  "package": "phase9_5/evidence/workbench/mixed-nsga2.kfe9",
+  "bootstrap_sha256": "1f7121b175f8cea46b12ef8dd72e58487b5f9fe3dcb485e4f5a777b94db11154",
+  "releases": 8,
+  "wall_seconds": 35.28200000000652,
+  "target": "PAL stock C64 selected-finalist flight endpoint via one pinned VICE instance; KFB9 bootstrap plus externally paced KLF6/KLR9 step-and-ack, not realtime",
+  "artifact": {
+    "bytes": 39963,
+    "sha256": "ea1c315aa44abccfbc112601319fa11997abcc2f351b47844e01399d2ff23597",
+    "load_address": 2049,
+    "load_end_exclusive": 42010,
+    "stock_fit": true
+  },
+  "broker": "KSA64_PHASE95_FINALIST_BOUNDED study=Mixed candidate=2e95aa26 releases=8 sensor=71596e2d command=c2fe3831 status=cd51bac8 truth=9833039c nav=2325ba22 flight=51dee460 allocator=d4960be4",
+  "result_raw": "4b4c4639010000000700000022ba252360e4de51e40b96d4"
+}

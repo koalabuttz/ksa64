@@ -31,8 +31,9 @@ search, and frozen artifact remains unchanged.
 - Full six-axis force-and-torque guidance is deferred as
   `SixAxisWrenchV1`.
 
-See [PLAN.md](PLAN.md) for the implementation gates and
-[CONTRACT.md](CONTRACT.md) for the frozen public behavior.
+See [PLAN.md](PLAN.md) for the implementation gates, [CONTRACT.md](CONTRACT.md)
+for the frozen public behavior, and [FINALIST_WORKFLOW.md](FINALIST_WORKFLOW.md)
+for browsing, retention, Mission Control, and selected split reruns.
 
 ## Implemented gates
 
@@ -46,6 +47,7 @@ See [PLAN.md](PLAN.md) for the implementation gates and
 - Gate 8 composes the advanced effectors with the exact 32 Hz event clock and the unchanged Phase 8 world through a new additive execution path. C9, R9, and M9 complete full missions; the accepted layered 5 m/s C9 case passes the 3 degree check; R9 passes the three-axis disturbance and reserve gates; M9 survives deterministic pitot loss; and strict KAT9/KAS9 evidence is independently checked. See [INTEGRATED_EVIDENCE.md](INTEGRATED_EVIDENCE.md).
 - Gate 9 generalizes the Phase 9 workbench over KAS9 evidence and freezes accepted canard, RCS, mixed-effector, and experimental research studies. Seven grid/NSGA-II studies perform 2,974 unique robust evaluations; accepted finalists pass their 64-case promotion tier, archives are byte-identical with one, four, and eight workers, and the separately labelled KSA-X1 study promotes no accepted physical finalist.
 - Gate 10 records the stock-target boundary without weakening the contract. The portable world endpoint remains too large and the advanced flight release exceeds the PAL realtime budget, but the exact stock flight endpoint fits without an REU. The accepted interim baseline is host world plus externally paced C64 flight: an eight-release one-instance VICE probe shadow-verifies every KLR9 command/status cell and the truth, navigation, flight, and allocator chains.
+- Gate 11 adds passive F1–F7 advanced Mission Control and noncanonical KMR9 recording, deterministic stock/REU finalist retention, a strict allocation-free KFE9 browser, and selected-finalist split reruns. The stock browser is 29,010 bytes and ends at `$7951`; the configurable KFB9 flight endpoint is 39,963 bytes and ends at `$A41A`. Separate one-instance VICE probes exactly rerun the first accepted canard, RCS, and mixed finalists for eight releases and close cleanly. Neither image requires an REU.
 
 Regenerate Gate 3 outputs with:
 

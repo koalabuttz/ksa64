@@ -17,8 +17,10 @@ execution entry points must not change.
 
 - `core/src/phase9_5_contract.rs`: identities, numeric wrappers, KPE9/KPA9/KLE9/KAS9/KSC9.
 - `interface/src/phase9_5.rs`: KLR9 and KAT9.
+- `core/src/phase9_5_finalist.rs`: allocation-free KFE9 presentation reader.
 - `flight/src/phase9_5.rs`: advanced truth-blind wrapper, roll demand, pitot fallback, allocator.
 - `sim/src/phase9_5.rs`: canard/RCS physics, exact valve edges, evaluator, telemetry.
+- `sim/src/phase9_5_bootstrap.rs` and `sim/src/bin/phase9_5_finalist_flight_endpoint_c64.rs`: strict KFB9 startup and separate stock selected-finalist flight endpoint.
 - `host/src/phase9_5*.rs`: compiler, references, campaign/search integration, Mission Control.
 - `phase9_5/reference/`: independent analytic/float64 evidence.
 - `phase9_5/evidence/`: frozen generated packs, vectors, campaigns, searches, and reports.

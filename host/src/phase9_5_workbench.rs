@@ -475,7 +475,7 @@ fn apply_point_mass(vehicle: &mut SpatialVehiclePack, delta: i32, position_q28: 
     vehicle.dry_mass = ksa64_core::phase8_numeric::SpatialMass::from_raw(new);
     vehicle.dry_cg_from_nose = ksa64_core::phase8_numeric::SpatialMomentArm::from_raw(ncg);
 }
-fn materialize_candidate(
+pub fn materialize_advanced_candidate(
     m: &SearchManifest,
     d: &DesignVector,
     study: AdvancedStudyId,
@@ -844,7 +844,7 @@ pub fn evaluate_advanced_candidate(
     if !matches!(tier, 1 | 8 | 64) {
         return Err(AdvancedWorkbenchError::Configuration);
     }
-    let base = materialize_candidate(m, d, study)?;
+    let base = materialize_advanced_candidate(m, d, study)?;
     let limit = if study.experimental() {
         tier.min(8)
     } else {
@@ -870,7 +870,7 @@ pub fn run_advanced_campaign(
 ) -> Result<AdvancedCampaignResult, AdvancedWorkbenchError> {
     let m = built_in_advanced_manifest(study, SearchEngineId::Nsga2V1);
     let d = baseline_advanced_vector(&m);
-    let base = materialize_candidate(&m, &d, study)?;
+    let base = materialize_advanced_candidate(&m, &d, study)?;
     let n = ADVANCED_CAMPAIGN_RUNS;
     let next = AtomicU32::new(0);
     let slots = Mutex::new(vec![None; n as usize]);
@@ -979,7 +979,7 @@ mod tests {
                 let m = built_in_advanced_manifest(s, e);
                 m.validate().unwrap();
                 let d = baseline_advanced_vector(&m);
-                materialize_candidate(&m, &d, s).unwrap();
+                materialize_advanced_candidate(&m, &d, s).unwrap();
             }
         }
     }

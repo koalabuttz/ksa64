@@ -337,5 +337,7 @@ Phase 9.5 leaves every Phase 8.5 and Phase 9 record unchanged and adds:
 - KSC9: 512-byte deterministic advanced campaign configuration.
 - KAE9: segmented campaign/search archive containing KAS9 evidence.
 - KFE9: bounded host/C64 finalist package.
+- KFB9: 352-byte, CRC-protected selected-finalist flight bootstrap carried only in the KLF6 Start payload. It binds manifest, study, candidate, vehicle, effector, and allocator identities and carries the bounded flight/allocator configuration required by the separate stock endpoint. KFB9 does not replace KPE9/KPA9 or become physical evidence.
+- KMR9: noncanonical host Mission Control recording of passive Phase 9.5 presentation updates and terminal checksum chains. It is replay/presentation data and never enters candidate or evaluator identity.
 
 KLR9 uses CRC-16-CCITT and a distinct sync/version prefix; KLF6 remains its outer transport. The fixed packs use strict version-9 headers, little-endian fields, identity binding, reserved-zero enforcement, and CRC-32. A pulse quantum is exactly 1/256 second (1,024 Q18 units), and a command carries zero through eight quanta for each of twelve jets.

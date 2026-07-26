@@ -51,6 +51,7 @@ pub mod phase8_5;
 pub mod phase8_campaign;
 pub mod phase8_storage;
 pub mod phase9_5;
+pub mod phase9_5_bootstrap;
 #[cfg(feature = "fixtures")]
 mod phase9_5_contract_self_test;
 pub mod phase9_5_mission;

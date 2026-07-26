@@ -1192,3 +1192,13 @@ Status: accepted; reschedules but does not erase D-095.
 Use host-world plus stock-C64-flight step-and-ack execution as the accessible Phase 9.5 baseline. The host remains the physical authority, releases exact KLR9 sensor cells at simulated 32 Hz epochs, waits for the C64 to execute the genuine advanced flight and allocation kernels, shadow-verifies returned command/status bytes, and only then advances the world. This preserves event and successor-command semantics but is explicitly not a realtime claim.
 
 Realtime C64 flight and the C64-world endpoint remain priority follow-on tracks rather than Phase 9.5 blockers. Preserve the measured PAL and stock-fit deficits. Investigate a measured 6502-specific rewrite and C64 Ultimate acceleration/integration as distinct future strategies; neither may silently change canonical physics, command ordering, or evaluation identity. Keep the portable C64 world and deliberately long target-run objective on the roadmap while prioritizing host-world/C64-flight, Mission Control, storage, and finalist workflows now.
+
+## D-098: Configure selected finalists through an additive flight bootstrap
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Keep the frozen Phase 9.5 reference flight endpoint unchanged. Configure selected optimized canard, RCS, and mixed candidates through a separate stock-C64 flight image and a strict 352-byte KFB9 payload in the KLF6 Start frame. KFB9 binds the manifest, study, candidate, vehicle, effector, and allocator identities and carries only the bounded flight and allocation configuration. KPE9/KPA9 remain the design evidence and the host remains world authority.
+
+Require the host to materialize and validate the candidate, construct the same portable flight/allocator configuration used by its shadow, and compare every returned KLR9 command and status cell before advancing the world. Treat F1–F7 Mission Control, KMR9 recording, KFE9 browsing, stock/REU retention, and replay as passive. Keep the selected-finalist endpoint stock-compatible and REU-independent; expansion capacity may increase retained histories only.

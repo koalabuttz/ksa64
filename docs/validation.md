@@ -342,7 +342,7 @@ The rust-mos finalist browser is 15,391 bytes and ends at `$441E`, below the sto
 
 The accepted physical studies remain inside the Phase 8 model envelope and promote only candidates satisfying all 64 hard-constraint cases. The broad-airframe demonstration is explicitly experimental, promotes no accepted finalists, and is never described as correlated or safety-valid.
 
-## Accepted Phase 9.5 validation through Gate 10
+## Accepted Phase 9.5 validation through Gate 11
 
 Phase 9.5 validates each new physical responsibility at the narrowest useful level before composing missions:
 
@@ -358,6 +358,10 @@ A Phase 9.5 external fixture is acceptable only when it records the generating t
 Gates 1–9 now include exact native/MOS contract vectors, independent canard/RCS/allocator float64 checks, integrated Firestorm C9/R9/M9 missions, a deterministic 64-case campaign, and canard/RCS/mixed grid and NSGA-II studies whose archives are byte-identical at one, four, and eight workers. KSA-X1 remains experimental and produces no accepted finalist.
 
 Gate 10 preserves the failed realtime and stock-world measurements as engineering evidence, then accepts host world plus externally paced stock-C64 flight as the interim placement. The clean endpoint is 44,306 bytes, ends at `$B511`, requires no REU, and passes an eight-release one-instance VICE probe with every KLR9 command/status cell shadow-verified. Simulated 32 Hz epochs and successor-command semantics are exact; wall-clock pacing may pause, so this is hardware-in-the-loop exactness rather than a realtime flight claim.
+
+Gate 11 validates presentation and finalist workflows separately from physics. Passive observation produces the same 64-release host/host terminal checksums with and without the F1–F7/KMR9 sink. KFE9 corruption and deterministic stock/REU retention tests pass. The first stock browser build exposed excessive software-stack pressure from materializing design, aggregate, and KAS9 records simultaneously; page-scoped parsing fixed the proven target fault. The accepted 29,010-byte browser ends at `$7951`, reports eight mixed finalists in VICE, requires no REU, and closes the sole emulator instance.
+
+The additive KFB9 selected-finalist endpoint is 39,963 bytes, ends at `$A41A`, and leaves 7,142 bytes before `$C000`. Strict native tests exercise the first accepted canard, RCS, and mixed finalists. Three sequential eight-release one-instance VICE probes then shadow-verify their KLR9 command/status cells and truth, navigation, flight, and allocator checksum chains. The PRG hash is `ea1c315aa44abccfbc112601319fa11997abcc2f351b47844e01399d2ff23597`; the canard, RCS, and mixed KFB9 hashes are respectively `569d1363f45b28e6ab277d946fff026cbd82c3d349a109413c99d7d420ba3b18`, `fc695f5e897f8066e3fedb44b796e2307901dcbb87df32f0a4d7c6a40609aa23`, and `1f7121b175f8cea46b12ef8dd72e58487b5f9fe3dcb485e4f5a777b94db11154`. These bounded runs prove configurable target execution, not wall-clock realtime flight.
 
 ## Planned Phase 10 validation
 

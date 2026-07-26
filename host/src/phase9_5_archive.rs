@@ -315,6 +315,132 @@ pub fn validate_kfe9(input: &[u8]) -> Result<(), AdvancedArchiveError> {
     Ok(())
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdvancedFinalistRecord {
+    pub design: DesignVector,
+    pub aggregate: CandidateAggregate,
+    pub summary: ksa64_core::phase9_5_contract::AdvancedEffectorEvaluationSummary,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdvancedFinalistPackage<'a> {
+    input: &'a [u8],
+    pub manifest_identity: u32,
+    pub study_identity: u32,
+    pub count: u8,
+}
+impl<'a> AdvancedFinalistPackage<'a> {
+    pub fn parse(input: &'a [u8]) -> Result<Self, AdvancedArchiveError> {
+        validate_kfe9(input)?;
+        let (manifest, study, count, _) = validate_header(input, b"KFE9")?;
+        Ok(Self {
+            input,
+            manifest_identity: manifest,
+            study_identity: study,
+            count: count as u8,
+        })
+    }
+    pub fn record(&self, index: usize) -> Result<AdvancedFinalistRecord, AdvancedArchiveError> {
+        if index >= self.count as usize {
+            return Err(AdvancedArchiveError::Count);
+        }
+        let o = KFE9_HEADER_LENGTH + index * KFE9_RECORD_LENGTH;
+        let design = DesignVector::parse(&self.input[o..o + KDV9_LENGTH])
+            .map_err(|_| AdvancedArchiveError::Record)?;
+        let aggregate =
+            CandidateAggregate::parse(&self.input[o + KDV9_LENGTH..o + KDV9_LENGTH + KOE9_LENGTH])
+                .map_err(|_| AdvancedArchiveError::Record)?;
+        let summary = parse_advanced_effector_summary(
+            &self.input[o + KDV9_LENGTH + KOE9_LENGTH..o + KFE9_RECORD_LENGTH],
+        )
+        .map_err(|_| AdvancedArchiveError::Record)?
+        .summary;
+        Ok(AdvancedFinalistRecord {
+            design,
+            aggregate,
+            summary,
+        })
+    }
+}
+
+pub fn subset_kfe9(input: &[u8], indices: &[usize]) -> Result<Vec<u8>, AdvancedArchiveError> {
+    let package = AdvancedFinalistPackage::parse(input)?;
+    if indices.len() > KFE9_MAX_FINALISTS {
+        return Err(AdvancedArchiveError::Count);
+    }
+    let mut seen = BTreeSet::new();
+    let mut payload = Vec::with_capacity(indices.len() * KFE9_RECORD_LENGTH);
+    for index in indices {
+        if !seen.insert(*index) || *index >= package.count as usize {
+            return Err(AdvancedArchiveError::Count);
+        }
+        let at = KFE9_HEADER_LENGTH + *index * KFE9_RECORD_LENGTH;
+        payload.extend_from_slice(&input[at..at + KFE9_RECORD_LENGTH]);
+    }
+    let h = header(
+        b"KFE9",
+        package.manifest_identity,
+        package.study_identity,
+        indices.len() as u32,
+        &payload,
+        KFE9_RECORD_LENGTH as u32,
+    );
+    let mut out = Vec::with_capacity(KFE9_HEADER_LENGTH + payload.len());
+    out.extend_from_slice(&h);
+    out.extend_from_slice(&payload);
+    validate_kfe9(&out)?;
+    Ok(out)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdvancedRetentionPlan {
+    pub capacity_bytes: usize,
+    pub retained_summaries: usize,
+    pub full_histories: usize,
+    pub compact_histories: usize,
+    pub unused_bytes: usize,
+}
+pub fn plan_advanced_retention(
+    reu_kib: usize,
+    finalist_count: usize,
+    full_history_bytes: usize,
+    compact_history_bytes: usize,
+) -> AdvancedRetentionPlan {
+    if reu_kib == 0 {
+        return AdvancedRetentionPlan {
+            capacity_bytes: 0,
+            retained_summaries: finalist_count.min(5),
+            full_histories: 0,
+            compact_histories: usize::from(finalist_count != 0),
+            unused_bytes: 0,
+        };
+    }
+    let capacity = reu_kib.saturating_mul(1024);
+    let summary_budget = capacity / 4;
+    let summaries = finalist_count.min(summary_budget / KFE9_RECORD_LENGTH);
+    let summary_bytes = summaries.saturating_mul(KFE9_RECORD_LENGTH);
+    let mut remaining = capacity.saturating_sub(summary_bytes);
+    let full = if full_history_bytes == 0 {
+        0
+    } else {
+        finalist_count.min(remaining / full_history_bytes)
+    };
+    remaining = remaining.saturating_sub(full.saturating_mul(full_history_bytes));
+    let compact_candidates = finalist_count.saturating_sub(full);
+    let compact = if compact_history_bytes == 0 {
+        0
+    } else {
+        compact_candidates.min(remaining / compact_history_bytes)
+    };
+    remaining = remaining.saturating_sub(compact.saturating_mul(compact_history_bytes));
+    AdvancedRetentionPlan {
+        capacity_bytes: capacity,
+        retained_summaries: summaries,
+        full_histories: full,
+        compact_histories: compact,
+        unused_bytes: remaining,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -335,5 +461,32 @@ mod tests {
         let n = bad.len();
         bad[n - 1] ^= 1;
         assert_eq!(validate_kae9(&bad), Err(AdvancedArchiveError::Checksum));
+    }
+    #[test]
+    fn finalist_reader_subset_and_retention_are_deterministic() {
+        let bytes = include_bytes!("../../phase9_5/evidence/workbench/mixed-nsga2.kfe9");
+        let package = AdvancedFinalistPackage::parse(bytes).unwrap();
+        assert_eq!(package.count, 8);
+        assert!(package.record(0).unwrap().aggregate.feasible);
+        let subset = subset_kfe9(bytes, &[0, 3, 7]).unwrap();
+        let selected = AdvancedFinalistPackage::parse(&subset).unwrap();
+        assert_eq!(selected.count, 3);
+        assert_eq!(
+            selected.record(1).unwrap().design,
+            package.record(3).unwrap().design
+        );
+        assert_eq!(
+            subset_kfe9(bytes, &[1, 1]),
+            Err(AdvancedArchiveError::Count)
+        );
+        let stock = plan_advanced_retention(0, 8, 640_128, 4_160);
+        assert_eq!(stock.retained_summaries, 5);
+        assert_eq!(stock.compact_histories, 1);
+        for kib in [128, 256, 512, 1024, 16_384] {
+            let plan = plan_advanced_retention(kib, 8, 640_128, 4_160);
+            assert!(plan.retained_summaries <= 8);
+            assert!(plan.full_histories + plan.compact_histories <= 8);
+            assert!(plan.unused_bytes <= plan.capacity_bytes);
+        }
     }
 }

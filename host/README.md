@@ -116,3 +116,17 @@ cargo run -p ksa64-host --bin phase8_trace
 The `phase9` binary compiles KOM9 manifests, runs built-in or compiled searches, emits deterministic KRA9/KPF9/KSN9 evidence and HTML/JSON/CSV reports, opens the passive optimization TUI, and exposes a persistent JSONL evaluator service.
 
 `phase9_search` owns grid/NSGA-II/DE proposal and selection logic; `phase9` owns candidate materialization and 1/8/64-case evaluation; `phase9_archive` owns generation commits/resume; `phase9_report`, `phase9_tui`, and `phase9_sensitivity` are observational. See `phase9/README.md` for commands and the accepted evidence boundary.
+
+## Phase 9.5 Mission Control and finalist tools
+
+Run the advanced host world and flight computer with the passive F1–F7 console:
+
+    cargo run -p ksa64-host --bin phase9_5_launch -- --display tui --pace realtime
+
+Use `--display summary|none`, `--pace fast|realtime`, `--max-releases N`, and `--record <path>.kmr9` for bounded automation and replay evidence. The same presentation sink can observe the externally paced C64 flight bridge without entering the command path.
+
+Inspect a retained finalist package and rerun its accepted robustness tier exactly:
+
+    cargo run -p ksa64-host --bin phase9_5_finalists -- --package phase9_5/evidence/workbench/mixed-nsga2.kfe9 --index 0 --reu-kib 0 --rerun
+
+The stock finalist browser consumes KFE9 directly. A separate selected-finalist flight endpoint consumes the strict KFB9 configuration sent in the KLF6 Start payload; the host still owns the world and shadow-verifies every KLR9 command/status cell. See `phase9_5/FINALIST_WORKFLOW.md` for build, VICE, stock/REU retention, and evidence commands.
