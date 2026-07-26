@@ -430,7 +430,7 @@ KRA9 commits complete generation segments and embeds KRE9 copies of retained KAS
 
 The C64 receives a bounded KFP9 finalist package and does not run production searches. Exact finalist flight may be rerun through the accepted host-world/C64-flight endpoint. The standalone finalist browser is a separate stock image; Phase 9 does not reopen the rejected monolithic Phase 8.5 packaging decision.
 
-## Planned Phase 9.5 and Phase 10 validation authority
+## Accepted Phase 9.5 and planned Phase 10 validation authority
 
 Advanced effectors and global flight preserve the existing ownership rule: during any interval, exactly one KSA64 world model owns and advances an entity's state. An external program may produce an input fixture or an independent comparison, but it never supplies live corrections, shares integration authority, or becomes a fallback dynamics path.
 

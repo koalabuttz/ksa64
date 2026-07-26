@@ -1202,3 +1202,16 @@ Status: accepted.
 Keep the frozen Phase 9.5 reference flight endpoint unchanged. Configure selected optimized canard, RCS, and mixed candidates through a separate stock-C64 flight image and a strict 352-byte KFB9 payload in the KLF6 Start frame. KFB9 binds the manifest, study, candidate, vehicle, effector, and allocator identities and carries only the bounded flight and allocation configuration. KPE9/KPA9 remain the design evidence and the host remains world authority.
 
 Require the host to materialize and validate the candidate, construct the same portable flight/allocator configuration used by its shadow, and compare every returned KLR9 command and status cell before advancing the world. Treat F1–F7 Mission Control, KMR9 recording, KFE9 browsing, stock/REU retention, and replay as passive. Keep the selected-finalist endpoint stock-compatible and REU-independent; expansion capacity may increase retained histories only.
+
+
+## D-099: Close Phase 9.5 on the exact-paced stock-flight baseline
+
+Date: 2026-07-25
+
+Status: accepted.
+
+Close Phase 9.5 after the complete frozen regression, independent model checks, fresh accepted workbench reproduction, MOS packaging, passive presentation validation, and finite baseline/canard/RCS/mixed stock-C64 probes pass. Treat host-world plus externally paced stock-C64 flight as the accepted interim deployment baseline without representing it as realtime.
+
+Preserve the measured realtime-flight and portable-world deficits as explicit follow-on work. Do not lower the 32 Hz release rate, move allocation to the host, remove effectors, or require an REU to manufacture a target pass. Carry the measured 6502-specific rewrite, C64 Ultimate integration, portable C64-world long-run, and physical-link tracks forward. Begin Phase 10 at the global frame/time contract and fixture boundary described in the Phase 10 handoff.
+
+The completion audit launches at most one VICE instance, closes it after success or proven failure, and waits 20 seconds between sequential Windows emulator processes after a startup-only transient was observed. It never starts a complete target mission without a fresh projection and explicit confirmation.

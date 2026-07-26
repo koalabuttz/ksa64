@@ -342,7 +342,7 @@ The rust-mos finalist browser is 15,391 bytes and ends at `$441E`, below the sto
 
 The accepted physical studies remain inside the Phase 8 model envelope and promote only candidates satisfying all 64 hard-constraint cases. The broad-airframe demonstration is explicitly experimental, promotes no accepted finalists, and is never described as correlated or safety-valid.
 
-## Accepted Phase 9.5 validation through Gate 11
+## Accepted Phase 9.5 validation
 
 Phase 9.5 validates each new physical responsibility at the narrowest useful level before composing missions:
 

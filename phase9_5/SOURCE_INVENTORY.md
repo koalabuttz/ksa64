@@ -31,3 +31,13 @@ Canard reference geometry and actuator values are declared assumptions. RCS
 installation, tank, and supply curves carry explicit source/provenance identity.
 Basilisk is optional secondary fixture generation only; normal tests and CI stay
 offline and do not depend on it.
+
+
+## Completion gate
+
+- `complete.ps1`: bounded Phase 0–9 compatibility, native, independent, accepted-workbench, MOS, and optional sequential VICE audit.
+- `completion-audit.json`: machine-readable accepted measurements, hashes, target boundaries, and limitations.
+- `COMPLETION.md`: human-readable Phase 9.5 closure.
+- `PHASE10_HANDOFF.md`: authoritative global-frame/time and validator boundary for the next phase.
+
+The completion gate introduces no runtime dependency and starts no complete target mission.

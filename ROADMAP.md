@@ -272,7 +272,7 @@ The optimizer selects candidates; the portable core only evaluates them.
 
 ## Phase 9.5: advanced control effectors
 
-Status: implementation in progress. Gates 1–11 have established the native physics/workbench, interim host-world plus externally paced stock-C64-flight baseline, passive advanced Mission Control, adaptive finalist retention, and selected finalist reruns on a configurable stock endpoint. Phase 9.5 remains before Phase 10 global flight.
+Status: complete. All twelve gates are accepted: native effectors and workbench, deterministic campaigns/searches, the interim host-world plus externally paced stock-C64-flight baseline, passive advanced Mission Control, adaptive finalist retention, selected-finalist stock reruns, and the bounded completion audit. Phase 10 global flight is next.
 
 Purpose: extend the Phase 8.5 control-allocation boundary with physically modeled aerodynamic and reaction-control effectors, using the Phase 9 workbench to size, tune, compare, and robustly evaluate them.
 
@@ -311,7 +311,7 @@ Exit criteria:
 
 ## Phase 10: global atmospheric and suborbital flight
 
-Status: planned after Phase 9.5 establishes the advanced control-effector library.
+Status: next planned phase; Phase 9.5 has handed off the accepted advanced control-effector library and explicit global frame/time validation requirements.
 
 Purpose: cover the region where local and orbital missions overlap without forcing all vehicles into one coordinate representation.
 

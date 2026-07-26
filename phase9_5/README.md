@@ -32,8 +32,9 @@ search, and frozen artifact remains unchanged.
   `SixAxisWrenchV1`.
 
 See [PLAN.md](PLAN.md) for the implementation gates, [CONTRACT.md](CONTRACT.md)
-for the frozen public behavior, and [FINALIST_WORKFLOW.md](FINALIST_WORKFLOW.md)
-for browsing, retention, Mission Control, and selected split reruns.
+for the frozen public behavior, [COMPLETION.md](COMPLETION.md) for the accepted audit,
+[FINALIST_WORKFLOW.md](FINALIST_WORKFLOW.md) for browsing and selected split reruns,
+and [PHASE10_HANDOFF.md](PHASE10_HANDOFF.md) for the global-flight boundary.
 
 ## Implemented gates
 
@@ -48,6 +49,7 @@ for browsing, retention, Mission Control, and selected split reruns.
 - Gate 9 generalizes the Phase 9 workbench over KAS9 evidence and freezes accepted canard, RCS, mixed-effector, and experimental research studies. Seven grid/NSGA-II studies perform 2,974 unique robust evaluations; accepted finalists pass their 64-case promotion tier, archives are byte-identical with one, four, and eight workers, and the separately labelled KSA-X1 study promotes no accepted physical finalist.
 - Gate 10 records the stock-target boundary without weakening the contract. The portable world endpoint remains too large and the advanced flight release exceeds the PAL realtime budget, but the exact stock flight endpoint fits without an REU. The accepted interim baseline is host world plus externally paced C64 flight: an eight-release one-instance VICE probe shadow-verifies every KLR9 command/status cell and the truth, navigation, flight, and allocator chains.
 - Gate 11 adds passive F1–F7 advanced Mission Control and noncanonical KMR9 recording, deterministic stock/REU finalist retention, a strict allocation-free KFE9 browser, and selected-finalist split reruns. The stock browser is 29,010 bytes and ends at `$7951`; the configurable KFB9 flight endpoint is 39,963 bytes and ends at `$A41A`. Separate one-instance VICE probes exactly rerun the first accepted canard, RCS, and mixed finalists for eight releases and close cleanly. Neither image requires an REU.
+- Gate 12 freezes the complete Phase 0–9 regression, independent vector/float64 audit, fresh 2,974-evaluation workbench reproduction, MOS packaging, and finite baseline/canard/RCS/mixed VICE evidence. The repeatable audit enforces one VICE instance, cleanup after every result, and a 20-second Windows inter-process cooldown. No full target mission was started.
 
 Regenerate Gate 3 outputs with:
 

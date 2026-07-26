@@ -1,0 +1,76 @@
+{
+  "schema": "ksa64.phase9_5.completion-audit-v1",
+  "status": "pass",
+  "date": "2026-07-25",
+  "accepted_base_commit": "14927d5",
+  "audit_script": {
+    "path": "phase9_5/complete.ps1",
+    "sha256": "d40a998cc289884282d9d294e8db7732f347cafbd0a8bd8427748b0a09f7c80a"
+  },
+  "compatibility": {
+    "phase_0_through_9": true,
+    "legacy_audit": "pass",
+    "frozen_artifacts_unchanged": true
+  },
+  "native": {
+    "format": "pass",
+    "clippy_all_targets_features_fixtures": "pass",
+    "workspace_tests": "pass",
+    "independent_vectors_and_float64": "pass"
+  },
+  "workbench": {
+    "seed": "0x4b534195",
+    "campaign_crc32": "0x24789fae",
+    "unique_robust_evaluations": 2974,
+    "accepted_report_sha256": "c4e0ce9c378e2e0bc566dec02f18e1bb47a1c975a333c78138811bb40d91a335",
+    "mixed_campaign_sha256": "0230a638bffe8c09f92dafe55f18ff87be9edcacde3ed28e486bd60c12c4947e",
+    "worker_counts": [
+      1,
+      4,
+      8
+    ],
+    "byte_identical": true
+  },
+  "stock_c64": {
+    "reu_required": false,
+    "baseline_flight": {
+      "bytes": 44306,
+      "end_exclusive": "0xb511",
+      "sha256": "2cbffcc866fa857f6eac1fb47efc7315adea5dd5fc7ec14f5d37d538742a3d8f"
+    },
+    "selected_finalist_flight": {
+      "bytes": 39963,
+      "end_exclusive": "0xa41a",
+      "sha256": "ea1c315aa44abccfbc112601319fa11997abcc2f351b47844e01399d2ff23597"
+    },
+    "finalist_browser": {
+      "bytes": 29010,
+      "end_exclusive": "0x7951",
+      "sha256": "adb685508b154db1c28c7ef6753f22eefa3c9f997cd4408febb4240ce887d0cd"
+    }
+  },
+  "vice": {
+    "policy": "one instance at a time; close after success or proven failure; 20 second inter-process cooldown",
+    "browser": "pass",
+    "baseline_releases": 8,
+    "canard_finalist_releases": 8,
+    "rcs_finalist_releases": 8,
+    "mixed_finalist_releases": 8,
+    "checksum_chains_exact": true,
+    "full_target_mission_started": false,
+    "transient_startup_note": "A Windows VICE process exited before monitor connection during the first combined audit. No simulation code ran. The unchanged probes passed after cleanup; a 20-second inter-process cooldown is now enforced."
+  },
+  "accepted_boundary": {
+    "baseline": "host world plus externally paced stock-C64 flight",
+    "realtime_stock_flight": false,
+    "portable_stock_world": false,
+    "full_six_axis_guidance": false
+  },
+  "limitations": [
+    "Advanced stock-C64 flight does not meet the 24,631-cycle PAL realtime budget.",
+    "The portable advanced world endpoint does not fit below $C000.",
+    "No complete Phase 9.5 target mission was started.",
+    "KSA-X1 is experimental and contributes no accepted physical finalist.",
+    "Results are engineering-simulation evidence, not launch approval, certification, regulatory evidence, or safety authority."
+  ]
+}
