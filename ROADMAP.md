@@ -364,7 +364,8 @@ The vehicle's organizational category never selects this profile automatically. 
 
 ## Phase 11: mission operations and programmable flight
 
-Status: implementation active.
+Status: complete. The accepted implementation and evidence are recorded in
+`phase11/COMPLETION.md`.
 
 Purpose: turn the accepted simulator into an operable and programmable mission
 system without adding a new physical model. Phase 11 freezes the contracts that
@@ -454,7 +455,8 @@ Explicit non-goals:
 
 ## Phase 12: Mission Foundry and passive 3-D operations
 
-Status: planned after Phase 11 freezes the headless contracts.
+Status: planned. Phase 11 has frozen the required headless contracts; see
+`phase11/PHASE12_HANDOFF.md`.
 
 Purpose: provide a KSP/Juno-inspired host authoring experience while keeping
 KSA64's compiled packs, authority boundaries, provenance, and evidence model

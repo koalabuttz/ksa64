@@ -401,15 +401,15 @@ workers. All 256 cases physically recover without numeric, frame, time, or
 model-envelope faults. Finite warp-disabled stock-C64 probes exact-match
 release-class and transition checksum chains without claiming realtime.
 
-## Phase 11 active validation
+## Accepted Phase 11 validation
 
 Phase 11 preserves the complete Phase 0-10 regression and validates the new
-operational shell independently from authoritative physics. Native tests cover
-package/ABI identity, mission-plan transfer, stage-validate-commit atomicity,
-ground-link isolation, onboard and ground-estimate prediction, deterministic
-procedures and roles, action replay, event-journal recovery, session bundles,
-deleting/truncating/corrupting every new record family, and controlled debrief
-counterfactuals.
+operational shell independently from authoritative physics. The completion
+audit covers package/ABI identity, mission-plan transfer,
+stage-validate-commit atomicity, ground-link isolation, onboard and
+ground-estimate prediction, deterministic procedures and roles, action replay,
+event-journal recovery, session bundles, deleting/truncating/corrupting every
+new record family, and controlled debrief counterfactuals.
 
 SafeholdRecoveryV1 has separate native and rust-mos evidence because it is an
 independent limited package. The complete reference package retains the same
@@ -424,6 +424,13 @@ code segment and both bank guards, and uses 16 of the reserved 279 emergency
 software-stack bytes. Final checksums are navigation c73060d2, flight 6e07595c,
 and command 6ab926f2. Diagnostic host wall time is not a PAL cycle claim; the
 endpoint is externally paced.
+
+The independent flat safehold endpoint also passes a 16-release native/C64
+exactness probe. Its 32,857-byte initialized image ends at `$8858`; the
+measured 4,330-byte rust-mos static-stack reservation extends the complete
+runtime footprint to `$9942`, leaving 9,918 bytes before `$C000`. The
+package-local stack declaration and compiler static-stack reservation are
+recorded separately.
 
 This evidence proves portable implementation consistency on stock C64 CPU/RAM
 under VICE. It does not prove a physical loader or user-port/ACIA/Ethernet link,

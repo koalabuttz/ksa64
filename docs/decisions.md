@@ -1367,3 +1367,28 @@ and journal-recovery operations; it uses 16 of 279 emergency-stack bytes.
 This does not close physical link/loading acceptance. Continue the physical
 loader, 6502-specific rewrite, C64 Ultimate acceleration, portable C64 world,
 and realtime target tracks without changing KLR10 or simulation authority.
+
+## D-109: Freeze Phase 11 mission operations and hand off Mission Foundry
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Accept the Phase 11 operational shell without adding new authoritative physics.
+Freeze the profile-specific flight-package envelope, mission plan, atomic
+load-validate-commit boundary, separate ground communications, estimate-based
+prediction, deterministic procedures/roles, action replay, session bundle,
+debrief, and headless authoring SDK. Preserve KLR8, KLR9, KLR10, and every
+Phase 0-10 artifact.
+
+Accept `SafeholdRecoveryV1` as an independent limited package and the banked
+stock-RAM `KsaG10rReferenceOpsV1` endpoint as an externally paced no-REU
+stopgap. The flat safehold runtime ends at `$9942`; the banked reference
+endpoint matches 13 native operations with preserved guards and 16/279
+emergency-stack bytes used. Neither target is a realtime or physical-link
+claim.
+
+Hand the frozen contracts to Phase 12 Mission Foundry. Keep physical
+loading/links, a 6502-specific rewrite, C64 Ultimate acceleration, the portable
+C64 world, REU overlays, and live package handover on their declared separate
+tracks.

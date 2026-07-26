@@ -1,0 +1,82 @@
+{
+  "schema": "ksa64.phase11.completion-audit-v1",
+  "status": "pass",
+  "date": "2026-07-26",
+  "accepted_implementation_commit": "c415842",
+  "compatibility": {
+    "phase_0_through_10": true,
+    "frozen_artifacts_unchanged": true,
+    "inactive_reference_wrapper_exact": true
+  },
+  "native": {
+    "format": "pass",
+    "clippy_all_targets_features_fixtures": "pass",
+    "workspace_tests": "pass",
+    "prediction_vectors": "pass",
+    "safehold_exactness": "pass",
+    "mission_sdk": "pass",
+    "session_replay": "pass",
+    "corruption_and_truncation": "pass"
+  },
+  "operational_scenarios": {
+    "nominal": "pass",
+    "gnss_loss": "pass",
+    "planned_guidance_update": "pass",
+    "ground_blackout": "pass",
+    "invalid_operations": "pass",
+    "safehold_recovery": "pass"
+  },
+  "session_sdk": {
+    "definition_identity": "0xc5884398",
+    "action_identity": "0x7ea2c50a",
+    "completed_evidence_identity": "0x6d4122a0",
+    "validated_bytes": 22369,
+    "segment_count": 17,
+    "manifest_sha256": "6db058a1af462090ec0c4b32391518748ccc2486feb1a18408d4eb02e3066486",
+    "file_sha256": "38a3ef2e497b8e24d1cf53a56db85b3d8bea0bdb27586215a02ff75d0ee39dc8"
+  },
+  "stock_c64": {
+    "reu_required": false,
+    "safehold": {
+      "artifact_bytes": 32857,
+      "initialized_end_exclusive": "0x8858",
+      "compiler_static_stack_bytes": 4330,
+      "runtime_end_exclusive": "0x9942",
+      "margin_before_c000_bytes": 9918,
+      "artifact_sha256": "353ecad4d65030233509db14fd30ee2ef02040a1a4320938043242e571eab779",
+      "probe_artifact_bytes": 28137,
+      "probe_artifact_sha256": "c340315bd1ec05138e6252004fe3c76b77f883559239cea837c19989d436a630",
+      "host_c64_signature": "e3c56a95"
+    },
+    "reference_operations": {
+      "flat_fit": false,
+      "banked_stopgap": true,
+      "bundle_bytes": 55423,
+      "bundle_sha256": "cb1979fd4e5abf5c26bfbc71ef031ed4d4e0c2d2a9eee4e0522fdc306d9ab377",
+      "records": 13,
+      "emergency_stack_capacity_bytes": 279,
+      "emergency_stack_high_water_bytes": 16,
+      "code_segments_preserved": true,
+      "segment_guards_preserved": true
+    }
+  },
+  "vice": {
+    "policy": "one instance, warp disabled, close after success or proven failure, 20 second cooldown",
+    "safehold_releases": 16,
+    "reference_operations_records": 13,
+    "navigation_checksum": "c73060d2",
+    "flight_checksum": "6e07595c",
+    "command_checksum": "6ab926f2",
+    "checksum_chains_exact": true,
+    "full_target_mission_started": false
+  },
+  "limitations": [
+    "The stock reference-operations endpoint is banked and externally paced, not realtime.",
+    "Physical loading and user-port, ACIA, or Ethernet links are not accepted.",
+    "SafeholdRecoveryV1 is not dissimilar hardware redundancy.",
+    "Live package handover and REU overlays remain deferred.",
+    "A 6502-specific rewrite, C64 Ultimate acceleration, and portable C64 world remain open.",
+    "No complete Phase 11 target mission was started.",
+    "Results are engineering evidence, not launch approval, certification, regulatory evidence, or safety authority."
+  ]
+}

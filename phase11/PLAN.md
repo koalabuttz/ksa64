@@ -1,6 +1,7 @@
 # Phase 11 implementation contract
 
-Status: active.
+Status: complete and accepted on 2026-07-26. See
+`COMPLETION.md` and `completion-audit.json`.
 
 ## Purpose
 

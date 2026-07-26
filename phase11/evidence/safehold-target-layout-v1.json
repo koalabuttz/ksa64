@@ -1,0 +1,19 @@
+{
+  "schema": "ksa64.phase11.safehold-target-layout-evidence-v1",
+  "package_resource_evidence": "phase11/evidence/safehold-resource-v1.json",
+  "package_resource_evidence_sha256": "6f73177936f0e65362ad453fe38739f2948c4a2602a37e5fb45c73e76c04c405",
+  "target": "mos-c64-none via pinned koalabuttz rust-mos image",
+  "artifact_bytes": 32857,
+  "artifact_sha256": "353ecad4d65030233509db14fd30ee2ef02040a1a4320938043242e571eab779",
+  "load_address": "0x0801",
+  "initialized_end_exclusive": "0x8858",
+  "compiler_static_stack": {
+    "section": ".noinit..Lstatic_stack",
+    "bytes": 4330,
+    "runtime_end_exclusive": "0x9942"
+  },
+  "margin_before_c000_bytes": 9918,
+  "stock_fit": true,
+  "reu_required": false,
+  "note": "This target-link record completes the map measurement that the immutable KFS11-bound package resource evidence left pending. The package-local 256-byte stack claim and rust-mos compiler static-stack reservation are distinct quantities."
+}
