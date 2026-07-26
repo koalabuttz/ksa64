@@ -1,0 +1,32 @@
+{
+  "format": "KSA64 Phase 10 compiled vehicle evidence v1",
+  "mission": {
+    "identity": "0x474d1001",
+    "launch": [
+      28.5,
+      -80.6,
+      0.003
+    ],
+    "pitch_knots": 8,
+    "recovery_anchor": [
+      28.5,
+      -75.8,
+      0.0
+    ],
+    "transition_altitudes_km": [
+      120.0,
+      120.0,
+      20.0
+    ]
+  },
+  "source_identity": "0x6894f3e6",
+  "source_sha256": "45d919a18edc2cd4e0157af8b6206f3058146ddefd9d19c148b8bb8fd53c4ac8",
+  "vehicle": {
+    "aero_knots": 8,
+    "identity": "0x47561001",
+    "provenance": "Every physical value is a declared engineering assumption for a fictional research vehicle.",
+    "reference_area_m2": 0.12566370614359174,
+    "source_identity": "0x6894f3e6",
+    "wet_mass_kg": 500.0
+  }
+}
