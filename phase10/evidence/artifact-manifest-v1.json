@@ -1,0 +1,22 @@
+{
+  "schema": "ksa64.phase10.artifact-manifest-v1",
+  "mission": "KSA-G10R nominal",
+  "case_seed": "0x4b5341a0",
+  "evaluation_identity": "0x6f1d6393",
+  "files": {
+    "ksa-g10r-nominal.csv": "a108b58d2e660f3c1f54ca8f5263770da7194748308e0b5e503be1145a71dd3f",
+    "ksa-g10r-nominal.html": "c16cf9c827bde17091b6825546d9f705b412f39db6ca49d1fcaff915ea09c09e",
+    "ksa-g10r-nominal.kmr10.json": "44fff467e1d09fd6e5320444d98418f09d3f3e25f2c13fe10193e0a1d6beede7",
+    "ksa-g10r-nominal.kph10": "03ef10e6bb8947c7aa00739452618e888dddc59d36cb0eebb7a585f3803812cb",
+    "ksa-g10r-nominal.ksr10": "7aa9d951fc521a43f00bcbc8ea7748e0a764c612753f9b02fbb459e6d4cf1948",
+    "ksa-g10r-nominal.ktt10": "c98b8065f961a5ed322c07286cfa98f0e188d992d47d6cd129d5605313474b67"
+  },
+  "metrics": {
+    "duration_s": 689.0,
+    "releases": 22049,
+    "apogee_km": 210.90478515625,
+    "downrange_km": 336.20361328125,
+    "crossrange_km": -2.857177734375,
+    "frame_transitions": 4
+  }
+}

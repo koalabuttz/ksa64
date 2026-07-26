@@ -189,7 +189,7 @@ pub struct GlobalTelemetryFrame {
 
 impl GlobalTelemetryFrame {
     pub fn encode(self, output: &mut [u8; KTT10_FRAME_LENGTH]) -> Result<(), GlobalRecordError> {
-        if self.flight_mode > 6 || self.transition_count as usize > GLOBAL_TRANSITION_COUNT {
+        if self.flight_mode > 7 || self.transition_count as usize > GLOBAL_TRANSITION_COUNT {
             return Err(GlobalRecordError::Range);
         }
         output.fill(0);
@@ -248,7 +248,7 @@ impl GlobalTelemetryFrame {
         }
         let frame = parse_frame(bytes[8])?;
         let segment = parse_segment(bytes[9])?;
-        if bytes[10] > 6 || bytes[11] as usize > GLOBAL_TRANSITION_COUNT {
+        if bytes[10] > 7 || bytes[11] as usize > GLOBAL_TRANSITION_COUNT {
             return Err(GlobalRecordError::Range);
         }
         let mut pulses = [0; 12];
