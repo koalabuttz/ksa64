@@ -863,6 +863,9 @@ pub struct AdvancedEffectorEvaluationSummary {
     pub max_hinge_q24: [i32; 4],
     pub rcs_initial_propellant_q21: i32,
     pub rcs_final_propellant_q21: i32,
+    pub max_residual_torque_q12: [i32; 3],
+    pub rail_settle_error_turn16: i16,
+    pub disturbance_settle_error_turn16: i16,
     pub checksum_chains: [u32; 8],
 }
 
@@ -929,6 +932,11 @@ pub fn write_advanced_effector_summary(
             .rcs_initial_propellant_q21
             .saturating_sub(value.rcs_final_propellant_q21),
     );
+    for i in 0..3 {
+        pi32(output, 132 + i * 4, value.max_residual_torque_q12[i]);
+    }
+    pi16(output, 144, value.rail_settle_error_turn16);
+    pi16(output, 146, value.disturbance_settle_error_turn16);
     for i in 0..8 {
         p32(output, 160 + i * 4, value.checksum_chains[i]);
     }
@@ -942,7 +950,7 @@ pub fn write_advanced_effector_summary(
 pub fn parse_advanced_effector_summary(input: &[u8]) -> Result<Kas9Record, Phase95ContractError> {
     let identity = validate(input, Kind::Summary)?;
     zero(input, 35, 36)?;
-    zero(input, 132, 160)?;
+    zero(input, 148, 160)?;
     zero(input, 192, 224)?;
     zero(input, 480, KAS9_LENGTH - 4)?;
     if input[32] != ModelProfileId::LocalEnu6DofV1 as u8 {
@@ -999,9 +1007,219 @@ pub fn parse_advanced_effector_summary(input: &[u8]) -> Result<Kas9Record, Phase
         max_hinge_q24: hinges,
         rcs_initial_propellant_q21: initial,
         rcs_final_propellant_q21: final_prop,
+        max_residual_torque_q12: [gi32(input, 132), gi32(input, 136), gi32(input, 140)],
+        rail_settle_error_turn16: gi16(input, 144),
+        disturbance_settle_error_turn16: gi16(input, 146),
         checksum_chains: checks,
     };
     Ok(Kas9Record { identity, summary })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdvancedCampaignParameter {
+    pub id: u8,
+    pub minimum: i32,
+    pub maximum: i32,
+}
+impl AdvancedCampaignParameter {
+    pub const EMPTY: Self = Self {
+        id: 0,
+        minimum: 0,
+        maximum: 0,
+    };
+}
+
+pub const ADVANCED_CAMPAIGN_PARAMETER_COUNT: usize = 16;
+pub const ADVANCED_CAMPAIGN_CATALOG_ID: u32 = 0x0959_0001;
+pub const ADVANCED_CAMPAIGN_CATALOG: [AdvancedCampaignParameter;
+    ADVANCED_CAMPAIGN_PARAMETER_COUNT] = [
+    AdvancedCampaignParameter {
+        id: 1,
+        minimum: -10_000,
+        maximum: 10_000,
+    },
+    AdvancedCampaignParameter {
+        id: 2,
+        minimum: -20_000,
+        maximum: 20_000,
+    },
+    AdvancedCampaignParameter {
+        id: 3,
+        minimum: -50_000,
+        maximum: 50_000,
+    },
+    AdvancedCampaignParameter {
+        id: 4,
+        minimum: -50_000,
+        maximum: 50_000,
+    },
+    AdvancedCampaignParameter {
+        id: 5,
+        minimum: -1_449_552,
+        maximum: 1_449_552,
+    },
+    AdvancedCampaignParameter {
+        id: 6,
+        minimum: -20_000,
+        maximum: 20_000,
+    },
+    AdvancedCampaignParameter {
+        id: 7,
+        minimum: 0,
+        maximum: 20_971_520,
+    },
+    AdvancedCampaignParameter {
+        id: 8,
+        minimum: 0,
+        maximum: 65_535,
+    },
+    AdvancedCampaignParameter {
+        id: 9,
+        minimum: 0,
+        maximum: 2_097_152,
+    },
+    AdvancedCampaignParameter {
+        id: 10,
+        minimum: -2_342_321,
+        maximum: 2_342_321,
+    },
+    AdvancedCampaignParameter {
+        id: 11,
+        minimum: -50_000,
+        maximum: 50_000,
+    },
+    AdvancedCampaignParameter {
+        id: 12,
+        minimum: -50_000,
+        maximum: 50_000,
+    },
+    AdvancedCampaignParameter {
+        id: 13,
+        minimum: -25_000,
+        maximum: 25_000,
+    },
+    AdvancedCampaignParameter {
+        id: 14,
+        minimum: -50_000,
+        maximum: 50_000,
+    },
+    AdvancedCampaignParameter {
+        id: 15,
+        minimum: -50_000,
+        maximum: 50_000,
+    },
+    AdvancedCampaignParameter {
+        id: 16,
+        minimum: -50_000,
+        maximum: 50_000,
+    },
+];
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdvancedCampaignConfig {
+    pub identity: u32,
+    pub master_seed: u32,
+    pub run_count: u16,
+    pub vehicle_identity: u32,
+    pub motor_identity: u32,
+    pub mission_identity: u32,
+    pub wind_identity: u32,
+    pub avionics_identity: u32,
+    pub effector_identity: u32,
+    pub allocator_identity: u32,
+}
+impl AdvancedCampaignConfig {
+    pub fn is_valid(&self) -> bool {
+        self.identity != 0
+            && self.master_seed != 0
+            && self.run_count > 0
+            && self.run_count <= 64
+            && self.vehicle_identity != 0
+            && self.motor_identity != 0
+            && self.mission_identity != 0
+            && self.wind_identity != 0
+            && self.avionics_identity != 0
+            && self.effector_identity != 0
+            && self.allocator_identity != 0
+    }
+}
+pub fn write_advanced_campaign_config(
+    value: &AdvancedCampaignConfig,
+    output: &mut [u8],
+) -> Result<(), Phase95ContractError> {
+    if !value.is_valid() {
+        return Err(Phase95ContractError::Range);
+    }
+    header(output, Kind::Campaign, value.identity)?;
+    p32(output, 32, value.master_seed);
+    p16(output, 36, value.run_count);
+    output[38] = ADVANCED_CAMPAIGN_PARAMETER_COUNT as u8;
+    p32(output, 40, ADVANCED_CAMPAIGN_CATALOG_ID);
+    for (i, id) in [
+        value.vehicle_identity,
+        value.motor_identity,
+        value.mission_identity,
+        value.wind_identity,
+        value.avionics_identity,
+        value.effector_identity,
+        value.allocator_identity,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        p32(output, 48 + i * 4, id);
+    }
+    for (i, parameter) in ADVANCED_CAMPAIGN_CATALOG.iter().enumerate() {
+        let at = 80 + i * 16;
+        output[at] = parameter.id;
+        output[at + 1] = 1;
+        pi32(output, at + 4, parameter.minimum);
+        pi32(output, at + 8, parameter.maximum);
+    }
+    seal(output);
+    Ok(())
+}
+pub fn parse_advanced_campaign_config(
+    input: &[u8],
+) -> Result<AdvancedCampaignConfig, Phase95ContractError> {
+    let identity = validate(input, Kind::Campaign)?;
+    if input[38] as usize != ADVANCED_CAMPAIGN_PARAMETER_COUNT
+        || input[39] != 0
+        || g32(input, 40) != ADVANCED_CAMPAIGN_CATALOG_ID
+    {
+        return Err(Phase95ContractError::Range);
+    }
+    zero(input, 44, 48)?;
+    zero(input, 76, 80)?;
+    for (i, parameter) in ADVANCED_CAMPAIGN_CATALOG.iter().enumerate() {
+        let at = 80 + i * 16;
+        if input[at] != parameter.id
+            || input[at + 1] != 1
+            || input[at + 2..at + 4].iter().any(|v| *v != 0)
+            || gi32(input, at + 4) != parameter.minimum
+            || gi32(input, at + 8) != parameter.maximum
+            || input[at + 12..at + 16].iter().any(|v| *v != 0)
+        {
+            return Err(Phase95ContractError::Range);
+        }
+    }
+    zero(input, 336, KSC9_LENGTH - 4)?;
+    let value = AdvancedCampaignConfig {
+        identity,
+        master_seed: g32(input, 32),
+        run_count: g16(input, 36),
+        vehicle_identity: g32(input, 48),
+        motor_identity: g32(input, 52),
+        mission_identity: g32(input, 56),
+        wind_identity: g32(input, 60),
+        avionics_identity: g32(input, 64),
+        effector_identity: g32(input, 68),
+        allocator_identity: g32(input, 72),
+    };
+    if !value.is_valid() {
+        return Err(Phase95ContractError::Range);
+    }
+    Ok(value)
 }
 
 #[cfg(test)]
@@ -1194,6 +1412,9 @@ mod tests {
             max_hinge_q24: [23, 24, 25, 26],
             rcs_initial_propellant_q21: 1000,
             rcs_final_propellant_q21: 750,
+            max_residual_torque_q12: [35, 36, 37],
+            rail_settle_error_turn16: 38,
+            disturbance_settle_error_turn16: 39,
             checksum_chains: [27, 28, 29, 30, 31, 32, 33, 34],
         };
         let mut bytes = [0u8; KAS9_LENGTH];

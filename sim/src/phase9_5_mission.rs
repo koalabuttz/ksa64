@@ -610,6 +610,7 @@ pub struct AdvancedLoopbackEvidence {
     pub authority_handoffs: u16,
     pub air_fallback_epochs: u16,
     pub rcs_final_propellant_q21: i32,
+    pub max_residual_torque_q12: [i32; 3],
     pub checksum_chains: [u32; 8],
 }
 fn hash_bytes(mut hash: u32, bytes: &[u8]) -> u32 {
@@ -711,6 +712,7 @@ where
     let mut pulses = 0u32;
     let mut handoffs = 0u16;
     let mut fallback = 0u16;
+    let mut max_residual = [0i32; 3];
     let mut rail_exit_epoch: Option<u16> = None;
     let mut rail_settle_error = i16::MAX;
     let mut disturbance_settle_error = i16::MAX;
@@ -855,6 +857,10 @@ where
                 .map(|q| u32::from(*q))
                 .sum::<u32>(),
         );
+        for axis in 0..3 {
+            max_residual[axis] =
+                max_residual[axis].max(out.allocation.residual_q12[axis].saturating_abs());
+        }
         if out.allocation.authority_state & 8 != 0 {
             handoffs = handoffs.saturating_add(1);
         }
@@ -883,6 +889,7 @@ where
         authority_handoffs: handoffs,
         air_fallback_epochs: fallback,
         rcs_final_propellant_q21: world.rcs_remaining_propellant_q21(),
+        max_residual_torque_q12: max_residual,
         checksum_chains: [
             result.checksum,
             sensor_hash,
@@ -963,6 +970,9 @@ pub fn evaluate_with_advanced_effectors(
             max_hinge_q24: evidence.max_hinge_q24,
             rcs_initial_propellant_q21: request.effectors.propellant_wet_mass_q21,
             rcs_final_propellant_q21: evidence.rcs_final_propellant_q21,
+            max_residual_torque_q12: evidence.max_residual_torque_q12,
+            rail_settle_error_turn16: evidence.rail_settle_error_turn16,
+            disturbance_settle_error_turn16: evidence.disturbance_settle_error_turn16,
             checksum_chains: evidence.checksum_chains,
         },
     )
