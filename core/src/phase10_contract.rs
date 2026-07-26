@@ -582,3 +582,12 @@ mod tests {
         assert!(!pack.covers(MissionTimeQ16::from_raw(61 * 65_536).unwrap()));
     }
 }
+#[test]
+fn generated_earth_and_transform_packs_decode_together() {
+    let earth =
+        EarthModelPack::decode(include_bytes!("../../phase10/generated/ksa-g10r.kem10")).unwrap();
+    let transforms =
+        TransformPack::decode(include_bytes!("../../phase10/generated/ksa-g10r.kft10")).unwrap();
+    assert_eq!(earth.identity, transforms.earth_identity);
+    assert_eq!(earth.leap_count, 27);
+}
