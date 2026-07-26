@@ -139,6 +139,46 @@ pub fn interpolate_i32(
     add(a, rounded as i32, status)
 }
 
+/// Integrates one fixed-point rate with exact signed residual carry.
+///
+/// The returned value is an increment in the destination scale. `residual`
+/// retains the sub-cell numerator left after rounding, preventing coherent
+/// long-duration drift while leaving the public state representation unchanged.
+pub fn integrate_with_residual(
+    rate_raw: i32,
+    dt_raw: u32,
+    shift: u8,
+    residual: &mut i64,
+    status: &mut NumericStatus,
+) -> i32 {
+    if shift == 0 || shift >= 63 {
+        status.record(NumericFault::InvalidInput);
+        return 0;
+    }
+    let denominator = 1i64 << shift;
+    let numerator = match i64::from(rate_raw)
+        .checked_mul(i64::from(dt_raw))
+        .and_then(|value| value.checked_add(*residual))
+    {
+        Some(value) => value,
+        None => {
+            status.record(NumericFault::Saturation);
+            return 0;
+        }
+    };
+    let half = denominator / 2;
+    let quotient = if numerator >= 0 {
+        (numerator + half) / denominator
+    } else {
+        (numerator - half) / denominator
+    };
+    if quotient < i64::from(i32::MIN) || quotient > i64::from(i32::MAX) {
+        status.record(NumericFault::Saturation);
+        return 0;
+    }
+    *residual = numerator - quotient * denominator;
+    quotient as i32
+}
 pub const fn global_numeric_contract_is_valid() -> bool {
     GLOBAL_POSITION_FRACTIONAL_BITS == 12
         && GLOBAL_VELOCITY_FRACTIONAL_BITS == 24
@@ -156,6 +196,25 @@ pub const fn global_numeric_contract_is_valid() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn residual_carry_prevents_long_duration_cell_loss() {
+        let mut status = NumericStatus::CLEAR;
+        let mut residual = 0i64;
+        let mut total = 0i64;
+        for _ in 0..3_200 {
+            total += i64::from(integrate_with_residual(
+                -66_327_286,
+                2_048,
+                28,
+                &mut residual,
+                &mut status,
+            ));
+        }
+        let exact = i64::from(-66_327_286) * 2_048 * 3_200 / (1i64 << 28);
+        assert!((total - exact).abs() <= 1);
+        assert!(status.is_clear());
+    }
 
     #[test]
     fn scales_and_exact_event_divisors_are_frozen() {

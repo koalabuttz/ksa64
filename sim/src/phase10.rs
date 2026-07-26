@@ -24,9 +24,9 @@ use ksa64_core::phase10_geodesy::{
     body_x_attitude, enu_to_ecef_rotation, geodetic_to_ecef, launch_direction_enu,
 };
 use ksa64_core::phase10_numeric::{
-    interpolate_i32, GlobalAccelerationVec, GlobalAngularRateVec, GlobalKinematicState,
-    GlobalPositionVec, GlobalVelocityVec, MissionTimeQ16, GLOBAL_AVIONICS_PERIOD_Q16,
-    GLOBAL_COAST_STEP_Q16, GLOBAL_POWERED_STEP_Q16,
+    integrate_with_residual, interpolate_i32, GlobalAccelerationVec, GlobalAngularRateVec,
+    GlobalKinematicState, GlobalPositionVec, GlobalVelocityVec, MissionTimeQ16,
+    GLOBAL_AVIONICS_PERIOD_Q16, GLOBAL_COAST_STEP_Q16, GLOBAL_POWERED_STEP_Q16,
 };
 use ksa64_core::phase10_vehicle::{
     GlobalAeroKnot, GlobalMissionPack, GlobalPackError, GlobalVehiclePack, PitchKnot,
@@ -192,6 +192,8 @@ pub struct GlobalWorldMachine<'a> {
     transitions: [FrameTransitionRecord; TRANSITION_CAPACITY],
     transition_count: u8,
     checksum: u32,
+    position_residual_q28: [i64; 3],
+    velocity_residual_q20: [i64; 3],
 }
 
 impl<'a> GlobalWorldMachine<'a> {
@@ -286,6 +288,8 @@ impl<'a> GlobalWorldMachine<'a> {
             transitions: [FrameTransitionRecord::ZERO; TRANSITION_CAPACITY],
             transition_count: 0,
             checksum: 0x811c_9dc5,
+            position_residual_q28: [0; 3],
+            velocity_residual_q20: [0; 3],
         })
     }
 
@@ -699,20 +703,40 @@ impl<'a> GlobalWorldMachine<'a> {
             midpoint_time,
         );
         let second = self.force_sample_with_mass(midpoint, midpoint_mass, controlled)?;
+        let acceleration = [
+            second.acceleration.x(),
+            second.acceleration.y(),
+            second.acceleration.z(),
+        ];
+        let midpoint_rate = [
+            midpoint_velocity.x(),
+            midpoint_velocity.y(),
+            midpoint_velocity.z(),
+        ];
+        let mut velocity_delta = [0; 3];
+        let mut position_delta = [0; 3];
+        for axis in 0..3 {
+            velocity_delta[axis] = integrate_with_residual(
+                acceleration[axis],
+                dt,
+                20,
+                &mut self.velocity_residual_q20[axis],
+                &mut status,
+            );
+            position_delta[axis] = integrate_with_residual(
+                midpoint_rate[axis],
+                dt,
+                28,
+                &mut self.position_residual_q28[axis],
+                &mut status,
+            );
+        }
         let successor_velocity = current.velocity.checked_add(
-            FixedVec3::<24>::new(
-                multiply_scaled(second.acceleration.x(), dt as i32, 20, &mut status),
-                multiply_scaled(second.acceleration.y(), dt as i32, 20, &mut status),
-                multiply_scaled(second.acceleration.z(), dt as i32, 20, &mut status),
-            ),
+            FixedVec3::<24>::new(velocity_delta[0], velocity_delta[1], velocity_delta[2]),
             &mut status,
         );
         let successor_position = current.position.checked_add(
-            FixedVec3::<12>::new(
-                multiply_scaled(midpoint_velocity.x(), dt as i32, 28, &mut status),
-                multiply_scaled(midpoint_velocity.y(), dt as i32, 28, &mut status),
-                multiply_scaled(midpoint_velocity.z(), dt as i32, 28, &mut status),
-            ),
+            FixedVec3::<12>::new(position_delta[0], position_delta[1], position_delta[2]),
             &mut status,
         );
         let successor_time = current.time.checked_add(dt, &mut status);
@@ -1333,6 +1357,7 @@ impl<'a> GlobalWorldMachine<'a> {
                         )?;
                         self.segment = GlobalSegment::EcefAscent;
                         self.coordinates = Coordinates::Global(global);
+                        self.reset_global_residuals();
                     }
                 }
                 GlobalSegment::EcefAscent
@@ -1355,6 +1380,7 @@ impl<'a> GlobalWorldMachine<'a> {
                     )?;
                     self.segment = GlobalSegment::EciCoast;
                     self.coordinates = Coordinates::Global(inertial);
+                    self.reset_global_residuals();
                     self.events |= EVENT_ECI_OWNER;
                 }
                 GlobalSegment::EciCoast
@@ -1376,6 +1402,7 @@ impl<'a> GlobalWorldMachine<'a> {
                     )?;
                     self.segment = GlobalSegment::EcefEntry;
                     self.coordinates = Coordinates::Global(fixed);
+                    self.reset_global_residuals();
                     self.events |= EVENT_ENTRY_OWNER;
                 }
                 GlobalSegment::EcefEntry
@@ -1394,6 +1421,7 @@ impl<'a> GlobalWorldMachine<'a> {
                     )?;
                     self.segment = GlobalSegment::LocalRecovery;
                     self.coordinates = Coordinates::Local(local);
+                    self.reset_global_residuals();
                     self.events |= EVENT_RECOVERY_OWNER;
                 }
                 _ => {}
@@ -1455,6 +1483,10 @@ impl<'a> GlobalWorldMachine<'a> {
         Ok(())
     }
 
+    fn reset_global_residuals(&mut self) {
+        self.position_residual_q28 = [0; 3];
+        self.velocity_residual_q20 = [0; 3];
+    }
     fn update_checksum(&mut self) -> Result<(), GlobalWorldError> {
         let snapshot = self.canonical_state()?;
         for value in [

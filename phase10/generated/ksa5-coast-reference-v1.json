@@ -1,0 +1,54 @@
+{
+  "schema": "ksa64.phase10.ksa5-coast-reference-v1",
+  "model": "independent-float64-central-j2-rk2",
+  "phase5_summary_checksum": "0x213aa57c",
+  "duration_s": 5350.0,
+  "step_s": 0.03125,
+  "steps": 171200,
+  "initial": {
+    "position_q12_km": [
+      21468577,
+      3871182,
+      15698368
+    ],
+    "velocity_q24_km_s": [
+      -66327286,
+      89767125,
+      68337641
+    ]
+  },
+  "terminal": {
+    "position_km": [
+      5038.470026886712,
+      1184.7784763253526,
+      4032.261512794683
+    ],
+    "velocity_km_s": [
+      -4.2894538231625985,
+      5.2989140849821545,
+      3.7909382656261914
+    ],
+    "position_q12_km": [
+      20637573,
+      4852853,
+      16516143
+    ],
+    "velocity_q24_km_s": [
+      -71965093,
+      88901026,
+      63601390
+    ]
+  },
+  "minimum_altitude_km": 181.61826723467038,
+  "maximum_altitude_km": 205.22472045167888,
+  "acceptance": {
+    "position_delta_km": 5.0,
+    "velocity_delta_m_s": 5.0
+  },
+  "external_fixture_policy": {
+    "satkit": "preferred frozen secondary reference",
+    "gmat": "optional bounded orbital corroboration",
+    "live_dependency_in_tests": false
+  },
+  "evidence_sha256": "72bcb9d595f4806507e2c99fc067bf9184db25b608e98d3947a17dcc886863cd"
+}
