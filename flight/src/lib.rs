@@ -7,6 +7,7 @@
 
 pub mod gnc;
 pub mod navigation;
+pub mod phase10;
 pub mod phase5_gnc;
 pub mod phase5_guidance;
 pub mod phase5_navigation;

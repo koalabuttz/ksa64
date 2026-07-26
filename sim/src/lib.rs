@@ -39,6 +39,7 @@ pub use phase5_telemetry_self_test::{
     phase5_telemetry_codec_signature, run_phase5_telemetry_self_tests,
 };
 pub mod phase10;
+pub mod phase10_avionics;
 pub mod phase5_vehicle;
 #[cfg(feature = "fixtures")]
 mod phase5_vehicle_self_test;

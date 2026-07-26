@@ -169,6 +169,8 @@ def run() -> dict:
         a = add(a, scale(cross(omega, at_v), -2.0))
         a = add(a, scale(cross(omega, cross(omega, at_p)), -1.0))
         cda = math.pi * (v["diameter_m"] * 0.5) ** 2
+        if descending and not drogue:
+            cda *= m["entry_drag_area_scale"]
         if drogue:
             cda = v["drogue_cda_m2"]
         if main:

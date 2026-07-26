@@ -51,6 +51,8 @@
     "recovery_radius_km": 200.0,
     "transition_dynamic_pressure_pa": 1.0,
     "recovery_transition_mach": 0.8,
+    "entry_attitude_aoa_deg": 12.0,
+    "entry_drag_area_scale": 6.0,
     "main_deployment_altitude_km": 1.5,
     "max_mission_time_s": 2700,
     "pitch_schedule": [

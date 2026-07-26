@@ -136,6 +136,7 @@ def compile_mission(data: dict, source_id: int) -> tuple[bytes, dict]:
     struct.pack_into("<16i", out, 64, *values)
     struct.pack_into("<I", out, 128, q(m["max_mission_time_s"], 16))
     out[132] = len(pitch)
+    struct.pack_into("<i", out, 136, q(m["entry_drag_area_scale"], 16))
     for i, (time_s, elevation_deg) in enumerate(pitch):
         struct.pack_into("<Ii", out, 256 + i * 8, q(time_s, 16), q(math.radians(elevation_deg), 28))
     evidence = {
@@ -148,6 +149,8 @@ def compile_mission(data: dict, source_id: int) -> tuple[bytes, dict]:
         ],
         "pitch_knots": len(pitch),
         "transition_altitudes_km": [120.0, 120.0, 20.0],
+        "entry_drag_area_scale": m["entry_drag_area_scale"],
+        "entry_attitude_aoa_deg": m["entry_attitude_aoa_deg"],
     }
     return seal(out), evidence
 

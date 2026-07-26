@@ -277,6 +277,7 @@ pub struct GlobalMissionPack {
     pub transition_dynamic_pressure_q14_pa: i32,
     pub recovery_transition_mach_q24: i32,
     pub main_deployment_altitude_q12_km: i32,
+    pub entry_drag_area_scale_q16: i32,
     pub max_mission_time_q16_s: u32,
     pub pitch_count: u8,
     pub pitch: [PitchKnot; GLOBAL_PITCH_MAX_KNOTS],
@@ -303,6 +304,8 @@ impl GlobalMissionPack {
             || self.transition_dynamic_pressure_q14_pa != 1 << 14
             || self.recovery_transition_mach_q24 != 13_421_773
             || self.main_deployment_altitude_q12_km <= 0
+            || self.entry_drag_area_scale_q16 < 1 << 16
+            || self.entry_drag_area_scale_q16 > 8 << 16
             || self.max_mission_time_q16_s == 0
             || self.max_mission_time_q16_s > 2_700 << 16
             || self.pitch_count < 2
@@ -359,6 +362,7 @@ impl GlobalMissionPack {
         pi32(output, 124, self.main_deployment_altitude_q12_km);
         p32(output, 128, self.max_mission_time_q16_s);
         output[132] = self.pitch_count;
+        pi32(output, 136, self.entry_drag_area_scale_q16);
         for (index, knot) in self.pitch.iter().enumerate() {
             let at = 256 + index * 8;
             p32(output, at, knot.time_q16_s);
@@ -375,7 +379,8 @@ impl GlobalMissionPack {
             || bytes[38] != ReferenceFrameId::EarthFixedEcefV1 as u8
             || bytes[39] != ReferenceFrameId::EarthInertialEciV1 as u8
             || bytes[56..64].iter().any(|byte| *byte != 0)
-            || bytes[133..256].iter().any(|byte| *byte != 0)
+            || bytes[133..136].iter().any(|byte| *byte != 0)
+            || bytes[140..256].iter().any(|byte| *byte != 0)
             || bytes[384..KGM10_LENGTH - 4].iter().any(|byte| *byte != 0)
         {
             return Err(GlobalPackError::Reserved);
@@ -415,6 +420,7 @@ impl GlobalMissionPack {
             transition_dynamic_pressure_q14_pa: gi32(bytes, 116),
             recovery_transition_mach_q24: gi32(bytes, 120),
             main_deployment_altitude_q12_km: gi32(bytes, 124),
+            entry_drag_area_scale_q16: gi32(bytes, 136),
             max_mission_time_q16_s: g32(bytes, 128),
             pitch_count: count,
             pitch,

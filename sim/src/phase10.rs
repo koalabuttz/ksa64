@@ -25,6 +25,9 @@ use ksa64_core::phase10_vehicle::{
 };
 use ksa64_core::phase8_numeric::{EnuAcceleration, EnuPosition, EnuVelocity};
 use ksa64_core::spatial_numeric::{FixedVec3, QuaternionQ30};
+use ksa64_interface::phase10::{
+    GlobalCommandCell, GlobalFrameId, GLOBAL_COMMAND_DROGUE, GLOBAL_COMMAND_MAIN,
+};
 
 pub const EVENT_RAIL_CLEAR: u16 = 0x0001;
 pub const EVENT_ECEF_OWNER: u16 = 0x0002;
@@ -118,6 +121,30 @@ pub struct GlobalWorldSnapshot {
     pub events: u16,
     pub transition_count: u8,
     pub checksum: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TransitionServiceRecord {
+    pub from: GlobalFrameId,
+    pub to: GlobalFrameId,
+    pub time: MissionTimeQ16,
+    pub transform_identity: u32,
+    pub rotation_q30: QuaternionQ30,
+    pub omega_q24: GlobalAngularRateVec,
+    pub translation_q12: GlobalPositionVec,
+    pub velocity_bias_q24: GlobalVelocityVec,
+    pub before: GlobalKinematicState,
+    pub after: GlobalKinematicState,
+    pub checksum: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FrameService {
+    pub frame: GlobalFrameId,
+    pub rotation_q30: QuaternionQ30,
+    pub omega_q24: GlobalAngularRateVec,
+    pub translation_q12: GlobalPositionVec,
+    pub velocity_bias_q24: GlobalVelocityVec,
 }
 
 #[derive(Clone, Copy)]
@@ -278,6 +305,23 @@ impl<'a> GlobalWorldMachine<'a> {
     }
 
     pub fn step(&mut self) -> Result<GlobalWorldSnapshot, GlobalWorldError> {
+        self.step_internal(None)
+    }
+
+    pub fn step_commanded(
+        &mut self,
+        command: &GlobalCommandCell,
+    ) -> Result<GlobalWorldSnapshot, GlobalWorldError> {
+        if command.frame != interface_frame(self.segment.frame()) {
+            return Err(GlobalWorldError::Identity);
+        }
+        self.step_internal(Some(command))
+    }
+
+    fn step_internal(
+        &mut self,
+        command: Option<&GlobalCommandCell>,
+    ) -> Result<GlobalWorldSnapshot, GlobalWorldError> {
         if self.complete {
             return Err(GlobalWorldError::Complete);
         }
@@ -290,7 +334,7 @@ impl<'a> GlobalWorldMachine<'a> {
             GlobalSegment::EciCoast => self.step_global(GLOBAL_COAST_STEP_Q16)?,
             GlobalSegment::LocalRecovery => self.step_local_recovery()?,
         }
-        self.process_events_and_transitions()?;
+        self.process_events_and_transitions(command)?;
         self.update_checksum()?;
         self.snapshot()
     }
@@ -307,6 +351,147 @@ impl<'a> GlobalWorldMachine<'a> {
             Coordinates::Local(state) => state.time,
             Coordinates::Global(state) => state.time,
         }
+    }
+
+    pub fn active_state(&self) -> Result<GlobalKinematicState, GlobalWorldError> {
+        match self.coordinates {
+            Coordinates::Local(state) => local_active_state(state),
+            Coordinates::Global(state) => Ok(state),
+        }
+    }
+
+    pub fn ecef_state_public(&self) -> Result<GlobalKinematicState, GlobalWorldError> {
+        self.ecef_state()
+    }
+
+    pub const fn deployment_feedback(&self) -> u16 {
+        (self.drogue as u16) | ((self.main as u16) << 1)
+    }
+
+    pub fn frame_service(&self) -> Result<FrameService, GlobalWorldError> {
+        let zero_position = GlobalPositionVec::ZERO;
+        let zero_velocity = GlobalVelocityVec::ZERO;
+        match self.segment {
+            GlobalSegment::EcefAscent | GlobalSegment::EcefEntry => Ok(FrameService {
+                frame: GlobalFrameId::EarthFixedEcefV1,
+                rotation_q30: QuaternionQ30::IDENTITY,
+                omega_q24: GlobalAngularRateVec::ZERO,
+                translation_q12: zero_position,
+                velocity_bias_q24: zero_velocity,
+            }),
+            GlobalSegment::EciCoast => {
+                let transform = interpolate_transform(self.transforms, self.current_time())?;
+                Ok(FrameService {
+                    frame: GlobalFrameId::EarthInertialEciV1,
+                    rotation_q30: transform.ecef_to_gcrf,
+                    omega_q24: transform.angular_velocity_gcrf,
+                    translation_q12: zero_position,
+                    velocity_bias_q24: zero_velocity,
+                })
+            }
+            GlobalSegment::LocalLaunch | GlobalSegment::LocalRecovery => {
+                let anchor = if self.segment == GlobalSegment::LocalRecovery {
+                    self.recovery_anchor
+                } else {
+                    self.launch_anchor
+                };
+                let rotation = anchor.enu_to_ecef.conjugate();
+                let mut status = NumericStatus::CLEAR;
+                let rotated_origin = rotation.rotate(anchor.origin_ecef, &mut status);
+                let translation = GlobalPositionVec::ZERO.checked_sub(rotated_origin, &mut status);
+                if !status.is_clear() {
+                    return Err(GlobalWorldError::Numeric);
+                }
+                Ok(FrameService {
+                    frame: GlobalFrameId::LocalEnuV1,
+                    rotation_q30: rotation,
+                    omega_q24: GlobalAngularRateVec::ZERO,
+                    translation_q12: translation,
+                    velocity_bias_q24: zero_velocity,
+                })
+            }
+        }
+    }
+
+    pub fn transition_service(
+        &self,
+        index: usize,
+    ) -> Result<TransitionServiceRecord, GlobalWorldError> {
+        if index >= self.transition_count as usize || index + 1 != self.transition_count as usize {
+            return Err(GlobalWorldError::Transition);
+        }
+        let record = self.transitions[index];
+        if record.time != self.current_time() {
+            return Err(GlobalWorldError::Transition);
+        }
+        let after = self.active_state()?;
+        let (before, rotation, omega, identity) = match (record.from, record.to) {
+            (ReferenceFrameId::LocalEnuV1, ReferenceFrameId::EarthFixedEcefV1) => {
+                let local = ecef_to_local(self.launch_anchor, after)?;
+                (
+                    local_active_state(local)?,
+                    self.launch_anchor.enu_to_ecef,
+                    GlobalAngularRateVec::ZERO,
+                    self.launch_anchor.identity,
+                )
+            }
+            (ReferenceFrameId::EarthFixedEcefV1, ReferenceFrameId::EarthInertialEciV1) => {
+                let transform = interpolate_transform(self.transforms, record.time)?;
+                (
+                    gcrf_to_ecef(transform, after)?,
+                    transform.ecef_to_gcrf,
+                    transform.angular_velocity_gcrf,
+                    self.transforms.identity,
+                )
+            }
+            (ReferenceFrameId::EarthInertialEciV1, ReferenceFrameId::EarthFixedEcefV1) => {
+                let transform = interpolate_transform(self.transforms, record.time)?;
+                (
+                    ecef_to_gcrf(transform, after)?,
+                    transform.ecef_to_gcrf.conjugate(),
+                    transform.angular_velocity_gcrf,
+                    self.transforms.identity,
+                )
+            }
+            (ReferenceFrameId::EarthFixedEcefV1, ReferenceFrameId::LocalEnuV1) => {
+                let local = match self.coordinates {
+                    Coordinates::Local(state) => state,
+                    _ => return Err(GlobalWorldError::Transition),
+                };
+                (
+                    local_to_ecef(self.recovery_anchor, local)?,
+                    self.recovery_anchor.enu_to_ecef.conjugate(),
+                    GlobalAngularRateVec::ZERO,
+                    self.recovery_anchor.identity,
+                )
+            }
+            _ => return Err(GlobalWorldError::Transition),
+        };
+        let mut status = NumericStatus::CLEAR;
+        let rotated_position = rotation.rotate(before.position, &mut status);
+        let translation = after.position.checked_sub(rotated_position, &mut status);
+        let velocity_bias = if omega == GlobalAngularRateVec::ZERO {
+            let rotated_velocity = rotation.rotate(before.velocity, &mut status);
+            after.velocity.checked_sub(rotated_velocity, &mut status)
+        } else {
+            GlobalVelocityVec::ZERO
+        };
+        if !status.is_clear() {
+            return Err(GlobalWorldError::Numeric);
+        }
+        Ok(TransitionServiceRecord {
+            from: interface_frame(record.from),
+            to: interface_frame(record.to),
+            time: record.time,
+            transform_identity: identity,
+            rotation_q30: rotation,
+            omega_q24: omega,
+            translation_q12: translation,
+            velocity_bias_q24: velocity_bias,
+            before,
+            after,
+            checksum: record.checksum,
+        })
     }
 
     fn canonical_state(&self) -> Result<GlobalKinematicState, GlobalWorldError> {
@@ -553,7 +738,17 @@ impl<'a> GlobalWorldMachine<'a> {
                 (self.vehicle.drogue_cda_q24_m2, 24)
             }
         } else {
-            (self.vehicle.reference_area_q29_m2, 29)
+            let area = if self.segment == GlobalSegment::EcefEntry && self.descending {
+                multiply_scaled(
+                    self.vehicle.reference_area_q29_m2,
+                    self.mission.entry_drag_area_scale_q16,
+                    16,
+                    &mut status,
+                )
+            } else {
+                self.vehicle.reference_area_q29_m2
+            };
+            (area, 29)
         };
         let cd = if self.drogue {
             1 << 24
@@ -778,7 +973,10 @@ impl<'a> GlobalWorldMachine<'a> {
         }
     }
 
-    fn process_events_and_transitions(&mut self) -> Result<(), GlobalWorldError> {
+    fn process_events_and_transitions(
+        &mut self,
+        command: Option<&GlobalCommandCell>,
+    ) -> Result<(), GlobalWorldError> {
         let time = self.current_time();
         let ecef = self.ecef_state()?;
         let geodetic = ecef_to_geodetic(ecef.position)?;
@@ -790,10 +988,24 @@ impl<'a> GlobalWorldMachine<'a> {
             && altitude < self.last_altitude_q12
         {
             self.descending = true;
-            self.drogue = true;
-            self.events |= EVENT_APOGEE | EVENT_DROGUE;
+            self.events |= EVENT_APOGEE;
+            if command.is_none() {
+                self.drogue = true;
+                self.events |= EVENT_DROGUE;
+            }
         }
-        if self.descending && !self.main && altitude <= self.mission.main_deployment_altitude_q12_km
+        if let Some(value) = command {
+            if !self.drogue && value.discrete & GLOBAL_COMMAND_DROGUE != 0 {
+                self.drogue = true;
+                self.events |= EVENT_DROGUE;
+            }
+            if self.drogue && !self.main && value.discrete & GLOBAL_COMMAND_MAIN != 0 {
+                self.main = true;
+                self.events |= EVENT_MAIN;
+            }
+        } else if self.descending
+            && !self.main
+            && altitude <= self.mission.main_deployment_altitude_q12_km
         {
             self.main = true;
             self.events |= EVENT_MAIN;
@@ -967,6 +1179,36 @@ impl<'a> GlobalWorldMachine<'a> {
         }
         Ok(())
     }
+}
+
+fn interface_frame(frame: ReferenceFrameId) -> GlobalFrameId {
+    match frame {
+        ReferenceFrameId::LocalEnuV1 => GlobalFrameId::LocalEnuV1,
+        ReferenceFrameId::EarthFixedEcefV1 => GlobalFrameId::EarthFixedEcefV1,
+        ReferenceFrameId::EarthInertialEciV1 => GlobalFrameId::EarthInertialEciV1,
+    }
+}
+
+fn local_active_state(
+    state: LocalKinematicState,
+) -> Result<GlobalKinematicState, GlobalWorldError> {
+    let position = GlobalPositionVec::new(
+        rounded_i64(state.position.x() as i64, 2_000)?,
+        rounded_i64(state.position.y() as i64, 2_000)?,
+        rounded_i64(state.position.z() as i64, 2_000)?,
+    );
+    let velocity = GlobalVelocityVec::new(
+        rounded_i64(state.velocity.x() as i64 * 4, 125)?,
+        rounded_i64(state.velocity.y() as i64 * 4, 125)?,
+        rounded_i64(state.velocity.z() as i64 * 4, 125)?,
+    );
+    Ok(GlobalKinematicState::new(
+        position,
+        velocity,
+        state.attitude,
+        state.angular_rate,
+        state.time,
+    ))
 }
 
 fn interpolate_pitch(
