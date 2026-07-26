@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–9 are complete. Phase 9 adds deterministic grid, NSGA-II, and differential-evolution search; 1/8/64-case robustness; exact checkpoint/resume; external optimizer integration; rich reports; and stock-C64 finalist browsing. All accepted searches are byte-identical with one, four, and eight workers, and the finite stock-C64 finalist browser now passes in one clean sequential VICE instance. Phase 6 live physical-link acceptance remains open.
+> **Project status:** Phases 0–9 are complete and Phase 9.5 Gates 1–10 are accepted. Phase 9.5 now has portable canard and cold-gas RCS physics, exact pulse/depletion and changing mass properties, truth-blind advanced avionics, deterministic mixed allocation, full integrated missions, and robust grid/NSGA-II studies. The interim stock baseline is host world plus externally paced C64 flight: the genuine stock endpoint fits without an REU and passes exact finite host/VICE evidence, while realtime C64 flight and the portable C64 world remain priority follow-on tracks.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -47,6 +47,9 @@ KSA64 currently provides:
 - a deterministic Phase 9 optimization workbench with strict manifests, grid/NSGA-II/DE engines, feasibility-first Pareto ranking, 1/8/64-case robustness, exact resume, sensitivity analysis, and an external JSONL evaluator;
 - ten frozen search studies and 13.1 MB of independently verified evidence, byte-identical at one, four, and eight workers, plus live TUI and self-contained HTML/JSON/CSV reports;
 - a 15,391-byte stock-C64 KFP9 finalist browser below `$C000`; its finite VICE probe validates four finalists and manifest `e86077d4`, then closes the sole emulator instance.
+- Phase 9.5 canard, twelve-jet cold-gas RCS, exact 1/256-second pulses, regulated/blowdown supply tables, changing propellant mass properties, pitot fallback, and `PriorityResidualV1` mixed-effector allocation;
+- accepted Firestorm C9/R9/M9 missions and deterministic canard, RCS, and mixed workbench studies, with experimental KSA-X1 evidence kept outside the accepted physical Pareto front;
+- an externally paced KLF6/KLR9 host-world/stock-C64-flight baseline that shadow-verifies exact command/status cells and checksum chains without claiming realtime performance or requiring an REU.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -135,6 +138,7 @@ The legacy Phase 3/4 accuracy-first closed-loop path still projects to 243.7 min
 - [Phase 8](phase8/README.md), [implementation contract](phase8/PLAN.md), and [completion audit](phase8/COMPLETION.md)
 - [Phase 8.5](phase8_5/README.md), [implementation contract](phase8_5/PLAN.md), [completion audit](phase8_5/COMPLETION.md), [stock-fit decision](phase8_5/STOCK_FIT_DECISION.md), and [Phase 9 handoff](phase8_5/PHASE9_HANDOFF.md)
 - [Phase 9](phase9/README.md), [implementation contract](phase9/PLAN.md), [completion record](phase9/COMPLETION.md), and [Phase 9.5 handoff](phase9/PHASE9_5_HANDOFF.md)
+- [Phase 9.5](phase9_5/README.md), [implementation contract](phase9_5/PLAN.md), [integrated evidence](phase9_5/INTEGRATED_EVIDENCE.md), and [stock-target decision](phase9_5/stock-target-decision.md)
 
 ### Phase 4 detail
 

@@ -16,8 +16,8 @@ search, and frozen artifact remains unchanged.
 - `KSA-X1`: a separately identified experimental vehicle using a regulated
   supply table. It demonstrates reuse but cannot enter an accepted physical
   Pareto front.
-- Host/host, host-world/C64-flight, and C64-world/host-flight execution.
-- Stock-C64 flight and world endpoints. No REU is required.
+- Host/host and host-world/C64-flight execution, with externally paced stock-C64 flight accepted as the interim hardware baseline.
+- The portable C64 world and realtime C64 flight remain priority follow-on tracks; neither is silently replaced by host physics or an REU requirement.
 
 ## Frozen boundaries
 
@@ -44,6 +44,8 @@ See [PLAN.md](PLAN.md) for the implementation gates and
 - Gate 6 adds a truth-blind advanced wrapper around the frozen local flight computer, three-axis torque demand with roll control, deterministic 32 Hz pitot sensing, conservative navigation/wind fallback, bounded link-loss behavior, and independent checksum chains. Native and stock-C64 probes produce the same `0x8c165977` signature; the C64 probe is 18,700 bytes and requires no REU.
 - Gate 7 implements `PriorityResidualV1` with pack-bound full-scale gimbal, orthogonal cruciform-canard, and bidirectional RCS mixing. It records requested, achieved, and exact residual torque; performs deterministic dynamic-pressure, reserve, health, rail, recovery, and safe-state handoffs; and never replays one-shot pulses. Four independent exact vectors produce signature `0xc262ed33` natively and in a 30,438-byte stock-C64 VICE probe.
 - Gate 8 composes the advanced effectors with the exact 32 Hz event clock and the unchanged Phase 8 world through a new additive execution path. C9, R9, and M9 complete full missions; the accepted layered 5 m/s C9 case passes the 3 degree check; R9 passes the three-axis disturbance and reserve gates; M9 survives deterministic pitot loss; and strict KAT9/KAS9 evidence is independently checked. See [INTEGRATED_EVIDENCE.md](INTEGRATED_EVIDENCE.md).
+- Gate 9 generalizes the Phase 9 workbench over KAS9 evidence and freezes accepted canard, RCS, mixed-effector, and experimental research studies. Seven grid/NSGA-II studies perform 2,974 unique robust evaluations; accepted finalists pass their 64-case promotion tier, archives are byte-identical with one, four, and eight workers, and the separately labelled KSA-X1 study promotes no accepted physical finalist.
+- Gate 10 records the stock-target boundary without weakening the contract. The portable world endpoint remains too large and the advanced flight release exceeds the PAL realtime budget, but the exact stock flight endpoint fits without an REU. The accepted interim baseline is host world plus externally paced C64 flight: an eight-release one-instance VICE probe shadow-verifies every KLR9 command/status cell and the truth, navigation, flight, and allocator chains.
 
 Regenerate Gate 3 outputs with:
 

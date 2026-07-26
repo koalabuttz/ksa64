@@ -434,7 +434,7 @@ The C64 receives a bounded KFP9 finalist package and does not run production sea
 
 Advanced effectors and global flight preserve the existing ownership rule: during any interval, exactly one KSA64 world model owns and advances an entity's state. An external program may produce an input fixture or an independent comparison, but it never supplies live corrections, shares integration authority, or becomes a fallback dynamics path.
 
-Phase 9.5 keeps canard, RCS, depletion, changing mass properties, actuator, control-allocation, and authority-handoff models inside the portable evaluator. Analytic fixtures and a deliberately small float64 implementation are the primary independent evidence. Optional Basilisk comparisons are limited to selected fixed-step attitude/RCS cases and are committed as offline fixtures; they do not validate KSA64-specific aerodynamics, exact release scheduling, or allocator logic.
+Phase 9.5 keeps canard, RCS, depletion, changing mass properties, actuator, control-allocation, and authority-handoff models inside the portable evaluator. Its interim stock baseline places the authoritative world on the host and the genuine flight/allocation endpoint on a stock C64 using exact externally paced KLF6/KLR9 step-and-ack cells. Wall-clock pacing is observational and may pause; this placement is not a realtime claim. Analytic fixtures and a deliberately small float64 implementation are the primary independent evidence. Optional Basilisk comparisons are limited to selected fixed-step attitude/RCS cases and are committed as offline fixtures; they do not validate KSA64-specific aerodynamics, exact release scheduling, or allocator logic.
 
 Phase 10 uses a layered evidence architecture:
 

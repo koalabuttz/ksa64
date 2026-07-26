@@ -272,9 +272,15 @@ The optimizer selects candidates; the portable core only evaluates them.
 
 ## Phase 9.5: advanced control effectors
 
-Status: implementation in progress. The additive contract is frozen in `phase9_5/CONTRACT.md`; Phase 9.5 remains before Phase 10 global flight.
+Status: implementation in progress. Gates 1–10 have established the native physics/workbench and the interim host-world plus externally paced stock-C64-flight baseline. Phase 9.5 remains before Phase 10 global flight.
 
 Purpose: extend the Phase 8.5 control-allocation boundary with physically modeled aerodynamic and reaction-control effectors, using the Phase 9 workbench to size, tune, compare, and robustly evaluate them.
+
+Target execution policy:
+
+- The interim accessible baseline is host-world plus externally paced stock-C64 flight over strict KLF6/KLR9 step-and-ack cells. It proves target execution and exact closed-loop behavior, not wall-clock realtime fitness.
+- Realtime stock-C64 flight remains a priority optimization track. Preserve the measured PAL deficit and investigate only measured changes, including a 6502-specific rewrite of hot kernels and C64 Ultimate acceleration/integration.
+- C64-world execution remains a priority long-run role but temporarily follows the host-world baseline while the remaining software layers mature. It is not removed, converted into a second simulator, or made dependent on an REU.
 
 Candidate capabilities:
 

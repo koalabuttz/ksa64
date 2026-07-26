@@ -332,6 +332,7 @@ pub mod phase8_5_tui;
 pub mod phase9;
 pub mod phase9_5_archive;
 pub mod phase9_5_compiler;
+pub mod phase9_5_link;
 pub mod phase9_5_workbench;
 pub mod phase9_archive;
 pub mod phase9_manifest;

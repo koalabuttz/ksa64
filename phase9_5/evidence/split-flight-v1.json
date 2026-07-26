@@ -1,0 +1,15 @@
+{
+  "schema": "ksa64.phase9_5.vice-mailbox-probe-v1",
+  "releases": 8,
+  "wall_seconds": 36.57799999997951,
+  "target": "PAL stock C64 flight endpoint via one pinned VICE instance; externally paced KLF6/KLR9 step-and-ack, not realtime",
+  "artifact": {
+    "bytes": 44306,
+    "sha256": "2cbffcc866fa857f6eac1fb47efc7315adea5dd5fc7ec14f5d37d538742a3d8f",
+    "load_address": 2049,
+    "load_end_exclusive": 46353,
+    "stock_fit": true
+  },
+  "broker": "KSA64_PHASE95_LISTENING 127.0.0.1:59703\nKSA64_PHASE95_BOUNDED releases=8 sensor=a66fb236 command=c2fe3831 status=18e58624 truth=74aedec0 nav=ef1f36a8 flight=51dee460 allocator=d4960be4",
+  "result_raw": "4b4c46390100000007000000a8361fef60e4de51e40b96d4"
+}

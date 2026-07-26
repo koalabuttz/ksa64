@@ -521,11 +521,15 @@ fn clamp_i16(v: i32) -> i16 {
 }
 fn hash_alloc(mut h: u32, c: &AdvancedCommandCell, a: &AllocationResult) -> u32 {
     h = h.rotate_left(5).wrapping_add(0x9e3779b9) ^ u32::from(c.source_epoch);
-    for v in a.achieved_q12 {
-        h = h.rotate_left(5).wrapping_add(0x9e3779b9) ^ v as u32
+    let mut axis = 0;
+    while axis < 3 {
+        h = h.rotate_left(5).wrapping_add(0x9e3779b9) ^ a.achieved_q12[axis] as u32;
+        axis += 1;
     }
-    for q in c.rcs_pulse_quanta {
-        h = h.rotate_left(5).wrapping_add(0x9e3779b9) ^ u32::from(q)
+    let mut jet = 0;
+    while jet < 12 {
+        h = h.rotate_left(5).wrapping_add(0x9e3779b9) ^ u32::from(c.rcs_pulse_quanta[jet]);
+        jet += 1;
     }
     h
 }

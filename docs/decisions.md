@@ -1181,3 +1181,14 @@ Date: 2026-07-25
 Status: accepted.
 
 Phase 9.5 guidance commands physical roll, pitch, and yaw torque only. RCS translation remains a physical consequence of individual jet forces but is not intentionally commanded. Reserve `SixAxisWrenchV1` for future docking, station keeping, rendezvous, and propulsive-landing missions so those uses can define their own translation, authority, navigation, and safety contracts.
+
+
+## D-097: Use externally paced C64 flight as the interim Phase 9.5 stock baseline
+
+Date: 2026-07-25
+
+Status: accepted; reschedules but does not erase D-095.
+
+Use host-world plus stock-C64-flight step-and-ack execution as the accessible Phase 9.5 baseline. The host remains the physical authority, releases exact KLR9 sensor cells at simulated 32 Hz epochs, waits for the C64 to execute the genuine advanced flight and allocation kernels, shadow-verifies returned command/status bytes, and only then advances the world. This preserves event and successor-command semantics but is explicitly not a realtime claim.
+
+Realtime C64 flight and the C64-world endpoint remain priority follow-on tracks rather than Phase 9.5 blockers. Preserve the measured PAL and stock-fit deficits. Investigate a measured 6502-specific rewrite and C64 Ultimate acceleration/integration as distinct future strategies; neither may silently change canonical physics, command ordering, or evaluation identity. Keep the portable C64 world and deliberately long target-run objective on the roadmap while prioritizing host-world/C64-flight, Mission Control, storage, and finalist workflows now.

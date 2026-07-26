@@ -342,9 +342,9 @@ The rust-mos finalist browser is 15,391 bytes and ends at `$441E`, below the sto
 
 The accepted physical studies remain inside the Phase 8 model envelope and promote only candidates satisfying all 64 hard-constraint cases. The broad-airframe demonstration is explicitly experimental, promotes no accepted finalists, and is never described as correlated or safety-valid.
 
-## Planned Phase 9.5 validation
+## Accepted Phase 9.5 validation through Gate 10
 
-Phase 9.5 will validate each new physical responsibility at the narrowest useful level before composing missions:
+Phase 9.5 validates each new physical responsibility at the narrowest useful level before composing missions:
 
 - Analytic force, torque, pulse, depletion, centre-of-mass, and inertia cases.
 - A small independent float64 implementation for canard/RCS dynamics, actuator response, allocation, and authority transitions.
@@ -354,6 +354,10 @@ Phase 9.5 will validate each new physical responsibility at the narrowest useful
 Basilisk is optional secondary evidence only for selected fixed-step spacecraft-attitude/RCS cases. It is not used to validate canard aerodynamics, exact-event release semantics, mixed allocation, or authority handoff. Any retained comparison is a frozen, versioned fixture. Routine tests and CI remain offline and do not install or execute Basilisk.
 
 A Phase 9.5 external fixture is acceptable only when it records the generating tool and version, complete input/configuration, model assumptions, integration settings, raw output, conversion procedure, declared tolerance, content hash, and regeneration instructions.
+
+Gates 1–9 now include exact native/MOS contract vectors, independent canard/RCS/allocator float64 checks, integrated Firestorm C9/R9/M9 missions, a deterministic 64-case campaign, and canard/RCS/mixed grid and NSGA-II studies whose archives are byte-identical at one, four, and eight workers. KSA-X1 remains experimental and produces no accepted finalist.
+
+Gate 10 preserves the failed realtime and stock-world measurements as engineering evidence, then accepts host world plus externally paced stock-C64 flight as the interim placement. The clean endpoint is 44,306 bytes, ends at `$B511`, requires no REU, and passes an eight-release one-instance VICE probe with every KLR9 command/status cell shadow-verified. Simulated 32 Hz epochs and successor-command semantics are exact; wall-clock pacing may pause, so this is hardware-in-the-loop exactness rather than a realtime flight claim.
 
 ## Planned Phase 10 validation
 
