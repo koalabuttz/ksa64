@@ -1,0 +1,81 @@
+[package]
+name = "clap"
+version = "4.6.1"
+description = "A simple to use, efficient, and full-featured Command Line Argument Parser"
+categories = ["command-line-interface"]
+keywords = [
+  "argument",
+  "cli",
+  "arg",
+  "parser",
+  "parse"
+]
+repository = "https://github.com/clap-rs/clap"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+rust-version = "1.85"
+
+[package.metadata.docs.rs]
+features = ["unstable-doc"]
+rustdoc-args = ["--generate-link-to-definition"]
+
+[package.metadata.playground]
+features = ["unstable-doc"]
+
+[package.metadata.release]
+shared-version = true
+tag-name = "v{{version}}"
+pre-release-replacements = [
+  {file="CHANGELOG.md", search="Unreleased", replace="{{version}}", min=1},
+  {file="CHANGELOG.md", search="\\.\\.\\.HEAD", replace="...{{tag_name}}", exactly=1},
+  {file="CHANGELOG.md", search="ReleaseDate", replace="{{date}}", min=1},
+  {file="CHANGELOG.md", search="<!-- next-header -->", replace="<!-- next-header -->\n## [Unreleased] - ReleaseDate\n", exactly=1},
+  {file="CHANGELOG.md", search="<!-- next-url -->", replace="<!-- next-url -->\n[Unreleased]: https://github.com/clap-rs/clap/compare/{{tag_name}}...HEAD", exactly=1},
+  {file="CITATION.cff", search="^date-released: ....-..-..", replace="date-released: {{date}}"},
+  {file="CITATION.cff", search="^version: .+\\..+\\..+", replace="version: {{version}}"},
+  {file="src/lib.rs", search="blob/v.+\\..+\\..+/CHANGELOG.md", replace="blob/v{{version}}/CHANGELOG.md", exactly=1},
+]
+
+[features]
+default = [
+  "std",
+  "color",
+  "help",
+  "usage",
+  "error-context",
+  "suggestions",
+]
+debug = ["clap_builder/debug", "clap_derive?/debug"] # Enables debug messages
+unstable-doc = ["clap_builder/unstable-doc", "derive"] # for docs.rs
+
+# Used in default
+std = ["clap_builder/std"] # support for no_std in a backwards-compatible way
+color = ["clap_builder/color"]
+help = ["clap_builder/help"]
+usage = ["clap_builder/usage"]
+error-context = ["clap_builder/error-context"]
+suggestions = ["clap_builder/suggestions"]
+
+# Optional
+deprecated = ["clap_builder/deprecated", "clap_derive?/deprecated"] # Guided experience to prepare for next breaking release (at different stages of development, this may become default)
+derive = ["dep:clap_derive"]
+cargo = ["clap_builder/cargo"] # Disable if you're not using Cargo, enables Cargo-env-var-dependent macros
+wrap_help = ["clap_builder/wrap_help"]
+env = ["clap_builder/env"] # Use environment variables during arg parsing
+unicode = ["clap_builder/unicode"]  # Support for unicode characters in arguments and help messages
+string = ["clap_builder/string"]  # Allow runtime generated strings
+
+# In-work features
+unstable-v5 = ["clap_builder/unstable-v5", "clap_derive?/unstable-v5", "deprecated"]
+unstable-ext = ["clap_builder/unstable-ext"]
+unstable-styles = ["clap_builder/unstable-styles"]  # deprecated
+unstable-derive-ui-tests = []
+unstable-markdown = ["clap_derive/unstable-markdown"]
+
+[lib]
+bench = false
+
+[dependencies]
+clap_builder = { path = "./clap_builder", version = "=4.6.0", default-features = false }
+clap_derive = { path = "./clap_derive", version = "=4.6.1", optional = true }
+

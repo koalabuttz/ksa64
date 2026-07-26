@@ -1,0 +1,3 @@
+```console
+$ demo example
+```

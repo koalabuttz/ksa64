@@ -1,0 +1,35 @@
+[package]
+name = "anstyle"
+version = "1.0.14"
+description = "ANSI text styling"
+categories = ["command-line-interface"]
+keywords = ["ansi", "terminal", "color", "no_std"]
+repository = "https://github.com/rust-cli/anstyle.git"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+rust-version = "1.66"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--generate-link-to-definition"]
+
+[package.metadata.release]
+tag-prefix = ""
+pre-release-replacements = [
+  {file="CHANGELOG.md", search="Unreleased", replace="{{version}}", min=1},
+  {file="CHANGELOG.md", search="\\.\\.\\.HEAD", replace="...{{tag_name}}", exactly=1},
+  {file="CHANGELOG.md", search="ReleaseDate", replace="{{date}}", min=1},
+  {file="CHANGELOG.md", search="<!-- next-header -->", replace="<!-- next-header -->\n## [Unreleased] - ReleaseDate\n", exactly=1},
+  {file="CHANGELOG.md", search="<!-- next-url -->", replace="<!-- next-url -->\n[Unreleased]: https://github.com/rust-cli/anstyle/compare/{{tag_name}}...HEAD", exactly=1},
+]
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+
+[dev-dependencies]
+lexopt = "0.3.1"
+snapbox = "0.6.23"
+

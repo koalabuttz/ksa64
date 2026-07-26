@@ -1,5 +1,4 @@
-use ksa64_host::phase11_authoring::compile_project_source;
-use ksa64_host::phase11_tui::run_operations_console;
+use ksa64_host::application::Ksa64Application;
 use std::env;
 use std::fs;
 
@@ -32,11 +31,12 @@ fn run() -> Result<(), String> {
         value["role"] = serde_json::Value::String(role.clone());
         source = serde_json::to_string(&value).map_err(|error| error.to_string())?;
     }
-    let project = compile_project_source(&source).map_err(|error| format!("{error:?}"))?;
-    let completed = run_operations_console(&project).map_err(|error| format!("{error:?}"))?;
+    let outcome = Ksa64Application::default()
+        .control_project(&source, None)
+        .map_err(|error| format!("{}: {}", error.diagnostic.code, error.diagnostic.message))?;
     println!(
-        "session evidence 0x{:08x}",
-        completed.evidence.evidence_identity
+        "session evidence {}",
+        outcome.identity.as_deref().unwrap_or("unknown")
     );
     Ok(())
 }

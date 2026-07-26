@@ -1,0 +1,666 @@
+{
+  "experiences": [
+    {
+      "actions": [
+        "run",
+        "mission-control",
+        "campaign",
+        "replay"
+      ],
+      "avionics": "LocalEnuRecoveryV1 / LocalEnuGimbalV1",
+      "envelope": "accepted Phase 8 local aerodynamic envelope",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "firestorm.avionics",
+      "kind": "mission",
+      "limitations": "combined world-plus-avionics stock image does not fit",
+      "maturity": "accepted",
+      "mission": "truth-blind navigation, recovery, and attitude control",
+      "name": "Firestorm local flight computer",
+      "package": "KLR8 local flight endpoint",
+      "placements": [
+        "host-world-host-flight",
+        "host-world-c64-flight",
+        "replay-only"
+      ],
+      "profile": "LocalEnu6DofV1",
+      "provenance_phase": "8.5",
+      "scenarios": [
+        "monitor",
+        "gimbal"
+      ],
+      "service": "local-avionics",
+      "tier": "current",
+      "timing": "externally-paced",
+      "vehicle": "Firestorm 54 and gimbal derivative"
+    },
+    {
+      "actions": [
+        "run",
+        "mission-control",
+        "campaign",
+        "replay"
+      ],
+      "avionics": "advanced KLR9 wrapper",
+      "envelope": "Mach <= 0.8; vehicle/local incidence <= 15 degrees",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "firestorm.canard",
+      "kind": "mission",
+      "limitations": "assumption-backed canard coefficients; crosswind and fault-matrix evidence remain available through the historical Phase 9.5 tools",
+      "maturity": "accepted",
+      "mission": "advanced effector flight",
+      "name": "Firestorm aerodynamic-canard control",
+      "package": "canard-only PriorityResidualV1",
+      "placements": [
+        "host-world-host-flight",
+        "host-world-c64-flight",
+        "c64-world-host-flight",
+        "replay-only"
+      ],
+      "profile": "LocalEnu6DofV1",
+      "provenance_phase": "9.5",
+      "scenarios": [
+        "nominal"
+      ],
+      "service": "advanced-canard",
+      "tier": "current",
+      "timing": "externally-paced",
+      "vehicle": "Firestorm-C9"
+    },
+    {
+      "actions": [
+        "optimize",
+        "replay",
+        "target-rerun"
+      ],
+      "avionics": "LocalEnuGimbalV1",
+      "envelope": "accepted gimbal authority and controller ranges",
+      "hardware": {
+        "notes": "production execution is host-native; selected evidence may be replayed on C64",
+        "reu_required": false,
+        "stock_c64_supported": false,
+        "ultimate_required": false
+      },
+      "id": "firestorm.control",
+      "kind": "optimization",
+      "limitations": "production optimization is host-only",
+      "maturity": "accepted",
+      "mission": "robust controller and actuator study",
+      "name": "Firestorm gimbal controller design",
+      "package": "Phase 9 Study B",
+      "placements": [
+        "host-only"
+      ],
+      "profile": "LocalEnu6DofV1",
+      "provenance_phase": "9",
+      "scenarios": [],
+      "service": "control-study",
+      "tier": "current",
+      "timing": "host-fast",
+      "vehicle": "Firestorm gimbal derivative"
+    },
+    {
+      "actions": [
+        "optimize",
+        "replay",
+        "target-rerun"
+      ],
+      "avionics": "monitor-only",
+      "envelope": "conservative accepted geometry range",
+      "hardware": {
+        "notes": "production execution is host-native; selected evidence may be replayed on C64",
+        "reu_required": false,
+        "stock_c64_supported": false,
+        "ultimate_required": false
+      },
+      "id": "firestorm.design",
+      "kind": "optimization",
+      "limitations": "production optimization is host-only",
+      "maturity": "accepted",
+      "mission": "robust passive design study",
+      "name": "Firestorm passive vehicle and recovery design",
+      "package": "Phase 9 Study A",
+      "placements": [
+        "host-only"
+      ],
+      "profile": "LocalEnu6DofV1",
+      "provenance_phase": "9",
+      "scenarios": [],
+      "service": "passive-design-study",
+      "tier": "current",
+      "timing": "host-fast",
+      "vehicle": "Firestorm research derivative"
+    },
+    {
+      "actions": [
+        "optimize",
+        "replay",
+        "target-rerun"
+      ],
+      "avionics": "advanced KLR9 wrapper",
+      "envelope": "accepted Phase 9.5 effector envelopes",
+      "hardware": {
+        "notes": "production execution is host-native; selected evidence may be replayed on C64",
+        "reu_required": false,
+        "stock_c64_supported": false,
+        "ultimate_required": false
+      },
+      "id": "firestorm.effectors",
+      "kind": "optimization",
+      "limitations": "KSA-X1 evidence remains experimental",
+      "maturity": "accepted",
+      "mission": "robust canard, RCS, and mixed-effector studies",
+      "name": "Firestorm advanced-effector workbench",
+      "package": "Phase 9.5 workbench",
+      "placements": [
+        "host-only"
+      ],
+      "profile": "LocalEnu6DofV1",
+      "provenance_phase": "9.5",
+      "scenarios": [],
+      "service": "advanced-effector-study",
+      "tier": "current",
+      "timing": "host-fast",
+      "vehicle": "Firestorm-C9/R9/M9"
+    },
+    {
+      "actions": [
+        "run",
+        "mission-control",
+        "campaign",
+        "replay"
+      ],
+      "avionics": "advanced KLR9 wrapper",
+      "envelope": "accepted Phase 9.5 combined-authority envelope",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "firestorm.mixed",
+      "kind": "mission",
+      "limitations": "no deliberate translational RCS guidance; crosswind and fault-matrix evidence remain available through the historical Phase 9.5 tools",
+      "maturity": "accepted",
+      "mission": "mixed-authority advanced flight",
+      "name": "Firestorm mixed gimbal, canard, and RCS control",
+      "package": "gimbal/canard/RCS PriorityResidualV1",
+      "placements": [
+        "host-world-host-flight",
+        "host-world-c64-flight",
+        "c64-world-host-flight",
+        "replay-only"
+      ],
+      "profile": "LocalEnu6DofV1",
+      "provenance_phase": "9.5",
+      "scenarios": [
+        "nominal"
+      ],
+      "service": "advanced-mixed",
+      "tier": "current",
+      "timing": "externally-paced",
+      "vehicle": "Firestorm-M9"
+    },
+    {
+      "actions": [
+        "run",
+        "mission-control",
+        "campaign",
+        "replay"
+      ],
+      "avionics": "advanced KLR9 wrapper",
+      "envelope": "compiled blowdown supply and protected reserve",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "firestorm.rcs",
+      "kind": "mission",
+      "limitations": "cold-gas source and installation are fictional; crosswind and fault-matrix evidence remain available through the historical Phase 9.5 tools",
+      "maturity": "accepted",
+      "mission": "advanced effector flight",
+      "name": "Firestorm cold-gas RCS control",
+      "package": "RCS-only PriorityResidualV1",
+      "placements": [
+        "host-world-host-flight",
+        "host-world-c64-flight",
+        "c64-world-host-flight",
+        "replay-only"
+      ],
+      "profile": "LocalEnu6DofV1",
+      "provenance_phase": "9.5",
+      "scenarios": [
+        "nominal"
+      ],
+      "service": "advanced-rcs",
+      "tier": "current",
+      "timing": "externally-paced",
+      "vehicle": "Firestorm-R9"
+    },
+    {
+      "actions": [
+        "run",
+        "mission-control",
+        "campaign",
+        "replay"
+      ],
+      "avionics": "truth-triggered Phase 8 executor",
+      "envelope": "Mach <= 0.8; angle of attack <= 15 degrees",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "firestorm.spatial",
+      "kind": "mission",
+      "limitations": "full six-degree-of-freedom ends at recovery deployment",
+      "maturity": "accepted",
+      "mission": "rail launch, weathercocking, recovery drift",
+      "name": "Firestorm local-ENU six-degree-of-freedom mission",
+      "package": "none",
+      "placements": [
+        "host-world-host-flight",
+        "replay-only"
+      ],
+      "profile": "LocalEnu6DofV1",
+      "provenance_phase": "8",
+      "scenarios": [
+        "calm",
+        "crosswind5"
+      ],
+      "service": "spatial-mission",
+      "tier": "current",
+      "timing": "long-run",
+      "vehicle": "Firestorm 54"
+    },
+    {
+      "actions": [
+        "run",
+        "mission-control",
+        "campaign",
+        "replay"
+      ],
+      "avionics": "event-driven physical profile",
+      "envelope": "accepted Phase 7 vertical profile",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "firestorm.vertical",
+      "kind": "mission",
+      "limitations": "one-dimensional; no wind or attitude dynamics",
+      "maturity": "accepted",
+      "mission": "I211W ascent and dual-deploy recovery",
+      "name": "Firestorm vertical point-mass mission",
+      "package": "none",
+      "placements": [
+        "host-world-host-flight",
+        "stock-c64-standalone",
+        "replay-only"
+      ],
+      "profile": "VerticalPointMassV1",
+      "provenance_phase": "7",
+      "scenarios": [
+        "nominal"
+      ],
+      "service": "vertical-mission",
+      "tier": "current",
+      "timing": "long-run",
+      "vehicle": "Firestorm 54"
+    },
+    {
+      "actions": [
+        "run",
+        "replay"
+      ],
+      "avionics": "none",
+      "envelope": "bounded exoatmospheric coast",
+      "hardware": {
+        "notes": "production execution is host-native; selected evidence may be replayed on C64",
+        "reu_required": false,
+        "stock_c64_supported": false,
+        "ultimate_required": false
+      },
+      "id": "ksa-5a.orbit-coast",
+      "kind": "corroboration",
+      "limitations": "does not run powered KSA-5A under the global profile",
+      "maturity": "qualified",
+      "mission": "one approximately 200 km orbit",
+      "name": "KSA-5A global one-orbit coast corroboration",
+      "package": "frozen handoff fixture",
+      "placements": [
+        "host-world-host-flight",
+        "replay-only"
+      ],
+      "profile": "GlobalEcef6DofV1",
+      "provenance_phase": "10",
+      "scenarios": [
+        "nominal"
+      ],
+      "service": "ksa5a-orbit-coast",
+      "tier": "current",
+      "timing": "host-fast",
+      "vehicle": "KSA-5A frozen insertion handoff"
+    },
+    {
+      "actions": [
+        "run",
+        "mission-control",
+        "campaign",
+        "replay"
+      ],
+      "avionics": "GlobalFlightComputer",
+      "envelope": "accepted research-scale global profile",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "ksa-g10r.global",
+      "kind": "mission",
+      "limitations": "fictional vehicle and assumption-backed high-speed aerodynamics",
+      "maturity": "accepted",
+      "mission": "ENU/ECEF/GCRF ascent, coast, entry, and recovery",
+      "name": "KSA-G10R global Earth mission",
+      "package": "KLR10 global flight endpoint",
+      "placements": [
+        "host-world-host-flight",
+        "host-world-c64-flight",
+        "replay-only"
+      ],
+      "profile": "GlobalEcef6DofV1",
+      "provenance_phase": "10",
+      "scenarios": [
+        "nominal"
+      ],
+      "service": "global-mission",
+      "tier": "current",
+      "timing": "externally-paced",
+      "vehicle": "KSA-G10R"
+    },
+    {
+      "actions": [
+        "compile",
+        "run",
+        "mission-control",
+        "replay",
+        "debrief",
+        "target-rerun"
+      ],
+      "avionics": "KsaG10rReferenceOpsV1",
+      "envelope": "accepted Phase 10 world and Phase 11 operations contract",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "ksa-g10r.operations",
+      "kind": "operations",
+      "limitations": "stock reference package uses banked RAM and is not realtime",
+      "maturity": "accepted",
+      "mission": "programmable flight and deterministic ground operations",
+      "name": "KSA-G10R mission operations",
+      "package": "KFS11/KMP11 operations package",
+      "placements": [
+        "host-world-host-flight",
+        "host-world-c64-flight",
+        "replay-only"
+      ],
+      "profile": "GlobalEcef6DofV1",
+      "provenance_phase": "11",
+      "scenarios": [
+        "nominal",
+        "gnss-loss",
+        "guidance-update",
+        "ground-blackout",
+        "invalid-operations"
+      ],
+      "service": "mission-operations",
+      "tier": "current",
+      "timing": "externally-paced",
+      "vehicle": "KSA-G10R"
+    },
+    {
+      "actions": [
+        "compile",
+        "run",
+        "mission-control",
+        "replay",
+        "debrief",
+        "target-rerun"
+      ],
+      "avionics": "SafeholdRecoveryV1",
+      "envelope": "declared ECI coast, ECEF entry, and local recovery only",
+      "hardware": {
+        "notes": "stock C64 supported; REU may increase retained evidence only",
+        "reu_required": false,
+        "stock_c64_supported": true,
+        "ultimate_required": false
+      },
+      "id": "ksa-g10r.safehold",
+      "kind": "operations",
+      "limitations": "not dissimilar hardware redundancy and rejects launch/ascent",
+      "maturity": "qualified",
+      "mission": "safehold, entry, and recovery",
+      "name": "KSA-G10R safehold and recovery package",
+      "package": "KFS11 limited backup package",
+      "placements": [
+        "host-world-host-flight",
+        "stock-c64-standalone",
+        "replay-only"
+      ],
+      "profile": "GlobalEcef6DofV1",
+      "provenance_phase": "11",
+      "scenarios": [
+        "safehold-recovery"
+      ],
+      "service": "safehold-recovery",
+      "tier": "current",
+      "timing": "externally-paced",
+      "vehicle": "KSA-G10R bounded coast/entry fixture"
+    }
+  ],
+  "historical": [
+    {
+      "audit_script": "phase0/check.ps1",
+      "id": "phase0",
+      "phase": "0",
+      "purpose": "toolchain and numeric feasibility"
+    },
+    {
+      "audit_script": "phase1/complete.ps1",
+      "id": "phase1",
+      "phase": "1",
+      "purpose": "vertical laboratory"
+    },
+    {
+      "audit_script": "phase10/complete.ps1",
+      "id": "phase10",
+      "phase": "10",
+      "purpose": "global Earth flight"
+    },
+    {
+      "audit_script": "phase11/complete.ps1",
+      "id": "phase11",
+      "phase": "11",
+      "purpose": "mission operations and programmable flight"
+    },
+    {
+      "audit_script": "phase2/complete.ps1",
+      "id": "phase2",
+      "phase": "2",
+      "purpose": "planar orbital ascent"
+    },
+    {
+      "audit_script": "phase3/complete.ps1",
+      "id": "phase3",
+      "phase": "3",
+      "purpose": "closed-loop avionics"
+    },
+    {
+      "audit_script": "phase11_5/audits/phase4-stored.ps1",
+      "id": "phase4",
+      "phase": "4",
+      "purpose": "adaptive statistical analysis"
+    },
+    {
+      "audit_script": "phase5/complete.ps1",
+      "id": "phase5",
+      "phase": "5",
+      "purpose": "three-dimensional dynamics"
+    },
+    {
+      "audit_script": "phase6/complete.ps1",
+      "id": "phase6",
+      "phase": "6",
+      "purpose": "Commodore-in-the-loop execution"
+    },
+    {
+      "audit_script": "phase7/complete.ps1",
+      "id": "phase7",
+      "phase": "7",
+      "purpose": "multi-profile vertical evaluation"
+    },
+    {
+      "audit_script": "phase8/complete.ps1",
+      "id": "phase8",
+      "phase": "8",
+      "purpose": "local-ENU spatial flight"
+    },
+    {
+      "audit_script": "phase8_5/complete.ps1",
+      "id": "phase8.5",
+      "phase": "8.5",
+      "purpose": "unified local avionics"
+    },
+    {
+      "audit_script": "phase9/complete.ps1",
+      "id": "phase9",
+      "phase": "9",
+      "purpose": "deterministic optimization"
+    },
+    {
+      "audit_script": "phase9_5/complete.ps1",
+      "id": "phase9.5",
+      "phase": "9.5",
+      "purpose": "advanced effectors"
+    }
+  ],
+  "schema": "ksa64.product-catalog.v1",
+  "targets": [
+    {
+      "build_owner": "phase9_5/complete.ps1",
+      "cargo_binary": "ksa64-phase9-5-finalist-flight-endpoint-c64",
+      "cargo_package": "ksa64-sim",
+      "id": "c64.firestorm.advanced-flight",
+      "live_probe_owner": "phase9_5/complete.ps1",
+      "name": "Stock-C64 advanced Firestorm flight endpoint",
+      "notes": "host owns the world; selected finalist bootstrap configures the endpoint",
+      "placement": "host-world-c64-flight",
+      "reu_required": false,
+      "stock_c64": true,
+      "stored_evidence": "phase9_5/COMPLETION.md",
+      "timing": "externally-paced"
+    },
+    {
+      "build_owner": "phase8/complete.ps1",
+      "cargo_binary": "ksa64-phase8-replay-c64",
+      "cargo_package": "ksa64-core",
+      "id": "c64.firestorm.spatial-replay",
+      "live_probe_owner": "phase8/complete.ps1",
+      "name": "Stock-C64 Firestorm spatial replay",
+      "notes": "full world mission remains a long-run target",
+      "placement": "replay-only",
+      "reu_required": false,
+      "stock_c64": true,
+      "stored_evidence": "phase8/COMPLETION.md",
+      "timing": "replay-only"
+    },
+    {
+      "build_owner": "phase7/complete.ps1",
+      "cargo_binary": "ksa64-phase7-full-c64",
+      "cargo_package": "ksa64-core",
+      "id": "c64.firestorm.vertical",
+      "live_probe_owner": "phase7/complete.ps1",
+      "name": "Stock-C64 Firestorm vertical mission",
+      "notes": "complete accepted target mission takes about 17.72 PAL CPU minutes",
+      "placement": "stock-c64-standalone",
+      "reu_required": false,
+      "stock_c64": true,
+      "stored_evidence": "phase7/COMPLETION.md",
+      "timing": "long-run"
+    },
+    {
+      "build_owner": "phase10/complete.ps1",
+      "cargo_binary": "ksa64-phase10-flight-endpoint-c64",
+      "cargo_package": "ksa64-sim",
+      "id": "c64.ksa-g10r.global-flight",
+      "live_probe_owner": "phase10/complete.ps1",
+      "name": "Stock-C64 KSA-G10R global flight endpoint",
+      "notes": "finite release and frame-transition probes are accepted; no realtime claim",
+      "placement": "host-world-c64-flight",
+      "reu_required": false,
+      "stock_c64": true,
+      "stored_evidence": "phase10/completion-audit.json",
+      "timing": "externally-paced"
+    },
+    {
+      "build_owner": "phase10/complete.ps1",
+      "cargo_binary": "ksa64-phase10-replay-c64",
+      "cargo_package": "ksa64-core",
+      "id": "c64.ksa-g10r.global-replay",
+      "live_probe_owner": "phase10/complete.ps1",
+      "name": "Stock-C64 KSA-G10R global replay",
+      "notes": "passive KPH10/KSR10 evidence browser",
+      "placement": "replay-only",
+      "reu_required": false,
+      "stock_c64": true,
+      "stored_evidence": "phase10/completion-audit.json",
+      "timing": "replay-only"
+    },
+    {
+      "build_owner": "phase11/c64-banked/build.ps1",
+      "cargo_binary": "ksa64-phase11-reference-ops-endpoint-c64",
+      "cargo_package": "ksa64-sim",
+      "id": "c64.ksa-g10r.reference-ops",
+      "live_probe_owner": "phase11/complete.ps1",
+      "name": "Banked stock-C64 KSA-G10R reference operations",
+      "notes": "banked RAM stopgap; interrupts disabled after entry; no realtime claim",
+      "placement": "host-world-c64-flight",
+      "reu_required": false,
+      "stock_c64": true,
+      "stored_evidence": "phase11/evidence/reference-ops-banked-vice-v1.json",
+      "timing": "externally-paced"
+    },
+    {
+      "build_owner": "phase11/complete.ps1",
+      "cargo_binary": "ksa64-phase11-safehold-endpoint-c64",
+      "cargo_package": "ksa64-sim",
+      "id": "c64.ksa-g10r.safehold",
+      "live_probe_owner": "phase11/complete.ps1",
+      "name": "Stock-C64 SafeholdRecoveryV1 endpoint",
+      "notes": "flat stock image; bounded coast, entry, and recovery package",
+      "placement": "stock-c64-standalone",
+      "reu_required": false,
+      "stock_c64": true,
+      "stored_evidence": "phase11/evidence/safehold-target-layout-v1.json",
+      "timing": "externally-paced"
+    }
+  ]
+}

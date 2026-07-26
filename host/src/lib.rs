@@ -353,3 +353,10 @@ pub mod phase9_report;
 pub mod phase9_search;
 pub mod phase9_sensitivity;
 pub mod phase9_tui;
+
+pub mod application;
+pub mod automation_app;
+pub mod catalog_assets;
+pub mod cli;
+pub mod optimization_app;
+pub mod product;

@@ -31,6 +31,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstyle"
+version = "1.0.14"
+
+[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -109,6 +113,37 @@ dependencies = [
  "cpufeatures",
  "rand_core",
 ]
+
+[[package]]
+name = "clap"
+version = "4.6.1"
+dependencies = [
+ "clap_builder",
+ "clap_derive",
+]
+
+[[package]]
+name = "clap_builder"
+version = "4.6.0"
+dependencies = [
+ "anstyle",
+ "clap_lex",
+ "strsim",
+]
+
+[[package]]
+name = "clap_derive"
+version = "4.6.1"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "clap_lex"
+version = "1.1.0"
 
 [[package]]
 name = "combine"
@@ -552,6 +587,7 @@ dependencies = [
 name = "ksa64-host"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "crc32fast",
  "crossterm",
  "ksa64-core",

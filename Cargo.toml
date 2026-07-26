@@ -1,5 +1,6 @@
 [workspace]
 members = ["core", "flight", "host", "interface", "sim"]
+exclude = ["third_party/clap", "third_party/anstyle"]
 resolver = "2"
 
 [profile.release]
@@ -10,3 +11,6 @@ panic = "abort"
 inherits = "release"
 opt-level = "z"
 codegen-units = 1
+
+[patch.crates-io]
+anstyle = { path = "third_party/anstyle/crates/anstyle" }
