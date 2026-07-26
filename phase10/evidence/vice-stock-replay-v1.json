@@ -1,0 +1,20 @@
+{
+  "schema": "ksa64.phase10.stock-replay-vice-v1",
+  "status": 0,
+  "code": 0,
+  "points": 128,
+  "outcome": 3,
+  "transition_mask": "0f",
+  "evaluation_identity": "6f1d6393",
+  "cue_hash": "db9a6eac",
+  "screen_sha256": "9c31a3725ad45e61ef2744612a832bd036e0392c3df9146101c67508ece57bb8",
+  "artifact": {
+    "bytes": 17002,
+    "sha256": "d251900109fef127d725e0d28e13c95c9ee941ea08ad232b4d14fa93ac9fee91",
+    "load_address": 2049,
+    "load_end_exclusive": 19049,
+    "stock_fit": true
+  },
+  "reu_required": false,
+  "warp": false
+}

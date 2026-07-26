@@ -544,6 +544,7 @@ version = "0.1.0"
 name = "ksa64-flight"
 version = "0.1.0"
 dependencies = [
+ "ksa64-core",
  "ksa64-interface",
 ]
 

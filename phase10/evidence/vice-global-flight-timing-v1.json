@@ -1,0 +1,35 @@
+{
+  "schema": "ksa64.phase10.global-flight-timing-v1",
+  "target": "PAL stock C64 via pinned x64sc 3.10",
+  "cycles": {
+    "timer_overhead": 24,
+    "fast_32hz": 1689887,
+    "aided_8hz": 2136880,
+    "gnss_1hz": 2237024,
+    "frame_transition": 3512697,
+    "worst": 3512697,
+    "pal_32hz_release": 30789
+  },
+  "realtime_ratios": {
+    "fast_32hz": 54.88606320439118,
+    "aided_8hz": 69.40400792490824,
+    "gnss_1hz": 72.65659813569782,
+    "frame_transition": 114.08935009256552,
+    "worst": 114.08935009256552
+  },
+  "estimated_wall_ms": {
+    "fast_32hz": 1715.1894751372242,
+    "aided_8hz": 2168.8752476533828,
+    "gnss_1hz": 2270.5186917405567,
+    "frame_transition": 3565.2921903926726
+  },
+  "flight_checksum": "73335923",
+  "artifact": {
+    "bytes": 35247,
+    "sha256": "081612e97c330f01b42635f64643148ff8bcc0109bd516d2a8c6ff4fbb97461d",
+    "load_address": 2049,
+    "load_end_exclusive": 37294
+  },
+  "warp": false,
+  "realtime_requirement": false
+}

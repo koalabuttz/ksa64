@@ -1,5 +1,6 @@
 //! Truth-blind global-frame flight software for Phase 10.
 
+use ksa64_core::numeric::{divide_scaled_truncating, magnitude4_floor, NumericStatus};
 use ksa64_interface::phase10::{
     GlobalAidFrameCell, GlobalCommandCell, GlobalFastSensorCell, GlobalFrameId, GlobalStatusCell,
     GlobalTransitionCell, GLOBAL_AID_ATTITUDE, GLOBAL_AID_BAROMETER, GLOBAL_AID_CONTINUITY,
@@ -54,6 +55,28 @@ pub struct GlobalFlightConfig {
     pub minimum_deployment_separation_q16: u32,
 }
 
+/// Frozen KSA-G10R configuration used by the stock C64 flight endpoint.
+pub const fn ksa_g10r_reference_flight_config() -> GlobalFlightConfig {
+    GlobalFlightConfig {
+        session: 0x10a0,
+        initial_frame: GlobalFrameId::LocalEnuV1,
+        initial_position_q12: [0; 3],
+        initial_attitude_q30: [759_250_122, 0, -759_250_129, 0],
+        launch_target_q30: [759_250_122, 0, -759_250_129, 0],
+        powered_target_q30: [952_420_627, 0, -495_798_804, -1],
+        entry_target_q30: [759_250_122, 0, -759_250_129, 0],
+        pitch_program_end_q16: 3_932_160,
+        proportional_gain_q15: [8_192; 3],
+        derivative_gain_q15: [32_767; 3],
+        torque_limit_q12: [16_384; 3],
+        gimbal_limit_q15: 455,
+        minimum_arming_time_q16: 3_932_160,
+        drogue_backup_time_q16: 39_321_600,
+        main_backup_time_q16: 58_982_400,
+        main_altitude_q12_km: 6_144,
+        minimum_deployment_separation_q16: 131_072,
+    }
+}
 impl GlobalFlightConfig {
     pub fn is_valid(self) -> bool {
         self.session != 0
@@ -799,18 +822,19 @@ fn body_x_attitude_from_velocity(velocity: [i32; 3]) -> [i32; 4] {
     ])
 }
 fn normalize_quaternion(value: [i32; 4]) -> [i32; 4] {
-    let sum = value
-        .iter()
-        .map(|component| i64::from(*component) * i64::from(*component))
-        .sum::<i64>();
-    if sum <= 0 {
+    let mut status = NumericStatus::CLEAR;
+    let magnitude = magnitude4_floor(value[0], value[1], value[2], value[3], &mut status);
+    if !status.is_clear() || magnitude == 0 || magnitude > i32::MAX as u32 {
         return [Q30_ONE, 0, 0, 0];
     }
-    let magnitude = integer_sqrt(sum as u64).max(1);
-    value.map(|component| {
-        let numerator = i64::from(component) * i64::from(Q30_ONE);
-        (numerator / magnitude as i64).clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32
-    })
+    let denominator = magnitude as i32;
+    let normalized =
+        value.map(|component| divide_scaled_truncating(component, denominator, 30, &mut status));
+    if status.is_clear() {
+        normalized
+    } else {
+        [Q30_ONE, 0, 0, 0]
+    }
 }
 
 fn integrate_small_angle(attitude: [i32; 4], delta_angle_q24: [i32; 3]) -> [i32; 4] {

@@ -8,4 +8,5 @@ publish = false
 fixtures = []
 
 [dependencies]
+ksa64-core = { path = "../core" }
 ksa64-interface = { path = "../interface" }

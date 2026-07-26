@@ -330,6 +330,7 @@ pub mod phase8_5_link;
 pub mod phase8_5_tui;
 
 pub mod phase10;
+pub mod phase10_link;
 pub mod phase10_mission;
 pub mod phase10_tui;
 pub mod phase9;

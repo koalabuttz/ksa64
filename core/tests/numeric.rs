@@ -1,8 +1,9 @@
 use core::mem::size_of;
 
 use ksa64_core::numeric::{
-    add, divide_scaled, divide_scaled_reduced_u16, interpolate_clamped,
-    interpolate_clamped_integral_q12, multiply_scaled, subtract, NumericFault, NumericStatus,
+    add, divide_scaled, divide_scaled_reduced_u16, divide_scaled_truncating, interpolate_clamped,
+    interpolate_clamped_integral_q12, magnitude4_floor, multiply_scaled, subtract, NumericFault,
+    NumericStatus,
 };
 use ksa64_core::quantities::{
     Acceleration, Altitude, Cda, Density, DensitySpeedSquared, Force, Fraction, Mass, MassFlow,
@@ -212,4 +213,18 @@ fn checked_add_subtract_and_table_validation_contain_bad_inputs() {
         0
     );
     assert!(table_status.contains(NumericFault::InvalidInput));
+}
+
+#[test]
+fn truncating_division_and_four_component_magnitude_are_exact() {
+    let mut status = NumericStatus::CLEAR;
+    assert_eq!(divide_scaled_truncating(5, 2, 0, &mut status), 2);
+    assert_eq!(divide_scaled_truncating(-5, 2, 0, &mut status), -2);
+    assert_eq!(divide_scaled_truncating(1, 3, 1, &mut status), 0);
+    assert_eq!(magnitude4_floor(3, 4, 12, 84, &mut status), 85);
+    assert_eq!(
+        magnitude4_floor(759_250_122, 0, -759_250_129, 0, &mut status),
+        1 << 30
+    );
+    assert!(status.is_clear());
 }

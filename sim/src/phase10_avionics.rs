@@ -72,6 +72,14 @@ pub struct GlobalAvionicsMissionSummary {
     pub placement_checksum: u32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GlobalReleaseBundle {
+    pub fast: Option<GlobalFastSensorCell>,
+    pub aid: Option<GlobalAidFrameCell>,
+    pub transition: Option<GlobalTransitionCell>,
+    pub evidence: GlobalFlightEvidence,
+}
+
 pub struct GlobalAvionicsMission<'a> {
     world: GlobalWorldMachine<'a>,
     flight: GlobalFlightComputer,
@@ -166,6 +174,10 @@ impl<'a> GlobalAvionicsMission<'a> {
     }
 
     pub fn release(&mut self) -> Result<GlobalFlightEvidence, GlobalWorldError> {
+        Ok(self.release_bundle()?.evidence)
+    }
+
+    pub fn release_bundle(&mut self) -> Result<GlobalReleaseBundle, GlobalWorldError> {
         let snapshot = self.world.snapshot()?;
         let active = self.world.active_state()?;
         if active.time.raw() & (GLOBAL_AVIONICS_PERIOD_Q16 - 1) != 0 {
@@ -236,7 +248,12 @@ impl<'a> GlobalAvionicsMission<'a> {
         self.last_transition_count = snapshot.transition_count;
         self.epoch = self.epoch.wrapping_add(1);
         self.releases = self.releases.saturating_add(1);
-        Ok(evidence)
+        Ok(GlobalReleaseBundle {
+            fast,
+            aid,
+            transition,
+            evidence,
+        })
     }
 
     pub fn advance_to_next_release(&mut self) -> Result<GlobalWorldSnapshot, GlobalWorldError> {

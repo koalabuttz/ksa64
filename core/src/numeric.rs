@@ -281,6 +281,30 @@ pub fn divide_scaled(
     signed_from_magnitude(quotient, negative, status)
 }
 
+/// Computes `(numerator * 2^shift) / denominator`, truncating toward zero.
+///
+/// This compatibility path exists for algorithms whose frozen contract predates
+/// the numeric layer's usual ties-away rounding rule.
+pub fn divide_scaled_truncating(
+    numerator: i32,
+    denominator: i32,
+    shift: u8,
+    status: &mut NumericStatus,
+) -> i32 {
+    if denominator == 0 {
+        status.record(NumericFault::DivisionByZero);
+        return 0;
+    }
+    if shift > 31 {
+        status.record(NumericFault::InvalidShift);
+        return 0;
+    }
+    let negative = (numerator < 0) ^ (denominator < 0);
+    let shifted = shift_left_32(magnitude(numerator), shift);
+    let (quotient, _) = divide_unsigned_64_by_32(shifted, magnitude(denominator));
+    signed_from_magnitude(quotient, negative, status)
+}
+
 /// Attempts an exact reduced-denominator division before using the general path.
 ///
 /// The fast path is selected only when the denominator has the declared power-of-two
@@ -385,6 +409,19 @@ fn add_unsigned_64_checked(value: &mut Unsigned64, addend: Unsigned64, status: &
         value.low = u32::MAX;
         value.high = u32::MAX;
     }
+}
+
+/// Returns `floor(sqrt(w*w + x*x + y*y + z*z))` using explicit two-word sums.
+pub fn magnitude4_floor(w: i32, x: i32, y: i32, z: i32, status: &mut NumericStatus) -> u32 {
+    let mut squared = multiply_unsigned_32(magnitude(w), magnitude(w));
+    for component in [x, y, z] {
+        add_unsigned_64_checked(
+            &mut squared,
+            multiply_unsigned_32(magnitude(component), magnitude(component)),
+            status,
+        );
+    }
+    sqrt_floor_unsigned_64(squared)
 }
 
 /// Returns the floor of `sqrt(x*x + y*y + z*z)` using explicit two-word sums.

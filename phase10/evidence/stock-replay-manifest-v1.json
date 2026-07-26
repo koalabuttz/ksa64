@@ -1,0 +1,26 @@
+{
+  "schema": "ksa64.phase10.stock-replay-manifest-v1",
+  "source": "phase10/evidence/ksa-g10r-nominal.kph10",
+  "source_sha256": "03ef10e6bb8947c7aa00739452618e888dddc59d36cb0eebb7a585f3803812cb",
+  "output": "phase10/evidence/ksa-g10r-stock.kph10",
+  "output_sha256": "89115be87e6b19136f5c5bfc511ebc42bd49d24d2bbd7ca10710fc5f6f830699",
+  "source_points": 699,
+  "retained_points": 128,
+  "stock_identity": "0x10a10003",
+  "selection_sha256": "8883d9f86e677860161df66743c536220bec2acfe7bbd483925d4a7e865492ce",
+  "required_indices": [
+    0,
+    1,
+    62,
+    113,
+    114,
+    254,
+    399,
+    400,
+    481,
+    482,
+    483,
+    662,
+    698
+  ]
+}
