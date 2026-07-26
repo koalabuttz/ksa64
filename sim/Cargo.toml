@@ -156,6 +156,16 @@ path = "src/bin/phase9_5_advanced_timed_c64.rs"
 required-features = ["c64"]
 
 [[bin]]
+name = "ksa64-phase11-safehold-reference"
+path = "src/bin/phase11_safehold_reference.rs"
+required-features = ["sim"]
+
+[[bin]]
+name = "ksa64-phase11-safehold-probe-c64"
+path = "src/bin/phase11_safehold_probe_c64.rs"
+required-features = ["c64"]
+
+[[bin]]
 name = "ksa64-phase9-5-finalist-flight-endpoint-c64"
 path = "src/bin/phase9_5_finalist_flight_endpoint_c64.rs"
 required-features = ["c64"]

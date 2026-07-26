@@ -1,0 +1,15 @@
+{
+  "schema": "ksa64.phase11.safehold-probe-v1",
+  "releases": 16,
+  "failures": 0,
+  "flight_checksum": "27d82deb",
+  "navigation_checksum": "48f50746",
+  "command_checksum": "a34401c6",
+  "journal_chain": "5c6dc09a",
+  "drogue_epoch": 13,
+  "main_epoch": 14,
+  "transition_count": 2,
+  "final_frame": 1,
+  "safe": false,
+  "signature": "e3c56a95"
+}

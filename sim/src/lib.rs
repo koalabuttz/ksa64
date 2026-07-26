@@ -13,7 +13,13 @@ pub mod evaluation;
 pub mod actuator;
 pub mod config;
 pub mod mission;
+#[cfg(feature = "fixtures")]
+mod phase11_safehold_self_test;
 pub mod phase4;
+#[cfg(feature = "fixtures")]
+pub use phase11_safehold_self_test::{
+    phase11_safehold_probe_signature, run_safehold_probe, SafeholdProbeResult,
+};
 pub mod phase5_archive;
 pub mod phase5_campaign;
 #[cfg(feature = "fixtures")]

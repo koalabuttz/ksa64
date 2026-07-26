@@ -1,0 +1,25 @@
+{
+  "schema": "ksa64.phase11.safehold-probe-v1",
+  "releases": 16,
+  "failures": 0,
+  "flight_checksum": "27d82deb",
+  "navigation_checksum": "48f50746",
+  "command_checksum": "a34401c6",
+  "journal_chain": "5c6dc09a",
+  "drogue_epoch": 13,
+  "main_epoch": 14,
+  "transition_count": 2,
+  "final_frame": 1,
+  "safe": false,
+  "signature": "e3c56a95",
+  "target": "PAL stock C64 via pinned x64sc 3.10",
+  "artifact": {
+    "bytes": 28137,
+    "sha256": "c340315bd1ec05138e6252004fe3c76b77f883559239cea837c19989d436a630",
+    "load_address": 2049,
+    "load_end_exclusive": 30184,
+    "stock_fit": true
+  },
+  "warp": false,
+  "complete_mission": false
+}

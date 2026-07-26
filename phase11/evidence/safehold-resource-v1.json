@@ -1,0 +1,35 @@
+{
+  "schema": "ksa64.phase11.safehold-resource-evidence-v1",
+  "package": "SafeholdRecoveryV1",
+  "implementation": "independent portable Rust over KLR10",
+  "supported_segments": [
+    "ECI coast",
+    "ECEF entry",
+    "local recovery"
+  ],
+  "unsupported_segments": [
+    "local launch",
+    "ECEF ascent"
+  ],
+  "resource_claim": {
+    "persistent_bytes": 1536,
+    "transient_bytes": 768,
+    "stack_bytes": 256,
+    "journal_records": 32,
+    "maximum_object_bytes": 512
+  },
+  "bounded_acceptance_fixture": {
+    "releases": 16,
+    "frame_transitions": 2,
+    "host_c64_signature": "e3c56a95",
+    "stock_probe_bytes_before_manifest_evidence_binding": 28137,
+    "load_end_exclusive_before_manifest_evidence_binding": 30184,
+    "warp": false,
+    "complete_mission": false
+  },
+  "limitations": [
+    "Resource claims are conservative static declarations pending endpoint map and stack instrumentation in Gate 11.",
+    "The finite probe establishes exact portable behavior; it is not a complete target mission or realtime claim.",
+    "This package is a contingency ABI demonstration, not dissimilar hardware redundancy."
+  ]
+}
