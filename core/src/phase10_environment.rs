@@ -508,8 +508,17 @@ pub fn ecef_to_geodetic(position: GlobalPositionVec) -> Result<GeodeticState, En
             break;
         }
         let normal_radius = divide_scaled(WGS84_SEMI_MAJOR_Q12_KM, root as i32, 30, &mut status);
-        let p_over_cos = divide_scaled(p, cos_lat, 30, &mut status);
-        height = subtract(p_over_cos, normal_radius, &mut status);
+        // Project the ECEF point and ellipsoid surface onto the geodetic
+        // normal. This is much less sensitive to latitude quantization than
+        // p / cos(latitude) - N near a trajectory apex.
+        let radial_projection = add(
+            multiply_scaled(p, cos_lat, 30, &mut status),
+            multiply_scaled(position.z(), sin_lat, 30, &mut status),
+            &mut status,
+        );
+        let ellipsoid_projection =
+            multiply_scaled(WGS84_SEMI_MAJOR_Q12_KM, root as i32, 30, &mut status);
+        height = subtract(radial_projection, ellipsoid_projection, &mut status);
         let normal_over_total = divide_scaled(
             normal_radius,
             add(normal_radius, height, &mut status),

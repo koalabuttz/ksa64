@@ -1,26 +1,26 @@
 {
   "schema": "ksa64.phase10.stock-replay-manifest-v1",
   "source": "phase10/evidence/ksa-g10r-nominal.kph10",
-  "source_sha256": "03ef10e6bb8947c7aa00739452618e888dddc59d36cb0eebb7a585f3803812cb",
+  "source_sha256": "cd664e8b72eff7aff1e3c4a5b7fb6859bb9d5178d3b6b6d4c2c06f2c61ed9cf2",
   "output": "phase10/evidence/ksa-g10r-stock.kph10",
-  "output_sha256": "89115be87e6b19136f5c5bfc511ebc42bd49d24d2bbd7ca10710fc5f6f830699",
-  "source_points": 699,
+  "output_sha256": "eedc77dcb78fc5c4663015242eb3a269d1610792a1a4885d1ef52b102be71845",
+  "source_points": 697,
   "retained_points": 128,
   "stock_identity": "0x10a10003",
-  "selection_sha256": "8883d9f86e677860161df66743c536220bec2acfe7bbd483925d4a7e865492ce",
+  "selection_sha256": "0f2ca24875699528aea34a90c70ed1077904a0e5e0cebe2d107e58a3445bd51f",
   "required_indices": [
     0,
     1,
     62,
     113,
     114,
-    254,
+    257,
     399,
     400,
     481,
     482,
     483,
     662,
-    698
+    696
   ]
 }

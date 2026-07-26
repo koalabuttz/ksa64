@@ -1317,11 +1317,27 @@ impl<'a> GlobalWorldMachine<'a> {
         let ecef = self.ecef_state()?;
         let geodetic = ecef_to_geodetic(ecef.position)?;
         let altitude = geodetic.height_q12_km;
+        let mut vertical_status = NumericStatus::CLEAR;
+        let local_up = enu_to_ecef_rotation(geodetic.latitude_q28_rad, geodetic.longitude_q28_rad)?
+            .rotate(FixedVec3::<30>::new(0, 0, 1 << 30), &mut vertical_status);
+        let vertical_velocity_q24 =
+            dot_mixed_q24_q30(ecef.velocity, local_up, &mut vertical_status);
+        if !vertical_status.is_clear() {
+            return Err(GlobalWorldError::Numeric);
+        }
+        let automatic_recovery_altitude = match self.coordinates {
+            Coordinates::Local(state) if self.segment == GlobalSegment::LocalRecovery => self
+                .mission
+                .recovery_height_q12_km
+                .checked_add(rounded_i64(state.position.z() as i64, 2_000)?)
+                .ok_or(GlobalWorldError::Numeric)?,
+            _ => altitude,
+        };
         if altitude > self.apogee_q12 {
             self.apogee_q12 = altitude;
         } else if !self.descending
             && time.raw() > self.vehicle.burn_time_q16_s
-            && altitude < self.last_altitude_q12
+            && vertical_velocity_q24 < 0
         {
             self.descending = true;
             self.events |= EVENT_APOGEE;
@@ -1341,7 +1357,7 @@ impl<'a> GlobalWorldMachine<'a> {
             }
         } else if self.descending
             && !self.main
-            && altitude <= self.mission.main_deployment_altitude_q12_km
+            && automatic_recovery_altitude <= self.mission.main_deployment_altitude_q12_km
         {
             self.main = true;
             self.events |= EVENT_MAIN;
@@ -1765,6 +1781,18 @@ fn unit_against_local_velocity(
     }
 }
 
+fn dot_mixed_q24_q30(left: FixedVec3<24>, right: FixedVec3<30>, status: &mut NumericStatus) -> i32 {
+    add(
+        add(
+            multiply_scaled(left.x(), right.x(), 30, status),
+            multiply_scaled(left.y(), right.y(), 30, status),
+            status,
+        ),
+        multiply_scaled(left.z(), right.z(), 30, status),
+        status,
+    )
+}
+
 fn dot_mixed_q19_q30(left: FixedVec3<19>, right: FixedVec3<30>, status: &mut NumericStatus) -> i32 {
     add(
         add(
@@ -1860,11 +1888,26 @@ mod tests {
         let mut world =
             GlobalWorldMachine::new(&earth, &transforms, &atmosphere, &vehicle, mission).unwrap();
         let mut steps = 0u32;
+        let mut apogee_time = 0;
+        let mut main_time = 0;
+        let mut landing_time = 0;
         while !world.is_complete() && steps < 150_000 {
-            world.step().unwrap();
+            let snapshot = world.step().unwrap();
+            if snapshot.events & EVENT_APOGEE != 0 && apogee_time == 0 {
+                apogee_time = snapshot.state.time.raw();
+            }
+            if snapshot.events & EVENT_MAIN != 0 && main_time == 0 {
+                main_time = snapshot.state.time.raw();
+            }
+            if snapshot.events & EVENT_LANDING != 0 && landing_time == 0 {
+                landing_time = snapshot.state.time.raw();
+            }
             steps += 1;
         }
         let snapshot = world.snapshot().unwrap();
+        assert_eq!(apogee_time, 16_437_248);
+        assert_eq!(main_time, 46_974_976);
+        assert_eq!(landing_time, 63_211_520);
         assert!(world.is_complete(), "{snapshot:?}");
         assert_eq!(snapshot.segment, GlobalSegment::LocalRecovery);
         assert_eq!(snapshot.transition_count, 4);

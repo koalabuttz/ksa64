@@ -2,7 +2,7 @@
   "schema": "ksa64.phase10.vice-global-flight-v1",
   "releases": 5,
   "transition_probe": true,
-  "wall_seconds": 28.67200000002049,
+  "wall_seconds": 36.17200000002049,
   "target": "PAL stock C64 flight endpoint via one pinned VICE instance; externally paced KLF6/KLR10 step-and-ack, not realtime",
   "artifact": {
     "bytes": 37403,
@@ -11,6 +11,6 @@
     "load_end_exclusive": 39450,
     "stock_fit": true
   },
-  "broker": "KSA64_PHASE10_LISTENING 127.0.0.1:58906\nKSA64_PHASE10_BOUNDED releases=5 transitions=0f sensor=10efccd2 command=037467b1 status=6d1d9bea nav=ed34a77d flight=5822347c",
-  "result_raw": "4b4c463001000000040000007da734ed7c3422586690c861"
+  "broker": "KSA64_PHASE10_LISTENING 127.0.0.1:55157\nKSA64_PHASE10_BOUNDED releases=5 transitions=0f sensor=f0b1d614 command=28ec2ebc status=fd0b240a nav=e33ffaa4 flight=4729a6b9",
+  "result_raw": "4b4c46300100000004000000a4fa3fe3b9a62947d489d025"
 }

@@ -2,21 +2,21 @@
   "schema": "ksa64.phase10.artifact-manifest-v1",
   "mission": "KSA-G10R nominal",
   "case_seed": "0x4b5341a0",
-  "evaluation_identity": "0x6f1d6393",
+  "evaluation_identity": "0x09fbd185",
   "files": {
-    "ksa-g10r-nominal.csv": "a108b58d2e660f3c1f54ca8f5263770da7194748308e0b5e503be1145a71dd3f",
-    "ksa-g10r-nominal.html": "c16cf9c827bde17091b6825546d9f705b412f39db6ca49d1fcaff915ea09c09e",
-    "ksa-g10r-nominal.kmr10.json": "44fff467e1d09fd6e5320444d98418f09d3f3e25f2c13fe10193e0a1d6beede7",
-    "ksa-g10r-nominal.kph10": "03ef10e6bb8947c7aa00739452618e888dddc59d36cb0eebb7a585f3803812cb",
-    "ksa-g10r-nominal.ksr10": "7aa9d951fc521a43f00bcbc8ea7748e0a764c612753f9b02fbb459e6d4cf1948",
-    "ksa-g10r-nominal.ktt10": "c98b8065f961a5ed322c07286cfa98f0e188d992d47d6cd129d5605313474b67"
+    "ksa-g10r-nominal.csv": "bc36dd954d161553aecf6c1de4090b507bd0af39b00776e036c7526780aacd64",
+    "ksa-g10r-nominal.html": "cceecbafa891795f3a6ced38da7b58643f0d2b75dd38e8f5390b6ea51f3eb35c",
+    "ksa-g10r-nominal.kmr10.json": "98aa5e7b94c06f48699ebf6a3fa26dd3d813bb4ffe80afbfccd48734b9b51c79",
+    "ksa-g10r-nominal.kph10": "cd664e8b72eff7aff1e3c4a5b7fb6859bb9d5178d3b6b6d4c2c06f2c61ed9cf2",
+    "ksa-g10r-nominal.ksr10": "9e8691933789ce6d870d561218d6888f65acb04ef24e02796be33a704c8678aa",
+    "ksa-g10r-nominal.ktt10": "a50b4b32b1c0feb44a54fc9041c40833717b9032ce127af67a9d34c3488e824a"
   },
   "metrics": {
-    "duration_s": 689.0,
-    "releases": 22049,
-    "apogee_km": 210.90478515625,
-    "downrange_km": 336.20361328125,
-    "crossrange_km": -2.857177734375,
+    "duration_s": 687.9375,
+    "releases": 22015,
+    "apogee_km": 210.89697265625,
+    "downrange_km": 336.1689453125,
+    "crossrange_km": -6.818359375,
     "frame_transitions": 4
   }
 }

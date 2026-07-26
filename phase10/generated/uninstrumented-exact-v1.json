@@ -1,0 +1,126 @@
+{
+  "apogee_km": 205.26806640625,
+  "checksum": "0x4ae4e41c",
+  "crossrange_km": -4.873291015625,
+  "downrange_km": 339.003662109375,
+  "event_times_s": {
+    "apogee": 250.8125,
+    "burnout": 60.0,
+    "drogue": 250.8125,
+    "landing": 964.53125,
+    "main": 716.78125,
+    "rail_clear": 0.90625
+  },
+  "maximum_dynamic_pressure_pa": 82930.82495117188,
+  "maximum_mach": 6.166445314884186,
+  "schema": "ksa64.phase10.uninstrumented-exact-v1",
+  "steps": 50215,
+  "terminal_ecef_position_km": [
+    1249.90869140625,
+    -5474.458740234375,
+    3017.3818359375
+  ],
+  "terminal_ecef_velocity_km_s": [
+    -0.0012598037719726562,
+    0.00497889518737793,
+    -0.0027884840965270996
+  ],
+  "terminal_time_s": 964.53125,
+  "transition_count": 4,
+  "transition_samples": [
+    {
+      "angular_rate_q24": [
+        0,
+        0,
+        0
+      ],
+      "attitude_q30": [
+        682118780,
+        440359217,
+        -618501832,
+        -333428734
+      ],
+      "time_s": 0.90625
+    },
+    {
+      "angular_rate_q24": [
+        0,
+        0,
+        0
+      ],
+      "attitude_q30": [
+        908308561,
+        176215470,
+        -145471528,
+        525055431
+      ],
+      "time_s": 113.25
+    },
+    {
+      "angular_rate_q24": [
+        0,
+        0,
+        0
+      ],
+      "attitude_q30": [
+        966575206,
+        -190198510,
+        -154763266,
+        -398154161
+      ],
+      "time_s": 388.34375
+    },
+    {
+      "angular_rate_q24": [
+        0,
+        0,
+        0
+      ],
+      "attitude_q30": [
+        985110705,
+        0,
+        -228724205,
+        -360781988
+      ],
+      "time_s": 476.65625
+    }
+  ],
+  "transitions": [
+    {
+      "angular_rate_delta_raw": 0,
+      "attitude_delta_raw": 0,
+      "from": "LocalEnuV1",
+      "position_delta_raw": 0,
+      "time_s": 0.90625,
+      "to": "EarthFixedEcefV1",
+      "velocity_delta_raw": 0
+    },
+    {
+      "angular_rate_delta_raw": 0,
+      "attitude_delta_raw": 1,
+      "from": "EarthFixedEcefV1",
+      "position_delta_raw": 2,
+      "time_s": 113.25,
+      "to": "EarthInertialEciV1",
+      "velocity_delta_raw": 2
+    },
+    {
+      "angular_rate_delta_raw": 0,
+      "attitude_delta_raw": 1,
+      "from": "EarthInertialEciV1",
+      "position_delta_raw": 2,
+      "time_s": 388.34375,
+      "to": "EarthFixedEcefV1",
+      "velocity_delta_raw": 2
+    },
+    {
+      "angular_rate_delta_raw": 0,
+      "attitude_delta_raw": 1,
+      "from": "EarthFixedEcefV1",
+      "position_delta_raw": 1,
+      "time_s": 476.65625,
+      "to": "LocalEnuV1",
+      "velocity_delta_raw": 3
+    }
+  ]
+}

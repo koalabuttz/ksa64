@@ -142,6 +142,11 @@ mod tests {
                 height_q12_km: 12,
             },
             GeodeticState {
+                latitude_q28_rad: 133_517_519,
+                longitude_q28_rad: -355_129_256,
+                height_q12_km: 0,
+            },
+            GeodeticState {
                 latitude_q28_rad: HALF_PI_Q28,
                 longitude_q28_rad: 0,
                 height_q12_km: 0,
