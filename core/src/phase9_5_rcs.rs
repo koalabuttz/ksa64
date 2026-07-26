@@ -183,6 +183,21 @@ impl RcsState {
     fn scheduled_open(&self, index: usize, time_q18: i32) -> bool {
         self.open_at_q18[index] <= time_q18 && time_q18 < self.close_at_q18[index]
     }
+
+    /// Return the physically open valve mask at an exact world epoch.
+    /// Stuck-open and leak faults remain visible even when no pulse is scheduled.
+    pub fn active_mask_at(&self, time_q18: i32, faults: [RcsJetFault; MAX_RCS_JETS]) -> u16 {
+        if self.remaining_propellant_q21 <= 0 {
+            return 0;
+        }
+        let mut mask = 0u16;
+        for (index, fault) in faults.iter().copied().enumerate() {
+            if fault_scale(fault, self.scheduled_open(index, time_q18)) != 0 {
+                mask |= 1u16 << index;
+            }
+        }
+        mask
+    }
 }
 
 pub fn sample_supply(

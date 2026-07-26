@@ -9,16 +9,19 @@ use crate::phase8_world::{
     step_hobby_attitude, step_rail_constrained, HobbySpatialEnvironment, HobbySpatialState,
     Phase8WorldError,
 };
+use crate::phase9_5_contract::AdvancedEffectorPack;
 
 use super::forces::{
-    dynamic_pressure_q13, environment_with_wind_scale, evaluate_forces, evaluate_forces_controlled,
-    recovery_force, ForceInput,
+    dynamic_pressure_q13, environment_with_wind_scale, evaluate_forces, evaluate_forces_advanced,
+    evaluate_forces_controlled, recovery_force, ForceInput,
 };
 use super::machine::Phase8MissionMachine;
-use super::propulsion::{burn_propellant, derive_mass_properties, sample_motor_thrust};
+use super::propulsion::{
+    add_rcs_propellant_mass, burn_propellant, derive_mass_properties, sample_motor_thrust,
+};
 use super::{
-    HobbySpatialPhase, Phase85AppliedControl, Phase8MissionError, SpatialAeroState,
-    SpatialMassProperties,
+    HobbySpatialPhase, Phase85AppliedControl, Phase8MissionError, Phase95AppliedControl,
+    Phase95PhysicalFeedback, SpatialAeroState, SpatialMassProperties,
 };
 
 pub(super) struct AdvanceOutput {
@@ -27,6 +30,7 @@ pub(super) struct AdvanceOutput {
     pub thrust_q13: i32,
     pub aero: SpatialAeroState,
     pub environment: HobbySpatialEnvironment,
+    pub phase95_feedback: Phase95PhysicalFeedback,
 }
 
 pub(super) fn advance(
@@ -40,6 +44,31 @@ pub(super) fn advance_controlled(
     machine: &mut Phase8MissionMachine<'_>,
     timestep: SpatialTime,
     control: Phase85AppliedControl,
+    exact_attitude_substeps: bool,
+) -> Result<AdvanceOutput, Phase8MissionError> {
+    advance_internal(machine, timestep, control, None, exact_attitude_substeps)
+}
+
+pub(super) fn advance_advanced(
+    machine: &mut Phase8MissionMachine<'_>,
+    timestep: SpatialTime,
+    control: Phase95AppliedControl,
+    pack: &AdvancedEffectorPack,
+) -> Result<AdvanceOutput, Phase8MissionError> {
+    advance_internal(
+        machine,
+        timestep,
+        control.legacy,
+        Some((pack, control)),
+        true,
+    )
+}
+
+fn advance_internal(
+    machine: &mut Phase8MissionMachine<'_>,
+    timestep: SpatialTime,
+    control: Phase85AppliedControl,
+    advanced: Option<(&AdvancedEffectorPack, Phase95AppliedControl)>,
     exact_attitude_substeps: bool,
 ) -> Result<AdvanceOutput, Phase8MissionError> {
     let phase = machine.snapshot.phase;
@@ -86,15 +115,23 @@ pub(super) fn advance_controlled(
             &mut status,
         )
     };
-    let mass = derive_mass_properties(
+    let mut mass = derive_mass_properties(
         machine.vehicle,
         machine.motor,
         remaining,
         machine.variation.mass_scale_ppm,
         &mut status,
     );
+    if let Some((pack, applied)) = advanced {
+        mass = add_rcs_propellant_mass(
+            mass,
+            pack,
+            applied.rcs_remaining_propellant_q21,
+            &mut status,
+        );
+    }
 
-    let (state, aero) = match phase {
+    let (state, aero, phase95_feedback) = match phase {
         HobbySpatialPhase::ConstrainedPowered => {
             let forces = evaluate_forces(
                 ForceInput {
@@ -133,7 +170,7 @@ pub(super) fn advance_controlled(
             )
             .map_err(|_| Phase8MissionError::Numeric)?;
             machine.rail = rail;
-            (state, forces.aero)
+            (state, forces.aero, Phase95PhysicalFeedback::ZERO)
         }
         HobbySpatialPhase::PoweredFlight | HobbySpatialPhase::Coast => {
             let input = ForceInput {
@@ -150,7 +187,12 @@ pub(super) fn advance_controlled(
             } else {
                 Phase85AppliedControl::NEUTRAL
             };
-            let forces = evaluate_forces_controlled(input, applied, &mut status)?;
+            let forces = if let Some((pack, mut advanced_control)) = advanced {
+                advanced_control.legacy = applied;
+                evaluate_forces_advanced(input, advanced_control, pack, &mut status)?
+            } else {
+                evaluate_forces_controlled(input, applied, &mut status)?
+            };
             let acceleration = acceleration_from_force(
                 forces.force_enu,
                 mass.mass,
@@ -192,7 +234,7 @@ pub(super) fn advance_controlled(
                     index += 1;
                 }
             }
-            (rotated, forces.aero)
+            (rotated, forces.aero, forces.phase95_feedback)
         }
         HobbySpatialPhase::DrogueRecovery | HobbySpatialPhase::MainRecovery => {
             let drag = recovery_force(
@@ -208,8 +250,30 @@ pub(super) fn advance_controlled(
                 machine.variation,
                 &mut status,
             );
-            let acceleration =
-                acceleration_from_force(drag, mass.mass, environment.gravity_q19, &mut status);
+            let mut recovery_force = drag;
+            if let Some((pack, applied)) = advanced {
+                if pack.set.has_rcs() {
+                    let rcs_body = crate::phase8_numeric::EnuForce::new(
+                        applied.rcs_force_body_q23[0] / 1_024,
+                        applied.rcs_force_body_q23[1] / 1_024,
+                        applied.rcs_force_body_q23[2] / 1_024,
+                    );
+                    recovery_force = recovery_force.checked_add(
+                        machine
+                            .snapshot
+                            .state
+                            .attitude
+                            .rotate(rcs_body, &mut status),
+                        &mut status,
+                    );
+                }
+            }
+            let acceleration = acceleration_from_force(
+                recovery_force,
+                mass.mass,
+                environment.gravity_q19,
+                &mut status,
+            );
             let mut recovered =
                 step_free_translation(machine.snapshot.state, acceleration, timestep)
                     .map_err(|_| Phase8MissionError::Numeric)?;
@@ -224,6 +288,17 @@ pub(super) fn advance_controlled(
                     ),
                     ..SpatialAeroState::ZERO
                 },
+                advanced.map_or(Phase95PhysicalFeedback::ZERO, |(_, applied)| {
+                    Phase95PhysicalFeedback {
+                        rcs_active_mask: applied.rcs_active_mask,
+                        rcs_force_body_q23: applied.rcs_force_body_q23,
+                        rcs_torque_body_q12: applied.rcs_torque_body_q12,
+                        rcs_remaining_propellant_q21: applied.rcs_remaining_propellant_q21,
+                        rcs_pressure_q8: applied.rcs_pressure_q8,
+                        rcs_thrust_scale_q30: applied.rcs_thrust_scale_q30,
+                        ..Phase95PhysicalFeedback::ZERO
+                    }
+                }),
             )
         }
         HobbySpatialPhase::Complete | HobbySpatialPhase::Failed => {
@@ -239,5 +314,6 @@ pub(super) fn advance_controlled(
         thrust_q13: thrust,
         aero,
         environment,
+        phase95_feedback,
     })
 }

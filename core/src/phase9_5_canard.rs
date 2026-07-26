@@ -9,6 +9,8 @@ use crate::phase9_5_contract::{AdvancedEffectorPack, MAX_CANARDS, MAX_CANARD_COE
 use crate::spatial_numeric::{cross_mixed_scaled, FixedVec3};
 
 pub const CANARD_MAX_DYNAMIC_PRESSURE_Q13: i32 = 20_000 << 13;
+/// Below 50 Pa the spatial model retires directional aerodynamics.
+pub const CANARD_MIN_DIRECTIONAL_PRESSURE_Q13: i32 = 50 << 13;
 const TWO_PI_Q28: i32 = 1_686_629_714;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -88,6 +90,7 @@ pub struct CanardEvaluationInput {
     pub mach_q24: i32,
     pub dynamic_pressure_q13: i32,
     pub vehicle_angle_of_attack_q28: i32,
+    pub air_velocity_body_q19: [i32; 3],
     pub cg_from_nose_q28: i32,
     pub deflection_turn16: [i16; MAX_CANARDS],
 }
@@ -162,9 +165,32 @@ fn evaluate_surface(
     let requested_turn =
         input.deflection_turn16[index].clamp(-installation.limit_turn16, installation.limit_turn16);
     let requested_angle = angle_q28(requested_turn, status);
-    if abs_i32(input.vehicle_angle_of_attack_q28).saturating_add(abs_i32(requested_angle))
-        > HOBBY_SPATIAL_MAX_AOA_Q28 as u32
-    {
+    let axial = input.air_velocity_body_q19[0];
+    if axial <= 0 {
+        return Err(CanardError::ModelEnvelopeExceeded);
+    }
+    let normal = installation.normal_q15;
+    let lateral_q19 = add(
+        multiply_scaled(
+            input.air_velocity_body_q19[1],
+            i32::from(normal[1]),
+            15,
+            status,
+        ),
+        multiply_scaled(
+            input.air_velocity_body_q19[2],
+            i32::from(normal[2]),
+            15,
+            status,
+        ),
+        status,
+    );
+    let ratio_q28 = divide_scaled(lateral_q19, axial, 28, status);
+    let ratio_squared_q28 = multiply_scaled(ratio_q28, ratio_q28, 28, status);
+    let ratio_cubed_q28 = multiply_scaled(ratio_squared_q28, ratio_q28, 28, status);
+    let local_vehicle_angle_q28 = subtract(ratio_q28, ratio_cubed_q28 / 3, status);
+    let local_incidence_q28 = add(local_vehicle_angle_q28, requested_angle, status);
+    if abs_i32(local_incidence_q28) > HOBBY_SPATIAL_MAX_AOA_Q28 as u32 {
         return Err(CanardError::ModelEnvelopeExceeded);
     }
     let chord_q28 = add(installation.root_q28, installation.tip_q28, status) / 2;
@@ -201,7 +227,6 @@ fn evaluate_surface(
         status,
     )
     .max(0);
-    let normal = installation.normal_q15;
     let force = FixedVec3::<13>::new(
         -induced_drag_q13,
         multiply_scaled(normal_q13, i32::from(normal[1]), 15, status),
@@ -240,6 +265,22 @@ pub fn evaluate_canards(
         || abs_i32(input.vehicle_angle_of_attack_q28) > HOBBY_SPATIAL_MAX_AOA_Q28 as u32
     {
         return Err(CanardError::ModelEnvelopeExceeded);
+    }
+    if input.dynamic_pressure_q13 < CANARD_MIN_DIRECTIONAL_PRESSURE_Q13 {
+        let mut surfaces = [CanardSurfaceResult::ZERO; MAX_CANARDS];
+        for (index, surface) in surfaces.iter_mut().enumerate() {
+            surface.effective_turn16 = input.deflection_turn16[index].clamp(
+                -pack.canards[index].limit_turn16,
+                pack.canards[index].limit_turn16,
+            );
+        }
+        return Ok(CanardEvaluation {
+            force_body: EnuForce::ZERO,
+            torque_body: BodyTorque::ZERO,
+            induced_drag_q13: 0,
+            load_limited_mask: 0,
+            surfaces,
+        });
     }
     let (control, drag, hinge) = sample_coefficients(pack, input.mach_q24, status);
     let mut surfaces = [CanardSurfaceResult::ZERO; MAX_CANARDS];
@@ -343,6 +384,7 @@ fn fixture_matches(pack: &AdvancedEffectorPack, fixture: &CanardFixture) -> bool
             mach_q24: 1 << 23,
             dynamic_pressure_q13: fixture.pressure_pa << 13,
             vehicle_angle_of_attack_q28: 0,
+            air_velocity_body_q19: [1 << 19, 0, 0],
             cg_from_nose_q28: 250_000_000,
             deflection_turn16: fixture.turns,
         },
@@ -408,6 +450,7 @@ mod tests {
         parse_effector_pack(include_bytes!("../../phase9_5/examples/firestorm-c9.kpe9")).unwrap()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn assert_vector(
         mut pack: AdvancedEffectorPack,
         turns: [i16; 4],
@@ -429,6 +472,7 @@ mod tests {
                 mach_q24: 1 << 23,
                 dynamic_pressure_q13: pressure_pa << 13,
                 vehicle_angle_of_attack_q28: 0,
+                air_velocity_body_q19: [1 << 19, 0, 0],
                 cg_from_nose_q28: 250_000_000,
                 deflection_turn16: turns,
             },
@@ -508,6 +552,7 @@ mod tests {
                 mach_q24: 1 << 23,
                 dynamic_pressure_q13: 2_000 << 13,
                 vehicle_angle_of_attack_q28: 0,
+                air_velocity_body_q19: [1 << 19, 0, 0],
                 cg_from_nose_q28: 250_000_000,
                 deflection_turn16: [0; 4],
             },
@@ -556,6 +601,7 @@ mod tests {
                 mach_q24: 1 << 23,
                 dynamic_pressure_q13: 2_000 << 13,
                 vehicle_angle_of_attack_q28: 0,
+                air_velocity_body_q19: [1 << 19, 0, 0],
                 cg_from_nose_q28: 250_000_000,
                 deflection_turn16: [910, -910, 0, 0],
             },
@@ -572,9 +618,11 @@ mod tests {
                 CanardEvaluationInput {
                     vehicle_angle_of_attack_q28: HOBBY_SPATIAL_MAX_AOA_Q28,
                     mach_q24: 0,
-                    dynamic_pressure_q13: 0,
+                    dynamic_pressure_q13: 50 << 13,
+                    // tan(15 degrees) in Q19 plus five degrees of surface deflection.
+                    air_velocity_body_q19: [1 << 19, 140_482, 140_482],
                     cg_from_nose_q28: 0,
-                    deflection_turn16: [1, 0, 0, 0]
+                    deflection_turn16: [910, 0, 0, 0]
                 },
                 &mut envelope_status
             ),
@@ -592,6 +640,7 @@ mod tests {
                 mach_q24: 1 << 23,
                 dynamic_pressure_q13: 20_000 << 13,
                 vehicle_angle_of_attack_q28: 0,
+                air_velocity_body_q19: [1 << 19, 0, 0],
                 cg_from_nose_q28: 250_000_000,
                 deflection_turn16: [1820; 4],
             },

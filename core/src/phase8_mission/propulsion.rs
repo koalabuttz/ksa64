@@ -3,6 +3,7 @@
 use crate::numeric::{add, divide_scaled, multiply_scaled, subtract, NumericStatus};
 use crate::phase8_numeric::{SpatialInertia, SpatialMass, SpatialMomentArm, SpatialTime};
 use crate::phase8_pack::{SpatialMotorPack, SpatialVehiclePack};
+use crate::phase9_5_contract::AdvancedEffectorPack;
 
 use super::SpatialMassProperties;
 
@@ -139,6 +140,60 @@ pub(super) fn derive_mass_properties(
             SpatialInertia::from_raw(transverse),
         ],
         propellant_remaining,
+    }
+}
+
+pub(super) fn add_rcs_propellant_mass(
+    base: SpatialMassProperties,
+    pack: &AdvancedEffectorPack,
+    remaining_q21: i32,
+    status: &mut NumericStatus,
+) -> SpatialMassProperties {
+    if !pack.set.has_rcs() || remaining_q21 <= 0 {
+        return base;
+    }
+    let remaining = remaining_q21.clamp(0, pack.propellant_wet_mass_q21);
+    let total = add(base.mass.raw(), remaining, status);
+    let base_first = multiply_scaled(base.mass.raw(), base.cg_from_nose.raw(), 21, status);
+    let tank_first = multiply_scaled(remaining, pack.tank_position_q28[0], 21, status);
+    let cg = divide_scaled(add(base_first, tank_first, status), total, 21, status);
+    let base_dx = subtract(base.cg_from_nose.raw(), cg, status);
+    let tank_dx = subtract(pack.tank_position_q28[0], cg, status);
+    let base_d2 = multiply_scaled(base_dx, base_dx, 28, status);
+    let tank_x2 = multiply_scaled(tank_dx, tank_dx, 28, status);
+    let tank_y2 = multiply_scaled(
+        pack.tank_position_q28[1],
+        pack.tank_position_q28[1],
+        28,
+        status,
+    );
+    let tank_z2 = multiply_scaled(
+        pack.tank_position_q28[2],
+        pack.tank_position_q28[2],
+        28,
+        status,
+    );
+    let base_parallel = multiply_scaled(base.mass.raw(), base_d2, 30, status);
+    let tank_axial = multiply_scaled(remaining, add(tank_y2, tank_z2, status), 30, status);
+    let tank_pitch = multiply_scaled(remaining, add(tank_x2, tank_z2, status), 30, status);
+    let tank_yaw = multiply_scaled(remaining, add(tank_x2, tank_y2, status), 30, status);
+    SpatialMassProperties {
+        mass: SpatialMass::from_raw(total),
+        cg_from_nose: SpatialMomentArm::from_raw(cg),
+        inertia: [
+            SpatialInertia::from_raw(add(base.inertia[0].raw(), tank_axial, status)),
+            SpatialInertia::from_raw(add(
+                add(base.inertia[1].raw(), base_parallel, status),
+                tank_pitch,
+                status,
+            )),
+            SpatialInertia::from_raw(add(
+                add(base.inertia[2].raw(), base_parallel, status),
+                tank_yaw,
+                status,
+            )),
+        ],
+        propellant_remaining: base.propellant_remaining,
     }
 }
 

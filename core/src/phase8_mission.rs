@@ -36,6 +36,56 @@ impl Phase85AppliedControl {
     };
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase95AppliedControl {
+    pub legacy: Phase85AppliedControl,
+    pub canard_turn16: [i16; 4],
+    pub rcs_force_body_q23: [i32; 3],
+    pub rcs_torque_body_q12: [i32; 3],
+    pub rcs_remaining_propellant_q21: i32,
+    pub rcs_pressure_q8: i32,
+    pub rcs_thrust_scale_q30: i32,
+    pub rcs_active_mask: u16,
+}
+impl Phase95AppliedControl {
+    pub const NEUTRAL: Self = Self {
+        legacy: Phase85AppliedControl::NEUTRAL,
+        canard_turn16: [0; 4],
+        rcs_force_body_q23: [0; 3],
+        rcs_torque_body_q12: [0; 3],
+        rcs_remaining_propellant_q21: 0,
+        rcs_pressure_q8: 0,
+        rcs_thrust_scale_q30: 0,
+        rcs_active_mask: 0,
+    };
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Phase95PhysicalFeedback {
+    pub effective_canard_turn16: [i16; 4],
+    pub canard_hinge_q24: [i32; 4],
+    pub canard_load_limited_mask: u8,
+    pub rcs_active_mask: u16,
+    pub rcs_force_body_q23: [i32; 3],
+    pub rcs_torque_body_q12: [i32; 3],
+    pub rcs_remaining_propellant_q21: i32,
+    pub rcs_pressure_q8: i32,
+    pub rcs_thrust_scale_q30: i32,
+}
+impl Phase95PhysicalFeedback {
+    pub const ZERO: Self = Self {
+        effective_canard_turn16: [0; 4],
+        canard_hinge_q24: [0; 4],
+        canard_load_limited_mask: 0,
+        rcs_active_mask: 0,
+        rcs_force_body_q23: [0; 3],
+        rcs_torque_body_q12: [0; 3],
+        rcs_remaining_propellant_q21: 0,
+        rcs_pressure_q8: 0,
+        rcs_thrust_scale_q30: 0,
+    };
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Phase85DeploymentCommand {
     pub drogue: bool,

@@ -1,5 +1,5 @@
 // Generated independently by phase9_5/reference/generate_allocator_vectors.py. Do not edit.
-pub const ALLOCATOR_SIGNATURE: u32 = 0xc262ed33;
+pub const ALLOCATOR_SIGNATURE: u32 = 0x50534777;
 pub const GIMBAL_GIMBAL: [i16; 2] = [444, -222];
 pub const GIMBAL_CANARDS: [i16; 4] = [0, 0, 0, 0];
 pub const GIMBAL_PULSES: [u8; 12] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -14,13 +14,13 @@ pub const CANARD_RESIDUAL: [i32; 3] = [0, 0, 0];
 pub const CANARD_SATURATION: u16 = 0;
 pub const RCS_GIMBAL: [i16; 2] = [0, 0];
 pub const RCS_CANARDS: [i16; 4] = [0, 0, 0, 0];
-pub const RCS_PULSES: [u8; 12] = [4, 4, 0, 0, 4, 4, 0, 0, 0, 0, 4, 4];
-pub const RCS_ACHIEVED: [i32; 3] = [1024, 1024, -1024];
-pub const RCS_RESIDUAL: [i32; 3] = [-24, -24, 24];
+pub const RCS_PULSES: [u8; 12] = [3, 3, 0, 0, 3, 3, 0, 0, 0, 0, 3, 3];
+pub const RCS_ACHIEVED: [i32; 3] = [768, 768, -768];
+pub const RCS_RESIDUAL: [i32; 3] = [232, 232, -232];
 pub const RCS_SATURATION: u16 = 2;
 pub const MIXED_GIMBAL: [i16; 2] = [910, -910];
 pub const MIXED_CANARDS: [i16; 4] = [1820, -910, 910, -1820];
-pub const MIXED_PULSES: [u8; 12] = [8, 8, 0, 0, 8, 8, 0, 0, 0, 0, 8, 8];
-pub const MIXED_ACHIEVED: [i32; 3] = [2867, 5940, -5940];
-pub const MIXED_RESIDUAL: [i32; 3] = [1133, 1060, -560];
-pub const MIXED_SATURATION: u16 = 2;
+pub const MIXED_PULSES: [u8; 12] = [7, 7, 0, 0, 7, 7, 0, 0, 0, 0, 7, 7];
+pub const MIXED_ACHIEVED: [i32; 3] = [2611, 5684, -5684];
+pub const MIXED_RESIDUAL: [i32; 3] = [1389, 1316, -816];
+pub const MIXED_SATURATION: u16 = 3;

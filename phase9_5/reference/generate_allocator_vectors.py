@@ -27,7 +27,7 @@ def pred_rcs(actual,auth,mix):
   num=sum(actual[j]*mix[a][j]for j in range(12));den=sum(x for x in mix[a]if x>0);r=0 if not den else max(-32768,min(32767,trunc(num,den)));out.append(scale(auth[a],r))
  return out
 def rcs(res,auth,mix):
- alloc=[max(-auth[a],min(auth[a],res[a]))for a in range(3)];norm=synth(alloc,auth,mix);pulse=[max(0,min(8,(max(0,v)*8+16384)>>15))for v in norm];actual=[min(32767,q*32768//8)for q in pulse];got=pred_rcs(actual,auth,mix);return got,pulse,int(got!=alloc)
+ alloc=[max(-auth[a],min(auth[a],res[a]))for a in range(3)];norm=synth(alloc,auth,mix);pulse=[max(0,min(8,(max(0,v)*8)>>15))for v in norm];actual=[min(32767,q*32768//8)for q in pulse];got=pred_rcs(actual,auth,mix);return got,pulse,int(got!=alloc)
 def run(demand,groups):
  priorities,aa,gm,cm,rm=parse();res=list(demand);got=[0,0,0];gimbal=[0,0];canards=[0]*4;pulse=[0]*12;sat=0
  for group in priorities:

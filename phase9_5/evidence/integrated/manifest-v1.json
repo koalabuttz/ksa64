@@ -1,0 +1,69 @@
+{
+  "accepted_seed": "0x4b534195",
+  "case_count": 8,
+  "contract": "PHASE95_CONTRACT_ID 0x09500001",
+  "crosswind_profile": "0 to 5 m/s east over the first 50 m; 5 m/s above",
+  "files": {
+    "firestorm-c9-crosswind.kas9": {
+      "bytes": 512,
+      "sha256": "db8af82991670905feda70cf943bcf767af50fae107538a6c929716530cdbb47"
+    },
+    "firestorm-c9-crosswind.kat9": {
+      "bytes": 866048,
+      "sha256": "741eea2d0e1dbccfd94ab5eec7cc619ea0aee7ad6f50cb92e518994de7b0c7a4"
+    },
+    "firestorm-c9-nominal.kas9": {
+      "bytes": 512,
+      "sha256": "925bce9447becdce1f305d92faf0bebe2a83b36bca2ca3a0d189e4b2e6500dce"
+    },
+    "firestorm-c9-nominal.kat9": {
+      "bytes": 867008,
+      "sha256": "390b69d9240725cce33b68eafcfd53f1a304320c5b9d88c353dc3a55dabb10e8"
+    },
+    "firestorm-m9-airdata-loss.kas9": {
+      "bytes": 512,
+      "sha256": "99e4a1ede47f9f953bd91f473f8a4ce02491bf8f27a9c46966d7f126eb5163a6"
+    },
+    "firestorm-m9-canard-hardover.kas9": {
+      "bytes": 512,
+      "sha256": "b70959b9aa15fe24ba51acc530b9a7babe73c62dbb33c8968966ca301cb0f60c"
+    },
+    "firestorm-m9-nominal.kas9": {
+      "bytes": 512,
+      "sha256": "1fe4586712eb731d23fca40a63343f5a1686e76ebff2efa60cb7e1f1956b7ea6"
+    },
+    "firestorm-m9-nominal.kat9": {
+      "bytes": 738048,
+      "sha256": "5e38a9566bb0fc935845ead91ca63c45e1414fb61caba57817b4ae17ee81fcae"
+    },
+    "firestorm-m9-stuck-open.kas9": {
+      "bytes": 512,
+      "sha256": "98e9db906446fe15a2637a5ec51f6101381c318b2239d43b76aa107129e00b1c"
+    },
+    "firestorm-r9-disturbance.kas9": {
+      "bytes": 512,
+      "sha256": "bdd7a0a18fa68ffc621fb2d19b6aeedd32ff11c572be9462baf4e4d8e46905f3"
+    },
+    "firestorm-r9-disturbance.kat9": {
+      "bytes": 774848,
+      "sha256": "6e3cbc09f5e4c2389fbbf2ecef2b59f81824833ef9bba22572f6ddc67531f1c4"
+    },
+    "firestorm-r9-nominal.kas9": {
+      "bytes": 512,
+      "sha256": "dd9ef5aec13f081acffdb6fb9f0c5b6c1823bee20b3a6c9822665aceacf4b724"
+    },
+    "firestorm-r9-nominal.kat9": {
+      "bytes": 774848,
+      "sha256": "536ffb506a23e5857791343d756f32f1adc50a57fde2e155c333173bfc177cd3"
+    },
+    "float64-integrated-v1.json": {
+      "bytes": 4898,
+      "sha256": "8c4d4478c97f38b211e8fa432c2bb102b03205b45e5d86dbebdebad47192fe0e"
+    },
+    "integrated-cases-v1.json": {
+      "bytes": 6395,
+      "sha256": "6ea41943b7a38258af1b52820dfe6b81b541bafcfecf5fc7e54825b3b7f866bd"
+    }
+  },
+  "schema": "ksa64.phase9_5-integrated-manifest-v1"
+}

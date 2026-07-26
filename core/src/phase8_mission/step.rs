@@ -7,16 +7,57 @@ use crate::phase8_pack::{
     SpatialMissionPack, SpatialMotorPack, SpatialVehiclePack, WindProfilePack,
 };
 
-use super::advance::{advance, advance_controlled};
+use super::advance::{advance, advance_advanced, advance_controlled};
 use super::machine::Phase8MissionMachine;
 use super::{
     magnitude3_i32, phase8_snapshot_checksum, HobbySpatialPhase, Phase85AppliedControl,
     Phase85DeploymentCommand, Phase8Milestone, Phase8MissionError, Phase8MissionResult,
-    Phase8MissionSnapshot, SpatialMissionVariation, EVENT_APOGEE, EVENT_BURNOUT, EVENT_DROGUE,
-    EVENT_LANDING, EVENT_MAIN, EVENT_RAIL_EXIT,
+    Phase8MissionSnapshot, Phase95AppliedControl, Phase95PhysicalFeedback, SpatialMissionVariation,
+    EVENT_APOGEE, EVENT_BURNOUT, EVENT_DROGUE, EVENT_LANDING, EVENT_MAIN, EVENT_RAIL_EXIT,
 };
 
 impl Phase8MissionMachine<'_> {
+    /// Inject a separately identified Phase 9.5 angular-rate disturbance at an
+    /// exact avionics release. Frozen Phase 8/8.5 executors never call this.
+    pub fn inject_phase95_angular_rate(
+        &mut self,
+        delta_q24: [i32; 3],
+    ) -> Result<(), Phase8MissionError> {
+        if self.is_complete()
+            || matches!(
+                self.snapshot.phase,
+                HobbySpatialPhase::DrogueRecovery
+                    | HobbySpatialPhase::MainRecovery
+                    | HobbySpatialPhase::Complete
+                    | HobbySpatialPhase::Failed
+            )
+        {
+            return Err(Phase8MissionError::Configuration);
+        }
+        self.snapshot.state.angular_rate = BodyAngularRate::new(
+            self.snapshot
+                .state
+                .angular_rate
+                .x()
+                .checked_add(delta_q24[0])
+                .ok_or(Phase8MissionError::Numeric)?,
+            self.snapshot
+                .state
+                .angular_rate
+                .y()
+                .checked_add(delta_q24[1])
+                .ok_or(Phase8MissionError::Numeric)?,
+            self.snapshot
+                .state
+                .angular_rate
+                .z()
+                .checked_add(delta_q24[2])
+                .ok_or(Phase8MissionError::Numeric)?,
+        );
+        self.checksum = phase8_snapshot_checksum(self.checksum ^ 0x095d_1570, self.snapshot);
+        Ok(())
+    }
+
     pub fn step(&mut self) -> Result<Phase8MissionSnapshot, Phase8MissionError> {
         if self.is_complete() {
             return Err(Phase8MissionError::Complete);
@@ -167,6 +208,140 @@ impl Phase8MissionMachine<'_> {
                 return Err(self.fail(EvaluationOutcome::NumericFault, Phase8MissionError::Numeric))
             }
         };
+        let mut successor = advanced.state;
+        let mut events = 0u16;
+        let mut next_phase = phase;
+        if phase == HobbySpatialPhase::ConstrainedPowered
+            && self.rail.distance.raw() >= self.rail_exit_distance.raw()
+        {
+            next_phase = HobbySpatialPhase::PoweredFlight;
+            events |= EVENT_RAIL_EXIT;
+            self.rail_exit = Phase8Milestone::from_state(successor);
+        }
+        if matches!(
+            phase,
+            HobbySpatialPhase::ConstrainedPowered | HobbySpatialPhase::PoweredFlight
+        ) && successor.time.raw() >= self.motor.burn_time.raw()
+        {
+            next_phase = HobbySpatialPhase::Coast;
+            events |= EVENT_BURNOUT;
+            self.burnout = Phase8Milestone::from_state(successor);
+        }
+        if phase == HobbySpatialPhase::Coast
+            && self.previous_vertical_velocity >= 0
+            && successor.velocity.z() < 0
+        {
+            events |= EVENT_APOGEE;
+            self.apogee = Phase8Milestone::from_state(successor);
+        }
+        if phase == HobbySpatialPhase::Coast
+            && deployment.drogue
+            && self.event_history & EVENT_BURNOUT != 0
+        {
+            next_phase = HobbySpatialPhase::DrogueRecovery;
+            events |= EVENT_DROGUE;
+            self.drogue = Phase8Milestone::from_state(successor);
+            self.deployment_started_raw = successor.time.raw();
+            successor.angular_rate = BodyAngularRate::ZERO;
+        }
+        if phase == HobbySpatialPhase::DrogueRecovery && deployment.main {
+            next_phase = HobbySpatialPhase::MainRecovery;
+            events |= EVENT_MAIN;
+            self.main = Phase8Milestone::from_state(successor);
+            self.deployment_started_raw = successor.time.raw();
+        }
+        if matches!(
+            phase,
+            HobbySpatialPhase::DrogueRecovery | HobbySpatialPhase::MainRecovery
+        ) && successor.position.z() <= self.mission.launch_altitude.raw()
+            && successor.velocity.z() < 0
+        {
+            successor.position = EnuPosition::new(
+                successor.position.x(),
+                successor.position.y(),
+                self.mission.launch_altitude.raw(),
+            );
+            next_phase = HobbySpatialPhase::Complete;
+            events |= EVENT_LANDING;
+            self.landing = Phase8Milestone::from_state(successor);
+            self.terminal_outcome = Some(EvaluationOutcome::GroundContact);
+        }
+        if successor.time.raw() >= self.mission.max_mission_time.raw()
+            && next_phase != HobbySpatialPhase::Complete
+        {
+            next_phase = HobbySpatialPhase::Failed;
+            self.terminal_outcome = Some(EvaluationOutcome::RecoveryIncomplete);
+        }
+        self.previous_vertical_velocity = successor.velocity.z();
+        self.event_history |= events;
+        self.steps = self.steps.saturating_add(1);
+        self.snapshot = Phase8MissionSnapshot {
+            state: successor,
+            phase: next_phase,
+            events,
+            mass: advanced.mass,
+            thrust_q13: advanced.thrust_q13,
+            aero: advanced.aero,
+            wind_q22: [
+                advanced.environment.wind.total.x(),
+                advanced.environment.wind.total.y(),
+                advanced.environment.wind.total.z(),
+            ],
+        };
+        self.update_extrema(advanced.environment);
+        if events & EVENT_RAIL_EXIT != 0 {
+            self.rail_exit_static_margin = self.snapshot.aero.static_margin_q24;
+        }
+        if events & EVENT_BURNOUT != 0 {
+            self.burnout_static_margin = self.snapshot.aero.static_margin_q24;
+        }
+        self.checksum = phase8_snapshot_checksum(self.checksum, self.snapshot);
+        Ok(self.snapshot)
+    }
+
+    pub fn step_advanced(
+        &mut self,
+        timestep: crate::phase8_numeric::SpatialTime,
+        control: Phase95AppliedControl,
+        effector_pack: &crate::phase9_5_contract::AdvancedEffectorPack,
+        deployment: Phase85DeploymentCommand,
+        physical_feedback: &mut Phase95PhysicalFeedback,
+    ) -> Result<Phase8MissionSnapshot, Phase8MissionError> {
+        if self.is_complete() {
+            return Err(Phase8MissionError::Complete);
+        }
+        let maximum = self.timestep()?;
+        if timestep.raw() <= 0 || timestep.raw() > maximum.raw() {
+            return Err(Phase8MissionError::Configuration);
+        }
+        if self
+            .snapshot
+            .state
+            .time
+            .raw()
+            .saturating_add(timestep.raw())
+            > self.mission.max_mission_time.raw()
+        {
+            return Err(Phase8MissionError::Configuration);
+        }
+        let phase = self.snapshot.phase;
+        let advanced = match advance_advanced(self, timestep, control, effector_pack) {
+            Ok(value) => value,
+            Err(Phase8MissionError::ModelEnvelopeExceeded) => {
+                let outcome = if self.event_history & EVENT_APOGEE != 0
+                    && self.event_history & EVENT_DROGUE == 0
+                {
+                    EvaluationOutcome::RecoveryIncomplete
+                } else {
+                    EvaluationOutcome::ModelEnvelopeExceeded
+                };
+                return Err(self.fail(outcome, Phase8MissionError::ModelEnvelopeExceeded));
+            }
+            Err(_) => {
+                return Err(self.fail(EvaluationOutcome::NumericFault, Phase8MissionError::Numeric))
+            }
+        };
+        *physical_feedback = advanced.phase95_feedback;
         let mut successor = advanced.state;
         let mut events = 0u16;
         let mut next_phase = phase;

@@ -9,12 +9,15 @@ use crate::phase8_aero::{
 use crate::phase8_numeric::{BodyTorque, EnuForce, EnuVelocity};
 use crate::phase8_pack::{SpatialMissionPack, SpatialVehiclePack};
 use crate::phase8_world::{HobbySpatialEnvironment, HobbySpatialState};
+use crate::phase9_5_canard::{evaluate_canards, CanardError, CanardEvaluationInput};
+use crate::phase9_5_contract::AdvancedEffectorPack;
 use crate::spatial_numeric::FixedVec3;
 
 use super::propulsion::scale_ppm;
 use super::{
-    magnitude3_i32, HobbySpatialPhase, Phase85AppliedControl, Phase8MissionError, SpatialAeroState,
-    SpatialMassProperties, SpatialMissionVariation,
+    magnitude3_i32, HobbySpatialPhase, Phase85AppliedControl, Phase8MissionError,
+    Phase95AppliedControl, Phase95PhysicalFeedback, SpatialAeroState, SpatialMassProperties,
+    SpatialMissionVariation,
 };
 
 /// Below this pressure the air-relative direction becomes numerically singular
@@ -27,6 +30,7 @@ pub(super) struct ForceMoment {
     pub force_enu: EnuForce,
     pub torque_body: BodyTorque,
     pub aero: SpatialAeroState,
+    pub phase95_feedback: Phase95PhysicalFeedback,
 }
 #[derive(Clone, Copy, Debug)]
 pub(super) struct ForceInput<'a> {
@@ -270,7 +274,86 @@ pub(super) fn evaluate_forces_controlled(
             normal_force_q13: magnitude3_i32(normal_body, status),
             static_margin_q24,
         },
+        phase95_feedback: Phase95PhysicalFeedback::ZERO,
     })
+}
+
+pub(super) fn evaluate_forces_advanced(
+    input: ForceInput<'_>,
+    control: Phase95AppliedControl,
+    pack: &AdvancedEffectorPack,
+    status: &mut NumericStatus,
+) -> Result<ForceMoment, Phase8MissionError> {
+    if !pack.is_valid() {
+        return Err(Phase8MissionError::Configuration);
+    }
+    let state = input.state;
+    let mass = input.mass;
+    let mut result = evaluate_forces_controlled(input, control.legacy, status)?;
+    let mut feedback = Phase95PhysicalFeedback {
+        rcs_active_mask: control.rcs_active_mask,
+        rcs_force_body_q23: control.rcs_force_body_q23,
+        rcs_torque_body_q12: control.rcs_torque_body_q12,
+        rcs_remaining_propellant_q21: control.rcs_remaining_propellant_q21,
+        rcs_pressure_q8: control.rcs_pressure_q8,
+        rcs_thrust_scale_q30: control.rcs_thrust_scale_q30,
+        ..Phase95PhysicalFeedback::ZERO
+    };
+    if pack.set.has_canards() {
+        let canards = evaluate_canards(
+            pack,
+            CanardEvaluationInput {
+                mach_q24: result.aero.mach_q24,
+                dynamic_pressure_q13: result.aero.dynamic_pressure_q13,
+                vehicle_angle_of_attack_q28: result.aero.angle_of_attack_q28,
+                air_velocity_body_q19: [
+                    input.environment.air_velocity_body.x(),
+                    input.environment.air_velocity_body.y(),
+                    input.environment.air_velocity_body.z(),
+                ],
+                cg_from_nose_q28: mass.cg_from_nose.raw(),
+                deflection_turn16: control.canard_turn16,
+            },
+            status,
+        )
+        .map_err(|error| match error {
+            CanardError::ModelEnvelopeExceeded => Phase8MissionError::ModelEnvelopeExceeded,
+            CanardError::InvalidPack => Phase8MissionError::Configuration,
+            CanardError::Numeric => Phase8MissionError::Numeric,
+        })?;
+        result.force_enu = result
+            .force_enu
+            .checked_add(state.attitude.rotate(canards.force_body, status), status);
+        result.torque_body = result.torque_body.checked_add(canards.torque_body, status);
+        result.aero.axial_drag_q13 =
+            add(result.aero.axial_drag_q13, canards.induced_drag_q13, status);
+        feedback.effective_canard_turn16 = canards.surfaces.map(|surface| surface.effective_turn16);
+        feedback.canard_hinge_q24 = canards.surfaces.map(|surface| surface.hinge_moment_q24);
+        feedback.canard_load_limited_mask = canards.load_limited_mask;
+    }
+    if pack.set.has_rcs() {
+        let rcs_body = EnuForce::new(
+            control.rcs_force_body_q23[0] / 1024,
+            control.rcs_force_body_q23[1] / 1024,
+            control.rcs_force_body_q23[2] / 1024,
+        );
+        result.force_enu = result
+            .force_enu
+            .checked_add(state.attitude.rotate(rcs_body, status), status);
+        result.torque_body = result.torque_body.checked_add(
+            BodyTorque::new(
+                control.rcs_torque_body_q12[0],
+                control.rcs_torque_body_q12[1],
+                control.rcs_torque_body_q12[2],
+            ),
+            status,
+        );
+    }
+    if !status.is_clear() {
+        return Err(Phase8MissionError::Numeric);
+    }
+    result.phase95_feedback = feedback;
+    Ok(result)
 }
 
 pub(super) fn recovery_force(

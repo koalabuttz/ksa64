@@ -100,12 +100,14 @@ pub enum AllocatorError {
 pub struct PriorityResidualAllocator {
     config: AdvancedAllocatorConfig,
     canard_enabled: bool,
+    rcs_fraction_q15: [i32; 12],
 }
 impl PriorityResidualAllocator {
     pub fn new(config: AdvancedAllocatorConfig) -> Option<Self> {
         config.is_valid().then_some(Self {
             config,
             canard_enabled: false,
+            rcs_fraction_q15: [0; 12],
         })
     }
     pub const fn config(&self) -> &AdvancedAllocatorConfig {
@@ -125,6 +127,7 @@ impl PriorityResidualAllocator {
             ..AllocationResult::ZERO
         };
         if feedback.safe || feedback.on_rail || feedback.recovery {
+            self.rcs_fraction_q15 = [0; 12];
             return Ok(out);
         }
         let canard_weight = self.canard_weight(feedback);
@@ -184,6 +187,7 @@ impl PriorityResidualAllocator {
                         &self.config.rcs_mix_q15,
                         self.config.rcs_max_quanta,
                         feedback.rcs_healthy_mask,
+                        &mut self.rcs_fraction_q15,
                     );
                     out.rcs_pulse_quanta = c;
                     apply_group(&mut out, a, s);
@@ -342,6 +346,7 @@ fn allocate_rcs(
     mix: &[[i16; 12]; 3],
     maximum: [u8; 12],
     healthy_mask: u16,
+    fractional_q15: &mut [i32; 12],
 ) -> ([i32; 3], [u8; 12], u16) {
     let allocated = [
         residual[0].clamp(-authority[0], authority[0]),
@@ -360,8 +365,10 @@ fn allocate_rcs(
             continue;
         }
         let positive = normalized[index].max(0);
-        let q = ((positive * i32::from(maximum[index]) + 16384) >> 15)
-            .clamp(0, i32::from(maximum[index])) as u8;
+        let desired_q15 = positive.saturating_mul(i32::from(maximum[index]));
+        let accumulated = fractional_q15[index].saturating_add(desired_q15);
+        let q = (accumulated >> 15).clamp(0, i32::from(maximum[index])) as u8;
+        fractional_q15[index] = accumulated.saturating_sub(i32::from(q) << 15);
         pulses[index] = q;
         actual[index] = (i32::from(q) * 32768 / i32::from(maximum[index])).min(32767)
     }
@@ -696,6 +703,21 @@ mod tests {
         assert_ne!(r.canards, [0; 4]);
         assert!(r.rcs_pulse_quanta.iter().any(|q| *q != 0));
     }
+    #[test]
+    fn mixed_authority_keeps_in_range_residual_below_ten_percent() {
+        let mut a = PriorityResidualAllocator::new(config()).unwrap();
+        let requested = [2_000, 4_000, -4_000];
+        let result = a.allocate(requested, feedback()).unwrap();
+        for axis in 0..3 {
+            assert!(
+                result.residual_q12[axis].unsigned_abs() * 10 <= requested[axis].unsigned_abs(),
+                "axis {axis}: requested={} residual={}",
+                requested[axis],
+                result.residual_q12[axis]
+            );
+        }
+    }
+
     #[test]
     fn airdata_and_reserve_handoffs_are_deterministic() {
         let mut a = PriorityResidualAllocator::new(config()).unwrap();

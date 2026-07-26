@@ -3,6 +3,8 @@
 // Explicit indices mirror frozen wire offsets and keep MOS code generation auditable.
 #![allow(clippy::needless_range_loop)]
 
+use crate::evaluation::{EvaluationSummary, ModelProfileId};
+use crate::phase8_result::{encode_ksr8, parse_ksr8, spatial_evaluation_identity};
 use crate::phase9_5_numeric::RCS_PULSE_QUANTUM_Q18;
 use crate::scenario::crc32_ieee;
 
@@ -13,6 +15,8 @@ pub const KPA9_LENGTH: usize = 512;
 pub const KLE9_LENGTH: usize = 256;
 pub const KAS9_LENGTH: usize = 512;
 pub const KSC9_LENGTH: usize = 512;
+pub const KAT9_HEADER_LENGTH: usize = 128;
+pub const KAT9_FRAME_LENGTH: usize = 320;
 pub const MAX_CANARDS: usize = 4;
 pub const MAX_RCS_JETS: usize = 12;
 pub const MAX_CANARD_COEFFICIENT_KNOTS: usize = 8;
@@ -835,9 +839,175 @@ pub fn parse_advanced_evaluation_request(
     Ok(v)
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdvancedEffectorEvaluationSummary {
+    pub physical: EvaluationSummary,
+    pub physical_summary_identity: u32,
+    pub avionics_identity: u32,
+    pub legacy_gimbal_identity: u32,
+    pub effector_identity: u32,
+    pub allocator_identity: u32,
+    pub uncertainty_identity: u32,
+    pub evaluator_identity: u32,
+    pub releases: u32,
+    pub max_navigation_error_q13: i32,
+    pub max_attitude_error_turn16: i16,
+    pub alarms: u16,
+    pub saturation_count: u32,
+    pub pulse_count: u32,
+    pub valve_edge_count: u32,
+    pub depletion_count: u16,
+    pub authority_handoffs: u16,
+    pub air_fallback_epochs: u16,
+    pub deployment_feedback: u16,
+    pub max_hinge_q24: [i32; 4],
+    pub rcs_initial_propellant_q21: i32,
+    pub rcs_final_propellant_q21: i32,
+    pub checksum_chains: [u32; 8],
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Kas9Record {
+    pub identity: u32,
+    pub summary: AdvancedEffectorEvaluationSummary,
+}
+
+pub fn write_advanced_effector_summary(
+    value: AdvancedEffectorEvaluationSummary,
+    output: &mut [u8],
+) -> Result<(), Phase95ContractError> {
+    if value.physical.profile != ModelProfileId::LocalEnu6DofV1
+        || value.physical_summary_identity != spatial_evaluation_identity(value.physical)
+        || value.avionics_identity == 0
+        || value.effector_identity == 0
+        || value.allocator_identity == 0
+        || value.evaluator_identity == 0
+        || value.rcs_final_propellant_q21 < 0
+        || value.rcs_final_propellant_q21 > value.rcs_initial_propellant_q21
+    {
+        return Err(Phase95ContractError::Identity);
+    }
+    let mut identity = value.physical_summary_identity
+        ^ value.effector_identity.rotate_left(7)
+        ^ value.allocator_identity.rotate_left(13);
+    for word in value.checksum_chains {
+        identity = identity.rotate_left(5) ^ word;
+    }
+    header(output, Kind::Summary, identity.max(1))?;
+    output[32] = value.physical.profile as u8;
+    output[33] = value.physical.outcome as u8;
+    output[34] = value.physical.numeric_faults;
+    p32(output, 36, value.physical_summary_identity);
+    p32(output, 40, value.avionics_identity);
+    p32(output, 44, value.legacy_gimbal_identity);
+    p32(output, 48, value.effector_identity);
+    p32(output, 52, value.allocator_identity);
+    p32(output, 56, value.uncertainty_identity);
+    p32(output, 60, value.evaluator_identity);
+    p32(output, 64, value.physical.steps);
+    p32(output, 68, value.physical.events);
+    p32(output, 72, value.releases);
+    pi32(output, 76, value.max_navigation_error_q13);
+    pi16(output, 80, value.max_attitude_error_turn16);
+    p16(output, 82, value.alarms);
+    p32(output, 84, value.saturation_count);
+    p32(output, 88, value.pulse_count);
+    p32(output, 92, value.valve_edge_count);
+    p16(output, 96, value.depletion_count);
+    p16(output, 98, value.authority_handoffs);
+    p16(output, 100, value.air_fallback_epochs);
+    p16(output, 102, value.deployment_feedback);
+    for i in 0..4 {
+        pi32(output, 104 + i * 4, value.max_hinge_q24[i]);
+    }
+    pi32(output, 120, value.rcs_initial_propellant_q21);
+    pi32(output, 124, value.rcs_final_propellant_q21);
+    pi32(
+        output,
+        128,
+        value
+            .rcs_initial_propellant_q21
+            .saturating_sub(value.rcs_final_propellant_q21),
+    );
+    for i in 0..8 {
+        p32(output, 160 + i * 4, value.checksum_chains[i]);
+    }
+    let mut physical = [0u8; crate::phase8_format::KSR8_LENGTH];
+    encode_ksr8(value.physical, &mut physical).map_err(|_| Phase95ContractError::Range)?;
+    output[224..480].copy_from_slice(&physical);
+    seal(output);
+    Ok(())
+}
+
+pub fn parse_advanced_effector_summary(input: &[u8]) -> Result<Kas9Record, Phase95ContractError> {
+    let identity = validate(input, Kind::Summary)?;
+    zero(input, 35, 36)?;
+    zero(input, 132, 160)?;
+    zero(input, 192, 224)?;
+    zero(input, 480, KAS9_LENGTH - 4)?;
+    if input[32] != ModelProfileId::LocalEnu6DofV1 as u8 {
+        return Err(Phase95ContractError::Unsupported);
+    }
+    let physical = parse_ksr8(&input[224..480])
+        .map_err(|_| Phase95ContractError::Range)?
+        .summary;
+    if physical.outcome as u8 != input[33]
+        || physical.numeric_faults != input[34]
+        || physical.steps != g32(input, 64)
+        || physical.events != g32(input, 68)
+        || spatial_evaluation_identity(physical) != g32(input, 36)
+    {
+        return Err(Phase95ContractError::Identity);
+    }
+    let mut hinges = [0; 4];
+    for i in 0..4 {
+        hinges[i] = gi32(input, 104 + i * 4);
+    }
+    let mut checks = [0; 8];
+    for i in 0..8 {
+        checks[i] = g32(input, 160 + i * 4);
+    }
+    let initial = gi32(input, 120);
+    let final_prop = gi32(input, 124);
+    if initial < 0
+        || final_prop < 0
+        || final_prop > initial
+        || gi32(input, 128) != initial - final_prop
+    {
+        return Err(Phase95ContractError::Range);
+    }
+    let summary = AdvancedEffectorEvaluationSummary {
+        physical,
+        physical_summary_identity: g32(input, 36),
+        avionics_identity: g32(input, 40),
+        legacy_gimbal_identity: g32(input, 44),
+        effector_identity: g32(input, 48),
+        allocator_identity: g32(input, 52),
+        uncertainty_identity: g32(input, 56),
+        evaluator_identity: g32(input, 60),
+        releases: g32(input, 72),
+        max_navigation_error_q13: gi32(input, 76),
+        max_attitude_error_turn16: gi16(input, 80),
+        alarms: g16(input, 82),
+        saturation_count: g32(input, 84),
+        pulse_count: g32(input, 88),
+        valve_edge_count: g32(input, 92),
+        depletion_count: g16(input, 96),
+        authority_handoffs: g16(input, 98),
+        air_fallback_epochs: g16(input, 100),
+        deployment_feedback: g16(input, 102),
+        max_hinge_q24: hinges,
+        rcs_initial_propellant_q21: initial,
+        rcs_final_propellant_q21: final_prop,
+        checksum_chains: checks,
+    };
+    Ok(Kas9Record { identity, summary })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::evaluation::EvaluationOutcome;
     #[allow(dead_code)]
     mod independent {
         include!("../../phase9_5/generated/contract_vectors_v1.rs");
@@ -990,6 +1160,52 @@ mod tests {
         seal(&mut rb);
         assert_eq!(
             parse_advanced_evaluation_request(&rb),
+            Err(Phase95ContractError::Reserved)
+        );
+    }
+    #[test]
+    fn kas9_round_trip_is_strict() {
+        let mut physical = EvaluationSummary::empty(ModelProfileId::LocalEnu6DofV1);
+        physical.outcome = EvaluationOutcome::GroundContact;
+        physical.steps = 99;
+        physical.events = 63;
+        physical.identities = [1, 2, 3, 4, 5, 6];
+        physical.source_checksums = [7, 8, 9, 10, 11];
+        let value = AdvancedEffectorEvaluationSummary {
+            physical,
+            physical_summary_identity: spatial_evaluation_identity(physical),
+            avionics_identity: 12,
+            legacy_gimbal_identity: 0,
+            effector_identity: 13,
+            allocator_identity: 14,
+            uncertainty_identity: 0,
+            evaluator_identity: 15,
+            releases: 88,
+            max_navigation_error_q13: 16,
+            max_attitude_error_turn16: 17,
+            alarms: 0,
+            saturation_count: 18,
+            pulse_count: 19,
+            valve_edge_count: 20,
+            depletion_count: 0,
+            authority_handoffs: 21,
+            air_fallback_epochs: 22,
+            deployment_feedback: 3,
+            max_hinge_q24: [23, 24, 25, 26],
+            rcs_initial_propellant_q21: 1000,
+            rcs_final_propellant_q21: 750,
+            checksum_chains: [27, 28, 29, 30, 31, 32, 33, 34],
+        };
+        let mut bytes = [0u8; KAS9_LENGTH];
+        write_advanced_effector_summary(value, &mut bytes).unwrap();
+        assert_eq!(
+            parse_advanced_effector_summary(&bytes).unwrap().summary,
+            value
+        );
+        bytes[200] = 1;
+        seal(&mut bytes);
+        assert_eq!(
+            parse_advanced_effector_summary(&bytes),
             Err(Phase95ContractError::Reserved)
         );
     }

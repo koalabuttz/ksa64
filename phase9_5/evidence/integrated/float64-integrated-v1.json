@@ -1,0 +1,129 @@
+{
+  "all_passed": true,
+  "cases": [
+    {
+      "case": "firestorm-c9-nominal",
+      "delta": {
+        "apogee_m": 0.6184175039157935,
+        "apogee_time_s": -0.008500000001172126,
+        "burnout_time_s": 0.0009986877439955855,
+        "drogue_time_s": -0.018226074220031308,
+        "landing_time_s": 0.022000000040122814,
+        "main_time_s": 0.0947499999645558,
+        "max_dynamic_pressure_pa": -8.84263928216751,
+        "max_speed_mps": -0.057004693309608,
+        "rail_exit_time_s": -0.001749999999999835
+      },
+      "exact": {
+        "apogee_m": 729.134033203125,
+        "apogee_time_s": 11.9375,
+        "burnout_time_s": 2.3240013122558594,
+        "drogue_time_s": 12.14422607421875,
+        "landing_time_s": 84.625,
+        "main_time_s": 54.03125,
+        "max_dynamic_pressure_pa": 10860.757934570312,
+        "max_speed_mps": 134.10983085632324,
+        "rail_exit_time_s": 0.21875
+      },
+      "float64": {
+        "apogee_m": 729.7524507070408,
+        "apogee_time_s": 11.928999999998828,
+        "burnout_time_s": 2.324999999999855,
+        "drogue_time_s": 12.125999999998719,
+        "landing_time_s": 84.64700000004012,
+        "main_time_s": 54.125999999964556,
+        "max_acceleration_mps2": 102.95937556089102,
+        "max_dynamic_pressure_pa": 10851.915295288145,
+        "max_speed_mps": 134.05282616301363,
+        "rail_exit_time_s": 0.21700000000000016
+      },
+      "passed": true
+    },
+    {
+      "case": "firestorm-r9-nominal",
+      "delta": {
+        "apogee_m": 0.5086299843985671,
+        "apogee_time_s": -0.0007500000009859065,
+        "burnout_time_s": 0.0009986877439955855,
+        "drogue_time_s": -0.013217376710057849,
+        "landing_time_s": 0.007192504880038086,
+        "main_time_s": 0.09474999998174383,
+        "max_dynamic_pressure_pa": -6.758314432938278,
+        "max_speed_mps": -0.043967596717948254,
+        "rail_exit_time_s": -0.002961395263671701
+      },
+      "exact": {
+        "apogee_m": 661.2430419921875,
+        "apogee_time_s": 11.59375,
+        "burnout_time_s": 2.3240013122558594,
+        "drogue_time_s": 11.764217376708984,
+        "landing_time_s": 75.65580749511719,
+        "main_time_s": 46.65625,
+        "max_dynamic_pressure_pa": 8950.731079101562,
+        "max_speed_mps": 121.6642074584961,
+        "rail_exit_time_s": 0.22996139526367188
+      },
+      "float64": {
+        "apogee_m": 661.7516719765861,
+        "apogee_time_s": 11.592999999999014,
+        "burnout_time_s": 2.324999999999855,
+        "drogue_time_s": 11.750999999998927,
+        "landing_time_s": 75.66299999999723,
+        "main_time_s": 46.750999999981744,
+        "max_acceleration_mps2": 92.57140444961149,
+        "max_dynamic_pressure_pa": 8943.972764668624,
+        "max_speed_mps": 121.62023986177815,
+        "rail_exit_time_s": 0.22700000000000017
+      },
+      "passed": true
+    },
+    {
+      "case": "firestorm-m9-nominal",
+      "delta": {
+        "apogee_m": 0.473650143385953,
+        "apogee_time_s": -0.0012095947274541885,
+        "burnout_time_s": 0.0009986877439955855,
+        "drogue_time_s": -0.01821463012795732,
+        "landing_time_s": -0.013250000020178732,
+        "main_time_s": 0.10727365111178244,
+        "max_dynamic_pressure_pa": -5.671141580829499,
+        "max_speed_mps": -0.04021779072638765,
+        "rail_exit_time_s": -0.007959716796874822
+      },
+      "exact": {
+        "apogee_m": 631.78955078125,
+        "apogee_time_s": 11.424209594726562,
+        "burnout_time_s": 2.3240013122558594,
+        "drogue_time_s": 11.644214630126953,
+        "landing_time_s": 72.03125,
+        "main_time_s": 43.64372634887695,
+        "max_dynamic_pressure_pa": 8239.972900390625,
+        "max_speed_mps": 116.7053451538086,
+        "rail_exit_time_s": 0.239959716796875
+      },
+      "float64": {
+        "apogee_m": 632.263200924636,
+        "apogee_time_s": 11.422999999999108,
+        "burnout_time_s": 2.324999999999855,
+        "drogue_time_s": 11.625999999998996,
+        "landing_time_s": 72.01799999997982,
+        "main_time_s": 43.750999999988736,
+        "max_acceleration_mps2": 88.54155047091477,
+        "max_dynamic_pressure_pa": 8234.301758809796,
+        "max_speed_mps": 116.6651273630822,
+        "rail_exit_time_s": 0.23200000000000018
+      },
+      "passed": true
+    }
+  ],
+  "limits": {
+    "apogee_fraction": 0.005,
+    "event_time_s": 0.3,
+    "max_q_fraction": 0.03,
+    "max_speed_fraction": 0.015
+  },
+  "method": "independent float64 US76 vertical dynamics with 8 Hz measured-state recovery sequencing",
+  "parameter_policy": "source data plus provenance-bearing compiled derivative mass inventory",
+  "schema": "ksa64.phase9_5-integrated-float64-v1",
+  "scope": "Complete nominal ascent, coast, recovery, and landing for each accepted derivative. Canard and RCS force/torque/depletion are covered separately by independent analytic vector suites."
+}
