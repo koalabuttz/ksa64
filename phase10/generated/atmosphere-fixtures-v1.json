@@ -1,0 +1,368 @@
+{
+  "earth_identity": "0x454d1001",
+  "format": "KAT10",
+  "identity": "0x41541001",
+  "records": [
+    {
+      "altitude_km": -1.0,
+      "density_kg_m3": 1.347,
+      "pressure_pa": 113929.0,
+      "raw": [
+        -4096,
+        361582559,
+        1866612736,
+        19310182,
+        22551639,
+        0,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 344.11070806311733,
+      "temperature_k": 294.65
+    },
+    {
+      "altitude_km": 0.0,
+      "density_kg_m3": 1.225,
+      "pressure_pa": 101325.0,
+      "raw": [
+        0,
+        328833434,
+        1660108800,
+        18884198,
+        22301507,
+        0,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 340.293988026089,
+      "temperature_k": 288.15
+    },
+    {
+      "altitude_km": 5.0,
+      "density_kg_m3": 0.736116,
+      "pressure_pa": 54019.9,
+      "raw": [
+        20480,
+        197599634,
+        885062042,
+        16754278,
+        21006214,
+        524288,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 320.5293944425378,
+      "temperature_k": 255.65
+    },
+    {
+      "altitude_km": 10.0,
+      "density_kg_m3": 0.41351,
+      "pressure_pa": 26436.3,
+      "raw": [
+        40960,
+        111000745,
+        433132339,
+        14624358,
+        19625618,
+        1048576,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 299.4631648745802,
+      "temperature_k": 223.15
+    },
+    {
+      "altitude_km": 15.0,
+      "density_kg_m3": 0.194755,
+      "pressure_pa": 12044.6,
+      "raw": [
+        61440,
+        52279147,
+        197338726,
+        14198374,
+        19337674,
+        1572864,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 295.0694935090715,
+      "temperature_k": 216.65
+    },
+    {
+      "altitude_km": 20.0,
+      "density_kg_m3": 0.08891,
+      "pressure_pa": 5474.89,
+      "raw": [
+        81920,
+        23866596,
+        89700598,
+        14198374,
+        19337674,
+        2097152,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 295.0694935090715,
+      "temperature_k": 216.65
+    },
+    {
+      "altitude_km": 25.0,
+      "density_kg_m3": 0.040084,
+      "pressure_pa": 2511.02,
+      "raw": [
+        102400,
+        10759967,
+        41140552,
+        14526054,
+        19559546,
+        2621440,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 298.45498168015223,
+      "temperature_k": 221.65
+    },
+    {
+      "altitude_km": 30.0,
+      "density_kg_m3": 0.01841,
+      "pressure_pa": 1171.87,
+      "raw": [
+        122880,
+        4941897,
+        19199918,
+        14844559,
+        19772819,
+        3145728,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 301.7092703533983,
+      "temperature_k": 226.51
+    },
+    {
+      "altitude_km": 40.0,
+      "density_kg_m3": 0.003996,
+      "pressure_pa": 287.14,
+      "raw": [
+        163840,
+        1072668,
+        4704502,
+        16406938,
+        20787329,
+        3670016,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 317.1894708313944,
+      "temperature_k": 250.35
+    },
+    {
+      "altitude_km": 50.0,
+      "density_kg_m3": 0.001027,
+      "pressure_pa": 79.779,
+      "raw": [
+        204800,
+        275683,
+        1307099,
+        17737318,
+        21613690,
+        4194304,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 329.79873100377444,
+      "temperature_k": 270.65
+    },
+    {
+      "altitude_km": 60.0,
+      "density_kg_m3": 0.0003097,
+      "pressure_pa": 21.958,
+      "raw": [
+        245760,
+        83134,
+        359760,
+        16188703,
+        20648616,
+        4718592,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 315.07288034097763,
+      "temperature_k": 247.02
+    },
+    {
+      "altitude_km": 70.0,
+      "density_kg_m3": 8.283e-05,
+      "pressure_pa": 5.2209,
+      "raw": [
+        286720,
+        22235,
+        85539,
+        14391050,
+        19468441,
+        5242880,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 297.064834022171,
+      "temperature_k": 219.59
+    },
+    {
+      "altitude_km": 80.0,
+      "density_kg_m3": 1.846e-05,
+      "pressure_pa": 1.0525,
+      "raw": [
+        327680,
+        4955,
+        17244,
+        13018071,
+        18516472,
+        4194304,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 282.5389441042066,
+      "temperature_k": 198.64
+    },
+    {
+      "altitude_km": 90.0,
+      "density_kg_m3": 3.416e-06,
+      "pressure_pa": 0.1836,
+      "raw": [
+        368640,
+        917,
+        3008,
+        12246712,
+        17959518,
+        2621440,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 274.0405038377721,
+      "temperature_k": 186.87
+    },
+    {
+      "altitude_km": 100.0,
+      "density_kg_m3": 5.606e-07,
+      "pressure_pa": 0.03201,
+      "raw": [
+        409600,
+        150,
+        524,
+        12784763,
+        18349797,
+        1048576,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 279.99568466574624,
+      "temperature_k": 195.08
+    },
+    {
+      "altitude_km": 110.0,
+      "density_kg_m3": 9.658e-08,
+      "pressure_pa": 0.0071,
+      "raw": [
+        450560,
+        26,
+        116,
+        15728640,
+        20353098,
+        0,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 310.563623626464,
+      "temperature_k": 240.0
+    },
+    {
+      "altitude_km": 120.0,
+      "density_kg_m3": 2.222e-08,
+      "pressure_pa": 0.0025,
+      "raw": [
+        491520,
+        6,
+        41,
+        23592960,
+        24927352,
+        0,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 380.3612052772995,
+      "temperature_k": 360.0
+    },
+    {
+      "altitude_km": 140.0,
+      "density_kg_m3": 3.88e-09,
+      "pressure_pa": 0.00072,
+      "raw": [
+        573440,
+        1,
+        12,
+        36700160,
+        31089870,
+        0,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 474.3937711226824,
+      "temperature_k": 560.0
+    },
+    {
+      "altitude_km": 160.0,
+      "density_kg_m3": 1.23e-09,
+      "pressure_pa": 0.0003,
+      "raw": [
+        655360,
+        0,
+        5,
+        47185920,
+        35252599,
+        0,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 537.9119751037339,
+      "temperature_k": 720.0
+    },
+    {
+      "altitude_km": 180.0,
+      "density_kg_m3": 5.464e-10,
+      "pressure_pa": 0.00015,
+      "raw": [
+        737280,
+        0,
+        2,
+        55705600,
+        38303138,
+        0,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 584.4595069805948,
+      "temperature_k": 850.0
+    },
+    {
+      "altitude_km": 200.0,
+      "density_kg_m3": 2.789e-10,
+      "pressure_pa": 8.4e-05,
+      "raw": [
+        819200,
+        0,
+        1,
+        62259200,
+        40493629,
+        0,
+        0,
+        0
+      ],
+      "speed_of_sound_m_s": 617.8837407635841,
+      "temperature_k": 950.0
+    }
+  ],
+  "runtime_interpolation": "piecewise linear fixed point",
+  "source_model": "U.S. Standard Atmosphere 1976 compiled representative profile",
+  "source_url": "https://ntrs.nasa.gov/citations/19770009539",
+  "terminal_behavior": "zero above 200 km"
+}
