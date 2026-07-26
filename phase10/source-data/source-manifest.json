@@ -1,0 +1,25 @@
+{
+  "schema": "ksa64.phase10.earth-source-manifest-v1",
+  "accepted_epoch_utc": "2024-01-01T00:00:00Z",
+  "leap_seconds": {
+    "authority": "IERS Bulletin C 67",
+    "published": "2024-01-08",
+    "url": "https://datacenter.iers.org/data/16/bulletinc-067.txt",
+    "upstream_sha256": "bf064f784512a6e364b818435ae55439d1029e47e8d39812eedd04bf7da8131d",
+    "tai_minus_utc_at_epoch_seconds": 37
+  },
+  "earth_orientation": {
+    "authority": "IERS finals2000A, final Bulletin B columns",
+    "url": "https://maia.usno.navy.mil/ser7/finals2000A.data",
+    "retrieved": "2026-07-26",
+    "upstream_sha256": "22feeac3f99572368c5e81c9702e151988050a636ef888aaf7e41ac0d2c9f85e",
+    "normalized_window_start_utc": "2023-12-31T00:00:00Z",
+    "normalized_window_end_utc": "2024-01-02T00:00:00Z",
+    "extrapolation": "forbidden"
+  },
+  "conventions": {
+    "ellipsoid": "WGS 84",
+    "orientation": "IERS Conventions 2010; IAU 2006/2000A",
+    "integration_time_scale": "elapsed TAI"
+  }
+}

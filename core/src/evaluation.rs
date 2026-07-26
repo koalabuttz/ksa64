@@ -16,6 +16,7 @@ pub enum ModelProfileId {
     LegacyKsa5SpatialV1 = 2,
     HobbyVerticalV1 = 3,
     HobbySpatialV1 = 4,
+    GlobalEcef6DofV1 = 5,
 }
 
 impl ModelProfileId {

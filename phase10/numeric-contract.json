@@ -1,0 +1,33 @@
+{
+  "schema": "ksa64.phase10.numeric-contract-v1",
+  "position": {"unit": "km", "storage": "i32", "fractional_bits": 12},
+  "velocity": {"unit": "km/s", "storage": "i32", "fractional_bits": 24, "maximum_raw": 201326592},
+  "acceleration": {"unit": "km/s^2", "storage": "i32", "fractional_bits": 28, "maximum_raw": 53687091},
+  "quaternion": {"storage": "i32", "fractional_bits": 30},
+  "angular_rate": {"unit": "rad/s", "storage": "i32", "fractional_bits": 24},
+  "mission_time": {"unit": "s", "storage": "u32", "fractional_bits": 16, "maximum_raw": 943718400},
+  "steps": {
+    "powered_q16": 512,
+    "coast_q16": 2048,
+    "rcs_quantum_q16": 256,
+    "avionics_period_q16": 2048
+  },
+  "earth": {
+    "semi_major_q12_km": 26124849,
+    "semi_minor_q12_km": 26037257,
+    "inverse_flattening_q20": 312745366,
+    "mu_q8_km3_s2": 102041713,
+    "j2_q30": 1162465,
+    "rotation_q30_rad_s": 78298
+  },
+  "envelope": {
+    "wet_mass_kg": 800,
+    "minimum_altitude_km": -1,
+    "maximum_altitude_km": 2000,
+    "maximum_speed_km_s": 12,
+    "maximum_duration_s": 14400,
+    "maximum_mach": 10,
+    "maximum_angle_of_attack_deg": 15,
+    "maximum_dynamic_pressure_pa": 100000
+  }
+}

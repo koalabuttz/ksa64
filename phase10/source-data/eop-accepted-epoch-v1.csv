@@ -1,0 +1,9 @@
+# KSA64 normalized IERS finals2000A excerpt
+# upstream=https://maia.usno.navy.mil/ser7/finals2000A.data
+# retrieved=2026-07-26
+# upstream_sha256=22feeac3f99572368c5e81c9702e151988050a636ef888aaf7e41ac0d2c9f85e
+# policy=final Bulletin B columns; no extrapolation
+utc,mjd,pm_x_arcsec,pm_y_arcsec,ut1_minus_utc_s,dx_mas,dy_mas
+2023-12-31T00:00:00Z,60309.00,0.138979,0.201930,0.0089356,0.216,-0.212
+2024-01-01T00:00:00Z,60310.00,0.136894,0.202185,0.0087572,0.283,-0.183
+2024-01-02T00:00:00Z,60311.00,0.134917,0.202555,0.0084757,0.353,-0.139
