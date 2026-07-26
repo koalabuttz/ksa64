@@ -6,6 +6,7 @@ use crate::phase10::{
     FrameService, GlobalWorldError, GlobalWorldMachine, GlobalWorldSnapshot,
     TransitionServiceRecord,
 };
+use ksa64_core::numeric::{magnitude3_floor, NumericStatus};
 use ksa64_core::phase10_contract::{EarthModelPack, TransformPack};
 use ksa64_core::phase10_environment::CompiledAtmospherePack;
 use ksa64_core::phase10_geodesy::launch_direction_enu;
@@ -54,10 +55,18 @@ impl GlobalSensorFaults {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GlobalAvionicsMissionSummary {
     pub terminal: GlobalWorldSnapshot,
+    pub terminal_ecef: GlobalKinematicState,
+    pub terminal_gcrf: GlobalKinematicState,
     pub flight: GlobalFlightEvidence,
     pub releases: u32,
     pub physical_steps: u32,
     pub transition_count: u8,
+    pub max_dynamic_pressure_q14: i32,
+    pub max_mach_q24: i32,
+    pub max_acceleration_q28: i32,
+    pub max_navigation_position_error_q12: i32,
+    pub max_navigation_velocity_error_q24: i32,
+    pub transition_records: [crate::phase10::FrameTransitionRecord; 4],
     pub sensor_checksum: u32,
     pub command_checksum: u32,
     pub placement_checksum: u32,
@@ -76,6 +85,11 @@ pub struct GlobalAvionicsMission<'a> {
     previous_active: GlobalKinematicState,
     held_command: GlobalCommandCell,
     last_flight: Option<GlobalFlightEvidence>,
+    max_dynamic_pressure_q14: i32,
+    max_mach_q24: i32,
+    max_acceleration_q28: i32,
+    max_navigation_position_error_q12: i32,
+    max_navigation_velocity_error_q24: i32,
     sensor_checksum: u32,
     command_checksum: u32,
     placement_checksum: u32,
@@ -132,6 +146,11 @@ impl<'a> GlobalAvionicsMission<'a> {
             previous_active,
             held_command,
             last_flight: None,
+            max_dynamic_pressure_q14: 0,
+            max_mach_q24: 0,
+            max_acceleration_q28: 0,
+            max_navigation_position_error_q12: 0,
+            max_navigation_velocity_error_q24: 0,
             sensor_checksum: 0x811c_9dc5,
             command_checksum: 0x811c_9dc5,
             placement_checksum: 0x811c_9dc5,
@@ -183,6 +202,34 @@ impl<'a> GlobalAvionicsMission<'a> {
             self.command_checksum,
             evidence.navigation.checksum,
         );
+        self.max_dynamic_pressure_q14 = self
+            .max_dynamic_pressure_q14
+            .max(snapshot.dynamic_pressure_q14_pa);
+        self.max_mach_q24 = self.max_mach_q24.max(snapshot.mach_q24);
+        let position_error =
+            vector_difference(active_position(active), evidence.navigation.position_q12);
+        let velocity_error =
+            vector_difference(active_velocity(active), evidence.navigation.velocity_q24);
+        self.max_navigation_position_error_q12 = self
+            .max_navigation_position_error_q12
+            .max(vector_magnitude(position_error)?);
+        self.max_navigation_velocity_error_q24 = self
+            .max_navigation_velocity_error_q24
+            .max(vector_magnitude(velocity_error)?);
+        if transition_service.is_none() {
+            let delta_velocity = vector_difference(
+                active_velocity(active),
+                active_velocity(self.previous_active),
+            );
+            let acceleration_q28 = [
+                delta_velocity[0].saturating_mul(512),
+                delta_velocity[1].saturating_mul(512),
+                delta_velocity[2].saturating_mul(512),
+            ];
+            self.max_acceleration_q28 = self
+                .max_acceleration_q28
+                .max(vector_magnitude(acceleration_q28)?);
+        }
         self.held_command = evidence.command;
         self.last_flight = Some(evidence);
         self.previous_active = active;
@@ -213,12 +260,12 @@ impl<'a> GlobalAvionicsMission<'a> {
             let evidence = self.release()?;
             if self.world.is_complete() {
                 let terminal = self.world.snapshot()?;
-                return Ok(self.summary(terminal, evidence));
+                return self.summary(terminal, evidence);
             }
             let terminal = self.advance_to_next_release()?;
             if self.world.is_complete() {
                 let final_evidence = self.release()?;
-                return Ok(self.summary(terminal, final_evidence));
+                return self.summary(terminal, final_evidence);
             }
             if self.releases > 460_800 {
                 return Err(GlobalWorldError::Timeout);
@@ -230,17 +277,25 @@ impl<'a> GlobalAvionicsMission<'a> {
         &self,
         terminal: GlobalWorldSnapshot,
         flight: GlobalFlightEvidence,
-    ) -> GlobalAvionicsMissionSummary {
-        GlobalAvionicsMissionSummary {
+    ) -> Result<GlobalAvionicsMissionSummary, GlobalWorldError> {
+        Ok(GlobalAvionicsMissionSummary {
             terminal,
+            terminal_ecef: self.world.ecef_state_public()?,
+            terminal_gcrf: self.world.gcrf_state_public()?,
             flight,
             releases: self.releases,
             physical_steps: self.physical_steps,
             transition_count: self.last_transition_count,
+            max_dynamic_pressure_q14: self.max_dynamic_pressure_q14,
+            max_mach_q24: self.max_mach_q24,
+            max_acceleration_q28: self.max_acceleration_q28,
+            max_navigation_position_error_q12: self.max_navigation_position_error_q12,
+            max_navigation_velocity_error_q24: self.max_navigation_velocity_error_q24,
+            transition_records: self.world.transition_records(),
             sensor_checksum: self.sensor_checksum,
             command_checksum: self.command_checksum,
             placement_checksum: self.placement_checksum,
-        }
+        })
     }
 
     fn fast_sensor(
@@ -519,6 +574,29 @@ fn clamp_i16(value: i32) -> i16 {
     value.clamp(i32::from(i16::MIN), i32::from(i16::MAX)) as i16
 }
 
+fn active_position(state: GlobalKinematicState) -> [i32; 3] {
+    [state.position.x(), state.position.y(), state.position.z()]
+}
+
+fn active_velocity(state: GlobalKinematicState) -> [i32; 3] {
+    [state.velocity.x(), state.velocity.y(), state.velocity.z()]
+}
+fn vector_difference(a: [i32; 3], b: [i32; 3]) -> [i32; 3] {
+    [
+        a[0].saturating_sub(b[0]),
+        a[1].saturating_sub(b[1]),
+        a[2].saturating_sub(b[2]),
+    ]
+}
+
+fn vector_magnitude(value: [i32; 3]) -> Result<i32, GlobalWorldError> {
+    let mut status = NumericStatus::CLEAR;
+    let magnitude = magnitude3_floor(value[0], value[1], value[2], &mut status);
+    if !status.is_clear() || magnitude > i32::MAX as u32 {
+        return Err(GlobalWorldError::Numeric);
+    }
+    Ok(magnitude as i32)
+}
 fn in_window(epoch: u16, start: u16, length: u8) -> bool {
     length != 0 && epoch.wrapping_sub(start) < u16::from(length)
 }
@@ -575,6 +653,7 @@ fn hash_placement(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use ksa64_core::phase10_contract::{EarthModelPack, TransformPack};
     use ksa64_core::phase10_environment::CompiledAtmospherePack;
     use ksa64_core::phase10_vehicle::{GlobalMissionPack, GlobalVehiclePack};

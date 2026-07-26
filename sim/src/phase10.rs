@@ -364,6 +364,44 @@ impl<'a> GlobalWorldMachine<'a> {
         self.ecef_state()
     }
 
+    pub fn gcrf_state_public(&self) -> Result<GlobalKinematicState, GlobalWorldError> {
+        let ecef = self.ecef_state()?;
+        let transform = interpolate_transform(self.transforms, ecef.time)?;
+        Ok(ecef_to_gcrf(transform, ecef)?)
+    }
+
+    pub fn launch_local_state_public(&self) -> Result<LocalKinematicState, GlobalWorldError> {
+        Ok(ecef_to_local(self.launch_anchor, self.ecef_state()?)?)
+    }
+
+    pub fn ecef_to_launch_local_public(
+        &self,
+        state: GlobalKinematicState,
+    ) -> Result<LocalKinematicState, GlobalWorldError> {
+        Ok(ecef_to_local(self.launch_anchor, state)?)
+    }
+    pub fn ecef_to_launch_offset_public(
+        &self,
+        state: GlobalKinematicState,
+    ) -> Result<GlobalPositionVec, GlobalWorldError> {
+        let mut status = NumericStatus::CLEAR;
+        let offset = state
+            .position
+            .checked_sub(self.launch_anchor.origin_ecef, &mut status);
+        let local = self
+            .launch_anchor
+            .enu_to_ecef
+            .conjugate()
+            .rotate(offset, &mut status);
+        if !status.is_clear() {
+            return Err(GlobalWorldError::Numeric);
+        }
+        Ok(local)
+    }
+    pub const fn transition_records(&self) -> [FrameTransitionRecord; TRANSITION_CAPACITY] {
+        self.transitions
+    }
+
     pub const fn deployment_feedback(&self) -> u16 {
         (self.drogue as u16) | ((self.main as u16) << 1)
     }
