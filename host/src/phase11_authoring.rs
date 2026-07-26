@@ -296,7 +296,24 @@ pub fn complete_project_session(
     project: &CompiledMissionProject,
     scripted: bool,
 ) -> Result<CompletedMissionSession, AuthoringError> {
+    if project.package == MissionPackage::ReferenceOps
+        && project.scenario == MissionScenario::GnssLoss
+    {
+        let mut session = crate::phase11_live::LiveMissionSession::compiled(project.clone())
+            .map_err(|_| AuthoringError::Compatibility)?;
+        session.prepare().map_err(|_| AuthoringError::Replay)?;
+        return session
+            .run_scripted_to_completion()
+            .map_err(|_| AuthoringError::Replay);
+    }
     let evidence = run_project(project, scripted)?;
+    complete_project_session_from_evidence(project, evidence)
+}
+
+pub(crate) fn complete_project_session_from_evidence(
+    project: &CompiledMissionProject,
+    evidence: SessionRunEvidence,
+) -> Result<CompletedMissionSession, AuthoringError> {
     let action_identity = evidence.action_chain.max(1);
     let completed_identity = evidence.evidence_identity.max(1);
     let debrief = (project.scenario == MissionScenario::GnssLoss).then(|| {
@@ -567,7 +584,7 @@ fn write_definition_pack(
     output[KSD11_LENGTH - 4..].copy_from_slice(&crc.to_le_bytes());
 }
 
-fn from_operational(value: OperationalScenarioEvidence) -> SessionRunEvidence {
+pub(crate) fn from_operational(value: OperationalScenarioEvidence) -> SessionRunEvidence {
     SessionRunEvidence {
         scenario_identity: value.scenario_identity,
         releases: value.releases,

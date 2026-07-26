@@ -457,3 +457,34 @@ The catalog advertises only scenarios callable through the product facade. Speci
 The accepted catalog contains 13 current experiences and seven target descriptors. Its SHA-256 is `b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13`. The unified GNSS-loss session remains the frozen 22,369-byte Phase 11 evidence with identity `0x6d4122a0`.
 
 This validation proves that presentation and orchestration preserve accepted behavior. It does not add real-vehicle accuracy, physical-link acceptance, realtime C64 performance, certification, launch approval, or safety authority.
+
+
+## Accepted pre-Phase 12 application hardening
+
+The Phase 11.5 follow-up validates organization and API semantics without changing product evidence:
+
+- the facade is reduced to public orchestration and common request/error types while focused modules own domain adapters;
+- every ordinary CLI product action routes through the nested request family;
+- request-policy tests distinguish read-only, workspace-writing, external-process, and explicitly live work and expose safe cancellation boundaries;
+- authored project IDs cannot shadow accepted product IDs;
+- accepted model references do not grant accepted product maturity;
+- recent sessions validate accepted-product or authored-project origins without entering either catalog;
+- unknown binary evidence reports `recognized_format: false` and requires its owning strict parser; and
+- the checked `ksa64.product-catalog.v1` bytes and SHA-256 remain unchanged.
+
+Host tests, Clippy, CLI parity, the Phase 11 compatibility session, and the no-live Phase 11.5 completion audit remain the acceptance boundary. No target code changed, so the already accepted finite VICE evidence is reused rather than repeated.
+
+
+## Accepted live-session application boundary
+
+The pre-Phase 12 gate additionally proves:
+
+- Compiled, Ready, Running, Paused, Completed, and Aborted lifecycle transitions reject invalid operations.
+- A release advances only through the accepted Phase 11 package and exposes a truth-blind typed snapshot.
+- Fast mode is bounded by the caller budget, real-time mode advances at most one release per scheduling call, paused mode advances none, and single-step advances exactly one before pausing. Wall time is not evidence.
+- Stage, commit, and cancellation use the accepted atomic uplink records; no session API directly commands effectors.
+- Scripted and manually submitted copies of the accepted GNSS-loss transcript produce byte-identical `CompletedMissionSession` and KSB11 bytes.
+- `Ksa64Application` reports the live capability and starts the session; unsupported synchronous experiences fail closed.
+- The Phase 11 operations console observes the live session instead of precomputing the completed result.
+
+These tests validate application orchestration, not new flight physics. All prior authoritative checksums and formats remain frozen.

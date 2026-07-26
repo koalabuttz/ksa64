@@ -524,3 +524,41 @@ The catalog has a current tier for supported product experiences and a separate 
 The CLI and Phase 12 consume the same Rust services. The GUI must never treat console text as an API. Catalog JSON is deterministic host metadata, not canonical simulation evidence, and Phase 11.5 therefore adds no K-format family.
 
 Target automation separates stored verification, build, and live probe requests. Stored verification cannot create a process. Live VICE requires an explicit flag and delegates to the phase that owns the target evidence, preserving one-instance, warp-disabled, cooldown, cleanup, and long-run rules.
+
+
+### Pre-Phase 12 application hardening
+
+The public `Ksa64Application` remains one orchestration facade, but accepted project, mission, campaign, evidence, optimization, and automation adapters are implemented in focused host modules. Static `ApplicationService` dispatch remains appropriate for reviewed built-ins and is not extended once per user project.
+
+The nested `ApplicationRequest` family covers Project, Mission, Campaign, Optimization, Evidence, Target, and Audit work. Each request declares a conservative permission class, a safe cancellation boundary, and whether explicit live confirmation is required. This metadata helps Phase 12 queue work without weakening the existing live-target gates; it is not authority to bypass those gates.
+
+### Incremental mission-session authority
+
+The flagship Phase 11 GNSS-loss experience now has one host-owned incremental orchestration boundary:
+
+```text
+Ksa64Application::start_mission
+        |
+        v
+LiveMissionSession
+  lifecycle + pacing + typed snapshots/events
+        |
+        +--> accepted flight-package release processing
+        +--> stage / validate / commit operator actions
+        +--> deterministic evidence accumulation
+        +--> existing KSB11 finalizer
+```
+
+The session advances the accepted package; it does not reproduce flight dynamics or avionics. Presentation owns wall-clock scheduling but never state. Pause and pacing are noncanonical; release order and accepted actions are evidence. Scripted and interactive copies of one action transcript finalize identically. Experiences without an incremental adapter remain explicitly synchronous and cannot claim live-session capability.
+
+Phase 12 must consume this object rather than driving flight packages directly or replaying a completed mission as if it were live.
+
+Discovery remains three separate domains:
+
+```text
+AcceptedProductCatalog --> reviewed built-in experiences and maturity
+ProjectWorkspace       --> authored source and Draft-to-Reviewed validation
+RecentSessions         --> derived evidence with an explicit origin
+```
+
+The UI may present these together but cannot merge their identities. Reusing an accepted model profile does not make a user vehicle or mission accepted. Unknown binary evidence is opaque until an owning strict parser recognizes it.

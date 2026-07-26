@@ -2,7 +2,8 @@
 //!
 //! This metadata is deliberately noncanonical. It explains how to reach the
 //! accepted evaluators and evidence without becoming another simulation
-//! authority or another binary data contract.
+//! authority or another binary data contract. User-authored projects and
+//! generated sessions deliberately live in separate workspace-model types.
 
 use serde::Serialize;
 use std::collections::BTreeSet;
@@ -142,6 +143,9 @@ pub struct HistoricalDescriptor {
     pub audit_script: &'static str,
 }
 
+/// Compile-time catalog of reviewed built-in products and engineering tools.
+///
+/// User-authored projects must never be inserted here; use `ProjectWorkspace`.
 #[derive(Clone, Copy, Debug)]
 pub struct ProductCatalog {
     pub experiences: &'static [ExperienceDescriptor],

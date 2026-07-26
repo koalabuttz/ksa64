@@ -53,20 +53,21 @@ pub struct OperationalScenarioEvidence {
     pub actions: Vec<ActionLogRecord>,
 }
 
-struct ActionTranscript {
-    records: Vec<ActionLogRecord>,
-    chain: u32,
+#[derive(Clone)]
+pub(crate) struct ActionTranscript {
+    pub(crate) records: Vec<ActionLogRecord>,
+    pub(crate) chain: u32,
 }
 
 impl ActionTranscript {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             records: Vec::new(),
             chain: 0x811c_9dc5,
         }
     }
 
-    fn record(&mut self, epoch: u32, step: u16, receipt: UplinkControlRecord) {
+    pub(crate) fn record(&mut self, epoch: u32, step: u16, receipt: UplinkControlRecord) {
         let sequence = self.records.len() as u32 + 1;
         let prior = self.chain;
         self.chain = hash_words(&[
@@ -429,7 +430,7 @@ pub fn run_invalid_operations_probe() -> OperationalScenarioEvidence {
     )
 }
 
-fn coast_config() -> GlobalFlightConfig {
+pub(crate) fn coast_config() -> GlobalFlightConfig {
     GlobalFlightConfig {
         initial_frame: GlobalFrameId::EarthInertialEciV1,
         initial_position_q12: [WGS84_SEMI_MAJOR_Q12_KM + 614_400, 0, 0],
@@ -468,7 +469,7 @@ fn gnss_loss_setup() -> (
     (package, procedure, ground, first)
 }
 
-fn coast_fast(epoch: u16) -> GlobalFastSensorCell {
+pub(crate) fn coast_fast(epoch: u16) -> GlobalFastSensorCell {
     GlobalFastSensorCell {
         session: 0x10a0,
         measurement_epoch: epoch,
@@ -490,7 +491,7 @@ fn coast_fast(epoch: u16) -> GlobalFastSensorCell {
     }
 }
 
-fn operational_snapshot(
+pub(crate) fn operational_snapshot(
     epoch: u32,
     flight: &GlobalFlightEvidence,
     ground_position: [i32; 3],
@@ -511,7 +512,7 @@ fn operational_snapshot(
     snapshot
 }
 
-fn ground_navigation_load(
+pub(crate) fn ground_navigation_load(
     epoch: u32,
     effective: u32,
     identity: u32,
@@ -542,7 +543,7 @@ fn ground_navigation_load(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn generic_load(
+pub(crate) fn generic_load(
     epoch: u32,
     effective: u32,
     identity: u32,
@@ -574,7 +575,7 @@ fn generic_load(
     }
 }
 
-fn commit_request(load: UplinkCommandLoad, epoch: u32) -> UplinkControlRecord {
+pub(crate) fn commit_request(load: UplinkCommandLoad, epoch: u32) -> UplinkControlRecord {
     UplinkControlRecord {
         kind: UplinkControlKind::CommitRequest,
         control_identity: load.load_identity ^ 0x55aa_0000,
@@ -590,7 +591,7 @@ fn commit_request(load: UplinkCommandLoad, epoch: u32) -> UplinkControlRecord {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn finish_evidence(
+pub(crate) fn finish_evidence(
     scenario_identity: u32,
     releases: u32,
     flight: GlobalFlightEvidence,

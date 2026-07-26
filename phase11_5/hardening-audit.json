@@ -1,0 +1,98 @@
+{
+  "schema": "ksa64.phase11-5.hardening-audit-v1",
+  "status": "pass",
+  "accepted_date": "2026-07-26",
+  "compatibility_baseline": "97cc5b112a12f643a248971c6831ecd188ab90ba",
+  "scope": {
+    "host_application_only": true,
+    "physics_changed": false,
+    "canonical_formats_changed": false,
+    "c64_programs_changed": false,
+    "vice_launched": false
+  },
+  "facade": {
+    "application_lines": 563,
+    "request_domains": [
+      "project",
+      "mission",
+      "campaign",
+      "optimization",
+      "evidence",
+      "target",
+      "audit"
+    ],
+    "focused_adapters": {
+      "project_lines": 117,
+      "mission_lines": 613,
+      "campaign_lines": 269,
+      "evidence_lines": 168,
+      "optimization_lines": 532,
+      "automation_lines": 364
+    }
+  },
+  "identity_domains": {
+    "accepted_product_catalog": true,
+    "project_workspace": true,
+    "recent_sessions": true,
+    "accepted_id_shadowing_rejected": true,
+    "authored_projects_cannot_be_accepted": true
+  },
+  "evidence_fallback": {
+    "wording": "inspected opaque binary artifact; owning strict parser required",
+    "recognized_format": false
+  },
+  "live_session": {
+    "adapter_identity": "0x11500001",
+    "experience": "ksa-g10r.operations",
+    "scenario": "gnss-loss",
+    "release_hz": 32,
+    "implementation_lines": 800,
+    "lifecycle": [
+      "compiled",
+      "ready",
+      "running",
+      "paused",
+      "completed",
+      "aborted"
+    ],
+    "pacing": [
+      "fast",
+      "realtime",
+      "paused",
+      "single-step"
+    ],
+    "bounded_step": true,
+    "retained_release_telemetry": true,
+    "typed_events": true,
+    "operator_actions": [
+      "stage",
+      "commit",
+      "cancel"
+    ],
+    "exact_ksb11_finalization": true,
+    "scripted_interactive_byte_identity": true,
+    "accepted_evidence_identity": "0x6d4122a0",
+    "accepted_bundle_bytes": 22369,
+    "unsupported_synchronous_experiences_fail_closed": true,
+    "operations_console_is_live": true
+  },
+  "frozen_catalog": {
+    "sha256": "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13",
+    "unchanged": true,
+    "current_experiences": 13,
+    "targets": 7
+  },
+  "validation": {
+    "cargo_fmt": "pass",
+    "cargo_clippy_warnings_denied": "pass",
+    "host_unit_tests": 96,
+    "host_suite": "pass",
+    "cli_parity": "pass",
+    "phase11_completion_audit": "pass",
+    "phase11_5_completion_audit": "pass",
+    "stored_target_verification": "pass",
+    "live_target_requires_explicit_flag": "pass",
+    "running_helper_processes_after_audit": 0
+  },
+  "phase12_entry_criterion": "Mission Foundry consumes LiveMissionSession directly and never implements a competing execution loop or presents completed replay as live."
+}

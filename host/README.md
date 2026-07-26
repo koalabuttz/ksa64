@@ -2,7 +2,7 @@
 
 ## Unified product shell
 
-`ksa64` is the primary host entrypoint and the Cargo package default. Running it with no arguments prints a non-mutating quick start. The shared `Ksa64Application` facade exposes the same catalog and services directly to Phase 12; graphical tools must not parse CLI output or spawn phase binaries.
+`ksa64` is the primary host entrypoint and the Cargo package default. Running it with no arguments prints a non-mutating quick start. The shared `Ksa64Application` facade exposes the same catalog and services directly to Phase 12; graphical tools must not parse CLI output or spawn phase binaries. Project, mission, campaign, evidence, optimization, and automation adapters are separate modules behind that facade. The nested request family exposes conservative permission and cancellation metadata for GUI orchestration. `Ksa64Application::start_mission` exposes the flagship GNSS-loss run as a typed incremental session with exact release stepping, operator actions, snapshots/events, and KSB11 finalization; unsupported synchronous evaluators cannot masquerade as live.
 
 ```powershell
 cargo run -p ksa64-host --bin ksa64 --
@@ -10,7 +10,9 @@ cargo run -p ksa64-host --bin ksa64 -- catalog list
 cargo run -p ksa64-host --bin ksa64 -- mission control ksa-g10r.operations --scenario gnss-loss
 ```
 
-See [Phase 11.5 commands](../phase11_5/COMMANDS.md), [target policy](../phase11_5/TARGETS.md), and the checked [product catalog](../phase11_5/product-catalog-v1.json). `ksa64-host` and documented phase-numbered programs remain compatibility entrypoints.
+Accepted built-ins live in `AcceptedProductCatalog`; user-authored source lives in `ProjectWorkspace`; generated evidence lives in `RecentSessions`. A project may reference an accepted model without acquiring accepted product maturity.
+
+See [Phase 11.5 commands](../phase11_5/COMMANDS.md), [hardening record](../phase11_5/HARDENING.md), [target policy](../phase11_5/TARGETS.md), and the checked [product catalog](../phase11_5/product-catalog-v1.json). `ksa64-host` and documented phase-numbered programs remain compatibility entrypoints.
 
 The host crate is a `std` adapter around the portable `ksa64-core`; it does not contain a second simulator. It captures records through the same `TelemetrySink` boundary used by C64 targets, then inspects the canonical binary stream with the core decoder.
 

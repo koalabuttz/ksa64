@@ -1,8 +1,9 @@
 //! Unified `ksa64` command surface.
 
 use crate::application::{
-    ApplicationError, ApplicationOutcome, CampaignRequest, Ksa64Application, MissionDisplay,
-    MissionPace, MissionRequest, OptimizationRequest,
+    ApplicationError, ApplicationOutcome, ApplicationRequest, AuditRequest, CampaignRequest,
+    EvidenceRequest, Ksa64Application, MissionApplicationRequest, MissionDisplay, MissionPace,
+    MissionRequest, OptimizationRequest, ProjectRequest, TargetRequest,
 };
 use crate::optimization_app::{
     compile_optimization_manifest, run_optimization_manifest, serve_product_optimizer,
@@ -386,25 +387,33 @@ fn project(
     application: &Ksa64Application,
     command: ProjectCommand,
 ) -> Result<ApplicationOutcome, ApplicationError> {
-    match command {
-        ProjectCommand::Lint { source } => application.lint_project(&read_text(&source)?),
-        ProjectCommand::Compile { source, output } => {
-            application.compile_project(&read_text(&source)?, &output)
-        }
-        ProjectCommand::Run { source, output } => {
-            application.run_project(&read_text(&source)?, &output, false)
-        }
-        ProjectCommand::Script { source, output } => {
-            application.run_project(&read_text(&source)?, &output, true)
-        }
-    }
+    let request = match command {
+        ProjectCommand::Lint { source } => ProjectRequest::Lint {
+            source: read_text(&source)?,
+        },
+        ProjectCommand::Compile { source, output } => ProjectRequest::Compile {
+            source: read_text(&source)?,
+            output,
+        },
+        ProjectCommand::Run { source, output } => ProjectRequest::Run {
+            source: read_text(&source)?,
+            output,
+            scripted: false,
+        },
+        ProjectCommand::Script { source, output } => ProjectRequest::Run {
+            source: read_text(&source)?,
+            output,
+            scripted: true,
+        },
+    };
+    application.execute(ApplicationRequest::Project(request))
 }
 
 fn mission(
     application: &Ksa64Application,
     command: MissionCommand,
 ) -> Result<ApplicationOutcome, ApplicationError> {
-    match command {
+    let request = match command {
         MissionCommand::Run {
             id,
             scenario,
@@ -412,7 +421,7 @@ fn mission(
             display,
             pace,
             output,
-        } => application.run_mission(&MissionRequest {
+        } => MissionApplicationRequest::Run(MissionRequest {
             id,
             scenario,
             role,
@@ -427,7 +436,7 @@ fn mission(
             role,
             pace,
             output,
-        } => application.mission_control(MissionRequest {
+        } => MissionApplicationRequest::Control(MissionRequest {
             id,
             scenario,
             role,
@@ -436,7 +445,8 @@ fn mission(
             scripted: false,
             output,
         }),
-    }
+    };
+    application.execute(ApplicationRequest::Mission(request))
 }
 
 fn campaign(
@@ -454,15 +464,15 @@ fn campaign(
             if preset != "routine" {
                 return Err(ApplicationError::unsupported(
                     "campaign.preset",
-                    "current campaigns expose their accepted routine configuration; use `--runs` for an explicit bounded count",
+                    "current campaigns expose their accepted routine configuration; use --runs for an explicit bounded count",
                 ));
             }
-            application.run_campaign(&CampaignRequest {
+            application.execute(ApplicationRequest::Campaign(CampaignRequest {
                 id,
                 runs,
                 workers,
                 output,
-            })
+            }))
         }
     }
 }
@@ -482,7 +492,7 @@ fn optimize(
             workers,
             output,
             tui,
-        } => application.run_optimization(&OptimizationRequest {
+        } => application.execute(ApplicationRequest::Optimization(OptimizationRequest {
             id,
             engine: engine.into(),
             preset: preset.into(),
@@ -490,7 +500,7 @@ fn optimize(
             output,
             tui,
             resume: false,
-        }),
+        })),
         OptimizeCommand::RunManifest {
             manifest,
             output,
@@ -527,26 +537,28 @@ fn evidence(
     application: &Ksa64Application,
     command: EvidenceCommand,
 ) -> Result<ApplicationOutcome, ApplicationError> {
-    match command {
-        EvidenceCommand::Inspect { artifact } => application.inspect_evidence(&artifact),
-        EvidenceCommand::Verify { artifact } => application.verify_evidence(&artifact),
-        EvidenceCommand::Replay { artifact } => application.replay_evidence(&artifact),
+    let request = match command {
+        EvidenceCommand::Inspect { artifact } => EvidenceRequest::Inspect { artifact },
+        EvidenceCommand::Verify { artifact } => EvidenceRequest::Verify { artifact },
+        EvidenceCommand::Replay { artifact } => EvidenceRequest::Replay { artifact },
         EvidenceCommand::Debrief { session, output } => {
-            application.debrief_evidence(&session, &output)
+            EvidenceRequest::Debrief { session, output }
         }
-    }
+    };
+    application.execute(ApplicationRequest::Evidence(request))
 }
 
 fn target(
     application: &Ksa64Application,
     command: TargetCommand,
 ) -> Result<ApplicationOutcome, ApplicationError> {
-    match command {
-        TargetCommand::Build { id } => application.build_target(&id),
-        TargetCommand::Verify { id } => application.verify_target_stored(&id),
-        TargetCommand::Probe { id, live } => application.probe_target_live(&id, live),
+    let request = match command {
+        TargetCommand::Build { id } => TargetRequest::Build { id },
+        TargetCommand::Verify { id } => TargetRequest::VerifyStored { id },
+        TargetCommand::Probe { id, live } => TargetRequest::ProbeLive { id, live },
         TargetCommand::List | TargetCommand::Show { .. } => unreachable!(),
-    }
+    };
+    application.execute(ApplicationRequest::Target(request))
 }
 
 fn audit(
@@ -554,7 +566,9 @@ fn audit(
     command: AuditCommand,
 ) -> Result<ApplicationOutcome, ApplicationError> {
     match command {
-        AuditCommand::Run { phase, live_vice } => application.run_audit(&phase, live_vice),
+        AuditCommand::Run { phase, live_vice } => {
+            application.execute(ApplicationRequest::Audit(AuditRequest { phase, live_vice }))
+        }
         AuditCommand::List => unreachable!(),
     }
 }

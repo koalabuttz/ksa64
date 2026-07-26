@@ -468,6 +468,7 @@ Delivered:
 - Direct Phase 12 Rust APIs; Mission Foundry does not need to parse CLI output or spawn phase binaries.
 - Exact Phase 11 and legacy telemetry compatibility wrappers retained through at least Phase 13.
 - Explicit stored-versus-live target dispatch preserving one-instance, warp-disabled, cooldown, cleanup, and long-run confirmation policy.
+- Pre-Phase 12 hardening: focused domain adapters, a complete nested request family with safety metadata, separate accepted-product, authored-project, and session domains, and a deterministic incremental GNSS-loss operations session with exact KSB11 finalization.
 
 Accepted evidence:
 
@@ -481,8 +482,8 @@ Explicit non-goals remain new physics, avionics, formats, target implementations
 
 ## Phase 12: Mission Foundry and passive 3-D operations
 
-Status: planned. Phase 11.5 has frozen the required product and application contracts; see
-`phase11_5/PHASE12_HANDOFF.md`.
+Status: planned. Phase 11.5 and its accepted hardening amendment have frozen the required product, application, and live-session contracts. A hard entry criterion is that Mission Foundry consumes `LiveMissionSession` directly; it may not build another execution loop or fake live operation from completed evidence. See
+`phase11_5/PHASE12_HANDOFF.md` and `phase11_5/HARDENING.md`.
 
 Purpose: provide a KSP/Juno-inspired host authoring experience while keeping
 KSA64's compiled packs, authority boundaries, provenance, and evidence model

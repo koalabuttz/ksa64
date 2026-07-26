@@ -56,3 +56,8 @@ The specialized phase tools remain available where their full engineering surfac
 - Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, REU package overlays, and a portable C64 global world remain separate tracks.
 - Stored target verification proves catalog/evidence integrity; deep semantic acceptance remains owned by each phase audit.
 - KSA64 remains engineering simulation evidence, not launch approval, certification, regulatory evidence, or safety authority.
+
+
+## Pre-Phase 12 hardening amendment
+
+The accepted follow-up in [HARDENING.md](HARDENING.md) preserves every completion result while preparing the host seam for Mission Foundry. Domain adapters are separated behind the same facade; the request family now covers all seven product domains with explicit safety metadata; accepted products, authored projects, and recent sessions are different types; and unknown binary evidence is labelled opaque rather than recognized. The checked product catalog remains byte-identical. The amendment also adds the live deterministic GNSS-loss session required by Phase 12: exact release stepping, typed snapshots/events/actions, pause and pacing controls, and finalization through the unchanged KSB11 builder. The existing operations console now consumes that session rather than displaying a precomputed result.

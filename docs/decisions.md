@@ -1404,3 +1404,29 @@ Add one deterministic `ProductCatalog` and `Ksa64Application` facade above the a
 Use stable domain IDs for new product discovery while preserving serialized profile variants, K-format identities, phase modules, artifacts, and hashes. Keep the current supported catalog separate from historical audits and specialist tools. Catalog JSON and application outcomes are host metadata, not canonical evidence.
 
 Phase 12 must call Rust application services directly. It may not invoke the CLI, parse console output, duplicate physics, or bypass strict evidence parsers. Target verification is stored and non-live by default; VICE and hardware always require an explicit request. No physics, avionics, optimizer, canonical format, or C64 program changes are authorized by this decision.
+
+
+## D-111: Harden the application seam before Mission Foundry
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Keep `Ksa64Application` as the public facade while moving project, mission, campaign, evidence, optimization, and automation adapters into focused host modules. Use static adapter dispatch for reviewed built-ins; do not create an `ApplicationService` variant for each user-authored project.
+
+Complete `ApplicationRequest` as a nested Project/Mission/Campaign/Optimization/Evidence/Target/Audit family. Attach conservative permission, cancellation, and explicit-live-confirmation metadata while retaining typed compatibility methods and the existing target/audit safety checks.
+
+Represent accepted built-ins, authored projects, and recent sessions with separate types and identity namespaces. Authored validation may reach Reviewed but never inherits Accepted product maturity from a reused model. Promotion into the accepted catalog requires a separately reviewed catalog and evidence decision.
+
+Treat unknown binary evidence as opaque until an owning strict parser recognizes it. Preserve the Phase 11.5 catalog bytes, all frozen artifacts, CLI compatibility, and every C64 program.
+
+
+## D-112: Require an incremental mission-session boundary before Mission Foundry
+
+Status: accepted on 2026-07-26.
+
+Do not let Phase 12 implement its own mission loop or present a completed replay as live operation. Add a host-only `LiveMissionSession` behind `Ksa64Application` with explicit lifecycle, exact release stepping, bounded advancement, typed truth-blind snapshots/events, operator actions through the accepted stage-validate-commit path, passive pacing controls, and deterministic KSB11 finalization.
+
+The first accepted live adapter is the flagship KSA-G10R GNSS-loss operations scenario. Other synchronous evaluators fail closed when asked for a live session. Capability discovery is additive application metadata and does not change the frozen product-catalog bytes.
+
+The existing completed-session command becomes a compatibility wrapper over the same session engine for this scenario. Identical ordered action transcripts must produce identical procedure, prediction, journal, checksum, and bundle evidence. Phase 12 owns graphical timelines, forms, maps, 3-D views, and wall-clock scheduling only; it cannot co-own simulation state.

@@ -3,6 +3,10 @@
 use crate::phase11_authoring::{
     complete_project_session, CompiledMissionProject, CompletedMissionSession, MissionScenario,
 };
+use crate::phase11_live::{
+    LiveMissionSession, MissionOperatorAction, MissionSessionEvent, MissionSessionEventKind,
+    MissionSessionLifecycle, MissionSessionSnapshot,
+};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{
@@ -17,7 +21,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Gauge, Paragraph, Sparkline, Tabs, Wrap};
 use ratatui::{Frame, Terminal};
 use std::io::{self, Stderr};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub const OPERATIONS_PAGE_NAMES: [&str; 7] = [
     "F1 FLIGHT",
@@ -153,6 +157,78 @@ impl OperationsConsoleModel {
         }
     }
 
+    pub fn from_live(
+        project: &CompiledMissionProject,
+        snapshot: &MissionSessionSnapshot,
+        events: &[MissionSessionEvent],
+    ) -> Self {
+        let action_rows = events
+            .iter()
+            .filter(|event| {
+                matches!(
+                    event.kind,
+                    MissionSessionEventKind::ActionStaged
+                        | MissionSessionEventKind::ActionCommitted
+                        | MissionSessionEventKind::ActionCancelled
+                        | MissionSessionEventKind::ActionRejected
+                )
+            })
+            .map(|event| {
+                format!(
+                    "E{:04} {:?} LOAD {:08X}",
+                    event.release_epoch, event.kind, event.detail_identity
+                )
+            })
+            .collect();
+        let private_truth =
+            (project.role == OperationalRole::SimDirector).then(|| SimDirectorPrivateModel {
+                truth_evidence_identity: snapshot.flight_checksum.unwrap_or(0),
+                fault_identity: project.master_seed
+                    ^ crate::phase11_scenarios::GNSS_LOSS_SCENARIO_ID,
+                counterfactuals: Vec::new(),
+                model_envelope:
+                    "LIVE OPERATIONAL SESSION / TRUTH COUNTERFACTUALS AFTER FINALIZATION".into(),
+            });
+        Self {
+            page: 0,
+            public: OperationsPublicModel {
+                definition_identity: project.definition_identity,
+                scenario_identity: crate::phase11_scenarios::GNSS_LOSS_SCENARIO_ID,
+                evidence_identity: snapshot.evidence_identity.unwrap_or(0),
+                package_identity: ksa_g10r_reference_ops_manifest().manifest_identity,
+                plan_identity: ksa64_flight::phase11::ksa_g10r_reference_mission_plan()
+                    .plan_identity,
+                role: project.role,
+                hints: project.source.hints,
+                releases: snapshot.release_epoch,
+                flight_checksum: snapshot.flight_checksum.unwrap_or(0),
+                navigation_checksum: snapshot.navigation_checksum.unwrap_or(0),
+                command_checksum: snapshot.command_checksum.unwrap_or(0),
+                prediction_checksum: snapshot
+                    .prediction
+                    .map_or(0, |value| value.prediction_checksum),
+                procedure_chain: snapshot.procedure_chain,
+                journal_chain: snapshot.journal_chain,
+                action_chain: snapshot.action_chain,
+                rejected_loads: snapshot.rejected_loads,
+                safe: snapshot.safe.unwrap_or(false),
+                action_rows,
+                procedure_label: format!(
+                    "LOSS OF GNSS AIDING / {:?} / STEP {}",
+                    snapshot.lifecycle, snapshot.procedure_step
+                ),
+                communications_label: if snapshot.staged_load_identity.is_some() {
+                    "LOAD STAGED / COMMIT REQUIRED"
+                } else {
+                    "UPLINK + DOWNLINK AVAILABLE"
+                }
+                .into(),
+                predictor_label: "LIVE ONBOARD EST / GROUND-PROPAGATED + GROUND EST".into(),
+            },
+            private_truth,
+        }
+    }
+
     pub fn truth_for_role(&self) -> Option<&SimDirectorPrivateModel> {
         (self.public.role == OperationalRole::SimDirector)
             .then_some(self.private_truth.as_ref())
@@ -197,6 +273,134 @@ impl Drop for TerminalSession {
 pub fn run_operations_console(
     project: &CompiledMissionProject,
 ) -> Result<CompletedMissionSession, OperationsConsoleError> {
+    if project.scenario != MissionScenario::GnssLoss {
+        return run_completed_operations_console(project);
+    }
+    let mut live = LiveMissionSession::compiled(project.clone())
+        .map_err(|_| OperationsConsoleError::Session)?;
+    live.prepare()
+        .map_err(|_| OperationsConsoleError::Session)?;
+    let mut model =
+        OperationsConsoleModel::from_live(project, &live.snapshot(), live.events_after(0));
+    let mut terminal = TerminalSession::new()?;
+    let mut last_release = Instant::now();
+    loop {
+        terminal.terminal.draw(|frame| {
+            render_operations_console(frame, &model, "KSA64 // LIVE MISSION OPERATIONS")
+        })?;
+        if live.lifecycle() == MissionSessionLifecycle::Completed {
+            if event::poll(Duration::from_millis(50))? {
+                if let Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press
+                        && matches!(key.code, KeyCode::Char('q') | KeyCode::Esc)
+                    {
+                        break;
+                    }
+                    update_page(&mut model, key.code);
+                }
+            }
+            continue;
+        }
+
+        if event::poll(Duration::from_millis(10))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
+                match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        live.abort(0x11ab_0001)
+                            .map_err(|_| OperationsConsoleError::Session)?;
+                        return Err(OperationsConsoleError::Session);
+                    }
+                    KeyCode::Char(' ') => {
+                        if live.lifecycle() == MissionSessionLifecycle::Paused {
+                            live.resume().map_err(|_| OperationsConsoleError::Session)?;
+                        } else {
+                            live.pause().map_err(|_| OperationsConsoleError::Session)?;
+                        }
+                    }
+                    KeyCode::Char('.') => {
+                        live.step_one_release()
+                            .map_err(|_| OperationsConsoleError::Session)?;
+                    }
+                    KeyCode::Enter => submit_next_guided_action(&mut live)?,
+                    other => update_page(&mut model, other),
+                }
+            }
+        }
+
+        let action_due =
+            live.recommended_load().is_some() || live.commit_request_for_staged().is_some();
+        let may_auto_act = project.role == OperationalRole::ScriptedOperator;
+        if may_auto_act && action_due {
+            submit_all_guided_actions(&mut live)?;
+        }
+        let should_pause_for_action = action_due
+            && matches!(
+                project.role,
+                OperationalRole::GuidedOperator
+                    | OperationalRole::FlightController
+                    | OperationalRole::SimDirector
+            );
+        if should_pause_for_action && live.lifecycle() != MissionSessionLifecycle::Paused {
+            live.pause().map_err(|_| OperationsConsoleError::Session)?;
+        }
+        if live.lifecycle() != MissionSessionLifecycle::Paused
+            && last_release.elapsed() >= Duration::from_micros(31_250)
+        {
+            live.advance_one_release()
+                .map_err(|_| OperationsConsoleError::Session)?;
+            last_release = Instant::now();
+        }
+        let page = model.page;
+        model = OperationsConsoleModel::from_live(project, &live.snapshot(), live.events_after(0));
+        model.page = page;
+    }
+    live.finish().map_err(|_| OperationsConsoleError::Session)
+}
+
+fn submit_next_guided_action(live: &mut LiveMissionSession) -> Result<(), OperationsConsoleError> {
+    if let Some(commit) = live.commit_request_for_staged() {
+        live.submit_operator_action(MissionOperatorAction::Commit(commit))
+            .map_err(|_| OperationsConsoleError::Session)?;
+        if live.lifecycle() == MissionSessionLifecycle::Paused {
+            live.resume().map_err(|_| OperationsConsoleError::Session)?;
+        }
+        return Ok(());
+    }
+    if let Some(load) = live.recommended_load() {
+        live.submit_operator_action(MissionOperatorAction::Stage {
+            load,
+            completed_event_mask: 0,
+        })
+        .map_err(|_| OperationsConsoleError::Session)?;
+    }
+    Ok(())
+}
+
+fn submit_all_guided_actions(live: &mut LiveMissionSession) -> Result<(), OperationsConsoleError> {
+    submit_next_guided_action(live)?;
+    submit_next_guided_action(live)
+}
+
+fn update_page(model: &mut OperationsConsoleModel, code: KeyCode) {
+    match code {
+        KeyCode::Left => {
+            model.page =
+                (model.page + OPERATIONS_PAGE_NAMES.len() - 1) % OPERATIONS_PAGE_NAMES.len();
+        }
+        KeyCode::Right => model.page = (model.page + 1) % OPERATIONS_PAGE_NAMES.len(),
+        KeyCode::F(number) if (1..=7).contains(&number) => {
+            model.page = usize::from(number - 1);
+        }
+        _ => {}
+    }
+}
+
+fn run_completed_operations_console(
+    project: &CompiledMissionProject,
+) -> Result<CompletedMissionSession, OperationsConsoleError> {
     let completed =
         complete_project_session(project, project.role == OperationalRole::ScriptedOperator)
             .map_err(|_| OperationsConsoleError::Session)?;
@@ -212,20 +416,10 @@ pub fn run_operations_console(
                 if key.kind != KeyEventKind::Press {
                     continue;
                 }
-                match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => break,
-                    KeyCode::Left => {
-                        model.page = (model.page + OPERATIONS_PAGE_NAMES.len() - 1)
-                            % OPERATIONS_PAGE_NAMES.len();
-                    }
-                    KeyCode::Right => {
-                        model.page = (model.page + 1) % OPERATIONS_PAGE_NAMES.len();
-                    }
-                    KeyCode::F(number) if (1..=7).contains(&number) => {
-                        model.page = usize::from(number - 1);
-                    }
-                    _ => {}
+                if matches!(key.code, KeyCode::Char('q') | KeyCode::Esc) {
+                    break;
                 }
+                update_page(&mut model, key.code);
             }
         }
     }
@@ -278,7 +472,7 @@ fn header(frame: &mut Frame<'_>, area: Rect, model: &OperationsConsoleModel, tit
     );
     frame.render_widget(
         Paragraph::new(format!(
-            "{:?}  DEF {:08X}  EVID {:08X}  F1-F7/←→  Q quit",
+            "{:?}  DEF {:08X}  EVID {:08X}  F1-F7/←→  SPACE pause  . step  ENTER action  Q quit",
             model.public.role, model.public.definition_identity, model.public.evidence_identity
         ))
         .style(Style::default().fg(Color::Green)),
