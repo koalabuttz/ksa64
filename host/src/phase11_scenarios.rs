@@ -31,6 +31,8 @@ pub const NOMINAL_OPERATIONS_SCENARIO_ID: u32 = 0x11b0_0001;
 pub const GNSS_LOSS_SCENARIO_ID: u32 = 0x11b0_0002;
 pub const GUIDANCE_UPDATE_SCENARIO_ID: u32 = 0x11b0_0003;
 pub const GROUND_BLACKOUT_SCENARIO_ID: u32 = 0x11b0_0004;
+pub const GNSS_LOSS_NO_ACTION_SCENARIO_ID: u32 = 0x11b0_0006;
+pub const GNSS_LOSS_DELAYED_ACTION_SCENARIO_ID: u32 = 0x11b0_0007;
 pub const INVALID_OPERATIONS_SCENARIO_ID: u32 = 0x11b0_0005;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -206,6 +208,83 @@ pub fn run_gnss_loss_procedure(_scripted: bool) -> OperationalScenarioEvidence {
         0,
     )
 }
+pub fn run_gnss_loss_no_action_probe() -> OperationalScenarioEvidence {
+    let (mut package, mut procedure, ground, first) = gnss_loss_setup();
+    let transcript = ActionTranscript::new();
+    let mut final_flight = first;
+    for epoch in 1..=321u16 {
+        final_flight = package.process_release(Some(coast_fast(epoch)), None, None);
+    }
+    let snapshot = operational_snapshot(321, &final_flight, ground.position_q12_km);
+    procedure.tick(&snapshot).unwrap();
+    procedure.tick(&snapshot).unwrap();
+    assert_eq!(procedure.state(), ProcedureState::Failed);
+    let procedure_chain = procedure.evidence().last().map_or(0, |record| record.chain);
+    finish_evidence(
+        GNSS_LOSS_NO_ACTION_SCENARIO_ID,
+        322,
+        final_flight,
+        &package,
+        procedure.state(),
+        procedure_chain,
+        transcript,
+        0,
+    )
+}
+
+pub fn run_gnss_loss_delayed_action_probe() -> OperationalScenarioEvidence {
+    let (mut package, mut procedure, ground, first) = gnss_loss_setup();
+    let mut transcript = ActionTranscript::new();
+    let mut final_flight = first;
+    for epoch in 1..=321u16 {
+        final_flight = package.process_release(Some(coast_fast(epoch)), None, None);
+    }
+    let snapshot = operational_snapshot(321, &final_flight, ground.position_q12_km);
+    procedure.tick(&snapshot).unwrap();
+    procedure.tick(&snapshot).unwrap();
+    assert_eq!(procedure.state(), ProcedureState::Failed);
+
+    let ground_load = ground_navigation_load(322, 325, 0x11c0_6001, ground);
+    let staged = package.stage_uplink(ground_load, 322).unwrap();
+    transcript.record(322, procedure.current_step(), staged);
+    let committed = package
+        .commit_uplink(&commit_request(ground_load, 322))
+        .unwrap();
+    transcript.record(322, procedure.current_step(), committed);
+    for epoch in 322..=325u16 {
+        final_flight = package.process_release(Some(coast_fast(epoch)), None, None);
+    }
+
+    let branch_load = generic_load(
+        326,
+        329,
+        0x11c0_6002,
+        UplinkLoadType::ContingencyBranch,
+        PACKAGE_CAP_BRANCH_SELECT,
+        final_flight.navigation.frame,
+        [1, 0, 0, 0],
+    );
+    let staged = package.stage_uplink(branch_load, 326).unwrap();
+    transcript.record(326, procedure.current_step(), staged);
+    let committed = package
+        .commit_uplink(&commit_request(branch_load, 326))
+        .unwrap();
+    transcript.record(326, procedure.current_step(), committed);
+    for epoch in 326..=329u16 {
+        final_flight = package.process_release(Some(coast_fast(epoch)), None, None);
+    }
+    let procedure_chain = procedure.evidence().last().map_or(0, |record| record.chain);
+    finish_evidence(
+        GNSS_LOSS_DELAYED_ACTION_SCENARIO_ID,
+        330,
+        final_flight,
+        &package,
+        procedure.state(),
+        procedure_chain,
+        transcript,
+        0,
+    )
+}
 
 pub fn run_guidance_update_probe() -> OperationalScenarioEvidence {
     let mut package = KsaG10rReferenceOpsV1::new(coast_config()).unwrap();
@@ -356,6 +435,37 @@ fn coast_config() -> GlobalFlightConfig {
         initial_position_q12: [WGS84_SEMI_MAJOR_Q12_KM + 614_400, 0, 0],
         ..ksa_g10r_reference_flight_config()
     }
+}
+fn gnss_loss_setup() -> (
+    KsaG10rReferenceOpsV1,
+    ProcedureEngine,
+    ksa64_interface::phase11::GroundEstimate,
+    GlobalFlightEvidence,
+) {
+    let mut package = KsaG10rReferenceOpsV1::new(coast_config()).unwrap();
+    let plan = ksa_g10r_reference_mission_plan();
+    assert!(package.initialize_mission_plan(plan));
+    let mut procedure =
+        ProcedureEngine::new(gnss_loss_procedure_pack(plan.plan_identity), 0).unwrap();
+    let first = package.process_release(Some(coast_fast(0)), None, None);
+    let observation = synthesize_ground_observation(
+        GroundTruthSample {
+            epoch: 0,
+            frame: first.navigation.frame,
+            position_q12_km: first.navigation.position_q12,
+            velocity_q24_km_s: first.navigation.velocity_q24,
+        },
+        0,
+        0x4b53_4111,
+    );
+    let mut estimator = GroundEstimator::new();
+    let ground = estimator.update(observation, 0).unwrap();
+    let snapshot = operational_snapshot(0, &first, ground.position_q12_km);
+    for _ in 0..3 {
+        procedure.tick(&snapshot).unwrap();
+    }
+    assert_eq!(procedure.current_step(), 4);
+    (package, procedure, ground, first)
 }
 
 fn coast_fast(epoch: u16) -> GlobalFastSensorCell {

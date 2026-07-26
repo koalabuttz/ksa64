@@ -1,0 +1,17 @@
+{
+  "schema": "ksa64.phase11.mission-project.v1",
+  "name": "KSA-G10R GNSS-loss operations",
+  "scenario": "gnss-loss",
+  "package": "KsaG10rReferenceOpsV1",
+  "role": "guided-operator",
+  "definition_identity": "0x11d10011",
+  "master_seed": "0x4b5341b0",
+  "hints": true,
+  "provenance": [
+    {
+      "kind": "accepted-model",
+      "source": "KSA64 frozen Phase 10 KSA-G10R evidence",
+      "identity": "0x10a00001"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "ksa64.phase11.session-sdk-evidence.v1",
+  "source": "phase11/examples/gnss-loss.json",
+  "compiler": "KSD11 v1",
+  "session": {
+    "definition_identity": "0xc5884398",
+    "action_identity": "0x7ea2c50a",
+    "completed_evidence_identity": "0x6d4122a0",
+    "validated_bytes": 22369,
+    "segment_count": 17,
+    "manifest_sha256": "6db058a1af462090ec0c4b32391518748ccc2486feb1a18408d4eb02e3066486",
+    "file_sha256": "38a3ef2e497b8e24d1cf53a56db85b3d8bea0bdb27586215a02ff75d0ee39dc8"
+  },
+  "checksums": {
+    "flight": "0x21ab27f0",
+    "navigation": "0x6768282d",
+    "command": "0xf095e720",
+    "evidence": "0x6d4122a0"
+  },
+  "acceptance": {
+    "definition_bundle_seals_without_claiming completion": true,
+    "completed_bundle_verifies": true,
+    "truncated_bundle_exposes_only_validated_prefix": true,
+    "corrupt_bundle_is_rejected": true,
+    "scripted_replay_is_exact": true,
+    "counterfactual_debrief_is_deterministic": true,
+    "html_and_json_reports_are_derived": true,
+    "c64_parses_no_json": true
+  }
+}

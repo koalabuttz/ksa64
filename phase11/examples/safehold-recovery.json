@@ -1,0 +1,17 @@
+{
+  "schema": "ksa64.phase11.mission-project.v1",
+  "name": "KSA-G10R bounded safehold and recovery",
+  "scenario": "safehold-recovery",
+  "package": "SafeholdRecoveryV1",
+  "role": "flight-software-engineer",
+  "definition_identity": "0x11d10012",
+  "master_seed": "0x4b5341b0",
+  "hints": false,
+  "provenance": [
+    {
+      "kind": "accepted-fixture",
+      "source": "KSA64 Phase 11 SafeholdRecoveryV1 bounded session",
+      "identity": "0x11d11002"
+    }
+  ]
+}

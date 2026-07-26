@@ -3,6 +3,7 @@
 //! Transport-neutral Phase 3 messages and strict fixed-width codecs.
 pub mod phase10;
 pub mod phase11;
+mod phase11_debrief;
 mod phase11_procedure;
 pub mod phase5;
 pub mod phase6;

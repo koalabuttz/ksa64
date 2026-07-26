@@ -4,6 +4,7 @@
 //! implementation is allowed to consume it and add bounded operational
 //! objects without giving ground software direct actuator authority.
 
+pub use crate::phase11_debrief::*;
 pub use crate::phase11_procedure::*;
 use crate::{crc32_ieee, CodecError};
 
