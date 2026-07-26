@@ -1,0 +1,13 @@
+{
+  "schema": "ksa64.phase10.compatibility-baseline-v1",
+  "source_commit": "75a16d3",
+  "audit_command": "phase9_5/complete.ps1 -SkipLegacy -SkipMos",
+  "audit_result": "pass",
+  "vice_used": false,
+  "frozen_through_phase": "9.5",
+  "notes": [
+    "All Phase 0-9.5 native tests, independent checks, accepted workbench reproductions, checked target artifacts, and presentation checks passed before Phase 10 implementation.",
+    "MOS and VICE are intentionally deferred to bounded Phase 10 target gates.",
+    "All Phase 10 code and formats are additive; no accepted legacy identity or artifact may change."
+  ]
+}
