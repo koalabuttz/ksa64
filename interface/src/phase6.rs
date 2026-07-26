@@ -50,6 +50,16 @@ pub enum LinkRecordType {
     Alarm = 9,
     Stop = 10,
     Heartbeat = 11,
+    PackageObject = 12,
+    GroundTelemetry = 13,
+    GroundTrackingObservation = 14,
+    UplinkStage = 15,
+    UplinkCommit = 16,
+    UplinkCancel = 17,
+    UplinkAcknowledgement = 18,
+    PredictionSummary = 19,
+    EventJournal = 20,
+    ProcedureAction = 21,
 }
 impl LinkRecordType {
     fn parse(v: u8) -> Result<Self, CodecError> {
@@ -65,6 +75,16 @@ impl LinkRecordType {
             9 => Ok(Self::Alarm),
             10 => Ok(Self::Stop),
             11 => Ok(Self::Heartbeat),
+            12 => Ok(Self::PackageObject),
+            13 => Ok(Self::GroundTelemetry),
+            14 => Ok(Self::GroundTrackingObservation),
+            15 => Ok(Self::UplinkStage),
+            16 => Ok(Self::UplinkCommit),
+            17 => Ok(Self::UplinkCancel),
+            18 => Ok(Self::UplinkAcknowledgement),
+            19 => Ok(Self::PredictionSummary),
+            20 => Ok(Self::EventJournal),
+            21 => Ok(Self::ProcedureAction),
             _ => Err(CodecError::Enum),
         }
     }
