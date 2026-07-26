@@ -1392,3 +1392,15 @@ Hand the frozen contracts to Phase 12 Mission Foundry. Keep physical
 loading/links, a 6502-specific rewrite, C64 Ultimate acceleration, the portable
 C64 world, REU overlays, and live package handover on their declared separate
 tracks.
+
+## D-110: Consolidate products through a host application facade
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Add one deterministic `ProductCatalog` and `Ksa64Application` facade above the accepted Phase 0–11 implementations. Make `ksa64` the primary host executable and keep `ksa64-host` plus documented phase programs as compatibility surfaces through at least Phase 13.
+
+Use stable domain IDs for new product discovery while preserving serialized profile variants, K-format identities, phase modules, artifacts, and hashes. Keep the current supported catalog separate from historical audits and specialist tools. Catalog JSON and application outcomes are host metadata, not canonical evidence.
+
+Phase 12 must call Rust application services directly. It may not invoke the CLI, parse console output, duplicate physics, or bypass strict evidence parsers. Target verification is stored and non-live by default; VICE and hardware always require an explicit request. No physics, avionics, optimizer, canonical format, or C64 program changes are authorized by this decision.

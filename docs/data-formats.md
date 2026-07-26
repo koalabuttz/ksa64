@@ -410,3 +410,9 @@ The packaging tool validates every segment against the accepted memory map
 before emitting load-addressed PRGs and a SHA-256 manifest. The VICE probe
 rejects any bundle, transcript, bank guard, code-preservation, or response
 mismatch.
+
+## Phase 11.5 product metadata
+
+Phase 11.5 introduces no canonical binary format and changes no existing `K*` record.
+
+`ksa64.product-catalog.v1` is deterministic host product metadata describing current experiences, targets, placements, maturity, limitations, and historical provenance. `ksa64.application-outcome.v1` is structured host command output. Neither participates in simulation, flight, campaign, optimizer, or evidence identity, and neither may replace the strict parser owned by an underlying artifact family.

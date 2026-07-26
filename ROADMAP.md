@@ -455,46 +455,34 @@ Explicit non-goals:
 
 ## Phase 11.5: product consolidation and unified application shell
 
-Status: implementation in progress. The accepted contract and baseline are in
-`phase11_5/`.
+Status: complete and accepted on 2026-07-26. See `phase11_5/COMPLETION.md`.
 
-Purpose: make the accepted simulation, operations, workbench, evidence, and
-target capabilities discoverable as one host product without changing any
-authoritative model or frozen artifact.
+Purpose: make the accepted simulation, operations, workbench, evidence, and target capabilities discoverable as one host product without changing authoritative models or frozen artifacts.
 
-Planned capabilities:
+Delivered:
 
-- One `ksa64` host executable and application facade shared with Phase 12.
-- A deterministic two-tier catalog separating current domain-oriented
-  experiences from historical phase validation tools.
-- Unified project, mission, campaign, optimization, evidence, target, and
-  audit commands.
-- Guided KSA-G10R GNSS-loss operations as the flagship quick-start.
-- Direct Rust application services; Mission Foundry will not parse CLI output
-  or spawn phase-numbered binaries.
-- Compatibility wrappers for documented host entrypoints through at least
-  Phase 13.
-- Explicit target metadata and opt-in live VICE behavior preserving the
-  one-instance, warp-disabled, cooldown, and long-run confirmation policies.
+- One default `ksa64` executable and a shared public Rust application facade.
+- A deterministic two-tier catalog with 13 current experiences, seven C64 targets, and opt-in Phase 0–11 historical tools.
+- Unified project, mission, campaign, optimization, evidence, target, and audit commands using stable domain IDs.
+- Guided KSA-G10R GNSS-loss operations as the flagship quick start.
+- Direct Phase 12 Rust APIs; Mission Foundry does not need to parse CLI output or spawn phase binaries.
+- Exact Phase 11 and legacy telemetry compatibility wrappers retained through at least Phase 13.
+- Explicit stored-versus-live target dispatch preserving one-instance, warp-disabled, cooldown, cleanup, and long-run confirmation policy.
 
-Exit criteria:
+Accepted evidence:
 
-- Every Phase 0-11 artifact remains exact.
-- All current experiences are discoverable without knowing phase numbers.
-- Unified and compatibility entrypoints produce identical artifacts and
-  checksums.
-- Stored target verification cannot launch VICE or hardware implicitly.
-- Phase 12 receives a stable product catalog and application-service boundary.
+- Every Phase 0–11 frozen artifact remains unchanged.
+- Unified and Phase 11 compatibility sessions are byte-identical.
+- Catalog and quick-start output are deterministic.
+- Stored verification cannot launch VICE, and live probes require an explicit flag.
+- rust-mos packaging and the finite safehold/banked VICE probes remain exact with no new C64 program.
 
-Explicit non-goals:
-
-- No new physics, avionics, formats, target implementation, GUI, or 3-D viewer.
-- No repository-wide directory migration or removal of historical evidence.
+Explicit non-goals remain new physics, avionics, formats, target implementations, GUI, 3-D viewer, repository migration, REU overlay, Ultimate acceleration, physical-link acceptance, and the deferred 6502 rewrite.
 
 ## Phase 12: Mission Foundry and passive 3-D operations
 
-Status: planned. Phase 11 has frozen the required headless contracts; see
-`phase11/PHASE12_HANDOFF.md`.
+Status: planned. Phase 11.5 has frozen the required product and application contracts; see
+`phase11_5/PHASE12_HANDOFF.md`.
 
 Purpose: provide a KSP/Juno-inspired host authoring experience while keeping
 KSA64's compiled packs, authority boundaries, provenance, and evidence model

@@ -74,6 +74,10 @@ fn phase11_wrapper_and_unified_project_produce_identical_sessions() {
         String::from_utf8_lossy(&legacy_output.stderr)
     );
     assert_eq!(fs::read(&unified).unwrap(), fs::read(&legacy).unwrap());
+    assert_eq!(
+        String::from_utf8(legacy_output.stdout).unwrap(),
+        "completed evidence 0x6d4122a0 (22369 bytes)\n"
+    );
 
     let _ = fs::remove_file(unified);
     let _ = fs::remove_file(legacy);
@@ -96,6 +100,10 @@ fn ksa64_host_keeps_original_capture_aliases() {
     assert!(a.status.success());
     assert!(b.status.success());
     assert_eq!(a.stdout, b.stdout);
+    let normalized = String::from_utf8(a.stderr)
+        .unwrap()
+        .replace(unified.to_str().unwrap(), alias.to_str().unwrap());
+    assert_eq!(normalized.as_bytes(), b.stderr);
     assert_eq!(fs::read(&unified).unwrap(), fs::read(&alias).unwrap());
 
     let _ = fs::remove_file(unified);

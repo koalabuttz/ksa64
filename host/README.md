@@ -1,4 +1,16 @@
-# KSA64 host telemetry tools
+# KSA64 host application and telemetry tools
+
+## Unified product shell
+
+`ksa64` is the primary host entrypoint and the Cargo package default. Running it with no arguments prints a non-mutating quick start. The shared `Ksa64Application` facade exposes the same catalog and services directly to Phase 12; graphical tools must not parse CLI output or spawn phase binaries.
+
+```powershell
+cargo run -p ksa64-host --bin ksa64 --
+cargo run -p ksa64-host --bin ksa64 -- catalog list
+cargo run -p ksa64-host --bin ksa64 -- mission control ksa-g10r.operations --scenario gnss-loss
+```
+
+See [Phase 11.5 commands](../phase11_5/COMMANDS.md), [target policy](../phase11_5/TARGETS.md), and the checked [product catalog](../phase11_5/product-catalog-v1.json). `ksa64-host` and documented phase-numbered programs remain compatibility entrypoints.
 
 The host crate is a `std` adapter around the portable `ksa64-core`; it does not contain a second simulator. It captures records through the same `TelemetrySink` boundary used by C64 targets, then inspects the canonical binary stream with the core decoder.
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes both the implemented architecture through Phase 4 and the extension boundaries for later phases. Accepted choices are recorded in `docs/decisions.md`; later phases may replace a model only through an explicit versioned decision.
+This document describes the implemented architecture through Phase 11.5 and the extension boundaries for later phases. Accepted choices are recorded in `docs/decisions.md`; later phases may replace a model only through an explicit versioned decision.
 
 ## System qualities
 
@@ -497,3 +497,30 @@ aided release takes seconds on the stock PAL CPU, the accepted placement is
 externally paced host-world/C64-flight and makes no realtime claim. A physical
 bank loader and link, a 6502-specific rewrite, C64 Ultimate acceleration, and
 the portable C64 world remain explicit follow-on tracks.
+
+## Accepted Phase 11.5 product architecture
+
+Phase 11.5 adds a host-only product boundary above the accepted domain implementations:
+
+```text
+ProductCatalog
+      |
+      v
+Ksa64Application facade
+      |
+      +--> accepted mission and operations services
+      +--> campaign and optimization workbenches
+      +--> strict evidence services
+      +--> explicit target and historical-audit dispatch
+      |
+      +--> ksa64 CLI
+      +--> Phase 12 Mission Foundry
+```
+
+The facade owns discovery, capability validation, orchestration, structured outcomes, and diagnostics. It does not own a vehicle state, duplicate a simulator, reinterpret telemetry, alter optimizer selection, or replace a strict evidence parser. Each catalog entry points directly to an accepted service adapter.
+
+The catalog has a current tier for supported product experiences and a separate historical tier for engineering audits and compatibility tools. New user-facing state uses stable domain IDs and canonical source aliases; serialized profile variants, phase modules, K-format identities, artifacts, and hashes remain unchanged.
+
+The CLI and Phase 12 consume the same Rust services. The GUI must never treat console text as an API. Catalog JSON is deterministic host metadata, not canonical simulation evidence, and Phase 11.5 therefore adds no K-format family.
+
+Target automation separates stored verification, build, and live probe requests. Stored verification cannot create a process. Live VICE requires an explicit flag and delegates to the phase that owns the target evidence, preserving one-instance, warp-disabled, cooldown, cleanup, and long-run rules.

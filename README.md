@@ -2,13 +2,32 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–11 are complete. Phase 11.5 is consolidating the accepted missions, operations, workbenches, evidence, and C64 targets behind one `ksa64` application and deterministic product catalog before Phase 12 builds Mission Foundry. The complete portable reference-operations package runs in banked stock-C64 RAM under externally paced VICE, while the independent safehold package remains a flat stock image. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, physical-link acceptance, and the portable C64 world remain parallel priority tracks.
+> **Project status:** Phases 0–11.5 are complete. The accepted missions, operations, workbenches, evidence, and C64 targets are now discoverable through one `ksa64` application and deterministic product catalog. Phase 12 can build Mission Foundry directly on the frozen Rust application facade. The complete portable reference-operations package runs in banked stock-C64 RAM under externally paced VICE, while the independent safehold package remains a flat stock image. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, physical-link acceptance, and the portable C64 world remain parallel priority tracks.
 
 KSA64 asks a deliberately unreasonable question:
 
 > What would a modern aerospace simulation architecture look like if its target computer were a Commodore 64?
 
 The answer is not an arcade game and not a desktop simulator squeezed unchanged into 64 KB. KSA64 uses the strategy that made early aerospace computing practical: select the smallest model that answers the current question, use explicit numeric representations, isolate vehicle truth from flight software, validate independently, and spend memory and CPU only where measurements justify it.
+
+
+## Quick start
+
+From the repository root, the flagship guided experience is:
+
+```powershell
+cargo run -p ksa64-host --bin ksa64 -- mission control ksa-g10r.operations --scenario gnss-loss
+```
+
+Discover everything currently supported without knowing phase numbers:
+
+```powershell
+cargo run -p ksa64-host --bin ksa64 --
+cargo run -p ksa64-host --bin ksa64 -- catalog list
+cargo run -p ksa64-host --bin ksa64 -- target list
+```
+
+The no-argument command and catalog are read-only. Stored target verification never launches VICE; live probes require `--live` and historical live audits require `--live-vice`.
 
 ## What works today
 
@@ -60,6 +79,7 @@ KSA64 currently provides:
 - Phase 11 profile-specific flight-package manifests, compiled mission plans, atomic stage/validate/commit uplinks, separate ground-communications faults, compact onboard prediction, independent ground estimation, deterministic procedures/roles, event-journal recovery, and exact action replay;
 - nominal, GNSS-loss, planned-update, blackout, invalid-command, and limited `SafeholdRecoveryV1` operational scenarios, plus a live operations console and headless `lint/compile/inspect/run/script/replay/debrief/verify` mission SDK;
 - a 32,857-byte flat stock-C64 safehold endpoint and an authorized banked stock-RAM reference-operations stopgap: 13 native/C64 exact operations, no REU, 16/279 emergency-stack bytes used, preserved bank guards/code, and warp-disabled one-instance VICE acceptance.
+- one host-facing `ksa64` product shell with 13 current experiences, seven C64 targets, deterministic human/JSON discovery, unified mission/campaign/optimization/evidence services, safe target dispatch, and Phase 11 compatibility wrappers.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -122,12 +142,12 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 9.5 — Advanced effectors | Complete: canards, cold-gas RCS, exact pulses/depletion, mixed allocation, robust searches, externally paced stock-C64 flight, live Mission Control, adaptive finalist browsing, selected-finalist split reruns, and full completion audit. |
 | 10 — Global Earth flight | Complete: WGS 84/TAI/EOP contracts, ECEF/GCRF dynamics, exact frame transitions, global avionics, controlled suborbital recovery, KSA-5A coast corroboration, deterministic campaigns, Mission Control, and bounded stock-C64 flight/replay. |
 | 11 — Mission operations | Complete: flight-software packages, mission plans, estimate-based prediction, NASA-style atomic commanding, deterministic procedures/roles, exact session replay/debriefs, headless authoring, a flat safehold endpoint, and the banked stock-C64 reference-operations stopgap. |
+| 11.5 — Product consolidation | Complete: one deterministic product catalog, shared Rust application facade, unified `ksa64` CLI, exact compatibility wrappers, safe target/audit dispatch, and a direct Phase 12 API handoff. |
 
 ## Active and planned phases
 
 | Phase | Intended result |
 |---|---|
-| 11.5 — Product consolidation | One host application facade, domain-oriented product catalog, unified CLI, compatibility entrypoints, and an explicit Phase 12 API boundary. |
 | 12 — Mission Foundry | Host vehicle integration, authority-lane mission composition, avionics binding, evidence maturity, and passive role-filtered 3-D operations over the Phase 11 contracts. |
 | 13 candidate — Sustained spacecraft | A concrete mission-selected orbital spacecraft and bounded subsystem slice; scope remains unlocked until the mission defines its required physics and evidence. |
 
@@ -161,7 +181,8 @@ The legacy Phase 3/4 accuracy-first closed-loop path still projects to 243.7 min
 - [Phase 9](phase9/README.md), [implementation contract](phase9/PLAN.md), [completion record](phase9/COMPLETION.md), and [Phase 9.5 handoff](phase9/PHASE9_5_HANDOFF.md)
 - [Phase 9.5](phase9_5/README.md), [implementation contract](phase9_5/PLAN.md), [completion record](phase9_5/COMPLETION.md), [integrated evidence](phase9_5/INTEGRATED_EVIDENCE.md), [stock-target decision](phase9_5/stock-target-decision.md), [finalist workflow](phase9_5/FINALIST_WORKFLOW.md), and [Phase 10 handoff](phase9_5/PHASE10_HANDOFF.md)
 - [Phase 10](phase10/README.md), [implementation contract](phase10/PLAN.md), [validation](phase10/VALIDATION.md), [completion record](phase10/COMPLETION.md), and [next-phase handoff](phase10/NEXT_PHASE_HANDOFF.md)
-- [Phase 11](phase11/README.md), [implementation contract](phase11/PLAN.md), [completion record](phase11/COMPLETION.md), [banked stock-C64 endpoint](phase11/C64_BANKED_REFERENCE_OPS.md), and [Phase 12 handoff](phase11/PHASE12_HANDOFF.md)
+- [Phase 11](phase11/README.md), [implementation contract](phase11/PLAN.md), [completion record](phase11/COMPLETION.md), [banked stock-C64 endpoint](phase11/C64_BANKED_REFERENCE_OPS.md), and [operations handoff](phase11/PHASE12_HANDOFF.md)
+- [Phase 11.5](phase11_5/README.md), [product commands](phase11_5/COMMANDS.md), [target guide](phase11_5/TARGETS.md), [completion record](phase11_5/COMPLETION.md), and [Mission Foundry API handoff](phase11_5/PHASE12_HANDOFF.md)
 
 ### Phase 4 detail
 
@@ -262,6 +283,14 @@ powershell -File phase11/complete.ps1
 ```
 
 It validates the frozen Phase 0–10 behavior, all operational contracts and scenarios, prediction vectors, the headless SDK, exact replay/debriefs, deliberate corruption, and both stock-C64 packages. Stored VICE evidence is checked by default; add `-RunVice` only to rerun the sequential finite safehold and banked-reference probes. It never starts a complete target mission.
+
+The Phase 11.5 product audit is:
+
+```powershell
+powershell -File phase11_5/complete.ps1
+```
+
+It composes the frozen Phase 11 boundary with catalog snapshots, application-service tests, quick-start determinism, unified/legacy byte parity, safe stored-target verification, rust-mos packaging, and target cleanup. Add `-RunVice` only to rerun the two finite sequential warp-disabled probes. It never starts a long target mission.
 
 ## Phase 6: software baseline accepted
 

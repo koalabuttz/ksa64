@@ -436,3 +436,24 @@ This evidence proves portable implementation consistency on stock C64 CPU/RAM
 under VICE. It does not prove a physical loader or user-port/ACIA/Ethernet link,
 realtime operation, dissimilar redundancy, certification, launch approval, or
 real-vehicle accuracy.
+
+## Accepted Phase 11.5 product validation
+
+Phase 11.5 validates orchestration and discoverability without creating a new physical oracle. The completion gate composes the frozen Phase 11 audit with:
+
+- deterministic current/historical catalog ordering and an exact checked JSON snapshot;
+- duplicate, missing-adapter, impossible-placement, and nonexistent-asset rejection;
+- a stable non-mutating quick start;
+- direct application-service tests for every advertised family;
+- exact KSB11 session parity between unified and Phase 11 entrypoints;
+- exact legacy telemetry alias parity;
+- stored target verification with process creation excluded;
+- explicit rejection of live target requests missing `--live`;
+- rust-mos package/hash and stock-memory regression; and
+- sequential finite VICE evidence using one warp-disabled instance at a time with cleanup.
+
+The catalog advertises only scenarios callable through the product facade. Specialist crosswind, fault-matrix, and full engineering switches remain discoverable through their historical owner rather than being falsely promised by a smaller adapter.
+
+The accepted catalog contains 13 current experiences and seven target descriptors. Its SHA-256 is `b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13`. The unified GNSS-loss session remains the frozen 22,369-byte Phase 11 evidence with identity `0x6d4122a0`.
+
+This validation proves that presentation and orchestration preserve accepted behavior. It does not add real-vehicle accuracy, physical-link acceptance, realtime C64 performance, certification, launch approval, or safety authority.

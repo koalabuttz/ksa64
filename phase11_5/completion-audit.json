@@ -1,0 +1,71 @@
+{
+  "schema": "ksa64.phase11-5.completion-audit-v1",
+  "status": "pass",
+  "date": "2026-07-26",
+  "accepted_implementation_commit": "e4faec3",
+  "compatibility": {
+    "phase_0_through_11": true,
+    "frozen_artifacts_unchanged": true,
+    "canonical_formats_added": false,
+    "c64_programs_changed": false
+  },
+  "product": {
+    "application_schema": "ksa64.application-outcome.v1",
+    "catalog_schema": "ksa64.product-catalog.v1",
+    "catalog_sha256": "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13",
+    "current_experiences": 13,
+    "c64_targets": 7,
+    "historical_entries": 14,
+    "default_executable": "ksa64",
+    "host_alias": "ksa64-host",
+    "flagship": "ksa64 mission control ksa-g10r.operations --scenario gnss-loss"
+  },
+  "native": {
+    "format": "pass",
+    "clippy_all_targets": "pass",
+    "phase11_workspace_regression": "pass",
+    "phase11_5_host_tests": "pass",
+    "catalog_snapshot": "pass",
+    "quick_start_deterministic": true,
+    "stored_target_verification_no_vice": true,
+    "live_probe_requires_explicit_flag": true
+  },
+  "parity": {
+    "phase11_session_bytes": 22369,
+    "phase11_evidence_identity": "0x6d4122a0",
+    "phase11_session_sha256": "38a3ef2e497b8e24d1cf53a56db85b3d8bea0bdb27586215a02ff75d0ee39dc8",
+    "phase1_capture_bytes": 10312,
+    "phase1_stream_crc32": "0xcf56fe65",
+    "phase1_state_checksum": "0x72bf6e0e"
+  },
+  "stock_c64": {
+    "reu_required": false,
+    "safehold_endpoint_bytes": 32857,
+    "safehold_probe_releases": 16,
+    "safehold_probe_failures": 0,
+    "safehold_probe_sha256": "c340315bd1ec05138e6252004fe3c76b77f883559239cea837c19989d436a630",
+    "reference_operations_bundle_bytes": 55423,
+    "reference_operations_bundle_sha256": "cb1979fd4e5abf5c26bfbc71ef031ed4d4e0c2d2a9eee4e0522fdc306d9ab377",
+    "reference_operations_records": 13,
+    "emergency_stack_high_water_bytes": 16,
+    "emergency_stack_capacity_bytes": 279,
+    "code_segments_preserved": true,
+    "segment_guards_preserved": true
+  },
+  "vice": {
+    "policy": "one instance, warp disabled, close after success or proven failure, 20 second cooldown",
+    "safehold": "pass",
+    "reference_operations": "pass",
+    "navigation_checksum": "c73060d2",
+    "flight_checksum": "6e07595c",
+    "command_checksum": "6ab926f2",
+    "full_target_mission_started": false
+  },
+  "limitations": [
+    "Phase 11.5 adds no new physics, canonical evidence format, or C64 program.",
+    "Specialized historical tools remain necessary for advanced switches not exposed by the primary shell.",
+    "Stored target verification does not replace the owning phase semantic audit.",
+    "Physical links, realtime target work, a 6502 rewrite, Ultimate acceleration, REU overlays, and the portable C64 world remain open.",
+    "Results are engineering evidence, not launch approval, certification, regulatory evidence, or safety authority."
+  ]
+}
