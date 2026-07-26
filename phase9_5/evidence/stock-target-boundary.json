@@ -1,0 +1,72 @@
+{
+  "schema": "ksa64.phase9_5.stock-target-boundary-v1",
+  "decision": "stop_at_explicit_gate10_boundary",
+  "accepted_artifacts_unchanged": true,
+  "flight_endpoint": {
+    "bytes": 44055,
+    "sha256": "27d759df625fdc9a65cd0b14e7c1de35669f3b2e6f920cd64b402bdbff40673c",
+    "load_address": 2049,
+    "load_end_exclusive": 46102,
+    "stock_fit": true,
+    "pal_budget_cycles": 24631,
+    "timing": {
+      "advanced_wrapper_cycles": 108582,
+      "allocated_aided_cycles": 681123,
+      "allocated_fast_cycles": 649685,
+      "allocated_fallback_cycles": 674880,
+      "worst_cycles": 681123,
+      "headroom_cycles": -656492,
+      "budget_ratio": 27.653079452722178
+    },
+    "fit_pass": true,
+    "realtime_pass": false
+  },
+  "world_endpoint": {
+    "flat_region_start": 2049,
+    "flat_region_end_exclusive": 49152,
+    "flat_region_bytes": 47103,
+    "optimized_runtime_pack_parsers": false,
+    "compiled_fixture_exactness_test": true,
+    "text_overflow_bytes": 41035,
+    "program_data_overflow_bytes": 43058,
+    "final_static_overflow_bytes": 50604,
+    "estimated_program_data_bytes": 90161,
+    "estimated_final_static_bytes": 97707,
+    "fit_pass": false,
+    "largest_symbols": [
+      {
+        "name": "AdvancedWorldEndpoint::release",
+        "bytes": 35422
+      },
+      {
+        "name": "world endpoint main",
+        "bytes": 10179
+      },
+      {
+        "name": "evaluate_forces_controlled",
+        "bytes": 5950
+      },
+      {
+        "name": "step_hobby_attitude",
+        "bytes": 2678
+      },
+      {
+        "name": "AdvancedEffectorPack::is_valid",
+        "bytes": 2180
+      },
+      {
+        "name": "derive_mass_properties",
+        "bytes": 1813
+      }
+    ]
+  },
+  "constraints_preserved": [
+    "32 Hz release rate unchanged",
+    "allocation remains on flight endpoint",
+    "no REU requirement introduced",
+    "effectors retained",
+    "world/flight split retained",
+    "no full target mission started"
+  ],
+  "next_authority_required": "Choose a materially different packaging or realtime strategy before Gate 10 can continue."
+}

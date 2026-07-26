@@ -1,0 +1,24 @@
+{
+  "schema": "ksa64.phase9_5.avionics-timing-v1",
+  "target": "PAL stock C64 via pinned x64sc 3.10",
+  "runs": 3,
+  "cycles": {
+    "status": 1,
+    "overhead": 24,
+    "aided_cycles": 681123,
+    "fast_cycles": 649685,
+    "fallback_cycles": 674880,
+    "worst_cycles": 681123,
+    "budget_cycles": 24631,
+    "allocator_checksum": 870763504
+  },
+  "deadline_pass": false,
+  "release_budget_fraction": 22.12228393257332,
+  "headroom_cycles": -656492,
+  "artifact": {
+    "bytes": 37011,
+    "sha256": "17f3160b8559d75f64af7b60a0cece918c99306b30979520463c7372720958b2",
+    "load_address": 2049,
+    "load_end_exclusive": 39058
+  }
+}

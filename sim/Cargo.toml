@@ -139,3 +139,18 @@ required-features = ["c64"]
 name = "ksa64-phase9-5-allocator-probe-c64"
 path = "src/bin/phase9_5_allocator_probe_c64.rs"
 required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase9-5-flight-endpoint-c64"
+path = "src/bin/phase9_5_flight_endpoint_c64.rs"
+required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase9-5-avionics-timed-c64"
+path = "src/bin/phase9_5_avionics_timed_c64.rs"
+required-features = ["c64"]
+
+[[bin]]
+name = "ksa64-phase9-5-advanced-timed-c64"
+path = "src/bin/phase9_5_advanced_timed_c64.rs"
+required-features = ["c64"]

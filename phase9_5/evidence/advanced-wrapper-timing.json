@@ -1,0 +1,18 @@
+{
+  "schema": "ksa64.phase9_5.advanced-wrapper-timing-v1",
+  "samples": [
+    {
+      "status": 0,
+      "cycles": 108582
+    },
+    {
+      "status": 0,
+      "cycles": 108582
+    },
+    {
+      "status": 0,
+      "cycles": 108582
+    }
+  ],
+  "cycles": 108582
+}
