@@ -1,0 +1,52 @@
+{
+  "schema": "ksa64.phase11.reference-ops-stock-fit-boundary.v1",
+  "status": "decision-required",
+  "target": "KsaG10rReferenceOpsV1 externally paced stock-C64 endpoint",
+  "toolchain": "pinned David/koalabuttz rust-mos Docker image, c64 profile, mos-c64-none",
+  "constraints": {
+    "load_address": "0x0801",
+    "required_end_exclusive": "0xc000",
+    "reu_required": false,
+    "portable_package_source_required": true
+  },
+  "initial_attempt": {
+    "image_overflow_bytes": 6464,
+    "total_overflow_including_static_stack_bytes": 15103
+  },
+  "measured_optimization": {
+    "change": "reuse stable mailbox memory for codecs and stream journal recovery one record at a time",
+    "image_overflow_bytes": 5154,
+    "static_stack_bytes": 8560,
+    "total_overflow_bytes": 13714,
+    "linker_map_text_bytes": 56172,
+    "main_text_bytes": 30572,
+    "portable_package_state_bytes": 3820,
+    "mission_plan_state_bytes": 1616
+  },
+  "accepted_safehold_endpoint": {
+    "artifact_bytes": 32857,
+    "load_end_exclusive": "0x8858",
+    "stock_fit": true,
+    "sha256": "353ecad4d65030233509db14fd30ee2ef02040a1a4320938043242e571eab779",
+    "reu_required": false
+  },
+  "conclusion": "The independent SafeholdRecoveryV1 endpoint fits. The complete portable reference operations package does not fit below 0xc000 after local-buffer optimization.",
+  "options_requiring_user_direction": [
+    {
+      "id": "banked-stock-image",
+      "effect": "Use RAM at or above 0xc000 with explicit banking; violates the frozen below-0xc000 acceptance wording."
+    },
+    {
+      "id": "6502-specific-reference-package",
+      "effect": "Implement a compact package with the same wire behavior; this is the deferred 6502-specific rewrite."
+    },
+    {
+      "id": "reu-or-ultimate-overlay",
+      "effect": "Use expansion-backed overlays; violates the no-REU baseline and belongs to the recorded feasibility study."
+    },
+    {
+      "id": "defer-reference-stock-target",
+      "effect": "Keep host-world/host-flight and SafeholdRecoveryV1 on stock C64 now; Phase 11 remains incomplete against its original stock-reference acceptance criterion."
+    }
+  ]
+}
