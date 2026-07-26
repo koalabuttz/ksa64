@@ -1,0 +1,14 @@
+{
+  "schema": "ksa64.phase11.compatibility-baseline-v1",
+  "source_commit": "2e530ba",
+  "audit_command": "phase10/complete.ps1 -SkipMos",
+  "audit_result": "pass",
+  "vice_used": false,
+  "frozen_through_phase": "10",
+  "notes": [
+    "Phase 11 is additive and does not change KLR8, KLR9, KLR10, or any accepted Phase 0-10 artifact.",
+    "The reference operations package must delegate the inactive path to the frozen Phase 10 GlobalFlightComputer exactly.",
+    "MOS and VICE evidence is reserved for bounded Phase 11 target gates."
+  ]
+}
+

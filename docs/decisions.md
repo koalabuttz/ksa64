@@ -1277,3 +1277,65 @@ apogee, drogue, main, and all frame transitions. Terminal ground contact has a
 separate four-recovery-step (0.125 s) tolerance for accumulated fixed-point
 descent quantization; the accepted difference is 0.09375 s. This deviation is
 explicit evidence, not coefficient tuning.
+
+## D-104: Keep flight packages profile-specific
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Add a versioned flight-software package envelope over existing KLR contracts,
+but do not replace KLR8, KLR9, or KLR10 with one universal sensor ABI. A
+package declares its compatible ABI, segments, schedule, capabilities,
+persistent memory, safe state, command-loss policy, and claimed targets.
+
+The Phase 10 reference operations package delegates its inactive path to the
+frozen `GlobalFlightComputer`. `SafeholdRecoveryV1` is a smaller independently
+identified coast/entry/recovery implementation compiled for host and rust-mos.
+It demonstrates interchangeability, not dissimilar safety redundancy.
+
+## D-105: Use atomic load, validate, acknowledge, and commit commanding
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Permit ground navigation updates, bounded targets for declared plan events,
+contingency selections, navigation modes, and high-level continue/hold/safe/
+recovery/abort requests. Flight software stages and validates a complete load,
+returns an explicit receipt, and changes active state only after a separate
+commit on an exact 32 Hz release.
+
+Never permit ground operations or procedures to command individual effectors.
+Stale, corrupt, partial, incompatible, excessive-residual, and late loads fail
+closed. Committed loads survive loss of ground contact; uncommitted loads
+never activate.
+
+## D-106: Separate the ground link from the simulated avionics loop
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Treat onboard sensor/actuator transport and spacecraft/ground communications
+as distinct logical links even when one physical host/C64 connection carries
+both. A simulated ground blackout may delay or drop telemetry and uplinks but
+cannot remove onboard sensors, actuator authority, the committed mission
+plan, compact prediction, recovery logic, or the event journal.
+
+Procedure time and command deadlines use simulation time. Paused or externally
+paced target execution therefore cannot manufacture an operational timeout.
+
+## D-107: Defer live package handover and REU overlays
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Select one flight package before a session. Do not implement live PASS/BFS
+engagement in Phase 11. Record a future REU feasibility study covering
+executable overlays, versioned handoff state, DMA latency, atomic validation,
+rollback, backup freshness, failure recovery, and C64 Ultimate interaction.
+
+An REU cannot execute code directly and one CPU plus storage is not hardware
+redundancy. The later target-engineering track must preserve that distinction.

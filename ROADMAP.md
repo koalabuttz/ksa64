@@ -364,7 +364,7 @@ The vehicle's organizational category never selects this profile automatically. 
 
 ## Phase 11: mission operations and programmable flight
 
-Status: next planned phase.
+Status: implementation active.
 
 Purpose: turn the accepted simulator into an operable and programmable mission
 system without adding a new physical model. Phase 11 freezes the contracts that
