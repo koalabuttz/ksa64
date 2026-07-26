@@ -61,10 +61,25 @@ pub enum GlobalWorldError {
     Frame(FrameError),
     Identity,
     Numeric,
-    Envelope,
+    EnvelopeDynamicPressure,
+    EnvelopeMach,
+    EnvelopeAngleOfAttack,
+    EnvelopeAeroTable,
     Transition,
     Complete,
     Timeout,
+}
+
+impl GlobalWorldError {
+    pub const fn is_model_envelope(self) -> bool {
+        matches!(
+            self,
+            Self::EnvelopeDynamicPressure
+                | Self::EnvelopeMach
+                | Self::EnvelopeAngleOfAttack
+                | Self::EnvelopeAeroTable
+        )
+    }
 }
 
 impl From<GlobalPackError> for GlobalWorldError {
@@ -854,8 +869,11 @@ impl<'a> GlobalWorldMachine<'a> {
             return Err(GlobalWorldError::Numeric);
         }
         let (speed_q4, mach_q24, dynamic_q14) = global_air_data(air_velocity, atmosphere)?;
-        if dynamic_q14 > MAX_DYNAMIC_PRESSURE_Q14 || mach_q24 > MAX_MACH_Q24 {
-            return Err(GlobalWorldError::Envelope);
+        if dynamic_q14 > MAX_DYNAMIC_PRESSURE_Q14 {
+            return Err(GlobalWorldError::EnvelopeDynamicPressure);
+        }
+        if mach_q24 > MAX_MACH_Q24 {
+            return Err(GlobalWorldError::EnvelopeMach);
         }
         let cda_and_bits = if self.drogue {
             if self.main {
@@ -956,13 +974,13 @@ impl<'a> GlobalWorldMachine<'a> {
         let mut torque = GlobalBodyTorque::ZERO;
         if !self.drogue && dynamic_q14 >= 1 << 14 {
             if body_air.x() <= 0 {
-                return Err(GlobalWorldError::Envelope);
+                return Err(GlobalWorldError::EnvelopeAngleOfAttack);
             }
             let alpha_y = divide_scaled(body_air.y(), body_air.x(), 24, status);
             let alpha_z = divide_scaled(body_air.z(), body_air.x(), 24, status);
             let alpha = magnitude3_floor(alpha_y, alpha_z, 0, status);
             if alpha > TAN_15_DEGREES_Q24 as u32 {
-                return Err(GlobalWorldError::Envelope);
+                return Err(GlobalWorldError::EnvelopeAngleOfAttack);
             }
             let q_area_q13 =
                 multiply_scaled(dynamic_q14, self.vehicle.reference_area_q29_m2, 29, status);
@@ -1139,7 +1157,7 @@ impl<'a> GlobalWorldMachine<'a> {
             return Ok(active[0]);
         }
         if mach_q24 > active[active.len() - 1].mach_q24 {
-            return Err(GlobalWorldError::Envelope);
+            return Err(GlobalWorldError::EnvelopeAeroTable);
         }
         let mut upper = 1;
         while mach_q24 > active[upper].mach_q24 {
@@ -1614,13 +1632,13 @@ fn air_data_from_speed(
         return Err(GlobalWorldError::Numeric);
     }
     if mach_q24 > MAX_MACH_Q24 {
-        return Err(GlobalWorldError::Envelope);
+        return Err(GlobalWorldError::EnvelopeMach);
     }
     let density_q20 = (atmosphere.density_q28_kg_m3 + 128) >> 8;
     let q_raw = density_q20 as i64 * speed_q4 as i64 * speed_q4 as i64;
     let dynamic_q14 = rounded_i64(q_raw, 1 << 15)?;
     if dynamic_q14 > MAX_DYNAMIC_PRESSURE_Q14 {
-        Err(GlobalWorldError::Envelope)
+        Err(GlobalWorldError::EnvelopeDynamicPressure)
     } else {
         Ok((speed_q4, mach_q24, dynamic_q14))
     }
@@ -1872,7 +1890,7 @@ mod tests {
         assert!(air_data_from_speed(0, atmosphere).is_ok());
         assert_eq!(
             air_data_from_speed(12_000 << 4, atmosphere),
-            Err(GlobalWorldError::Envelope)
+            Err(GlobalWorldError::EnvelopeMach)
         );
     }
 }

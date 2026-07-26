@@ -1,0 +1,24 @@
+{
+  "schema": "ksa64.phase10.worker-reproducibility-v1",
+  "master_seed": "0x4b5341a0",
+  "routine": {
+    "runs": 64,
+    "archive_sha256": "1b837647178968e1523d1050e05532292dee82c587eac3a222e889010e65d123",
+    "one_worker_seconds": 57.1920585,
+    "four_worker_seconds": 18.3552765,
+    "eight_worker_seconds": 12.1443462,
+    "byte_identical": true
+  },
+  "completion": {
+    "runs": 256,
+    "archive_sha256": "23522651dc02fc2f70e13763ec2ec92c701a279423a854d02aabac1e7e1bb54b",
+    "one_worker_seconds": 234.4040095,
+    "four_worker_seconds": 70.1216335,
+    "eight_worker_seconds": 42.7590471,
+    "byte_identical": true,
+    "ground_contacts": 256,
+    "physical_recoveries": 256,
+    "model_envelope_exceeded": 0,
+    "numeric_frame_time_faults": 0
+  }
+}
