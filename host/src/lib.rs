@@ -335,6 +335,7 @@ pub mod phase10_mission;
 pub mod phase10_tui;
 pub mod phase11_operations;
 pub mod phase11_prediction;
+pub mod phase11_scenarios;
 pub mod phase9;
 pub mod phase9_5_archive;
 pub mod phase9_5_compiler;

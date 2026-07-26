@@ -114,6 +114,8 @@ pub struct KsaG10rReferenceOpsV1 {
     journal: EventJournal,
     epoch: u32,
     last_prediction: Option<ksa64_interface::phase11::PredictionSummary>,
+    active_plan_checksum: u32,
+    prediction_dirty: bool,
 }
 
 impl KsaG10rReferenceOpsV1 {
@@ -124,6 +126,8 @@ impl KsaG10rReferenceOpsV1 {
             journal: EventJournal::new(),
             epoch: 0,
             last_prediction: None,
+            active_plan_checksum: 0,
+            prediction_dirty: false,
             inner: GlobalFlightComputer::new(config)?,
         })
     }
@@ -144,6 +148,8 @@ impl KsaG10rReferenceOpsV1 {
             return false;
         }
         self.plan = Some(plan);
+        self.active_plan_checksum = plan.plan_identity;
+        self.prediction_dirty = true;
         self.journal.append(
             self.epoch,
             ksa64_interface::phase11::JournalEventKind::Mode,
@@ -277,6 +283,26 @@ impl GlobalKlr10FlightPackage for KsaG10rReferenceOpsV1 {
             if let Some((load, acknowledgement)) = self.uplink.release(self.epoch) {
                 let applied = self.apply_committed(&load);
                 self.journal_receipt(&acknowledgement);
+                if applied
+                    && load.load_type
+                        != ksa64_interface::phase11::UplinkLoadType::GroundNavigationUpdate
+                {
+                    self.active_plan_checksum = hash_journal(
+                        self.active_plan_checksum,
+                        load.load_identity,
+                        self.epoch,
+                        load.load_type as u8,
+                        load.required_capabilities,
+                        load.plan_identity,
+                        &[
+                            load.arguments[0],
+                            load.arguments[1],
+                            load.arguments[2],
+                            load.arguments[3],
+                        ],
+                    );
+                    self.prediction_dirty = true;
+                }
                 self.journal.append(
                     self.epoch,
                     ksa64_interface::phase11::JournalEventKind::Mode,
@@ -288,8 +314,17 @@ impl GlobalKlr10FlightPackage for KsaG10rReferenceOpsV1 {
         }
         let evidence = self.inner.tick(fast, aid, transition);
         if let Some(plan) = self.plan.as_ref() {
-            if self.epoch & 31 == 0 {
-                let prediction = compact_prediction(evidence.navigation, plan, self.epoch);
+            if self.epoch & 31 == 0 || self.prediction_dirty {
+                let mut prediction = compact_prediction(evidence.navigation, plan, self.epoch);
+                prediction.prediction_checksum = hash_receipt(
+                    prediction.prediction_checksum,
+                    self.active_plan_checksum,
+                    self.epoch,
+                    plan.plan_identity,
+                    prediction.product as u8,
+                    0,
+                );
+                prediction.prediction_identity = prediction.prediction_checksum.max(1);
                 if self
                     .last_prediction
                     .map(|prior| prior.prediction_checksum != prediction.prediction_checksum)
@@ -309,6 +344,7 @@ impl GlobalKlr10FlightPackage for KsaG10rReferenceOpsV1 {
                     );
                 }
                 self.last_prediction = Some(prediction);
+                self.prediction_dirty = false;
             }
         }
         self.epoch = self.epoch.saturating_add(1);
