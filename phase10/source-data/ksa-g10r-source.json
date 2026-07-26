@@ -13,7 +13,7 @@
     "dry_cg_from_nose_m": 4.05,
     "wet_inertia_kg_m2": [10.0, 2450.0, 2450.0],
     "dry_inertia_kg_m2": [3.2, 760.0, 760.0],
-    "thrust_n": 14000.0,
+    "thrust_n": 15000.0,
     "main_mass_flow_kg_s": 5.6666666667,
     "burn_time_s": 60.0,
     "gimbal_limit_deg": 5.0,
@@ -56,12 +56,12 @@
     "pitch_schedule": [
       [0, 90.0],
       [5, 90.0],
-      [10, 85.0],
-      [20, 72.0],
-      [30, 58.0],
-      [40, 45.0],
-      [50, 34.0],
-      [60, 28.0]
+      [10, 88.0],
+      [20, 82.0],
+      [30, 75.0],
+      [40, 68.0],
+      [50, 60.0],
+      [60, 55.0]
     ]
   },
   "source_note": "Values are assumption-backed Phase 10 design inputs, not validated real-vehicle data."

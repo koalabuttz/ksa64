@@ -19,14 +19,14 @@
       20.0
     ]
   },
-  "source_identity": "0x6894f3e6",
-  "source_sha256": "45d919a18edc2cd4e0157af8b6206f3058146ddefd9d19c148b8bb8fd53c4ac8",
+  "source_identity": "0x9da81c60",
+  "source_sha256": "c3322aa9024248d84a9a3fa3d4c7c7591855519131b0b9b6192d35d1fa60f8ca",
   "vehicle": {
     "aero_knots": 8,
     "identity": "0x47561001",
     "provenance": "Every physical value is a declared engineering assumption for a fictional research vehicle.",
     "reference_area_m2": 0.12566370614359174,
-    "source_identity": "0x6894f3e6",
+    "source_identity": "0x9da81c60",
     "wet_mass_kg": 500.0
   }
 }

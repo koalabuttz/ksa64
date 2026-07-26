@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "phase10" / "generated"
 LENGTH = 128 + 64 * 40 + 4
-EARTH_ID = 0x454D_1001
+EARTH_ID = 0x10EA_2024
 ATMOSPHERE_ID = 0x4154_1001
 CONTRACT_ID = 0x10E0_0001
 

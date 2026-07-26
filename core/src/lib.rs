@@ -11,6 +11,7 @@ pub mod numeric;
 pub mod phase10_contract;
 pub mod phase10_environment;
 pub mod phase10_frames;
+pub mod phase10_geodesy;
 pub mod phase10_numeric;
 pub mod phase10_time;
 pub mod phase10_vehicle;

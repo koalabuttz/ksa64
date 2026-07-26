@@ -415,7 +415,7 @@ fn cordic_atan2_q28(y: i32, x: i32, status: &mut NumericStatus) -> i32 {
     rounded_i64(angle, 1, status)
 }
 
-fn cordic_sin_cos_q30(mut angle_q28: i32, status: &mut NumericStatus) -> (i32, i32) {
+pub(crate) fn cordic_sin_cos_q30(mut angle_q28: i32, status: &mut NumericStatus) -> (i32, i32) {
     while angle_q28 > PI_Q28 {
         angle_q28 -= PI_Q28 * 2;
     }
