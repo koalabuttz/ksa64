@@ -1662,3 +1662,700 @@ mod uplink_contract_tests {
         }
     }
 }
+
+pub const KPD11_LENGTH: usize = 256;
+pub const KPP11_HEADER_LENGTH: usize = 128;
+pub const KPP11_POINT_LENGTH: usize = 32;
+pub const KGO11_LENGTH: usize = 128;
+pub const KGE11_LENGTH: usize = 128;
+pub const KEJ11_LENGTH: usize = 64;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum PredictionProductKind {
+    OnboardCompact = 1,
+    OnboardEstimateGroundPropagated = 2,
+    GroundEstimate = 3,
+    SimTruthCounterfactual = 4,
+}
+impl PredictionProductKind {
+    fn parse(value: u8) -> Result<Self, CodecError> {
+        match value {
+            1 => Ok(Self::OnboardCompact),
+            2 => Ok(Self::OnboardEstimateGroundPropagated),
+            3 => Ok(Self::GroundEstimate),
+            4 => Ok(Self::SimTruthCounterfactual),
+            _ => Err(CodecError::Enum),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum PredictionTerminalReason {
+    ValidHorizon = 1,
+    AtmosphericImpact = 2,
+    ModelEnvelope = 3,
+    EstimateInvalid = 4,
+    PlanIncomplete = 5,
+}
+impl PredictionTerminalReason {
+    fn parse(value: u8) -> Result<Self, CodecError> {
+        match value {
+            1 => Ok(Self::ValidHorizon),
+            2 => Ok(Self::AtmosphericImpact),
+            3 => Ok(Self::ModelEnvelope),
+            4 => Ok(Self::EstimateInvalid),
+            5 => Ok(Self::PlanIncomplete),
+            _ => Err(CodecError::Enum),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PredictionSummary {
+    pub prediction_identity: u32,
+    pub model_identity: u32,
+    pub product: PredictionProductKind,
+    pub source_estimate_identity: u32,
+    pub source_estimate_checksum: u32,
+    pub package_manifest_identity: u32,
+    pub plan_identity: u32,
+    pub source_epoch: u32,
+    pub generation_epoch: u32,
+    pub valid_until_epoch: u32,
+    pub frame: crate::phase10::GlobalFrameId,
+    pub terminal_reason: PredictionTerminalReason,
+    pub apogee_q12_km: i32,
+    pub perigee_q12_km: i32,
+    pub time_to_apogee_q16: u32,
+    pub time_to_impact_q16: u32,
+    pub impact_position_q12_km: [i32; 3],
+    pub transition_epochs: [u32; 3],
+    pub assumptions: u32,
+    pub prediction_checksum: u32,
+}
+
+pub fn write_kpd11(value: &PredictionSummary, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KPD11_LENGTH
+        || value.prediction_identity == 0
+        || value.model_identity == 0
+        || value.source_estimate_identity == 0
+        || value.package_manifest_identity == 0
+        || value.plan_identity == 0
+        || value.valid_until_epoch < value.generation_epoch
+    {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    output[..4].copy_from_slice(b"KPD1");
+    output[4] = 11;
+    output[5] = value.product as u8;
+    p16(output, 6, KPD11_LENGTH as u16);
+    p32(output, 8, value.prediction_identity);
+    p32(output, 12, value.model_identity);
+    p32(output, 16, value.source_estimate_identity);
+    p32(output, 20, value.source_estimate_checksum);
+    p32(output, 24, value.package_manifest_identity);
+    p32(output, 28, value.plan_identity);
+    p32(output, 32, value.source_epoch);
+    p32(output, 36, value.generation_epoch);
+    p32(output, 40, value.valid_until_epoch);
+    output[44] = value.frame as u8;
+    output[45] = value.terminal_reason as u8;
+    p32(output, 48, value.apogee_q12_km as u32);
+    p32(output, 52, value.perigee_q12_km as u32);
+    p32(output, 56, value.time_to_apogee_q16);
+    p32(output, 60, value.time_to_impact_q16);
+    for axis in 0..3 {
+        p32(
+            output,
+            64 + axis * 4,
+            value.impact_position_q12_km[axis] as u32,
+        );
+        p32(output, 76 + axis * 4, value.transition_epochs[axis]);
+    }
+    p32(output, 88, value.assumptions);
+    p32(output, 92, value.prediction_checksum);
+    p32(output, 252, crc32_ieee(&output[..252]));
+    Ok(())
+}
+
+pub fn parse_kpd11(input: &[u8]) -> Result<PredictionSummary, CodecError> {
+    if input.len() != KPD11_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if input[..4] != *b"KPD1" || input[4] != 11 || g16(input, 6) != KPD11_LENGTH as u16 {
+        return Err(CodecError::Enum);
+    }
+    if crc32_ieee(&input[..252]) != g32(input, 252) {
+        return Err(CodecError::Checksum);
+    }
+    if input[46] != 0 || input[47] != 0 || input[96..252].iter().any(|byte| *byte != 0) {
+        return Err(CodecError::Reserved);
+    }
+    let value = PredictionSummary {
+        prediction_identity: g32(input, 8),
+        model_identity: g32(input, 12),
+        product: PredictionProductKind::parse(input[5])?,
+        source_estimate_identity: g32(input, 16),
+        source_estimate_checksum: g32(input, 20),
+        package_manifest_identity: g32(input, 24),
+        plan_identity: g32(input, 28),
+        source_epoch: g32(input, 32),
+        generation_epoch: g32(input, 36),
+        valid_until_epoch: g32(input, 40),
+        frame: parse_global_frame(input[44])?,
+        terminal_reason: PredictionTerminalReason::parse(input[45])?,
+        apogee_q12_km: g32(input, 48) as i32,
+        perigee_q12_km: g32(input, 52) as i32,
+        time_to_apogee_q16: g32(input, 56),
+        time_to_impact_q16: g32(input, 60),
+        impact_position_q12_km: [
+            g32(input, 64) as i32,
+            g32(input, 68) as i32,
+            g32(input, 72) as i32,
+        ],
+        transition_epochs: [g32(input, 76), g32(input, 80), g32(input, 84)],
+        assumptions: g32(input, 88),
+        prediction_checksum: g32(input, 92),
+    };
+    if value.prediction_identity == 0
+        || value.model_identity == 0
+        || value.source_estimate_identity == 0
+        || value.package_manifest_identity == 0
+        || value.plan_identity == 0
+        || value.valid_until_epoch < value.generation_epoch
+    {
+        return Err(CodecError::Flags);
+    }
+    Ok(value)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PredictionPathHeader {
+    pub path_identity: u32,
+    pub model_identity: u32,
+    pub product: PredictionProductKind,
+    pub source_estimate_identity: u32,
+    pub source_estimate_checksum: u32,
+    pub package_manifest_identity: u32,
+    pub plan_identity: u32,
+    pub source_epoch: u32,
+    pub generation_epoch: u32,
+    pub point_count: u16,
+    pub cadence_releases: u16,
+    pub terminal_reason: PredictionTerminalReason,
+    pub path_checksum: u32,
+}
+
+pub fn write_kpp11_header(
+    value: &PredictionPathHeader,
+    output: &mut [u8],
+) -> Result<(), CodecError> {
+    if output.len() != KPP11_HEADER_LENGTH
+        || value.path_identity == 0
+        || value.model_identity == 0
+        || value.source_estimate_identity == 0
+        || value.package_manifest_identity == 0
+        || value.plan_identity == 0
+        || value.point_count == 0
+        || value.cadence_releases == 0
+    {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    output[..4].copy_from_slice(b"KPP1");
+    output[4] = 11;
+    output[5] = value.product as u8;
+    p16(output, 6, KPP11_HEADER_LENGTH as u16);
+    p32(output, 8, value.path_identity);
+    p32(output, 12, value.model_identity);
+    p32(output, 16, value.source_estimate_identity);
+    p32(output, 20, value.source_estimate_checksum);
+    p32(output, 24, value.package_manifest_identity);
+    p32(output, 28, value.plan_identity);
+    p32(output, 32, value.source_epoch);
+    p32(output, 36, value.generation_epoch);
+    p16(output, 40, value.point_count);
+    p16(output, 42, value.cadence_releases);
+    output[44] = value.terminal_reason as u8;
+    p32(output, 48, value.path_checksum);
+    p32(output, 124, crc32_ieee(&output[..124]));
+    Ok(())
+}
+
+pub fn parse_kpp11_header(input: &[u8]) -> Result<PredictionPathHeader, CodecError> {
+    if input.len() != KPP11_HEADER_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if input[..4] != *b"KPP1" || input[4] != 11 || g16(input, 6) != 128 {
+        return Err(CodecError::Enum);
+    }
+    if crc32_ieee(&input[..124]) != g32(input, 124) {
+        return Err(CodecError::Checksum);
+    }
+    if input[45] != 0
+        || input[46] != 0
+        || input[47] != 0
+        || input[52..124].iter().any(|byte| *byte != 0)
+    {
+        return Err(CodecError::Reserved);
+    }
+    Ok(PredictionPathHeader {
+        path_identity: g32(input, 8),
+        model_identity: g32(input, 12),
+        product: PredictionProductKind::parse(input[5])?,
+        source_estimate_identity: g32(input, 16),
+        source_estimate_checksum: g32(input, 20),
+        package_manifest_identity: g32(input, 24),
+        plan_identity: g32(input, 28),
+        source_epoch: g32(input, 32),
+        generation_epoch: g32(input, 36),
+        point_count: g16(input, 40),
+        cadence_releases: g16(input, 42),
+        terminal_reason: PredictionTerminalReason::parse(input[44])?,
+        path_checksum: g32(input, 48),
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PredictionPathPoint {
+    pub epoch: u32,
+    pub frame: crate::phase10::GlobalFrameId,
+    pub flags: u8,
+    pub position_q12_km: [i32; 3],
+    pub altitude_q12_km: i32,
+    pub downrange_q12_km: i32,
+    pub crossrange_q12_km: i32,
+}
+
+pub fn write_kpp11_point(value: &PredictionPathPoint, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KPP11_POINT_LENGTH || value.flags & !3 != 0 {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    p32(output, 0, value.epoch);
+    output[4] = value.frame as u8;
+    output[5] = value.flags;
+    for axis in 0..3 {
+        p32(output, 8 + axis * 4, value.position_q12_km[axis] as u32);
+    }
+    p32(output, 20, value.altitude_q12_km as u32);
+    p32(output, 24, value.downrange_q12_km as u32);
+    p32(output, 28, value.crossrange_q12_km as u32);
+    Ok(())
+}
+
+pub fn parse_kpp11_point(input: &[u8]) -> Result<PredictionPathPoint, CodecError> {
+    if input.len() != KPP11_POINT_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if input[6] != 0 || input[7] != 0 || input[5] & !3 != 0 {
+        return Err(CodecError::Reserved);
+    }
+    Ok(PredictionPathPoint {
+        epoch: g32(input, 0),
+        frame: parse_global_frame(input[4])?,
+        flags: input[5],
+        position_q12_km: [
+            g32(input, 8) as i32,
+            g32(input, 12) as i32,
+            g32(input, 16) as i32,
+        ],
+        altitude_q12_km: g32(input, 20) as i32,
+        downrange_q12_km: g32(input, 24) as i32,
+        crossrange_q12_km: g32(input, 28) as i32,
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GroundTrackingObservation {
+    pub source_identity: u32,
+    pub observation_identity: u32,
+    pub measurement_epoch: u32,
+    pub receipt_epoch: u32,
+    pub frame: crate::phase10::GlobalFrameId,
+    pub validity: u8,
+    pub position_q12_km: [i32; 3],
+    pub velocity_q24_km_s: [i32; 3],
+    pub uncertainty_q16: [u32; 3],
+    pub observation_checksum: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GroundEstimate {
+    pub estimator_identity: u32,
+    pub estimate_identity: u32,
+    pub source_observation_identity: u32,
+    pub measurement_epoch: u32,
+    pub production_epoch: u32,
+    pub frame: crate::phase10::GlobalFrameId,
+    pub flags: u8,
+    pub position_q12_km: [i32; 3],
+    pub velocity_q24_km_s: [i32; 3],
+    pub confidence_q16: [u32; 3],
+    pub residual_q16: [i32; 3],
+    pub estimator_checksum: u32,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn write_ground_common(
+    magic: &[u8; 4],
+    identities: [u32; 3],
+    epochs: [u32; 2],
+    frame: crate::phase10::GlobalFrameId,
+    flags: u8,
+    position: [i32; 3],
+    velocity: [i32; 3],
+    first: [u32; 3],
+    second: [i32; 3],
+    checksum: u32,
+    output: &mut [u8],
+) -> Result<(), CodecError> {
+    if output.len() != 128 || identities[0] == 0 || identities[1] == 0 || flags & !3 != 0 {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    output[..4].copy_from_slice(magic);
+    output[4] = 11;
+    output[5] = flags;
+    p16(output, 6, 128);
+    p32(output, 8, identities[0]);
+    p32(output, 12, identities[1]);
+    p32(output, 16, identities[2]);
+    p32(output, 20, epochs[0]);
+    p32(output, 24, epochs[1]);
+    output[28] = frame as u8;
+    for axis in 0..3 {
+        p32(output, 32 + axis * 4, position[axis] as u32);
+        p32(output, 44 + axis * 4, velocity[axis] as u32);
+        p32(output, 56 + axis * 4, first[axis]);
+        p32(output, 68 + axis * 4, second[axis] as u32);
+    }
+    p32(output, 80, checksum);
+    p32(output, 124, crc32_ieee(&output[..124]));
+    Ok(())
+}
+
+fn check_ground_common<'a>(input: &'a [u8], magic: &[u8; 4]) -> Result<&'a [u8], CodecError> {
+    if input.len() != 128 {
+        return Err(CodecError::Length);
+    }
+    if input[..4] != *magic || input[4] != 11 || g16(input, 6) != 128 {
+        return Err(CodecError::Enum);
+    }
+    if crc32_ieee(&input[..124]) != g32(input, 124) {
+        return Err(CodecError::Checksum);
+    }
+    if input[29] != 0
+        || input[30] != 0
+        || input[31] != 0
+        || input[5] & !3 != 0
+        || input[84..124].iter().any(|byte| *byte != 0)
+    {
+        return Err(CodecError::Reserved);
+    }
+    Ok(input)
+}
+
+pub fn write_kgo11(value: &GroundTrackingObservation, output: &mut [u8]) -> Result<(), CodecError> {
+    write_ground_common(
+        b"KGO1",
+        [value.source_identity, value.observation_identity, 0],
+        [value.measurement_epoch, value.receipt_epoch],
+        value.frame,
+        value.validity,
+        value.position_q12_km,
+        value.velocity_q24_km_s,
+        value.uncertainty_q16,
+        [0; 3],
+        value.observation_checksum,
+        output,
+    )
+}
+
+pub fn parse_kgo11(input: &[u8]) -> Result<GroundTrackingObservation, CodecError> {
+    let input = check_ground_common(input, b"KGO1")?;
+    Ok(GroundTrackingObservation {
+        source_identity: g32(input, 8),
+        observation_identity: g32(input, 12),
+        measurement_epoch: g32(input, 20),
+        receipt_epoch: g32(input, 24),
+        frame: parse_global_frame(input[28])?,
+        validity: input[5],
+        position_q12_km: [
+            g32(input, 32) as i32,
+            g32(input, 36) as i32,
+            g32(input, 40) as i32,
+        ],
+        velocity_q24_km_s: [
+            g32(input, 44) as i32,
+            g32(input, 48) as i32,
+            g32(input, 52) as i32,
+        ],
+        uncertainty_q16: [g32(input, 56), g32(input, 60), g32(input, 64)],
+        observation_checksum: g32(input, 80),
+    })
+}
+
+pub fn write_kge11(value: &GroundEstimate, output: &mut [u8]) -> Result<(), CodecError> {
+    write_ground_common(
+        b"KGE1",
+        [
+            value.estimator_identity,
+            value.estimate_identity,
+            value.source_observation_identity,
+        ],
+        [value.measurement_epoch, value.production_epoch],
+        value.frame,
+        value.flags,
+        value.position_q12_km,
+        value.velocity_q24_km_s,
+        value.confidence_q16,
+        value.residual_q16,
+        value.estimator_checksum,
+        output,
+    )
+}
+
+pub fn parse_kge11(input: &[u8]) -> Result<GroundEstimate, CodecError> {
+    let input = check_ground_common(input, b"KGE1")?;
+    Ok(GroundEstimate {
+        estimator_identity: g32(input, 8),
+        estimate_identity: g32(input, 12),
+        source_observation_identity: g32(input, 16),
+        measurement_epoch: g32(input, 20),
+        production_epoch: g32(input, 24),
+        frame: parse_global_frame(input[28])?,
+        flags: input[5],
+        position_q12_km: [
+            g32(input, 32) as i32,
+            g32(input, 36) as i32,
+            g32(input, 40) as i32,
+        ],
+        velocity_q24_km_s: [
+            g32(input, 44) as i32,
+            g32(input, 48) as i32,
+            g32(input, 52) as i32,
+        ],
+        confidence_q16: [g32(input, 56), g32(input, 60), g32(input, 64)],
+        residual_q16: [
+            g32(input, 68) as i32,
+            g32(input, 72) as i32,
+            g32(input, 76) as i32,
+        ],
+        estimator_checksum: g32(input, 80),
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum JournalEventKind {
+    Mode = 1,
+    NavigationSource = 2,
+    Uplink = 3,
+    Prediction = 4,
+    Communications = 5,
+    SafeState = 6,
+    Alarm = 7,
+}
+impl JournalEventKind {
+    fn parse(value: u8) -> Result<Self, CodecError> {
+        match value {
+            1 => Ok(Self::Mode),
+            2 => Ok(Self::NavigationSource),
+            3 => Ok(Self::Uplink),
+            4 => Ok(Self::Prediction),
+            5 => Ok(Self::Communications),
+            6 => Ok(Self::SafeState),
+            7 => Ok(Self::Alarm),
+            _ => Err(CodecError::Enum),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EventJournalRecord {
+    pub sequence: u32,
+    pub epoch: u32,
+    pub kind: JournalEventKind,
+    pub flags: u8,
+    pub primary_identity: u32,
+    pub secondary_identity: u32,
+    pub arguments: [i32; 4],
+    pub prior_chain: u32,
+    pub chain: u32,
+}
+impl EventJournalRecord {
+    pub const EMPTY: Self = Self {
+        sequence: 0,
+        epoch: 0,
+        kind: JournalEventKind::Mode,
+        flags: 0,
+        primary_identity: 0,
+        secondary_identity: 0,
+        arguments: [0; 4],
+        prior_chain: 0,
+        chain: 0,
+    };
+}
+
+pub fn write_kej11(value: &EventJournalRecord, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KEJ11_LENGTH || value.sequence == 0 || value.flags & !3 != 0 {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    p32(output, 0, value.sequence);
+    p32(output, 4, value.epoch);
+    output[8] = value.kind as u8;
+    output[9] = value.flags;
+    p32(output, 12, value.primary_identity);
+    p32(output, 16, value.secondary_identity);
+    for (index, argument) in value.arguments.iter().enumerate() {
+        p32(output, 20 + index * 4, *argument as u32);
+    }
+    p32(output, 36, value.prior_chain);
+    p32(output, 40, value.chain);
+    p32(output, 60, crc32_ieee(&output[..60]));
+    Ok(())
+}
+
+pub fn parse_kej11(input: &[u8]) -> Result<EventJournalRecord, CodecError> {
+    if input.len() != KEJ11_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if crc32_ieee(&input[..60]) != g32(input, 60) {
+        return Err(CodecError::Checksum);
+    }
+    if input[10] != 0
+        || input[11] != 0
+        || input[9] & !3 != 0
+        || input[44..60].iter().any(|byte| *byte != 0)
+    {
+        return Err(CodecError::Reserved);
+    }
+    let mut arguments = [0; 4];
+    for (index, value) in arguments.iter_mut().enumerate() {
+        *value = g32(input, 20 + index * 4) as i32;
+    }
+    let value = EventJournalRecord {
+        sequence: g32(input, 0),
+        epoch: g32(input, 4),
+        kind: JournalEventKind::parse(input[8])?,
+        flags: input[9],
+        primary_identity: g32(input, 12),
+        secondary_identity: g32(input, 16),
+        arguments,
+        prior_chain: g32(input, 36),
+        chain: g32(input, 40),
+    };
+    if value.sequence == 0 {
+        return Err(CodecError::Sequence);
+    }
+    Ok(value)
+}
+
+#[cfg(test)]
+mod prediction_contract_tests {
+    use super::*;
+
+    #[test]
+    fn prediction_ground_and_journal_records_are_strict() {
+        let prediction = PredictionSummary {
+            prediction_identity: 1,
+            model_identity: 2,
+            product: PredictionProductKind::OnboardCompact,
+            source_estimate_identity: 3,
+            source_estimate_checksum: 4,
+            package_manifest_identity: 5,
+            plan_identity: 6,
+            source_epoch: 7,
+            generation_epoch: 8,
+            valid_until_epoch: 40,
+            frame: crate::phase10::GlobalFrameId::EarthInertialEciV1,
+            terminal_reason: PredictionTerminalReason::ValidHorizon,
+            apogee_q12_km: 100,
+            perigee_q12_km: 0,
+            time_to_apogee_q16: 9,
+            time_to_impact_q16: 10,
+            impact_position_q12_km: [11, 12, 13],
+            transition_epochs: [14, 15, 16],
+            assumptions: 1,
+            prediction_checksum: 17,
+        };
+        let mut bytes = [0; KPD11_LENGTH];
+        write_kpd11(&prediction, &mut bytes).unwrap();
+        assert_eq!(parse_kpd11(&bytes).unwrap(), prediction);
+        bytes[150] = 1;
+        let crc = crc32_ieee(&bytes[..252]);
+        p32(&mut bytes, 252, crc);
+        assert_eq!(parse_kpd11(&bytes), Err(CodecError::Reserved));
+
+        let observation = GroundTrackingObservation {
+            source_identity: 1,
+            observation_identity: 2,
+            measurement_epoch: 3,
+            receipt_epoch: 4,
+            frame: crate::phase10::GlobalFrameId::EarthFixedEcefV1,
+            validity: 3,
+            position_q12_km: [5, 6, 7],
+            velocity_q24_km_s: [8, 9, 10],
+            uncertainty_q16: [11, 12, 13],
+            observation_checksum: 14,
+        };
+        let mut ground = [0; KGO11_LENGTH];
+        write_kgo11(&observation, &mut ground).unwrap();
+        assert_eq!(parse_kgo11(&ground).unwrap(), observation);
+
+        let journal = EventJournalRecord {
+            sequence: 1,
+            epoch: 20,
+            kind: JournalEventKind::Communications,
+            flags: 0,
+            primary_identity: 1,
+            secondary_identity: 2,
+            arguments: [3, 4, 5, 6],
+            prior_chain: 7,
+            chain: 8,
+        };
+        let mut journal_bytes = [0; KEJ11_LENGTH];
+        write_kej11(&journal, &mut journal_bytes).unwrap();
+        assert_eq!(parse_kej11(&journal_bytes).unwrap(), journal);
+    }
+
+    #[test]
+    fn prediction_path_has_explicit_product_and_source_estimate() {
+        let header = PredictionPathHeader {
+            path_identity: 1,
+            model_identity: 2,
+            product: PredictionProductKind::GroundEstimate,
+            source_estimate_identity: 3,
+            source_estimate_checksum: 4,
+            package_manifest_identity: 5,
+            plan_identity: 6,
+            source_epoch: 7,
+            generation_epoch: 8,
+            point_count: 2,
+            cadence_releases: 32,
+            terminal_reason: PredictionTerminalReason::AtmosphericImpact,
+            path_checksum: 9,
+        };
+        let mut bytes = [0; KPP11_HEADER_LENGTH];
+        write_kpp11_header(&header, &mut bytes).unwrap();
+        assert_eq!(parse_kpp11_header(&bytes).unwrap(), header);
+
+        let point = PredictionPathPoint {
+            epoch: 8,
+            frame: crate::phase10::GlobalFrameId::EarthInertialEciV1,
+            flags: 1,
+            position_q12_km: [1, 2, 3],
+            altitude_q12_km: 4,
+            downrange_q12_km: 5,
+            crossrange_q12_km: 6,
+        };
+        let mut point_bytes = [0; KPP11_POINT_LENGTH];
+        write_kpp11_point(&point, &mut point_bytes).unwrap();
+        assert_eq!(parse_kpp11_point(&point_bytes).unwrap(), point);
+    }
+}

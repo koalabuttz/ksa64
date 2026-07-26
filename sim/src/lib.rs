@@ -22,6 +22,7 @@ mod phase5_campaign_self_test;
 pub use phase5_campaign_self_test::{
     phase5_campaign_probe_signature, run_phase5_campaign_self_tests,
 };
+pub mod phase11;
 pub mod phase5_closed_loop;
 pub mod phase5_history;
 #[cfg(feature = "fixtures")]

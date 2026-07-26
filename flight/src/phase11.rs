@@ -46,8 +46,8 @@ pub const fn ksa_g10r_reference_ops_manifest() -> FlightSoftwarePackageManifest 
         safe_state: PackageSafeStateId::ReferenceGlobalSafeV1,
         command_loss: PackageCommandLossBehavior::FrozenKlr10HoldThenSafe,
         resource: PackageResourceClaim {
-            persistent_bytes: 2_048,
-            transient_bytes: 1_024,
+            persistent_bytes: 4_096,
+            transient_bytes: 4_096,
             stack_bytes: 512,
             journal_records: 32,
             maximum_object_bytes: 4_096,
@@ -63,20 +63,202 @@ pub const fn ksa_g10r_reference_ops_manifest() -> FlightSoftwarePackageManifest 
         resource_evidence_sha256: [0x11; 32],
     }
 }
+pub const fn ksa_g10r_reference_mission_plan() -> ksa64_interface::phase11::MissionPlan {
+    use ksa64_interface::phase11::{
+        ContingencyBranch, FlightAbiId, FlightSoftwarePackageId, MissionEventKind,
+        MissionEventTrigger, MissionFailurePolicy, MissionPlan, MissionPlanEvent,
+        OperatorDecisionPoint, KMP11_MAX_BRANCHES, KMP11_MAX_DECISIONS, KMP11_MAX_EVENTS,
+        PACKAGE_CAP_MASK,
+    };
+    let mut events = [MissionPlanEvent::EMPTY; KMP11_MAX_EVENTS];
+    events[0] = MissionPlanEvent {
+        event_id: 1,
+        kind: MissionEventKind::PlannedCorrection,
+        trigger: MissionEventTrigger::ExactRelease,
+        flags: 0,
+        failure_policy: MissionFailurePolicy::FailClosed,
+        earliest_epoch: 100,
+        latest_epoch: 120,
+        exact_epoch: 110,
+        prerequisite_events: 0,
+        required_capabilities: ksa64_interface::phase11::PACKAGE_CAP_TARGET_UPDATE,
+        arguments: [0; 4],
+        guard_metric: 0,
+        guard_comparison: 0,
+    };
+    MissionPlan {
+        plan_identity: 0x11a0_0001,
+        package_manifest_identity: KSA_G10R_REFERENCE_OPS_MANIFEST_ID,
+        package: FlightSoftwarePackageId::KsaG10rReferenceOpsV1,
+        abi: FlightAbiId::GlobalKlr10V1,
+        vehicle_profile_identity: GLOBAL_ECEF_PROFILE_ID,
+        mission_identity: KSA_G10R_MISSION_COMPATIBILITY_ID,
+        earth_identity: 0x10e0_0001,
+        environment_identity: 0x10a7_0001,
+        onboard_prediction_model: 0x11d0_0001,
+        ground_prediction_model: 0x11d0_0002,
+        required_capabilities: PACKAGE_CAP_MASK,
+        event_count: 1,
+        branch_count: 0,
+        decision_count: 0,
+        events,
+        branches: [ContingencyBranch::EMPTY; KMP11_MAX_BRANCHES],
+        decisions: [OperatorDecisionPoint::EMPTY; KMP11_MAX_DECISIONS],
+    }
+}
 
 pub struct KsaG10rReferenceOpsV1 {
     inner: GlobalFlightComputer,
+    plan: Option<ksa64_interface::phase11::MissionPlan>,
+    uplink: AtomicUplinkManager,
+    journal: EventJournal,
+    epoch: u32,
+    last_prediction: Option<ksa64_interface::phase11::PredictionSummary>,
 }
 
 impl KsaG10rReferenceOpsV1 {
     pub fn new(config: GlobalFlightConfig) -> Option<Self> {
         Some(Self {
+            plan: None,
+            uplink: AtomicUplinkManager::new(),
+            journal: EventJournal::new(),
+            epoch: 0,
+            last_prediction: None,
             inner: GlobalFlightComputer::new(config)?,
         })
     }
 
     pub const fn frozen_inner(&self) -> &GlobalFlightComputer {
         &self.inner
+    }
+
+    pub fn initialize_mission_plan(&mut self, plan: ksa64_interface::phase11::MissionPlan) -> bool {
+        let manifest = ksa_g10r_reference_ops_manifest();
+        if plan.package_manifest_identity != manifest.manifest_identity
+            || plan.package != manifest.package
+            || plan.abi != manifest.abi
+            || plan.vehicle_profile_identity != manifest.vehicle_profile_identity
+            || plan.mission_identity != manifest.mission_compatibility_identity
+            || plan.required_capabilities & !manifest.capabilities != 0
+        {
+            return false;
+        }
+        self.plan = Some(plan);
+        self.journal.append(
+            self.epoch,
+            ksa64_interface::phase11::JournalEventKind::Mode,
+            plan.plan_identity,
+            manifest.manifest_identity,
+            [1, 0, 0, 0],
+        );
+        true
+    }
+
+    pub fn stage_uplink(
+        &mut self,
+        load: ksa64_interface::phase11::UplinkCommandLoad,
+        completed_event_mask: u32,
+    ) -> Option<ksa64_interface::phase11::UplinkControlRecord> {
+        let plan = self.plan.as_ref()?;
+        let receipt = self.uplink.stage(
+            load,
+            self.epoch,
+            completed_event_mask,
+            &self.inner.navigation(),
+            &ksa_g10r_reference_ops_manifest(),
+            plan,
+        );
+        self.journal_receipt(&receipt);
+        Some(receipt)
+    }
+
+    pub fn commit_uplink(
+        &mut self,
+        request: &ksa64_interface::phase11::UplinkControlRecord,
+    ) -> Option<ksa64_interface::phase11::UplinkControlRecord> {
+        self.plan?;
+        let receipt = self.uplink.commit(request, self.epoch);
+        self.journal_receipt(&receipt);
+        Some(receipt)
+    }
+
+    pub fn cancel_uplink(
+        &mut self,
+        request: &ksa64_interface::phase11::UplinkControlRecord,
+    ) -> Option<ksa64_interface::phase11::UplinkControlRecord> {
+        self.plan?;
+        let receipt = self.uplink.cancel(request, self.epoch);
+        self.journal_receipt(&receipt);
+        Some(receipt)
+    }
+
+    pub fn record_ground_communications(&mut self, available: bool) {
+        self.journal.append(
+            self.epoch,
+            ksa64_interface::phase11::JournalEventKind::Communications,
+            u32::from(available),
+            0,
+            [0; 4],
+        );
+    }
+
+    pub const fn prediction_summary(&self) -> Option<ksa64_interface::phase11::PredictionSummary> {
+        self.last_prediction
+    }
+
+    pub fn recover_journal_after(
+        &self,
+        sequence: u32,
+        output: &mut [ksa64_interface::phase11::EventJournalRecord],
+    ) -> usize {
+        self.journal.recover_after(sequence, output)
+    }
+
+    fn journal_receipt(&mut self, receipt: &ksa64_interface::phase11::UplinkControlRecord) {
+        self.journal.append(
+            self.epoch,
+            ksa64_interface::phase11::JournalEventKind::Uplink,
+            receipt.load_identity,
+            receipt.control_identity,
+            [
+                receipt.kind as i32,
+                receipt.state as i32,
+                receipt.reason as i32,
+                receipt.effective_epoch as i32,
+            ],
+        );
+    }
+
+    fn apply_committed(&mut self, load: &ksa64_interface::phase11::UplinkCommandLoad) -> bool {
+        match load.load_type {
+            ksa64_interface::phase11::UplinkLoadType::GroundNavigationUpdate => {
+                self.inner.operational_navigation_update(
+                    load.frame,
+                    [load.arguments[0], load.arguments[1], load.arguments[2]],
+                    [load.arguments[3], load.arguments[4], load.arguments[5]],
+                    self.epoch as u16,
+                )
+            }
+            ksa64_interface::phase11::UplinkLoadType::MissionEventTarget => {
+                self.inner.operational_guidance_target(
+                    load.arguments[0] as u8,
+                    [
+                        load.arguments[1],
+                        load.arguments[2],
+                        load.arguments[3],
+                        load.arguments[4],
+                    ],
+                )
+            }
+            ksa64_interface::phase11::UplinkLoadType::HighLevelMode => {
+                if load.arguments[0] >= 2 {
+                    self.inner.operational_request_safe();
+                }
+                true
+            }
+            ksa64_interface::phase11::UplinkLoadType::ContingencyBranch
+            | ksa64_interface::phase11::UplinkLoadType::NavigationMode => true,
+        }
     }
 }
 
@@ -91,7 +273,46 @@ impl GlobalKlr10FlightPackage for KsaG10rReferenceOpsV1 {
         aid: Option<GlobalAidFrameCell>,
         transition: Option<GlobalTransitionCell>,
     ) -> GlobalFlightEvidence {
-        self.inner.tick(fast, aid, transition)
+        if self.plan.is_some() {
+            if let Some((load, acknowledgement)) = self.uplink.release(self.epoch) {
+                let applied = self.apply_committed(&load);
+                self.journal_receipt(&acknowledgement);
+                self.journal.append(
+                    self.epoch,
+                    ksa64_interface::phase11::JournalEventKind::Mode,
+                    load.load_identity,
+                    load.load_type as u32,
+                    [i32::from(applied), 0, 0, 0],
+                );
+            }
+        }
+        let evidence = self.inner.tick(fast, aid, transition);
+        if let Some(plan) = self.plan.as_ref() {
+            if self.epoch & 31 == 0 {
+                let prediction = compact_prediction(evidence.navigation, plan, self.epoch);
+                if self
+                    .last_prediction
+                    .map(|prior| prior.prediction_checksum != prediction.prediction_checksum)
+                    .unwrap_or(true)
+                {
+                    self.journal.append(
+                        self.epoch,
+                        ksa64_interface::phase11::JournalEventKind::Prediction,
+                        prediction.prediction_identity,
+                        prediction.source_estimate_identity,
+                        [
+                            prediction.apogee_q12_km,
+                            prediction.time_to_apogee_q16 as i32,
+                            0,
+                            0,
+                        ],
+                    );
+                }
+                self.last_prediction = Some(prediction);
+            }
+        }
+        self.epoch = self.epoch.saturating_add(1);
+        evidence
     }
 }
 
@@ -857,5 +1078,334 @@ mod uplink_tests {
         let late = manager.commit(&commit_request(&valid, 303), 303);
         assert_eq!(late.reason, UplinkReasonCode::Late);
         assert_eq!(manager.state(), UplinkState::Staged);
+    }
+}
+
+pub const EVENT_JOURNAL_CAPACITY: usize = 32;
+
+pub struct EventJournal {
+    records: [ksa64_interface::phase11::EventJournalRecord; EVENT_JOURNAL_CAPACITY],
+    start: u8,
+    len: u8,
+    next_sequence: u32,
+    chain: u32,
+}
+
+impl EventJournal {
+    pub const fn new() -> Self {
+        Self {
+            records: [ksa64_interface::phase11::EventJournalRecord::EMPTY; EVENT_JOURNAL_CAPACITY],
+            start: 0,
+            len: 0,
+            next_sequence: 1,
+            chain: 0x811c_9dc5,
+        }
+    }
+
+    pub fn append(
+        &mut self,
+        epoch: u32,
+        kind: ksa64_interface::phase11::JournalEventKind,
+        primary_identity: u32,
+        secondary_identity: u32,
+        arguments: [i32; 4],
+    ) -> ksa64_interface::phase11::EventJournalRecord {
+        let prior_chain = self.chain;
+        self.chain = hash_journal(
+            self.chain,
+            self.next_sequence,
+            epoch,
+            kind as u8,
+            primary_identity,
+            secondary_identity,
+            &arguments,
+        );
+        let record = ksa64_interface::phase11::EventJournalRecord {
+            sequence: self.next_sequence,
+            epoch,
+            kind,
+            flags: 0,
+            primary_identity,
+            secondary_identity,
+            arguments,
+            prior_chain,
+            chain: self.chain,
+        };
+        let index = if usize::from(self.len) < EVENT_JOURNAL_CAPACITY {
+            let index = (usize::from(self.start) + usize::from(self.len)) % EVENT_JOURNAL_CAPACITY;
+            self.len += 1;
+            index
+        } else {
+            let index = usize::from(self.start);
+            self.start = ((usize::from(self.start) + 1) % EVENT_JOURNAL_CAPACITY) as u8;
+            index
+        };
+        self.records[index] = record;
+        self.next_sequence = self.next_sequence.saturating_add(1);
+        record
+    }
+
+    pub fn recover_after(
+        &self,
+        sequence: u32,
+        output: &mut [ksa64_interface::phase11::EventJournalRecord],
+    ) -> usize {
+        let mut written = 0;
+        for offset in 0..usize::from(self.len) {
+            let record = self.records[(usize::from(self.start) + offset) % EVENT_JOURNAL_CAPACITY];
+            if record.sequence > sequence && written < output.len() {
+                output[written] = record;
+                written += 1;
+            }
+        }
+        written
+    }
+}
+
+impl Default for EventJournal {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+fn hash_journal(
+    mut hash: u32,
+    sequence: u32,
+    epoch: u32,
+    kind: u8,
+    primary: u32,
+    secondary: u32,
+    arguments: &[i32; 4],
+) -> u32 {
+    for value in [sequence, epoch, u32::from(kind), primary, secondary] {
+        for byte in value.to_le_bytes() {
+            hash = (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193);
+        }
+    }
+    for argument in arguments {
+        for byte in argument.to_le_bytes() {
+            hash = (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193);
+        }
+    }
+    hash
+}
+
+pub fn compact_prediction(
+    navigation: crate::phase10::GlobalNavigation,
+    plan: &ksa64_interface::phase11::MissionPlan,
+    epoch: u32,
+) -> ksa64_interface::phase11::PredictionSummary {
+    use ksa64_interface::phase10::GlobalFrameId;
+    let (altitude_q12, vertical_velocity_q24) = if navigation.frame == GlobalFrameId::LocalEnuV1 {
+        (navigation.position_q12[2], navigation.velocity_q24[2])
+    } else {
+        let mut status = ksa64_core::numeric::NumericStatus::CLEAR;
+        let radius = ksa64_core::numeric::magnitude4_floor(
+            0,
+            navigation.position_q12[0],
+            navigation.position_q12[1],
+            navigation.position_q12[2],
+            &mut status,
+        ) as i32;
+        let dot = navigation
+            .position_q12
+            .iter()
+            .zip(navigation.velocity_q24.iter())
+            .fold(0i64, |sum, (position, velocity)| {
+                sum.saturating_add(i64::from(*position) * i64::from(*velocity))
+            });
+        let radial_velocity = if radius > 0 {
+            (dot / i64::from(radius)).clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32
+        } else {
+            0
+        };
+        (
+            radius.saturating_sub(ksa64_core::phase10_contract::WGS84_SEMI_MAJOR_Q12_KM),
+            radial_velocity,
+        )
+    };
+    const GRAVITY_Q28_KM_S2: i64 = 2_632_453;
+    let ascending = vertical_velocity_q24.max(0) as i64;
+    let additional_q12 =
+        ((ascending * ascending) / (GRAVITY_Q28_KM_S2 * 512)).clamp(0, i64::from(i32::MAX)) as i32;
+    let time_to_apogee_q16 =
+        ((ascending << 20) / GRAVITY_Q28_KM_S2).clamp(0, i64::from(u32::MAX)) as u32;
+    let apogee_q12_km = altitude_q12.saturating_add(additional_q12);
+    let prediction_checksum = hash_receipt(
+        navigation.checksum,
+        plan.plan_identity,
+        epoch,
+        apogee_q12_km as u32,
+        navigation.frame as u8,
+        0,
+    );
+    ksa64_interface::phase11::PredictionSummary {
+        prediction_identity: prediction_checksum.max(1),
+        model_identity: plan.onboard_prediction_model,
+        product: ksa64_interface::phase11::PredictionProductKind::OnboardCompact,
+        source_estimate_identity: 0x11e1_0001,
+        source_estimate_checksum: navigation.checksum,
+        package_manifest_identity: plan.package_manifest_identity,
+        plan_identity: plan.plan_identity,
+        source_epoch: epoch,
+        generation_epoch: epoch,
+        valid_until_epoch: epoch.saturating_add(32),
+        frame: navigation.frame,
+        terminal_reason: ksa64_interface::phase11::PredictionTerminalReason::ValidHorizon,
+        apogee_q12_km,
+        perigee_q12_km: 0,
+        time_to_apogee_q16,
+        time_to_impact_q16: 0,
+        impact_position_q12_km: navigation.position_q12,
+        transition_epochs: [u32::MAX; 3],
+        assumptions: 1,
+        prediction_checksum,
+    }
+}
+
+#[cfg(test)]
+mod operations_tests {
+    use super::*;
+    use crate::phase10::ksa_g10r_reference_flight_config;
+    use ksa64_interface::phase10::{
+        GlobalFastSensorCell, GlobalFrameId, GLOBAL_FAST_ATTITUDE, GLOBAL_FAST_DELTA_ANGLE,
+        GLOBAL_FAST_DELTA_V,
+    };
+    use ksa64_interface::phase11::{
+        EventJournalRecord, JournalEventKind, UplinkCommandLoad, UplinkControlKind,
+        UplinkControlRecord, UplinkLoadType, UplinkReasonCode, UplinkState,
+        PACKAGE_CAP_HIGH_LEVEL_MODE,
+    };
+
+    fn fast(epoch: u16) -> GlobalFastSensorCell {
+        GlobalFastSensorCell {
+            session: 0x10a0,
+            measurement_epoch: epoch,
+            production_epoch: epoch,
+            frame: GlobalFrameId::LocalEnuV1,
+            validity: GLOBAL_FAST_DELTA_V | GLOBAL_FAST_DELTA_ANGLE | GLOBAL_FAST_ATTITUDE,
+            mission_time_q16: u32::from(epoch) * 2_048,
+            delta_velocity_q24: [0, 0, 1],
+            delta_angle_q24: [0; 3],
+            attitude_vector_q15: [0; 3],
+            angular_rate_q15: [0; 3],
+            dynamic_pressure_q10: 0,
+            mach_q12: 0,
+            gimbal_applied_q15: [0; 2],
+            rcs_propellant_q21: 5 << 21,
+            actuator_feedback: 0,
+            vehicle_status: 2,
+            sensor_checksum: epoch,
+        }
+    }
+
+    fn safe_load() -> UplinkCommandLoad {
+        let mut arguments = [0; 16];
+        arguments[0] = 2;
+        UplinkCommandLoad {
+            load_identity: 0x11c0_1001,
+            package_manifest_identity: KSA_G10R_REFERENCE_OPS_MANIFEST_ID,
+            plan_identity: ksa_g10r_reference_mission_plan().plan_identity,
+            abi: FlightAbiId::GlobalKlr10V1,
+            source_estimator_identity: 0x11e0_1001,
+            source_estimator_checksum: 0x1234_5678,
+            stage_epoch: 0,
+            not_before_epoch: 2,
+            expires_epoch: 12,
+            requested_effective_epoch: 4,
+            required_capabilities: PACKAGE_CAP_HIGH_LEVEL_MODE,
+            prerequisite_event_mask: 0,
+            position_residual_limit_q12: 0,
+            velocity_residual_limit_q24: 0,
+            frame: GlobalFrameId::LocalEnuV1,
+            load_type: UplinkLoadType::HighLevelMode,
+            arguments,
+        }
+    }
+
+    fn commit_request(load: UplinkCommandLoad) -> UplinkControlRecord {
+        UplinkControlRecord {
+            kind: UplinkControlKind::CommitRequest,
+            control_identity: 0x11c1_1001,
+            load_identity: load.load_identity,
+            package_manifest_identity: load.package_manifest_identity,
+            plan_identity: load.plan_identity,
+            request_epoch: 0,
+            effective_epoch: load.requested_effective_epoch,
+            state: UplinkState::Staged,
+            reason: UplinkReasonCode::Accepted,
+            receipt_checksum: 0,
+        }
+    }
+
+    #[test]
+    fn committed_high_level_action_activates_on_the_exact_release() {
+        let mut package = KsaG10rReferenceOpsV1::new(ksa_g10r_reference_flight_config()).unwrap();
+        assert!(package.initialize_mission_plan(ksa_g10r_reference_mission_plan()));
+        let load = safe_load();
+        assert_eq!(
+            package.stage_uplink(load, 0).unwrap().state,
+            UplinkState::Staged
+        );
+        assert_eq!(
+            package.commit_uplink(&commit_request(load)).unwrap().state,
+            UplinkState::Committed
+        );
+        for epoch in 0..4u16 {
+            let evidence = package.process_release(Some(fast(epoch)), None, None);
+            assert!(!evidence.safe);
+        }
+        let evidence = package.process_release(Some(fast(4)), None, None);
+        assert!(evidence.safe);
+    }
+
+    #[test]
+    fn communications_blackout_does_not_interrupt_flight_and_journal_recovers_in_order() {
+        let mut package = KsaG10rReferenceOpsV1::new(ksa_g10r_reference_flight_config()).unwrap();
+        assert!(package.initialize_mission_plan(ksa_g10r_reference_mission_plan()));
+        package.record_ground_communications(false);
+        let mut prior_flight_checksum = 0;
+        for epoch in 0..12u16 {
+            let evidence = package.process_release(Some(fast(epoch)), None, None);
+            assert_ne!(evidence.flight_checksum, prior_flight_checksum);
+            prior_flight_checksum = evidence.flight_checksum;
+        }
+        package.record_ground_communications(true);
+
+        let mut records = [EventJournalRecord::EMPTY; EVENT_JOURNAL_CAPACITY];
+        let count = package.recover_journal_after(0, &mut records);
+        assert!(count >= 4);
+        assert!(records[..count]
+            .windows(2)
+            .all(|pair| pair[0].sequence < pair[1].sequence));
+        let mut communication_count = 0;
+        let mut communication_state = [u32::MAX; 2];
+        for record in &records[..count] {
+            if record.kind == JournalEventKind::Communications {
+                if communication_count < communication_state.len() {
+                    communication_state[communication_count] = record.primary_identity;
+                }
+                communication_count += 1;
+            }
+        }
+        assert_eq!(communication_count, 2);
+        assert_eq!(communication_state, [0, 1]);
+    }
+
+    #[test]
+    fn compact_prediction_is_bound_to_navigation_and_plan_not_truth() {
+        let mut navigation = GlobalFlightComputer::new(ksa_g10r_reference_flight_config())
+            .unwrap()
+            .navigation();
+        navigation.position_q12 = [0, 0, 409_600];
+        navigation.velocity_q24 = [0, 0, 1_677_722];
+        navigation.checksum = 0x55aa_1234;
+        let plan = ksa_g10r_reference_mission_plan();
+        let first = compact_prediction(navigation, &plan, 64);
+        let second = compact_prediction(navigation, &plan, 64);
+        assert_eq!(first, second);
+        assert_eq!(first.source_estimate_checksum, navigation.checksum);
+        assert_eq!(first.plan_identity, plan.plan_identity);
+        assert!(first.apogee_q12_km >= navigation.position_q12[2]);
     }
 }

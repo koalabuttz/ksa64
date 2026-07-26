@@ -318,6 +318,47 @@ impl GlobalFlightComputer {
         self.safe
     }
 
+    /// Apply a fully validated Phase 11 ground navigation update. The legacy
+    /// path never calls this method, so frozen Phase 10 behavior is unchanged.
+    pub fn operational_navigation_update(
+        &mut self,
+        frame: GlobalFrameId,
+        position_q12: [i32; 3],
+        velocity_q24: [i32; 3],
+        epoch: u16,
+    ) -> bool {
+        if frame != self.navigation.frame {
+            return false;
+        }
+        self.navigation.position_q12 = position_q12;
+        self.navigation.velocity_q24 = velocity_q24;
+        self.navigation.checksum = hash_navigation(
+            self.navigation.checksum,
+            epoch,
+            frame,
+            &position_q12,
+            &velocity_q24,
+        );
+        true
+    }
+
+    /// Replace one declared guidance target after an atomic operations commit.
+    pub fn operational_guidance_target(&mut self, selector: u8, target_q30: [i32; 4]) -> bool {
+        let target = normalize_quaternion(target_q30);
+        match selector {
+            1 => self.config.powered_target_q30 = target,
+            2 => self.config.entry_target_q30 = target,
+            _ => return false,
+        }
+        true
+    }
+
+    /// Enter the existing frozen safe state through a high-level ground request.
+    pub fn operational_request_safe(&mut self) {
+        self.safe = true;
+        self.alarms |= GLOBAL_ALARM_SAFE;
+    }
+
     pub fn record_deadline_miss(&mut self) {
         self.deadline_misses = self.deadline_misses.saturating_add(1);
         self.alarms |= GLOBAL_ALARM_DEADLINE | GLOBAL_ALARM_SAFE;
