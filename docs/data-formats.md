@@ -341,3 +341,22 @@ Phase 9.5 leaves every Phase 8.5 and Phase 9 record unchanged and adds:
 - KMR9: noncanonical host Mission Control recording of passive Phase 9.5 presentation updates and terminal checksum chains. It is replay/presentation data and never enters candidate or evaluator identity.
 
 KLR9 uses CRC-16-CCITT and a distinct sync/version prefix; KLF6 remains its outer transport. The fixed packs use strict version-9 headers, little-endian fields, identity binding, reserved-zero enforcement, and CRC-32. A pulse quantum is exactly 1/256 second (1,024 Q18 units), and a command carries zero through eight quanta for each of twelve jets.
+
+## Phase 10 global formats
+
+Phase 10 preserves every earlier family and adds:
+
+- KEM10: 512-byte Earth/time/gravity/source-policy pack.
+- KFT10: bounded 128-byte header plus 48-byte transform knots.
+- KAT10: bounded 128-byte header plus 40-byte atmosphere/wind knots.
+- KGV10: 2,048-byte global vehicle/propulsion/aero/recovery pack.
+- KGM10: 1,024-byte mission/guidance/anchor/transition pack.
+- KLR10: 64-byte fast sensor and command cells, 96-byte aid/frame and status cells, and a 192-byte transition cell carried inside KLF6.
+- KTT10: 128-byte header followed by 256-byte canonical telemetry frames.
+- KSR10: 512-byte global evaluation summary.
+- KPH10: 64-byte header followed by 48-byte compact ground-track/altitude points.
+- KSC10: 512-byte deterministic campaign configuration.
+- KRA10: 128-byte header, embedded KSC10, ordered protected KSR10 records, and a 32-byte footer.
+- KMR10: noncanonical host Mission Control recording.
+
+Every canonical record is little-endian, fixed-capacity, identity-bound, CRC-protected, reserved-zero strict, and corruption/truncation rejecting. KLF6 placement, worker count, presentation, and storage never enter physical identity.

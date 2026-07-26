@@ -1215,3 +1215,65 @@ Close Phase 9.5 after the complete frozen regression, independent model checks, 
 Preserve the measured realtime-flight and portable-world deficits as explicit follow-on work. Do not lower the 32 Hz release rate, move allocation to the host, remove effectors, or require an REU to manufacture a target pass. Carry the measured 6502-specific rewrite, C64 Ultimate integration, portable C64-world long-run, and physical-link tracks forward. Begin Phase 10 at the global frame/time contract and fixture boundary described in the Phase 10 handoff.
 
 The completion audit launches at most one VICE instance, closes it after success or proven failure, and waits 20 seconds between sequential Windows emulator processes after a startup-only transient was observed. It never starts a complete target mission without a fresh projection and explicit confirmation.
+
+## D-100: Freeze the accepted global Earth and time authority
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Use `GlobalEcef6DofV1` with WGS 84 ellipsoidal geodesy, `CentralJ2V1`,
+compiled IERS 2010 / IAU 2006–2000A transforms, elapsed TAI integration, and
+the pinned 2024-01-01 epoch. ECEF owns atmospheric ascent and entry; GCRF owns
+exoatmospheric coast. Source coverage is identity-bound and extrapolation
+fails before propagation.
+
+## D-101: Split physical-world and avionics validation authority
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Use a separate float64 implementation to validate the complete
+uninstrumented/prescribed-attitude physical path. Validate controlled global
+flight independently through truth-blind navigation/control tests, exact link
+cells and checksum chains, named faults, analytic controller evidence, and
+campaigns. Do not compare a prescribed-attitude reference directly to a
+closed-loop controlled mission and mislabel controller differences as physics
+error.
+
+SatKit/Orekit/GMAT remain frozen fixture generators or corroborators. They
+never own runtime state.
+
+## D-102: Accept externally paced stock-C64 global flight without a realtime claim
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Use host-world plus stock-C64-flight as the Phase 10 hardware baseline. The
+37,403-byte flight endpoint, 35,247-byte timing program, and 17,002-byte replay
+fit below `$C000` without an REU. Exact step-and-ack preserves logical epochs
+and successor-command ordering, but measured release costs of 54.9 through
+114.1 PAL slots explicitly fail realtime operation.
+
+Defer the portable stock global world, 6502-specific optimization, C64
+Ultimate acceleration, and physical-link acceptance without changing the
+canonical global evaluator.
+
+## D-103: Correct global event qualification and declare terminal-contact tolerance
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Qualify apogee from velocity projected onto WGS 84 geodetic up rather than a
+single quantized altitude decrease. After ECEF-to-local recovery handoff,
+qualify main deployment against recovery-site local AGL rather than
+ellipsoidal altitude.
+
+The independent model keeps the one-step bound for rail clearance, burnout,
+apogee, drogue, main, and all frame transitions. Terminal ground contact has a
+separate four-recovery-step (0.125 s) tolerance for accumulated fixed-point
+descent quantization; the accepted difference is 0.09375 s. This deviation is
+explicit evidence, not coefficient tuning.

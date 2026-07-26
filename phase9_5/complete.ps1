@@ -267,6 +267,17 @@ try {
         throw "unsafe audit cleanup"
     }
     if (Test-Path -LiteralPath $resolved) {
-        Remove-Item -LiteralPath $resolved -Recurse -Force
+        $cleanupAttempts = 0
+        while (Test-Path -LiteralPath $resolved) {
+            try {
+                Remove-Item -LiteralPath $resolved -Recurse -Force -ErrorAction Stop
+            } catch {
+                $cleanupAttempts += 1
+                if ($cleanupAttempts -ge 8) {
+                    throw
+                }
+                Start-Sleep -Milliseconds 250
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 # Phase 10 source inventory
 
-Status: frozen contract inventory; normalized data snapshots and generated
-fixture hashes are added at their implementation gates.
+Status: complete. Normalized source snapshots, generation metadata, and
+fixture hashes are frozen under `source-data`, `generated`, and `evidence`.
 
 ## Normative model sources
 
@@ -43,3 +43,18 @@ must reject any required source value without provenance.
 - <https://satkit.dev/>
 - <https://satkit.dev/api/frametransform/>
 - <https://www.orekit.org/site-orekit-12.2/apidocs/org/orekit/frames/package-summary.html>
+
+## Frozen source identities
+
+`source-data/source-manifest.json` binds:
+
+- IERS Bulletin C 67, upstream SHA-256
+  `bf064f784512a6e364b818435ae55439d1029e47e8d39812eedd04bf7da8131d`;
+- IERS finals2000A final Bulletin B columns, upstream SHA-256
+  `22feeac3f99572368c5e81c9702e151988050a636ef888aaf7e41ac0d2c9f85e`;
+- the normalized EOP window from 2023-12-31 through 2024-01-02 UTC;
+- forbidden extrapolation and elapsed TAI integration.
+
+The frame fixture manifest records SatKit 0.16.0 and satkit-data 0.9.0 wheel
+hashes. KSA-G10R source values are explicitly assumption-backed. Normal audits
+consume these checked-in files and never retrieve live Earth data.

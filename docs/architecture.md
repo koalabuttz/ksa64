@@ -430,7 +430,7 @@ KRA9 commits complete generation segments and embeds KRE9 copies of retained KAS
 
 The C64 receives a bounded KFP9 finalist package and does not run production searches. Exact finalist flight may be rerun through the accepted host-world/C64-flight endpoint. The standalone finalist browser is a separate stock image; Phase 9 does not reopen the rejected monolithic Phase 8.5 packaging decision.
 
-## Accepted Phase 9.5 and planned Phase 10 validation authority
+## Accepted Phase 9.5 and Phase 10 global architecture
 
 Advanced effectors and global flight preserve the existing ownership rule: during any interval, exactly one KSA64 world model owns and advances an entity's state. An external program may produce an input fixture or an independent comparison, but it never supplies live corrections, shares integration authority, or becomes a fallback dynamics path.
 
@@ -455,3 +455,14 @@ Phase 10 uses a layered evidence architecture:
 The global profile consumes versioned, compiled Earth/time data. Normal execution and CI never retrieve live leap-second or Earth-orientation data and never require an external validator. The profile contract freezes the ellipsoid, rotation/orientation model, supported time scales, leap-second and EOP sources and validity, transform conventions, and failure policy before integrated trajectory acceptance.
 
 Transform validation is intentionally separated from force-model and integration validation. Position, velocity, attitude, angular rate, and time continuity are tested at the ENU/ECEF/ECI seams before a trajectory comparison can be interpreted. This prevents a convention error from being misdiagnosed as an aerodynamic, gravity, or integrator defect.
+
+The accepted global executor moves one continuous state through
+`LocalLaunch -> EcefAscent -> EciCoast -> EcefEntry -> LocalRecovery`.
+Qualification occurs in the world, but ownership commits only at the next
+exact 32 Hz release before sensor sampling. The onboard navigator transforms
+its own estimate using the public frame service and is never reset from truth.
+
+Host-world/host-flight is the canonical complete-mission placement.
+Host-world plus externally paced stock-C64 flight uses the same KLR10 cells
+and shadow verification. The portable C64 global world is deferred; no second
+production simulator or host correction path was introduced.

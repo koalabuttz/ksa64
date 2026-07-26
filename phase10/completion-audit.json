@@ -1,0 +1,89 @@
+{
+  "schema": "ksa64.phase10.completion-audit-v1",
+  "status": "pass",
+  "date": "2026-07-26",
+  "accepted_implementation_commit": "613560a",
+  "compatibility": {
+    "phase_0_through_9_5": true,
+    "frozen_artifacts_unchanged": true
+  },
+  "native": {
+    "format": "pass",
+    "clippy_all_targets_features_fixtures": "pass",
+    "workspace_tests": "pass",
+    "numeric_time_frame_environment_vectors": "pass",
+    "independent_float64_world": "pass",
+    "ksa5_orbital_coast": "pass"
+  },
+  "controlled_nominal": {
+    "evaluation_identity": "0x09fbd185",
+    "duration_s": 687.9375,
+    "releases": 22015,
+    "apogee_km": 210.89697265625,
+    "downrange_km": 336.1689453125,
+    "crossrange_km": -6.818359375,
+    "frame_transitions": 4
+  },
+  "independent_world": {
+    "exact_apogee_km": 205.26806640625,
+    "float64_apogee_km": 205.27147924765177,
+    "apogee_delta_percent": 0.001662626565115225,
+    "downrange_delta_percent": 0.014046759226014007,
+    "landing_position_delta_km": 0.04890665304153429,
+    "maximum_transition_time_delta_s": 0.03125,
+    "maximum_flight_event_time_delta_s": 0.03125,
+    "maximum_transition_attitude_delta_deg": 0.00003478538297612979,
+    "landing_time_delta_s": 0.09375,
+    "landing_time_tolerance_s": 0.125,
+    "pass": true
+  },
+  "campaign": {
+    "master_seed": "0x4b5341a0",
+    "routine_runs": 64,
+    "routine_archive_sha256": "2cc8e089ecfbc6f470ef61cd2aca684e53dc1b4a9bcdb1f2dd821c85714c05d1",
+    "completion_runs": 256,
+    "completion_archive_sha256": "18c56e7537a8393376e0444033170319f74449b51826a4916cce74c5bc2f4daf",
+    "physical_recoveries": 256,
+    "numeric_frame_time_faults": 0,
+    "worker_counts": [1, 4, 8],
+    "byte_identical": true
+  },
+  "stock_c64": {
+    "reu_required": false,
+    "flight_endpoint": {
+      "bytes": 37403,
+      "end_exclusive": "0x9a1a",
+      "sha256": "48d41a09ec0cc3e8a2699dee5111fa7ffff46bc8d15d2783c8becbdcd8e8c59b"
+    },
+    "timing_probe": {
+      "bytes": 35247,
+      "end_exclusive": "0x91ae",
+      "sha256": "081612e97c330f01b42635f64643148ff8bcc0109bd516d2a8c6ff4fbb97461d"
+    },
+    "replay": {
+      "bytes": 17002,
+      "end_exclusive": "0x4a69",
+      "sha256": "e85d710e9e31dda9a28a37a8d42f6ee50c93ba8d18ca4ea8710db76e1c1c673e"
+    },
+    "worst_release_cycles": 3512697,
+    "worst_release_slots": 114.08935009256552,
+    "realtime_requirement": false
+  },
+  "vice": {
+    "policy": "one instance, warp disabled, close after success or proven failure, 20 second cooldown",
+    "release_class_releases": 33,
+    "transition_probe_releases": 5,
+    "transition_mask": "0f",
+    "stock_replay": "pass",
+    "checksum_chains_exact": true,
+    "full_target_mission_started": false
+  },
+  "limitations": [
+    "KSA-G10R is fictional and assumption-backed.",
+    "The compiled atmosphere is idealized and gravity is central plus J2.",
+    "The stock global flight endpoint is externally paced and not realtime.",
+    "A portable stock-C64 global world was not implemented.",
+    "No complete Phase 10 target mission was started.",
+    "Results are engineering evidence, not launch approval, certification, regulatory evidence, or safety authority."
+  ]
+}

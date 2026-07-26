@@ -363,9 +363,9 @@ Gate 11 validates presentation and finalist workflows separately from physics. P
 
 The additive KFB9 selected-finalist endpoint is 39,963 bytes, ends at `$A41A`, and leaves 7,142 bytes before `$C000`. Strict native tests exercise the first accepted canard, RCS, and mixed finalists. Three sequential eight-release one-instance VICE probes then shadow-verify their KLR9 command/status cells and truth, navigation, flight, and allocator checksum chains. The PRG hash is `ea1c315aa44abccfbc112601319fa11997abcc2f351b47844e01399d2ff23597`; the canard, RCS, and mixed KFB9 hashes are respectively `569d1363f45b28e6ab277d946fff026cbd82c3d349a109413c99d7d420ba3b18`, `fc695f5e897f8066e3fedb44b796e2307901dcbb87df32f0a4d7c6a40609aa23`, and `1f7121b175f8cea46b12ef8dd72e58487b5f9fe3dcb485e4f5a777b94db11154`. These bounded runs prove configurable target execution, not wall-clock realtime flight.
 
-## Planned Phase 10 validation
+## Accepted Phase 10 validation
 
-Phase 10 will use four deliberately distinct evidence layers:
+Phase 10 uses four deliberately distinct evidence layers:
 
 1. Frame/time-only transforms with force propagation disabled.
 2. Environment and force snapshots at fixed states and epochs.
@@ -388,3 +388,15 @@ Transform cases span multiple epochs, leap-second and EOP boundaries, an explici
 Every evidence report separates frame/time disagreement from force/environment disagreement and integration accumulation. External fixtures record tool/data versions, hashes, inputs, epoch and time-scale declarations, source and destination frames, transform direction, Earth/gravity/atmosphere settings, raw output, conversion code, tolerances, and regeneration instructions.
 
 Normal tests and CI consume checked-in fixtures without network access, live leap-second/EOP data, or installed external tools. No validator is permitted to own, correct, or co-propagate production state.
+
+The exact uninstrumented world and separate float64 implementation differ by
+0.001663% in apogee, 0.014047% in downrange, and 48.9 m at landing. All
+in-flight events and transitions agree within one 32 Hz step; terminal ground
+contact uses a separately declared four-recovery-step bound and differs by
+0.09375 s. The controlled truth-blind mission independently completes 22,015
+releases and all four frame changes.
+
+The 64- and 256-case archives are byte-identical with one, four, and eight
+workers. All 256 cases physically recover without numeric, frame, time, or
+model-envelope faults. Finite warp-disabled stock-C64 probes exact-match
+release-class and transition checksum chains without claiming realtime.

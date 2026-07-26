@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–9.5 are complete. Phase 9.5 adds portable canard and cold-gas RCS physics, exact pulse/depletion and changing mass properties, truth-blind advanced avionics, deterministic mixed allocation, full integrated missions, robust grid/NSGA-II studies, live Mission Control, and selected-finalist stock-C64 execution. The interim stock baseline is host world plus externally paced C64 flight; realtime C64 flight and the portable C64 world remain priority follow-on tracks. Phase 10 global atmospheric/suborbital flight is next.
+> **Project status:** Phases 0–10 are complete. Phase 10 adds WGS 84 global Earth flight, compiled standards-based time and Earth orientation, explicit ENU/ECEF/GCRF ownership transitions, a truth-blind global flight computer, deterministic global campaigns, passive Mission Control, KSA-5A orbital corroboration, and exact externally paced stock-C64 flight/replay endpoints. Realtime C64 flight and the portable C64 world remain priority follow-on tracks.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -51,7 +51,12 @@ KSA64 currently provides:
 - accepted Firestorm C9/R9/M9 missions and deterministic canard, RCS, and mixed workbench studies, with experimental KSA-X1 evidence kept outside the accepted physical Pareto front;
 - an externally paced KLF6/KLR9 host-world/stock-C64-flight baseline that shadow-verifies exact command/status cells and checksum chains without claiming realtime performance or requiring an REU;
 - a passive Phase 9.5 F1–F7 host Mission Control TUI and KMR9 recording for host/host or host/C64 flight placement;
-- adaptive KFE9 finalist retention, a 29,010-byte stock finalist browser, and a 39,963-byte configurable stock flight endpoint that exactly reruns selected canard, RCS, and mixed finalists through strict KFB9 bootstraps.
+- adaptive KFE9 finalist retention, a 29,010-byte stock finalist browser, and a 39,963-byte configurable stock flight endpoint that exactly reruns selected canard, RCS, and mixed finalists through strict KFB9 bootstraps;
+- the separately versioned `GlobalEcef6DofV1` profile with local launch/recovery, rotating-Earth ECEF atmospheric flight, GCRF coast, WGS 84 geodesy, central-plus-J2 gravity, and compiled atmosphere;
+- continuous elapsed TAI, pinned leap/EOP inputs, SatKit-derived frame fixtures, exact release-bound frame transitions, and a frame-aware truth-blind global flight computer;
+- a complete controlled KSA-G10R mission crossing ENU→ECEF→GCRF→ECEF→ENU, plus independent full-world float64 evidence and a bounded KSA-5A one-orbit coast;
+- byte-identical 64/256-case global campaigns, self-contained global Mission Control reports, and strict KTT10/KSR10/KPH10/KRA10 evidence;
+- a 37,403-byte externally paced stock-C64 global flight endpoint and a 17,002-byte stock replay, both below `$C000`, REU-independent, and validated with warp disabled.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -112,6 +117,7 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 8.5 — Unified avionics | Complete: exact event execution, local truth-blind navigation/recovery, monitor and gimbal capabilities, strict formats, host/VICE placement, live Mission Control, campaigns, PAL timing, and an explicit combined-stock fit decision. |
 | 9 — Optimization workbench | Complete: deterministic grid/NSGA-II/DE search, 1/8/64 robustness, feasibility-first Pareto evidence, exact archives/resume, external optimizer protocol, reports/TUI, and a finite stock-C64 finalist-browser VICE pass. |
 | 9.5 — Advanced effectors | Complete: canards, cold-gas RCS, exact pulses/depletion, mixed allocation, robust searches, externally paced stock-C64 flight, live Mission Control, adaptive finalist browsing, selected-finalist split reruns, and full completion audit. |
+| 10 — Global Earth flight | Complete: WGS 84/TAI/EOP contracts, ECEF/GCRF dynamics, exact frame transitions, global avionics, controlled suborbital recovery, KSA-5A coast corroboration, deterministic campaigns, Mission Control, and bounded stock-C64 flight/replay. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 
@@ -142,6 +148,7 @@ The legacy Phase 3/4 accuracy-first closed-loop path still projects to 243.7 min
 - [Phase 8.5](phase8_5/README.md), [implementation contract](phase8_5/PLAN.md), [completion audit](phase8_5/COMPLETION.md), [stock-fit decision](phase8_5/STOCK_FIT_DECISION.md), and [Phase 9 handoff](phase8_5/PHASE9_HANDOFF.md)
 - [Phase 9](phase9/README.md), [implementation contract](phase9/PLAN.md), [completion record](phase9/COMPLETION.md), and [Phase 9.5 handoff](phase9/PHASE9_5_HANDOFF.md)
 - [Phase 9.5](phase9_5/README.md), [implementation contract](phase9_5/PLAN.md), [completion record](phase9_5/COMPLETION.md), [integrated evidence](phase9_5/INTEGRATED_EVIDENCE.md), [stock-target decision](phase9_5/stock-target-decision.md), [finalist workflow](phase9_5/FINALIST_WORKFLOW.md), and [Phase 10 handoff](phase9_5/PHASE10_HANDOFF.md)
+- [Phase 10](phase10/README.md), [implementation contract](phase10/PLAN.md), [validation](phase10/VALIDATION.md), [completion record](phase10/COMPLETION.md), and [next-phase handoff](phase10/NEXT_PHASE_HANDOFF.md)
 
 ### Phase 4 detail
 
@@ -226,6 +233,14 @@ powershell -File phase9/complete.ps1
 ```
 
 It verifies the full native workspace, independent accepted-search evidence, the external JSONL protocol, fresh one/four/eight-worker quick searches, strict reports, KFP9 packaging, and the pinned rust-mos stock browser. It validates checked-in accepted searches rather than silently spending minutes regenerating all thirty worker variants. Add `-RunVice` to revalidate the checked finite browser evidence with one sequential emulator instance.
+
+The bounded Phase 10 audit is:
+
+```powershell
+powershell -File phase10/complete.ps1
+```
+
+It validates frozen legacy behavior, frame/time/environment fixtures, the independent complete physical reference, KSA-5A coast, controlled artifacts, campaigns, and stock packaging. Stored VICE evidence is checked by default; add `-RunVice` only to rerun the sequential warp-disabled finite probes. It never silently starts a complete target mission.
 
 ## Phase 6: software baseline accepted
 

@@ -1,6 +1,7 @@
 # Phase 10 implementation plan
 
-Status: implementation in progress.
+Status: complete. All twelve gates are accepted; see
+[COMPLETION.md](COMPLETION.md).
 
 Master seed: `0x4B5341A0`.
 

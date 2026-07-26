@@ -272,7 +272,7 @@ The optimizer selects candidates; the portable core only evaluates them.
 
 ## Phase 9.5: advanced control effectors
 
-Status: complete. All twelve gates are accepted: native effectors and workbench, deterministic campaigns/searches, the interim host-world plus externally paced stock-C64-flight baseline, passive advanced Mission Control, adaptive finalist retention, selected-finalist stock reruns, and the bounded completion audit. Phase 10 global flight is next.
+Status: complete. All twelve gates are accepted: native effectors and workbench, deterministic campaigns/searches, the interim host-world plus externally paced stock-C64-flight baseline, passive advanced Mission Control, adaptive finalist retention, selected-finalist stock reruns, and the bounded completion audit.
 
 Purpose: extend the Phase 8.5 control-allocation boundary with physically modeled aerodynamic and reaction-control effectors, using the Phase 9 workbench to size, tune, compare, and robustly evaluate them.
 
@@ -311,11 +311,21 @@ Exit criteria:
 
 ## Phase 10: global atmospheric and suborbital flight
 
-Status: next planned phase; Phase 9.5 has handed off the accepted advanced control-effector library and explicit global frame/time validation requirements.
+Status: complete. All twelve gates are accepted.
 
 Purpose: cover the region where local and orbital missions overlap without forcing all vehicles into one coordinate representation.
 
-Candidate capabilities:
+Accepted result:
+
+- WGS 84, elapsed TAI, pinned leap/EOP data, central-plus-J2 gravity, compiled IERS/IAU transforms, and compiled U.S. Standard Atmosphere profiles.
+- Explicit release-bound ownership across local ENU, ECEF atmospheric flight, GCRF coast, ECEF entry, and local recovery.
+- The controlled KSA-G10R mission completes all transitions and recovery; the independent uninstrumented float64 model passes its physical and event tolerances.
+- A frozen KSA-5A insertion handoff completes a bounded one-orbit global coast.
+- Seed `0x4b5341a0` 64/256-case archives are byte-identical at one, four, and eight workers; all 256 cases recover without numeric/frame/time faults.
+- F1–F7 global Mission Control, strict reports, and stock trajectory replay are passive.
+- The no-REU stock flight endpoint fits below `$C000` and exact-matches finite host/VICE release and transition probes. It is externally paced, not realtime.
+
+Accepted capabilities:
 
 - A separately versioned `GlobalEcef6DofV1` profile for rotating-Earth, long-range atmospheric and suborbital flight.
 - Strict local-ENU, Earth-fixed, and Earth-inertial state transforms with continuous position, velocity, attitude, angular rate, time, and identity.
@@ -334,14 +344,14 @@ Validation authority and external-reference strategy:
 
 SatKit, Orekit, and GMAT generate frozen evidence only. Normal tests and CI require no external tool, network access, or live Earth-orientation or leap-second data. Only one model owns an entity's state during an interval; external tools never co-propagate or correct the production trajectory at runtime.
 
-Required contract before global dynamics implementation:
+Accepted Earth/time/frame contract:
 
 - Declare the reference ellipsoid, gravity model, Earth-rotation/orientation and any precession/nutation model, supported time scales, continuous internal integration scale, leap-second source, Earth-orientation-data source and validity window, extrapolation/failure policy, and every permitted simplification.
 - Compile accepted leap-second and Earth-orientation inputs into versioned offline data. UTC is an input/output representation, not a discontinuous integration clock across a leap second.
 - Freeze transform direction, axis, quaternion, angular-rate, velocity-transport, and epoch conventions before accepting force or trajectory comparisons.
 - Do not select higher-fidelity Earth/time models by prestige alone. Phase 10 range and accuracy analysis chooses the smallest declared model that satisfies its mission envelope, then versions that choice.
 
-Required transform and transition evidence:
+Accepted transform and transition evidence:
 
 - Test multiple epochs, including leap-second and Earth-orientation-data boundaries plus an explicit out-of-coverage failure case.
 - Test the equator, both sides of the date line, high altitude, near both poles, and the exact poles. Exact-pole local frames must declare a reference meridian/longitude because ENU heading is otherwise ambiguous.

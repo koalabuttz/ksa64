@@ -130,3 +130,25 @@ Inspect a retained finalist package and rerun its accepted robustness tier exact
     cargo run -p ksa64-host --bin phase9_5_finalists -- --package phase9_5/evidence/workbench/mixed-nsga2.kfe9 --index 0 --reu-kib 0 --rerun
 
 The stock finalist browser consumes KFE9 directly. A separate selected-finalist flight endpoint consumes the strict KFB9 configuration sent in the KLF6 Start payload; the host still owns the world and shadow-verifies every KLR9 command/status cell. See `phase9_5/FINALIST_WORKFLOW.md` for build, VICE, stock/REU retention, and evidence commands.
+
+## Phase 10 global mission tools
+
+`phase10_launch` runs the complete host-world/host-flight KSA-G10R mission and
+feeds the passive global F1–F7 Mission Control model. It emits strict KTT10,
+KSR10, KPH10, CSV, JSON, HTML/SVG, and optional KMR10 evidence.
+
+`phase10_bridge` owns the externally paced KLF6/KLR10 seam. The host advances
+to one exact release, delivers transported measurements, waits for the C64
+flight response, shadow-verifies its cells, and then advances.
+
+`phase10_campaign` executes deterministic 64/256-case studies with ordered
+merging. `phase10_world_reference` emits the production uninstrumented
+physical reference consumed by the independent Python comparison.
+
+```powershell
+cargo run -p ksa64-host --bin phase10_launch -- --display tui
+cargo run -p ksa64-host --release --bin phase10_campaign -- target/phase10/campaign 64 8
+cargo run -p ksa64-host --bin phase10_world_reference
+```
+
+See `phase10/README.md` and `phase10/VALIDATION.md`.
