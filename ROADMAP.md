@@ -453,6 +453,44 @@ Explicit non-goals:
 - No claim that an evidence ledger is certification, launch approval, or a
   calibrated real-world probability of success.
 
+## Phase 11.5: product consolidation and unified application shell
+
+Status: implementation in progress. The accepted contract and baseline are in
+`phase11_5/`.
+
+Purpose: make the accepted simulation, operations, workbench, evidence, and
+target capabilities discoverable as one host product without changing any
+authoritative model or frozen artifact.
+
+Planned capabilities:
+
+- One `ksa64` host executable and application facade shared with Phase 12.
+- A deterministic two-tier catalog separating current domain-oriented
+  experiences from historical phase validation tools.
+- Unified project, mission, campaign, optimization, evidence, target, and
+  audit commands.
+- Guided KSA-G10R GNSS-loss operations as the flagship quick-start.
+- Direct Rust application services; Mission Foundry will not parse CLI output
+  or spawn phase-numbered binaries.
+- Compatibility wrappers for documented host entrypoints through at least
+  Phase 13.
+- Explicit target metadata and opt-in live VICE behavior preserving the
+  one-instance, warp-disabled, cooldown, and long-run confirmation policies.
+
+Exit criteria:
+
+- Every Phase 0-11 artifact remains exact.
+- All current experiences are discoverable without knowing phase numbers.
+- Unified and compatibility entrypoints produce identical artifacts and
+  checksums.
+- Stored target verification cannot launch VICE or hardware implicitly.
+- Phase 12 receives a stable product catalog and application-service boundary.
+
+Explicit non-goals:
+
+- No new physics, avionics, formats, target implementation, GUI, or 3-D viewer.
+- No repository-wide directory migration or removal of historical evidence.
+
 ## Phase 12: Mission Foundry and passive 3-D operations
 
 Status: planned. Phase 11 has frozen the required headless contracts; see

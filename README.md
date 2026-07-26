@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–11 are complete. KSA64 now includes deterministic mission operations, interchangeable flight-software packages, estimate-based prediction, atomic commanding, procedures and roles, exact session/debrief evidence, and a headless mission-authoring SDK. The complete portable reference-operations package runs in banked stock-C64 RAM under externally paced VICE, while the independent safehold package remains a flat stock image. Phase 12 will build Mission Foundry and the passive 3-D viewer on these frozen contracts. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, physical-link acceptance, and the portable C64 world remain parallel priority tracks.
+> **Project status:** Phases 0–11 are complete. Phase 11.5 is consolidating the accepted missions, operations, workbenches, evidence, and C64 targets behind one `ksa64` application and deterministic product catalog before Phase 12 builds Mission Foundry. The complete portable reference-operations package runs in banked stock-C64 RAM under externally paced VICE, while the independent safehold package remains a flat stock image. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, physical-link acceptance, and the portable C64 world remain parallel priority tracks.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -127,6 +127,7 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 
 | Phase | Intended result |
 |---|---|
+| 11.5 — Product consolidation | One host application facade, domain-oriented product catalog, unified CLI, compatibility entrypoints, and an explicit Phase 12 API boundary. |
 | 12 — Mission Foundry | Host vehicle integration, authority-lane mission composition, avionics binding, evidence maturity, and passive role-filtered 3-D operations over the Phase 11 contracts. |
 | 13 candidate — Sustained spacecraft | A concrete mission-selected orbital spacecraft and bounded subsystem slice; scope remains unlocked until the mission defines its required physics and evidence. |
 
