@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–10 are complete. Phase 10 adds WGS 84 global Earth flight, compiled standards-based time and Earth orientation, explicit ENU/ECEF/GCRF ownership transitions, a truth-blind global flight computer, deterministic global campaigns, passive Mission Control, KSA-5A orbital corroboration, and exact externally paced stock-C64 flight/replay endpoints. Realtime C64 flight and the portable C64 world remain priority follow-on tracks.
+> **Project status:** Phases 0–10 are complete. Phase 11 is planned next: mission operations, interchangeable flight-software packages, estimate-based prediction, deterministic procedures/operator actions, session/debrief evidence, and a headless mission-authoring SDK. Phase 12 then builds the host Mission Foundry and passive 3-D viewer on those contracts. Realtime C64 flight and the portable C64 world remain a parallel priority track.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -118,6 +118,14 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 9 — Optimization workbench | Complete: deterministic grid/NSGA-II/DE search, 1/8/64 robustness, feasibility-first Pareto evidence, exact archives/resume, external optimizer protocol, reports/TUI, and a finite stock-C64 finalist-browser VICE pass. |
 | 9.5 — Advanced effectors | Complete: canards, cold-gas RCS, exact pulses/depletion, mixed allocation, robust searches, externally paced stock-C64 flight, live Mission Control, adaptive finalist browsing, selected-finalist split reruns, and full completion audit. |
 | 10 — Global Earth flight | Complete: WGS 84/TAI/EOP contracts, ECEF/GCRF dynamics, exact frame transitions, global avionics, controlled suborbital recovery, KSA-5A coast corroboration, deterministic campaigns, Mission Control, and bounded stock-C64 flight/replay. |
+
+## Planned phases
+
+| Phase | Intended result |
+|---|---|
+| 11 — Mission operations | Flight-software package ABI, estimate-based prediction, authority-checked operator actions, deterministic procedures/roles, mission-session bundles, debriefs, and the headless authoring SDK without new physics. |
+| 12 — Mission Foundry | Host vehicle integration, authority-lane mission composition, avionics binding, evidence maturity, and passive role-filtered 3-D operations over the Phase 11 contracts. |
+| 13 candidate — Sustained spacecraft | A concrete mission-selected orbital spacecraft and bounded subsystem slice; scope remains unlocked until the mission defines its required physics and evidence. |
 
 The reviewed Phase 4 campaign uses seed `0x4b534134` and 1,024 runs. Its campaign identity is `0xa2e9e9d5` and its ordered summary chain is `0x813ce420`. Run zero reproduces the frozen Phase 3 nominal truth, sensor, navigation, flight, and KST3 checksums exactly.
 

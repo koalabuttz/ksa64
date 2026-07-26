@@ -362,9 +362,179 @@ Accepted transform and transition evidence:
 
 The vehicle's organizational category never selects this profile automatically. A small sounding rocket may require it, while a large vehicle may legitimately use a local profile for a bounded launch-site experiment.
 
-## Post-Phase-10 mission backlog
+## Phase 11: mission operations and programmable flight
 
-The profile architecture may later support multiple central bodies,
-rendezvous, deorbit, entry, landing, tracking, and pass prediction. These
-missions remain deliberately unassigned until a concrete experiment can define
-their required fidelity and evidence.
+Status: next planned phase.
+
+Purpose: turn the accepted simulator into an operable and programmable mission
+system without adding a new physical model. Phase 11 freezes the contracts that
+future graphical authoring, procedures, user flight software, and sustained
+spacecraft missions will consume.
+
+Planned architecture:
+
+- Formalize a `FlightSoftwarePackage` envelope binding package identity,
+  compatible KLR contract and capabilities, release schedule, persistent
+  memory, safe-state behavior, and target-specific resource evidence. KLR8,
+  KLR9, and KLR10 remain separately versioned sensor/command contracts; Phase
+  11 does not invent one magical universal sensor ABI.
+- Support interchangeable reference, user-native, rust-mos/6502, and external
+  hardware flight endpoints through the existing KLF6 boundary. A bytecode VM
+  or friendly language remains optional until a measured use case justifies
+  its interpreter and toolchain cost.
+- Add a versioned mission-plan contract containing planned guidance events,
+  operator decision points, and declared prediction-model identities.
+- Add separately identified onboard-estimate and ground-estimate prediction
+  services for event times, frame transitions, apsides, ground track, and
+  atmospheric impact. SIM-truth prediction remains a SIM Director-only
+  counterfactual and never masquerades as an independent operational estimate.
+- Add an epoch-tagged operator/uplink command protocol. Procedures and UI code
+  may request only declared actions; flight software and world authority retain
+  their existing power to validate, reject, safe, and record them.
+- Add deterministic procedure packs with public operational-data guards,
+  simulated-time timeouts, branches, cautions, acknowledgements, permitted
+  actions, scripted regression inputs, and exact replay.
+- Add Observer, Guided Operator, Flight Controller, Flight-Software Engineer,
+  and SIM Director roles over one authoritative run. These are responsibility
+  and information boundaries, not physics difficulty levels.
+- Add an immutable mission-session bundle binding vehicle/environment/mission,
+  flight software, plan, procedures, faults, operator actions, canonical
+  telemetry, predictions, and deterministic debrief evidence.
+- Add a headless mission-authoring SDK, schema validation, pack compilation,
+  source/provenance ledger, and test harness. Graphical authoring is Phase 12.
+- Extend Phase 9 sensitivity and counterfactual evidence into model-derived
+  design explanations and debriefs. Reports distinguish observations,
+  hypotheses, and causal evidence and never turn assumption-backed campaign
+  fractions into real-world reliability claims.
+
+Reference operations scenario:
+
+- Reuse the accepted KSA-G10R physical world unchanged.
+- Demonstrate nominal operations and a deterministic GNSS-loss procedure using
+  only transported measurements, ground estimates, prediction residuals, and
+  authorized epoch-tagged actions.
+- Replay the complete human or scripted action log to identical mission,
+  procedure, prediction, and checksum evidence.
+- Prove at least one alternative flight-software package crosses the same
+  profile-specific ABI and failure boundary as the reference implementation.
+
+Exit criteria:
+
+- Existing Phase 0-10 artifacts remain exact.
+- Execution placement, operator role, hints, procedure presentation, and
+  prediction display cannot alter physics except through explicit recorded
+  commands.
+- Onboard and ground predictors start from their own estimates and identify
+  their models; neither receives private truth.
+- Procedure time is simulation time, so a paused or externally paced C64 does
+  not create a false deadline or timeout.
+- Package, plan, procedure, action-log, prediction, and session corruption
+  fail closed.
+- Reference and alternative flight packages produce bounded, attributable
+  resource and timing evidence on every claimed target.
+
+Explicit non-goals:
+
+- No new atmosphere, gravity, vehicle, subsystem, n-body, or entry physics.
+- No universal spacecraft scripting language or bytecode VM requirement.
+- No graphical 3-D vehicle editor, arbitrary code plugins, or authoring on the
+  C64.
+- No claim that an evidence ledger is certification, launch approval, or a
+  calibrated real-world probability of success.
+
+## Phase 12: Mission Foundry and passive 3-D operations
+
+Status: planned after Phase 11 freezes the headless contracts.
+
+Purpose: provide a KSP/Juno-inspired host authoring experience while keeping
+KSA64's compiled packs, authority boundaries, provenance, and evidence model
+distinct.
+
+Planned capabilities:
+
+- A host-only vehicle-integration editor with component trees, attachment
+  nodes, symmetry, procedural geometry, internal placement, staging, and
+  cutaway views.
+- Live wet/dry mass, CG, inertia, CP, static margin, control-authority,
+  propellant, connection, provenance, representability, and model-envelope
+  overlays derived through the same headless compiler used outside the GUI.
+- A multi-lane mission composer separating world events, flight-software
+  decisions, ground operations, and SIM Director faults.
+- An avionics lab that binds sensors, flight-software packages, release
+  budgets, capabilities, and safe states. Visual plan/procedure authoring is in
+  scope; visual flight-program authoring is accepted only if it compiles into
+  the Phase 11 package ABI with deterministic resource evidence.
+- Explicit Sketch, Evaluated, and Frozen Candidate maturity states. Sketches
+  may run with visible assumption warnings; only compiled identified packs can
+  become canonical evidence.
+- A passive 3-D viewer consuming canonical telemetry and mission recordings,
+  with continuous local-to-global scaling and role-filtered truth, onboard,
+  ground, predicted, and planned trajectories.
+- A first bounded component vocabulary covering the accepted Firestorm and
+  KSA-G10R families. Generalization follows demonstrated needs rather than an
+  up-front universal parts engine.
+
+Exit criteria:
+
+- GUI and headless compilation of the same source produce byte-identical packs
+  and derivation ledgers.
+- Editing a source produces a new identity and never mutates evidence from a
+  frozen candidate.
+- Viewer state, camera, rendering rate, and role-filtering cannot alter the
+  authoritative run.
+- Truth remains unavailable outside SIM Director products.
+- The stock C64 consumes compiled packs and replay products; it is not required
+  to parse authoring projects or render the 3-D scene.
+
+Explicit non-goals:
+
+- No universal CAD, CFD, FEA, or arbitrary plug-in execution system.
+- No hidden automatic wiring of mechanical, propellant, power, data, or
+  control interfaces.
+- No unrecorded HOTAS/manual-control path. A later manual-input source must use
+  the Phase 11 epoch-tagged command contract and deterministic replay.
+
+## Parallel target-engineering track
+
+Stock-C64 execution remains a project priority but does not block the
+host-authoring phases:
+
+- profile and rewrite measured global/advanced hot kernels for the 6502;
+- evaluate C64 Ultimate acceleration without changing canonical behavior;
+- restore a portable C64-world long-run role;
+- accept physical user-port, ACIA, and Ethernet transports;
+- use the Phase 11 package ABI to compare reference and target-specific flight
+  implementations without creating a second simulator.
+
+No optimization may silently lower rates, remove capabilities, require an REU,
+or change accepted evidence.
+
+## Candidate Phase 13: sustained orbital spacecraft and bounded systems
+
+Phase 13 requires a separately reviewed concrete mission before its scope is
+locked. The preferred experiment is one sustained Earth-orbital spacecraft
+using the Phase 11 operations contracts and Phase 12 authoring workflow.
+
+That mission may justify a compiled bounded subsystem slice containing one
+electrical bus, battery/generation, avionics and communications loads,
+propulsion valves, a small thermal state, and two or three meaningful
+degradation/redundancy chains. It may also select a bounded subset of sustained
+propagation, ground tracking, deorbit guidance, `SixAxisWrenchV1`, rendezvous,
+docking, or station keeping.
+
+The mission must define which capabilities are necessary; Phase 13 does not
+begin as a universal spacecraft-systems graph.
+
+## Later mission-driven backlog
+
+- Runtime empirical atmosphere and higher-order Earth environment models only
+  when a selected mission's error budget requires them.
+- Lifting entry, thermal protection, ablation, precision landing, and
+  propulsive landing only for a concrete entry/landing experiment.
+- Multiple central bodies, n-body dynamics, lunar flight, Lagrange-point
+  operations, and interplanetary propagation only after a mission defines the
+  required ephemeris, frame/time, navigation, and validation contracts.
+- An engineering-program layer may later derive evidence maturity, unresolved
+  anomalies, campaign coverage, and hardware-in-the-loop status from immutable
+  artifacts. It must not award arbitrary technology points or present
+  assumption-backed campaign fractions as calibrated reliability.
