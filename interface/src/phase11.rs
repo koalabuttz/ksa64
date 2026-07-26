@@ -1065,3 +1065,600 @@ mod mission_plan_tests {
         assert_eq!(crc32_ieee(&rebuilt), total_crc32);
     }
 }
+
+pub const KUL11_LENGTH: usize = 512;
+pub const KUA11_LENGTH: usize = 128;
+pub const KAL11_HEADER_LENGTH: usize = 128;
+pub const KAL11_RECORD_LENGTH: usize = 64;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum UplinkLoadType {
+    GroundNavigationUpdate = 1,
+    MissionEventTarget = 2,
+    ContingencyBranch = 3,
+    NavigationMode = 4,
+    HighLevelMode = 5,
+}
+impl UplinkLoadType {
+    fn parse(value: u8) -> Result<Self, CodecError> {
+        match value {
+            1 => Ok(Self::GroundNavigationUpdate),
+            2 => Ok(Self::MissionEventTarget),
+            3 => Ok(Self::ContingencyBranch),
+            4 => Ok(Self::NavigationMode),
+            5 => Ok(Self::HighLevelMode),
+            _ => Err(CodecError::Enum),
+        }
+    }
+
+    pub const fn capability(self) -> u32 {
+        match self {
+            Self::GroundNavigationUpdate => PACKAGE_CAP_GROUND_NAV_UPDATE,
+            Self::MissionEventTarget => PACKAGE_CAP_TARGET_UPDATE,
+            Self::ContingencyBranch => PACKAGE_CAP_BRANCH_SELECT,
+            Self::NavigationMode => PACKAGE_CAP_NAV_MODE,
+            Self::HighLevelMode => PACKAGE_CAP_HIGH_LEVEL_MODE,
+        }
+    }
+
+    pub const fn support_bit(self) -> u16 {
+        match self {
+            Self::GroundNavigationUpdate => PACKAGE_LOAD_GROUND_NAV,
+            Self::MissionEventTarget => PACKAGE_LOAD_EVENT_TARGET,
+            Self::ContingencyBranch => PACKAGE_LOAD_BRANCH,
+            Self::NavigationMode => PACKAGE_LOAD_NAV_MODE,
+            Self::HighLevelMode => PACKAGE_LOAD_HIGH_LEVEL_MODE,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UplinkCommandLoad {
+    pub load_identity: u32,
+    pub package_manifest_identity: u32,
+    pub plan_identity: u32,
+    pub abi: FlightAbiId,
+    pub source_estimator_identity: u32,
+    pub source_estimator_checksum: u32,
+    pub stage_epoch: u32,
+    pub not_before_epoch: u32,
+    pub expires_epoch: u32,
+    pub requested_effective_epoch: u32,
+    pub required_capabilities: u32,
+    pub prerequisite_event_mask: u32,
+    pub position_residual_limit_q12: i32,
+    pub velocity_residual_limit_q24: i32,
+    pub frame: crate::phase10::GlobalFrameId,
+    pub load_type: UplinkLoadType,
+    pub arguments: [i32; 16],
+}
+
+fn validate_uplink_load(value: &UplinkCommandLoad) -> Result<(), CodecError> {
+    if value.load_identity == 0
+        || value.package_manifest_identity == 0
+        || value.plan_identity == 0
+        || value.source_estimator_identity == 0
+        || value.expires_epoch < value.not_before_epoch
+        || value.requested_effective_epoch < value.not_before_epoch
+        || value.requested_effective_epoch > value.expires_epoch
+        || value.required_capabilities & !PACKAGE_CAP_MASK != 0
+        || value.required_capabilities & value.load_type.capability() == 0
+        || value.position_residual_limit_q12 < 0
+        || value.velocity_residual_limit_q24 < 0
+    {
+        return Err(CodecError::Flags);
+    }
+    Ok(())
+}
+
+pub fn write_kul11(value: &UplinkCommandLoad, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KUL11_LENGTH {
+        return Err(CodecError::Length);
+    }
+    validate_uplink_load(value)?;
+    output.fill(0);
+    output[..4].copy_from_slice(b"KUL1");
+    p16(output, 4, 11);
+    p16(output, 6, KUL11_LENGTH as u16);
+    p32(output, 8, value.load_identity);
+    p32(output, 12, value.package_manifest_identity);
+    p32(output, 16, value.plan_identity);
+    p32(output, 20, value.abi as u32);
+    p32(output, 24, value.source_estimator_identity);
+    p32(output, 28, value.source_estimator_checksum);
+    p32(output, 32, value.stage_epoch);
+    p32(output, 36, value.not_before_epoch);
+    p32(output, 40, value.expires_epoch);
+    p32(output, 44, value.requested_effective_epoch);
+    p32(output, 48, value.required_capabilities);
+    p32(output, 52, value.prerequisite_event_mask);
+    p32(output, 56, value.position_residual_limit_q12 as u32);
+    p32(output, 60, value.velocity_residual_limit_q24 as u32);
+    output[64] = value.frame as u8;
+    output[65] = value.load_type as u8;
+    for (index, argument) in value.arguments.iter().enumerate() {
+        p32(output, 68 + index * 4, *argument as u32);
+    }
+    p32(output, 508, crc32_ieee(&output[..508]));
+    Ok(())
+}
+
+fn parse_global_frame(value: u8) -> Result<crate::phase10::GlobalFrameId, CodecError> {
+    match value {
+        1 => Ok(crate::phase10::GlobalFrameId::LocalEnuV1),
+        2 => Ok(crate::phase10::GlobalFrameId::EarthFixedEcefV1),
+        3 => Ok(crate::phase10::GlobalFrameId::EarthInertialEciV1),
+        _ => Err(CodecError::Enum),
+    }
+}
+
+pub fn parse_kul11(input: &[u8]) -> Result<UplinkCommandLoad, CodecError> {
+    if input.len() != KUL11_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if input[..4] != *b"KUL1" || g16(input, 4) != 11 || g16(input, 6) != KUL11_LENGTH as u16 {
+        return Err(CodecError::Enum);
+    }
+    if crc32_ieee(&input[..508]) != g32(input, 508) {
+        return Err(CodecError::Checksum);
+    }
+    if input[66] != 0 || input[67] != 0 || input[132..508].iter().any(|byte| *byte != 0) {
+        return Err(CodecError::Reserved);
+    }
+    let mut arguments = [0; 16];
+    for (index, argument) in arguments.iter_mut().enumerate() {
+        *argument = g32(input, 68 + index * 4) as i32;
+    }
+    let value = UplinkCommandLoad {
+        load_identity: g32(input, 8),
+        package_manifest_identity: g32(input, 12),
+        plan_identity: g32(input, 16),
+        abi: FlightAbiId::parse(g32(input, 20))?,
+        source_estimator_identity: g32(input, 24),
+        source_estimator_checksum: g32(input, 28),
+        stage_epoch: g32(input, 32),
+        not_before_epoch: g32(input, 36),
+        expires_epoch: g32(input, 40),
+        requested_effective_epoch: g32(input, 44),
+        required_capabilities: g32(input, 48),
+        prerequisite_event_mask: g32(input, 52),
+        position_residual_limit_q12: g32(input, 56) as i32,
+        velocity_residual_limit_q24: g32(input, 60) as i32,
+        frame: parse_global_frame(input[64])?,
+        load_type: UplinkLoadType::parse(input[65])?,
+        arguments,
+    };
+    validate_uplink_load(&value)?;
+    Ok(value)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum UplinkControlKind {
+    StageReceipt = 1,
+    CommitRequest = 2,
+    CommitReceipt = 3,
+    Cancellation = 4,
+    ExecutionAcknowledgement = 5,
+}
+impl UplinkControlKind {
+    fn parse(value: u8) -> Result<Self, CodecError> {
+        match value {
+            1 => Ok(Self::StageReceipt),
+            2 => Ok(Self::CommitRequest),
+            3 => Ok(Self::CommitReceipt),
+            4 => Ok(Self::Cancellation),
+            5 => Ok(Self::ExecutionAcknowledgement),
+            _ => Err(CodecError::Enum),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum UplinkState {
+    Empty = 0,
+    Staged = 1,
+    Committed = 2,
+    Executed = 3,
+    Cancelled = 4,
+    Rejected = 5,
+    Expired = 6,
+}
+impl UplinkState {
+    fn parse(value: u8) -> Result<Self, CodecError> {
+        match value {
+            0 => Ok(Self::Empty),
+            1 => Ok(Self::Staged),
+            2 => Ok(Self::Committed),
+            3 => Ok(Self::Executed),
+            4 => Ok(Self::Cancelled),
+            5 => Ok(Self::Rejected),
+            6 => Ok(Self::Expired),
+            _ => Err(CodecError::Enum),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum UplinkReasonCode {
+    Accepted = 0,
+    Corrupt = 1,
+    Identity = 2,
+    Frame = 3,
+    Stale = 4,
+    Late = 5,
+    Unsupported = 6,
+    Capability = 7,
+    Prerequisite = 8,
+    Bounds = 9,
+    Residual = 10,
+    Occupied = 11,
+    Conflict = 12,
+    AlreadyApplied = 13,
+}
+impl UplinkReasonCode {
+    fn parse(value: u8) -> Result<Self, CodecError> {
+        match value {
+            0 => Ok(Self::Accepted),
+            1 => Ok(Self::Corrupt),
+            2 => Ok(Self::Identity),
+            3 => Ok(Self::Frame),
+            4 => Ok(Self::Stale),
+            5 => Ok(Self::Late),
+            6 => Ok(Self::Unsupported),
+            7 => Ok(Self::Capability),
+            8 => Ok(Self::Prerequisite),
+            9 => Ok(Self::Bounds),
+            10 => Ok(Self::Residual),
+            11 => Ok(Self::Occupied),
+            12 => Ok(Self::Conflict),
+            13 => Ok(Self::AlreadyApplied),
+            _ => Err(CodecError::Enum),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UplinkControlRecord {
+    pub kind: UplinkControlKind,
+    pub control_identity: u32,
+    pub load_identity: u32,
+    pub package_manifest_identity: u32,
+    pub plan_identity: u32,
+    pub request_epoch: u32,
+    pub effective_epoch: u32,
+    pub state: UplinkState,
+    pub reason: UplinkReasonCode,
+    pub receipt_checksum: u32,
+}
+
+pub fn write_kua11(value: &UplinkControlRecord, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KUA11_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if value.control_identity == 0
+        || value.load_identity == 0
+        || value.package_manifest_identity == 0
+        || value.plan_identity == 0
+    {
+        return Err(CodecError::Flags);
+    }
+    output.fill(0);
+    output[..4].copy_from_slice(b"KUA1");
+    output[4] = 11;
+    output[5] = value.kind as u8;
+    p16(output, 6, KUA11_LENGTH as u16);
+    p32(output, 8, value.control_identity);
+    p32(output, 12, value.load_identity);
+    p32(output, 16, value.package_manifest_identity);
+    p32(output, 20, value.plan_identity);
+    p32(output, 24, value.request_epoch);
+    p32(output, 28, value.effective_epoch);
+    output[32] = value.state as u8;
+    output[33] = value.reason as u8;
+    p32(output, 36, value.receipt_checksum);
+    p32(output, 124, crc32_ieee(&output[..124]));
+    Ok(())
+}
+
+pub fn parse_kua11(input: &[u8]) -> Result<UplinkControlRecord, CodecError> {
+    if input.len() != KUA11_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if input[..4] != *b"KUA1" || input[4] != 11 || g16(input, 6) != KUA11_LENGTH as u16 {
+        return Err(CodecError::Enum);
+    }
+    if crc32_ieee(&input[..124]) != g32(input, 124) {
+        return Err(CodecError::Checksum);
+    }
+    if input[34] != 0 || input[35] != 0 || input[40..124].iter().any(|byte| *byte != 0) {
+        return Err(CodecError::Reserved);
+    }
+    let value = UplinkControlRecord {
+        kind: UplinkControlKind::parse(input[5])?,
+        control_identity: g32(input, 8),
+        load_identity: g32(input, 12),
+        package_manifest_identity: g32(input, 16),
+        plan_identity: g32(input, 20),
+        request_epoch: g32(input, 24),
+        effective_epoch: g32(input, 28),
+        state: UplinkState::parse(input[32])?,
+        reason: UplinkReasonCode::parse(input[33])?,
+        receipt_checksum: g32(input, 36),
+    };
+    if value.control_identity == 0
+        || value.load_identity == 0
+        || value.package_manifest_identity == 0
+        || value.plan_identity == 0
+    {
+        return Err(CodecError::Flags);
+    }
+    Ok(value)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum OperationalRole {
+    Observer = 1,
+    GuidedOperator = 2,
+    FlightController = 3,
+    FlightSoftwareEngineer = 4,
+    SimDirector = 5,
+    ScriptedOperator = 6,
+}
+impl OperationalRole {
+    fn parse(value: u8) -> Result<Self, CodecError> {
+        match value {
+            1 => Ok(Self::Observer),
+            2 => Ok(Self::GuidedOperator),
+            3 => Ok(Self::FlightController),
+            4 => Ok(Self::FlightSoftwareEngineer),
+            5 => Ok(Self::SimDirector),
+            6 => Ok(Self::ScriptedOperator),
+            _ => Err(CodecError::Enum),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ActionLogHeader {
+    pub session_definition_identity: u32,
+    pub transcript_identity: u32,
+    pub package_manifest_identity: u32,
+    pub plan_identity: u32,
+    pub action_count: u32,
+    pub final_chain: u32,
+    pub complete: bool,
+}
+
+pub fn write_kal11_header(value: &ActionLogHeader, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KAL11_HEADER_LENGTH
+        || value.session_definition_identity == 0
+        || value.transcript_identity == 0
+        || value.package_manifest_identity == 0
+        || value.plan_identity == 0
+    {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    output[..4].copy_from_slice(b"KAL1");
+    p16(output, 4, 11);
+    p16(output, 6, KAL11_HEADER_LENGTH as u16);
+    p32(output, 8, value.session_definition_identity);
+    p32(output, 12, value.transcript_identity);
+    p32(output, 16, value.package_manifest_identity);
+    p32(output, 20, value.plan_identity);
+    p32(output, 24, value.action_count);
+    p32(output, 28, value.final_chain);
+    output[32] = u8::from(value.complete);
+    p32(output, 124, crc32_ieee(&output[..124]));
+    Ok(())
+}
+
+pub fn parse_kal11_header(input: &[u8]) -> Result<ActionLogHeader, CodecError> {
+    if input.len() != KAL11_HEADER_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if input[..4] != *b"KAL1" || g16(input, 4) != 11 || g16(input, 6) != 128 {
+        return Err(CodecError::Enum);
+    }
+    if crc32_ieee(&input[..124]) != g32(input, 124) {
+        return Err(CodecError::Checksum);
+    }
+    if input[32] > 1 || input[33..124].iter().any(|byte| *byte != 0) {
+        return Err(CodecError::Reserved);
+    }
+    Ok(ActionLogHeader {
+        session_definition_identity: g32(input, 8),
+        transcript_identity: g32(input, 12),
+        package_manifest_identity: g32(input, 16),
+        plan_identity: g32(input, 20),
+        action_count: g32(input, 24),
+        final_chain: g32(input, 28),
+        complete: input[32] != 0,
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ActionLogRecord {
+    pub sequence: u32,
+    pub epoch: u32,
+    pub role: OperationalRole,
+    pub action_kind: UplinkControlKind,
+    pub state: UplinkState,
+    pub reason: UplinkReasonCode,
+    pub load_identity: u32,
+    pub detail_identity: u32,
+    pub procedure_step: u16,
+    pub arguments: [i32; 4],
+    pub prior_chain: u32,
+    pub chain: u32,
+}
+
+pub fn write_kal11_record(value: &ActionLogRecord, output: &mut [u8]) -> Result<(), CodecError> {
+    if output.len() != KAL11_RECORD_LENGTH || value.sequence == 0 {
+        return Err(CodecError::Length);
+    }
+    output.fill(0);
+    p32(output, 0, value.sequence);
+    p32(output, 4, value.epoch);
+    output[8] = value.role as u8;
+    output[9] = value.action_kind as u8;
+    output[10] = value.state as u8;
+    output[11] = value.reason as u8;
+    p32(output, 12, value.load_identity);
+    p32(output, 16, value.detail_identity);
+    p16(output, 20, value.procedure_step);
+    for (index, argument) in value.arguments.iter().enumerate() {
+        p32(output, 24 + index * 4, *argument as u32);
+    }
+    p32(output, 40, value.prior_chain);
+    p32(output, 44, value.chain);
+    p32(output, 60, crc32_ieee(&output[..60]));
+    Ok(())
+}
+
+pub fn parse_kal11_record(input: &[u8]) -> Result<ActionLogRecord, CodecError> {
+    if input.len() != KAL11_RECORD_LENGTH {
+        return Err(CodecError::Length);
+    }
+    if crc32_ieee(&input[..60]) != g32(input, 60) {
+        return Err(CodecError::Checksum);
+    }
+    if input[22] != 0 || input[23] != 0 || input[48..60].iter().any(|byte| *byte != 0) {
+        return Err(CodecError::Reserved);
+    }
+    let mut arguments = [0; 4];
+    for (index, argument) in arguments.iter_mut().enumerate() {
+        *argument = g32(input, 24 + index * 4) as i32;
+    }
+    let value = ActionLogRecord {
+        sequence: g32(input, 0),
+        epoch: g32(input, 4),
+        role: OperationalRole::parse(input[8])?,
+        action_kind: UplinkControlKind::parse(input[9])?,
+        state: UplinkState::parse(input[10])?,
+        reason: UplinkReasonCode::parse(input[11])?,
+        load_identity: g32(input, 12),
+        detail_identity: g32(input, 16),
+        procedure_step: g16(input, 20),
+        arguments,
+        prior_chain: g32(input, 40),
+        chain: g32(input, 44),
+    };
+    if value.sequence == 0 {
+        return Err(CodecError::Sequence);
+    }
+    Ok(value)
+}
+
+#[cfg(test)]
+mod uplink_contract_tests {
+    use super::*;
+
+    fn load() -> UplinkCommandLoad {
+        UplinkCommandLoad {
+            load_identity: 0x11c0_0001,
+            package_manifest_identity: 0x11f5_a001,
+            plan_identity: 0x11a0_0001,
+            abi: FlightAbiId::GlobalKlr10V1,
+            source_estimator_identity: 0x11e0_0001,
+            source_estimator_checksum: 0x1234_5678,
+            stage_epoch: 100,
+            not_before_epoch: 102,
+            expires_epoch: 120,
+            requested_effective_epoch: 104,
+            required_capabilities: PACKAGE_CAP_GROUND_NAV_UPDATE,
+            prerequisite_event_mask: 0,
+            position_residual_limit_q12: 4_096,
+            velocity_residual_limit_q24: 16_777,
+            frame: crate::phase10::GlobalFrameId::EarthInertialEciV1,
+            load_type: UplinkLoadType::GroundNavigationUpdate,
+            arguments: [0; 16],
+        }
+    }
+
+    #[test]
+    fn uplink_load_and_receipt_are_strict() {
+        let load = load();
+        let mut bytes = [0; KUL11_LENGTH];
+        write_kul11(&load, &mut bytes).unwrap();
+        assert_eq!(parse_kul11(&bytes).unwrap(), load);
+        bytes[200] = 1;
+        let crc = crc32_ieee(&bytes[..508]);
+        p32(&mut bytes, 508, crc);
+        assert_eq!(parse_kul11(&bytes), Err(CodecError::Reserved));
+
+        let receipt = UplinkControlRecord {
+            kind: UplinkControlKind::CommitReceipt,
+            control_identity: 7,
+            load_identity: load.load_identity,
+            package_manifest_identity: load.package_manifest_identity,
+            plan_identity: load.plan_identity,
+            request_epoch: 100,
+            effective_epoch: 104,
+            state: UplinkState::Committed,
+            reason: UplinkReasonCode::Accepted,
+            receipt_checksum: 0x55aa_1234,
+        };
+        let mut control = [0; KUA11_LENGTH];
+        write_kua11(&receipt, &mut control).unwrap();
+        assert_eq!(parse_kua11(&control).unwrap(), receipt);
+        control[50] = 1;
+        let crc = crc32_ieee(&control[..124]);
+        p32(&mut control, 124, crc);
+        assert_eq!(parse_kua11(&control), Err(CodecError::Reserved));
+    }
+
+    #[test]
+    fn action_log_header_and_records_round_trip() {
+        let header = ActionLogHeader {
+            session_definition_identity: 1,
+            transcript_identity: 2,
+            package_manifest_identity: 3,
+            plan_identity: 4,
+            action_count: 1,
+            final_chain: 0x99,
+            complete: true,
+        };
+        let mut header_bytes = [0; KAL11_HEADER_LENGTH];
+        write_kal11_header(&header, &mut header_bytes).unwrap();
+        assert_eq!(parse_kal11_header(&header_bytes).unwrap(), header);
+
+        let record = ActionLogRecord {
+            sequence: 1,
+            epoch: 100,
+            role: OperationalRole::ScriptedOperator,
+            action_kind: UplinkControlKind::CommitRequest,
+            state: UplinkState::Committed,
+            reason: UplinkReasonCode::Accepted,
+            load_identity: 7,
+            detail_identity: 8,
+            procedure_step: 4,
+            arguments: [1, 2, 3, 4],
+            prior_chain: 9,
+            chain: 10,
+        };
+        let mut record_bytes = [0; KAL11_RECORD_LENGTH];
+        write_kal11_record(&record, &mut record_bytes).unwrap();
+        assert_eq!(parse_kal11_record(&record_bytes).unwrap(), record);
+    }
+
+    #[test]
+    fn no_uplink_load_type_can_name_a_physical_effector() {
+        let supported = [
+            UplinkLoadType::GroundNavigationUpdate,
+            UplinkLoadType::MissionEventTarget,
+            UplinkLoadType::ContingencyBranch,
+            UplinkLoadType::NavigationMode,
+            UplinkLoadType::HighLevelMode,
+        ];
+        assert_eq!(supported.len(), 5);
+        for raw in 6..=u8::MAX {
+            assert_eq!(UplinkLoadType::parse(raw), Err(CodecError::Enum));
+        }
+    }
+}

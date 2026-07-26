@@ -369,3 +369,493 @@ mod object_tests {
         );
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct PendingUplink {
+    load: ksa64_interface::phase11::UplinkCommandLoad,
+    state: ksa64_interface::phase11::UplinkState,
+    effective_epoch: u32,
+}
+
+pub struct AtomicUplinkManager {
+    pending: Option<PendingUplink>,
+    last_executed_identity: u32,
+    receipt_chain: u32,
+}
+
+impl AtomicUplinkManager {
+    pub const fn new() -> Self {
+        Self {
+            pending: None,
+            last_executed_identity: 0,
+            receipt_chain: 0x811c_9dc5,
+        }
+    }
+
+    pub const fn state(&self) -> ksa64_interface::phase11::UplinkState {
+        match self.pending {
+            Some(value) => value.state,
+            None => ksa64_interface::phase11::UplinkState::Empty,
+        }
+    }
+
+    pub fn stage(
+        &mut self,
+        load: ksa64_interface::phase11::UplinkCommandLoad,
+        current_epoch: u32,
+        completed_event_mask: u32,
+        navigation: &crate::phase10::GlobalNavigation,
+        manifest: &FlightSoftwarePackageManifest,
+        plan: &ksa64_interface::phase11::MissionPlan,
+    ) -> ksa64_interface::phase11::UplinkControlRecord {
+        use ksa64_interface::phase11::{UplinkReasonCode as Reason, UplinkState as State};
+        if self.last_executed_identity == load.load_identity {
+            return self.receipt(
+                ksa64_interface::phase11::UplinkControlKind::StageReceipt,
+                &load,
+                current_epoch,
+                current_epoch,
+                State::Executed,
+                Reason::AlreadyApplied,
+            );
+        }
+        if let Some(pending) = self.pending {
+            if pending.load == load {
+                return self.receipt(
+                    ksa64_interface::phase11::UplinkControlKind::StageReceipt,
+                    &load,
+                    current_epoch,
+                    pending.effective_epoch,
+                    pending.state,
+                    Reason::Accepted,
+                );
+            }
+            return self.receipt(
+                ksa64_interface::phase11::UplinkControlKind::StageReceipt,
+                &load,
+                current_epoch,
+                current_epoch,
+                State::Rejected,
+                Reason::Occupied,
+            );
+        }
+        let reason = self.validate_stage(
+            &load,
+            current_epoch,
+            completed_event_mask,
+            navigation,
+            manifest,
+            plan,
+        );
+        if reason != Reason::Accepted {
+            return self.receipt(
+                ksa64_interface::phase11::UplinkControlKind::StageReceipt,
+                &load,
+                current_epoch,
+                current_epoch,
+                State::Rejected,
+                reason,
+            );
+        }
+        self.pending = Some(PendingUplink {
+            load,
+            state: State::Staged,
+            effective_epoch: load.requested_effective_epoch,
+        });
+        self.receipt(
+            ksa64_interface::phase11::UplinkControlKind::StageReceipt,
+            &load,
+            current_epoch,
+            load.requested_effective_epoch,
+            State::Staged,
+            Reason::Accepted,
+        )
+    }
+
+    fn validate_stage(
+        &self,
+        load: &ksa64_interface::phase11::UplinkCommandLoad,
+        current_epoch: u32,
+        completed_event_mask: u32,
+        navigation: &crate::phase10::GlobalNavigation,
+        manifest: &FlightSoftwarePackageManifest,
+        plan: &ksa64_interface::phase11::MissionPlan,
+    ) -> ksa64_interface::phase11::UplinkReasonCode {
+        use ksa64_interface::phase11::UplinkReasonCode as Reason;
+        if load.package_manifest_identity != manifest.manifest_identity
+            || load.plan_identity != plan.plan_identity
+            || load.abi != manifest.abi
+        {
+            return Reason::Identity;
+        }
+        if load.frame != navigation.frame {
+            return Reason::Frame;
+        }
+        if load.stage_epoch != current_epoch || load.expires_epoch < current_epoch {
+            return Reason::Stale;
+        }
+        if load.requested_effective_epoch < current_epoch.saturating_add(2)
+            || load.requested_effective_epoch < load.not_before_epoch
+            || load.requested_effective_epoch > load.expires_epoch
+        {
+            return Reason::Late;
+        }
+        if manifest.command_load_support & load.load_type.support_bit() == 0 {
+            return Reason::Unsupported;
+        }
+        if manifest.capabilities & load.required_capabilities != load.required_capabilities
+            || plan.required_capabilities & load.load_type.capability() == 0
+        {
+            return Reason::Capability;
+        }
+        if completed_event_mask & load.prerequisite_event_mask != load.prerequisite_event_mask {
+            return Reason::Prerequisite;
+        }
+        if load.load_type == ksa64_interface::phase11::UplinkLoadType::GroundNavigationUpdate {
+            for axis in 0..3 {
+                if residual(load.arguments[axis], navigation.position_q12[axis])
+                    > load.position_residual_limit_q12 as u64
+                    || residual(load.arguments[axis + 3], navigation.velocity_q24[axis])
+                        > load.velocity_residual_limit_q24 as u64
+                {
+                    return Reason::Residual;
+                }
+            }
+        }
+        Reason::Accepted
+    }
+
+    pub fn commit(
+        &mut self,
+        request: &ksa64_interface::phase11::UplinkControlRecord,
+        current_epoch: u32,
+    ) -> ksa64_interface::phase11::UplinkControlRecord {
+        use ksa64_interface::phase11::{
+            UplinkControlKind as Kind, UplinkReasonCode as Reason, UplinkState as State,
+        };
+        let Some(mut pending) = self.pending else {
+            return *request;
+        };
+        if request.kind != Kind::CommitRequest
+            || request.load_identity != pending.load.load_identity
+            || request.package_manifest_identity != pending.load.package_manifest_identity
+            || request.plan_identity != pending.load.plan_identity
+        {
+            return self.receipt(
+                Kind::CommitReceipt,
+                &pending.load,
+                current_epoch,
+                request.effective_epoch,
+                State::Rejected,
+                Reason::Identity,
+            );
+        }
+        if pending.state == State::Committed {
+            return self.receipt(
+                Kind::CommitReceipt,
+                &pending.load,
+                current_epoch,
+                pending.effective_epoch,
+                State::Committed,
+                Reason::Accepted,
+            );
+        }
+        if request.effective_epoch != pending.load.requested_effective_epoch
+            || request.effective_epoch < current_epoch.saturating_add(2)
+            || request.effective_epoch < pending.load.not_before_epoch
+            || request.effective_epoch > pending.load.expires_epoch
+        {
+            return self.receipt(
+                Kind::CommitReceipt,
+                &pending.load,
+                current_epoch,
+                request.effective_epoch,
+                State::Rejected,
+                Reason::Late,
+            );
+        }
+        pending.state = State::Committed;
+        pending.effective_epoch = request.effective_epoch;
+        self.pending = Some(pending);
+        self.receipt(
+            Kind::CommitReceipt,
+            &pending.load,
+            current_epoch,
+            pending.effective_epoch,
+            State::Committed,
+            Reason::Accepted,
+        )
+    }
+
+    pub fn cancel(
+        &mut self,
+        request: &ksa64_interface::phase11::UplinkControlRecord,
+        current_epoch: u32,
+    ) -> ksa64_interface::phase11::UplinkControlRecord {
+        use ksa64_interface::phase11::{
+            UplinkControlKind as Kind, UplinkReasonCode as Reason, UplinkState as State,
+        };
+        let Some(pending) = self.pending else {
+            return *request;
+        };
+        if request.kind != Kind::Cancellation
+            || request.load_identity != pending.load.load_identity
+            || request.package_manifest_identity != pending.load.package_manifest_identity
+            || request.plan_identity != pending.load.plan_identity
+        {
+            return self.receipt(
+                Kind::Cancellation,
+                &pending.load,
+                current_epoch,
+                current_epoch,
+                State::Rejected,
+                Reason::Identity,
+            );
+        }
+        self.pending = None;
+        self.receipt(
+            Kind::Cancellation,
+            &pending.load,
+            current_epoch,
+            current_epoch,
+            State::Cancelled,
+            Reason::Accepted,
+        )
+    }
+
+    pub fn release(
+        &mut self,
+        epoch: u32,
+    ) -> Option<(
+        ksa64_interface::phase11::UplinkCommandLoad,
+        ksa64_interface::phase11::UplinkControlRecord,
+    )> {
+        use ksa64_interface::phase11::{
+            UplinkControlKind as Kind, UplinkReasonCode as Reason, UplinkState as State,
+        };
+        let pending = self.pending?;
+        if epoch > pending.load.expires_epoch {
+            self.pending = None;
+            return None;
+        }
+        if pending.state != State::Committed || epoch != pending.effective_epoch {
+            return None;
+        }
+        self.pending = None;
+        self.last_executed_identity = pending.load.load_identity;
+        let receipt = self.receipt(
+            Kind::ExecutionAcknowledgement,
+            &pending.load,
+            epoch,
+            epoch,
+            State::Executed,
+            Reason::Accepted,
+        );
+        Some((pending.load, receipt))
+    }
+
+    fn receipt(
+        &mut self,
+        kind: ksa64_interface::phase11::UplinkControlKind,
+        load: &ksa64_interface::phase11::UplinkCommandLoad,
+        request_epoch: u32,
+        effective_epoch: u32,
+        state: ksa64_interface::phase11::UplinkState,
+        reason: ksa64_interface::phase11::UplinkReasonCode,
+    ) -> ksa64_interface::phase11::UplinkControlRecord {
+        let control_identity = load.load_identity ^ request_epoch.rotate_left(11) ^ kind as u32;
+        self.receipt_chain = hash_receipt(
+            self.receipt_chain,
+            load.load_identity,
+            request_epoch,
+            effective_epoch,
+            state as u8,
+            reason as u8,
+        );
+        ksa64_interface::phase11::UplinkControlRecord {
+            kind,
+            control_identity: control_identity.max(1),
+            load_identity: load.load_identity,
+            package_manifest_identity: load.package_manifest_identity,
+            plan_identity: load.plan_identity,
+            request_epoch,
+            effective_epoch,
+            state,
+            reason,
+            receipt_checksum: self.receipt_chain,
+        }
+    }
+}
+
+impl Default for AtomicUplinkManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+fn residual(left: i32, right: i32) -> u64 {
+    (i64::from(left) - i64::from(right)).unsigned_abs()
+}
+
+fn hash_receipt(
+    mut hash: u32,
+    load: u32,
+    request_epoch: u32,
+    effective_epoch: u32,
+    state: u8,
+    reason: u8,
+) -> u32 {
+    for value in [
+        load,
+        request_epoch,
+        effective_epoch,
+        u32::from(state),
+        u32::from(reason),
+    ] {
+        for byte in value.to_le_bytes() {
+            hash = (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193);
+        }
+    }
+    hash
+}
+
+#[cfg(test)]
+mod uplink_tests {
+    use super::*;
+    use ksa64_interface::phase10::GlobalFrameId;
+    use ksa64_interface::phase11::*;
+
+    fn plan() -> MissionPlan {
+        MissionPlan {
+            plan_identity: 0x11a0_0001,
+            package_manifest_identity: KSA_G10R_REFERENCE_OPS_MANIFEST_ID,
+            package: FlightSoftwarePackageId::KsaG10rReferenceOpsV1,
+            abi: FlightAbiId::GlobalKlr10V1,
+            vehicle_profile_identity: GLOBAL_ECEF_PROFILE_ID,
+            mission_identity: KSA_G10R_MISSION_COMPATIBILITY_ID,
+            earth_identity: 0x10e0_0001,
+            environment_identity: 0x10a7_0001,
+            onboard_prediction_model: 0x11d0_0001,
+            ground_prediction_model: 0x11d0_0002,
+            required_capabilities: PACKAGE_CAP_MISSION_PLAN | PACKAGE_CAP_GROUND_NAV_UPDATE,
+            event_count: 0,
+            branch_count: 0,
+            decision_count: 0,
+            events: [MissionPlanEvent::EMPTY; KMP11_MAX_EVENTS],
+            branches: [ContingencyBranch::EMPTY; KMP11_MAX_BRANCHES],
+            decisions: [OperatorDecisionPoint::EMPTY; KMP11_MAX_DECISIONS],
+        }
+    }
+
+    fn load(epoch: u32, identity: u32) -> UplinkCommandLoad {
+        UplinkCommandLoad {
+            load_identity: identity,
+            package_manifest_identity: KSA_G10R_REFERENCE_OPS_MANIFEST_ID,
+            plan_identity: 0x11a0_0001,
+            abi: FlightAbiId::GlobalKlr10V1,
+            source_estimator_identity: 0x11e0_0001,
+            source_estimator_checksum: 0x1234_5678,
+            stage_epoch: epoch,
+            not_before_epoch: epoch + 2,
+            expires_epoch: epoch + 20,
+            requested_effective_epoch: epoch + 4,
+            required_capabilities: PACKAGE_CAP_GROUND_NAV_UPDATE,
+            prerequisite_event_mask: 0,
+            position_residual_limit_q12: 4_096,
+            velocity_residual_limit_q24: 16_777,
+            frame: GlobalFrameId::LocalEnuV1,
+            load_type: UplinkLoadType::GroundNavigationUpdate,
+            arguments: [0; 16],
+        }
+    }
+
+    fn navigation() -> crate::phase10::GlobalNavigation {
+        GlobalFlightComputer::new(crate::phase10::ksa_g10r_reference_flight_config())
+            .unwrap()
+            .navigation()
+    }
+
+    fn commit_request(load: &UplinkCommandLoad, request_epoch: u32) -> UplinkControlRecord {
+        UplinkControlRecord {
+            kind: UplinkControlKind::CommitRequest,
+            control_identity: load.load_identity ^ 0x55,
+            load_identity: load.load_identity,
+            package_manifest_identity: load.package_manifest_identity,
+            plan_identity: load.plan_identity,
+            request_epoch,
+            effective_epoch: load.requested_effective_epoch,
+            state: UplinkState::Staged,
+            reason: UplinkReasonCode::Accepted,
+            receipt_checksum: 0,
+        }
+    }
+
+    #[test]
+    fn load_cannot_execute_before_separate_commit_and_executes_exactly_on_release() {
+        let manifest = ksa_g10r_reference_ops_manifest();
+        let plan = plan();
+        let navigation = navigation();
+        let load = load(100, 0x11c0_0001);
+        let mut manager = AtomicUplinkManager::new();
+        let staged = manager.stage(load, 100, 0, &navigation, &manifest, &plan);
+        assert_eq!(staged.state, UplinkState::Staged);
+        assert_eq!(manager.release(101), None);
+        assert_eq!(manager.release(102), None);
+
+        let committed = manager.commit(&commit_request(&load, 101), 101);
+        assert_eq!(committed.state, UplinkState::Committed);
+        assert_eq!(manager.release(103), None);
+        let (executed, acknowledgement) = manager.release(104).unwrap();
+        assert_eq!(executed, load);
+        assert_eq!(acknowledgement.state, UplinkState::Executed);
+        assert_eq!(manager.release(105), None);
+
+        let duplicate = manager.stage(load, 106, 0, &navigation, &manifest, &plan);
+        assert_eq!(duplicate.reason, UplinkReasonCode::AlreadyApplied);
+        assert_eq!(duplicate.state, UplinkState::Executed);
+    }
+
+    #[test]
+    fn staged_uncommitted_load_expires_without_execution_during_blackout() {
+        let manifest = ksa_g10r_reference_ops_manifest();
+        let plan = plan();
+        let navigation = navigation();
+        let load = load(200, 0x11c0_0002);
+        let mut manager = AtomicUplinkManager::new();
+        assert_eq!(
+            manager
+                .stage(load, 200, 0, &navigation, &manifest, &plan)
+                .state,
+            UplinkState::Staged
+        );
+        for epoch in 201..=221 {
+            assert_eq!(manager.release(epoch), None);
+        }
+        assert_eq!(manager.state(), UplinkState::Empty);
+    }
+
+    #[test]
+    fn identity_frame_residual_and_late_commit_fail_closed() {
+        let manifest = ksa_g10r_reference_ops_manifest();
+        let plan = plan();
+        let navigation = navigation();
+        let mut excessive = load(300, 0x11c0_0003);
+        excessive.arguments[0] = 10_000;
+        excessive.position_residual_limit_q12 = 1;
+        let mut manager = AtomicUplinkManager::new();
+        let receipt = manager.stage(excessive, 300, 0, &navigation, &manifest, &plan);
+        assert_eq!(receipt.reason, UplinkReasonCode::Residual);
+        assert_eq!(manager.state(), UplinkState::Empty);
+
+        let valid = load(300, 0x11c0_0004);
+        assert_eq!(
+            manager
+                .stage(valid, 300, 0, &navigation, &manifest, &plan)
+                .state,
+            UplinkState::Staged
+        );
+        let late = manager.commit(&commit_request(&valid, 303), 303);
+        assert_eq!(late.reason, UplinkReasonCode::Late);
+        assert_eq!(manager.state(), UplinkState::Staged);
+    }
+}
