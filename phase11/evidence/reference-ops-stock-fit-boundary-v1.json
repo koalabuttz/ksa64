@@ -1,6 +1,6 @@
 {
   "schema": "ksa64.phase11.reference-ops-stock-fit-boundary.v1",
-  "status": "decision-required",
+  "status": "resolved-by-authorized-banked-stopgap",
   "target": "KsaG10rReferenceOpsV1 externally paced stock-C64 endpoint",
   "toolchain": "pinned David/koalabuttz rust-mos Docker image, c64 profile, mos-c64-none",
   "constraints": {
@@ -30,23 +30,61 @@
     "sha256": "353ecad4d65030233509db14fd30ee2ef02040a1a4320938043242e571eab779",
     "reu_required": false
   },
-  "conclusion": "The independent SafeholdRecoveryV1 endpoint fits. The complete portable reference operations package does not fit below 0xc000 after local-buffer optimization.",
-  "options_requiring_user_direction": [
-    {
-      "id": "banked-stock-image",
-      "effect": "Use RAM at or above 0xc000 with explicit banking; violates the frozen below-0xc000 acceptance wording."
+  "conclusion": "The flat below-$C000 reference package remains impossible. The authorized stopgap now fits the same portable package in stock 64 KiB by using explicit RAM banking; SafeholdRecoveryV1 remains an independent flat endpoint.",
+  "accepted_banked_stopgap": {
+    "authorization": "User selected host-world/C64-flight baseline and authorized a stock-RAM banked stopgap while deferring a 6502-specific rewrite and C64 Ultimate acceleration.",
+    "bundle_bytes": 55423,
+    "bundle_sha256": "cb1979fd4e5abf5c26bfbc71ef031ed4d4e0c2d2a9eee4e0522fdc306d9ab377",
+    "segments": [
+      {
+        "name": "extra",
+        "range": "0x053f-0x0800",
+        "bytes": 706,
+        "margin_bytes": 0
+      },
+      {
+        "name": "main",
+        "range": "0x0801-0xbfcc",
+        "bytes": 47052,
+        "margin_before_state_bytes": 51
+      },
+      {
+        "name": "state_and_static_stack",
+        "range": "0xc000-0xe1fd",
+        "bytes": 8702
+      },
+      {
+        "name": "high",
+        "range": "0xe1fe-0xffda",
+        "bytes": 7645,
+        "margin_bytes": 37
+      }
+    ],
+    "emergency_software_stack": {
+      "range": "0x0428-0x053e",
+      "capacity_bytes": 279,
+      "measured_high_water_bytes": 16
     },
-    {
-      "id": "6502-specific-reference-package",
-      "effect": "Implement a compact package with the same wire behavior; this is the deferred 6502-specific rewrite."
-    },
-    {
-      "id": "reu-or-ultimate-overlay",
-      "effect": "Use expansion-backed overlays; violates the no-REU baseline and belongs to the recorded feasibility study."
-    },
-    {
-      "id": "defer-reference-stock-target",
-      "effect": "Keep host-world/host-flight and SafeholdRecoveryV1 on stock C64 now; Phase 11 remains incomplete against its original stock-reference acceptance criterion."
+    "runtime_policy": "SEI; disable CIA/VIC interrupts; map BASIC, I/O, and KERNAL out with CPU port 0x34; no ROM or I/O calls after entry.",
+    "reu_required": false,
+    "vice_exactness": {
+      "records": 13,
+      "warp": false,
+      "code_segments_preserved": true,
+      "segment_guards_preserved": true,
+      "navigation_checksum": "c73060d2",
+      "flight_checksum": "6e07595c",
+      "command_checksum": "6ab926f2"
     }
-  ]
+  },
+  "resolution": {
+    "selected": "banked-stock-image",
+    "acceptance_scope": "stock-C64 CPU/RAM exactness in VICE; externally paced mailbox execution; no REU and no realtime claim",
+    "remaining_tracks": [
+      "physical-C64 bank loader and physical-link acceptance",
+      "6502-specific reference-package rewrite",
+      "C64 Ultimate RAM and acceleration",
+      "portable C64 world"
+    ]
+  }
 }

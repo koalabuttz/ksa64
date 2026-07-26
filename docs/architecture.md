@@ -466,3 +466,34 @@ Host-world/host-flight is the canonical complete-mission placement.
 Host-world plus externally paced stock-C64 flight uses the same KLR10 cells
 and shadow verification. The portable C64 global world is deferred; no second
 production simulator or host correction path was introduced.
+
+## Accepted Phase 11 operations and stock-target architecture
+
+Phase 11 wraps the frozen global flight computer in versioned flight-software
+packages without changing KLR10 or creating another world model. Mission plans,
+ground observations, predictions, procedures, uplinks, acknowledgements,
+journals, actions, and debriefs are operational records. They may influence a
+mission only through the public load-validate-commit boundary. The world
+remains authoritative, and onboard and ground predictors propagate their own
+transported estimates rather than private truth.
+
+The logical avionics loop and ground-operations link remain separate even when
+they share one physical transport. Losing ground communication cannot stop
+onboard sensing, navigation, guidance, control, recovery, prediction, or
+journaling. Roles and procedures filter information and broker public actions;
+they never change physics implicitly.
+
+`SafeholdRecoveryV1` remains a compact flat stock-C64 endpoint. The full
+`KsaG10rReferenceOpsV1` endpoint uses an accepted headless banked stopgap:
+low helper code below the normal PRG, main code below `$C000`, package/static
+state under BASIC and the I/O window, and high helper code beneath KERNAL. It
+disables interrupts and maps BASIC, I/O, and KERNAL out before portable package
+execution, performs no ROM or device I/O afterward, and requires no REU.
+
+The bank layout changes packaging only. Native and C64 endpoints execute the
+same portable package and exchange the same strict operations; the finite VICE
+gate requires byte-exact replies and preserved code/guard regions. Because an
+aided release takes seconds on the stock PAL CPU, the accepted placement is
+externally paced host-world/C64-flight and makes no realtime claim. A physical
+bank loader and link, a 6502-specific rewrite, C64 Ultimate acceleration, and
+the portable C64 world remain explicit follow-on tracks.

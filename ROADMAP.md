@@ -418,6 +418,16 @@ Reference operations scenario:
 - Prove at least one alternative flight-software package crosses the same
   profile-specific ABI and failure boundary as the reference implementation.
 
+Target implementation status:
+
+- `SafeholdRecoveryV1` fits as an independent flat stock-C64 image.
+- The complete portable reference package exceeded the flat below-`$C000`
+  boundary, so the authorized stopgap uses explicit stock-RAM banking beneath
+  I/O and KERNAL. The one-instance, warp-disabled VICE gate exact-matches 13
+  native operations without an REU; it is externally paced and not realtime.
+- Physical loading/link acceptance, a 6502-specific rewrite, C64 Ultimate
+  acceleration, and the portable C64 world remain parallel target tracks.
+
 Exit criteria:
 
 - Existing Phase 0-10 artifacts remain exact.

@@ -87,8 +87,15 @@ same mission, procedure, prediction, journal, and checksum evidence.
 ## Target policy
 
 Host-world plus externally paced stock-C64 flight remains the hardware
-baseline. Phase 11 adds separate reference-operations and safehold/recovery
-images below `$C000`, without an REU. It makes no realtime claim.
+baseline. `SafeholdRecoveryV1` remains a flat image below `$C000`. The
+complete portable reference-operations package uses the authorized banked
+stock-RAM stopgap documented in `C64_BANKED_REFERENCE_OPS.md`: its main image
+ends below `$C000`, while state and cold helpers occupy RAM normally hidden
+by I/O and KERNAL. It requires no REU and makes no realtime claim.
+
+The accepted banked gate is stock-CPU/stock-RAM VICE evidence. A validated
+physical loader/link, a 6502-specific rewrite, C64 Ultimate acceleration, and
+the portable C64 world remain explicit follow-on tracks.
 
 Only one warp-disabled VICE process may run at once. It is closed after success
 or proven failure. A complete target mission requires a fresh projection of no

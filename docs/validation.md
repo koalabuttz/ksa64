@@ -400,3 +400,32 @@ The 64- and 256-case archives are byte-identical with one, four, and eight
 workers. All 256 cases physically recover without numeric, frame, time, or
 model-envelope faults. Finite warp-disabled stock-C64 probes exact-match
 release-class and transition checksum chains without claiming realtime.
+
+## Phase 11 active validation
+
+Phase 11 preserves the complete Phase 0-10 regression and validates the new
+operational shell independently from authoritative physics. Native tests cover
+package/ABI identity, mission-plan transfer, stage-validate-commit atomicity,
+ground-link isolation, onboard and ground-estimate prediction, deterministic
+procedures and roles, action replay, event-journal recovery, session bundles,
+deleting/truncating/corrupting every new record family, and controlled debrief
+counterfactuals.
+
+SafeholdRecoveryV1 has separate native and rust-mos evidence because it is an
+independent limited package. The complete reference package retains the same
+portable source but uses the accepted banked stock-RAM stopgap. Its host fixture
+generator produces a strict 13-record transcript covering ordinary and aided
+releases, prediction, stage, commit, ground blackout/reacquisition, and journal
+recovery. The stock-C64 endpoint must match every output byte and navigation,
+flight, and command checksum.
+
+The accepted warp-disabled PAL VICE run matches all 13 records, preserves every
+code segment and both bank guards, and uses 16 of the reserved 279 emergency
+software-stack bytes. Final checksums are navigation c73060d2, flight 6e07595c,
+and command 6ab926f2. Diagnostic host wall time is not a PAL cycle claim; the
+endpoint is externally paced.
+
+This evidence proves portable implementation consistency on stock C64 CPU/RAM
+under VICE. It does not prove a physical loader or user-port/ACIA/Ethernet link,
+realtime operation, dissimilar redundancy, certification, launch approval, or
+real-vehicle accuracy.

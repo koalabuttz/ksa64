@@ -1,0 +1,3 @@
+#!/bin/sh
+cd /workspace/phase11/c64-banked || exit 1
+exec mos-c64-clang "$@"

@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–10 are complete. Phase 11 is planned next: mission operations, interchangeable flight-software packages, estimate-based prediction, deterministic procedures/operator actions, session/debrief evidence, and a headless mission-authoring SDK. Phase 12 then builds the host Mission Foundry and passive 3-D viewer on those contracts. Realtime C64 flight and the portable C64 world remain a parallel priority track.
+> **Project status:** Phases 0–10 are complete and Phase 11 implementation is active. Mission operations, interchangeable flight-software packages, estimate-based prediction, deterministic procedures/operator actions, session/debrief evidence, and the headless mission-authoring SDK now exist. The current target stopgap runs the complete portable reference-operations package in banked stock-C64 RAM under externally paced VICE; Phase 12 will build Mission Foundry and the passive 3-D viewer on the frozen operational contracts. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, and the portable C64 world remain parallel priority tracks.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -57,6 +57,9 @@ KSA64 currently provides:
 - a complete controlled KSA-G10R mission crossing ENU→ECEF→GCRF→ECEF→ENU, plus independent full-world float64 evidence and a bounded KSA-5A one-orbit coast;
 - byte-identical 64/256-case global campaigns, self-contained global Mission Control reports, and strict KTT10/KSR10/KPH10/KRA10 evidence;
 - a 37,403-byte externally paced stock-C64 global flight endpoint and a 17,002-byte stock replay, both below `$C000`, REU-independent, and validated with warp disabled.
+- Phase 11 profile-specific flight-package manifests, compiled mission plans, atomic stage/validate/commit uplinks, separate ground-communications faults, compact onboard prediction, independent ground estimation, deterministic procedures/roles, event-journal recovery, and exact action replay;
+- nominal, GNSS-loss, planned-update, blackout, invalid-command, and limited `SafeholdRecoveryV1` operational scenarios, plus a live operations console and headless `lint/compile/inspect/run/script/replay/debrief/verify` mission SDK;
+- a 32,857-byte flat stock-C64 safehold endpoint and an authorized banked stock-RAM reference-operations stopgap: 13 native/C64 exact operations, no REU, 16/279 emergency-stack bytes used, preserved bank guards/code, and warp-disabled one-instance VICE acceptance.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -119,11 +122,11 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 9.5 — Advanced effectors | Complete: canards, cold-gas RCS, exact pulses/depletion, mixed allocation, robust searches, externally paced stock-C64 flight, live Mission Control, adaptive finalist browsing, selected-finalist split reruns, and full completion audit. |
 | 10 — Global Earth flight | Complete: WGS 84/TAI/EOP contracts, ECEF/GCRF dynamics, exact frame transitions, global avionics, controlled suborbital recovery, KSA-5A coast corroboration, deterministic campaigns, Mission Control, and bounded stock-C64 flight/replay. |
 
-## Planned phases
+## Active and planned phases
 
 | Phase | Intended result |
 |---|---|
-| 11 — Mission operations | Flight-software package ABI, estimate-based prediction, authority-checked operator actions, deterministic procedures/roles, mission-session bundles, debriefs, and the headless authoring SDK without new physics. |
+| 11 — Mission operations (active) | Operational contracts, scenarios, console, SDK, safehold target, and the banked reference-operations stopgap are implemented; completion audit and final freeze remain. |
 | 12 — Mission Foundry | Host vehicle integration, authority-lane mission composition, avionics binding, evidence maturity, and passive role-filtered 3-D operations over the Phase 11 contracts. |
 | 13 candidate — Sustained spacecraft | A concrete mission-selected orbital spacecraft and bounded subsystem slice; scope remains unlocked until the mission defines its required physics and evidence. |
 

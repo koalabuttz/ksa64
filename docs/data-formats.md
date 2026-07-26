@@ -360,3 +360,53 @@ Phase 10 preserves every earlier family and adds:
 - KMR10: noncanonical host Mission Control recording.
 
 Every canonical record is little-endian, fixed-capacity, identity-bound, CRC-protected, reserved-zero strict, and corruption/truncation rejecting. KLF6 placement, worker count, presentation, and storage never enter physical identity.
+
+## Phase 11 mission-operations formats
+
+Phase 11 leaves KLR10 and every earlier physical record unchanged. It adds
+strict operational envelopes around the accepted global flight ABI:
+
+- KFS11 is a fixed 512-byte flight-software package manifest.
+- KMP11 is a fixed 2,048-byte compiled mission plan with at most 24 events,
+  eight contingency branches, and eight operator decisions.
+- KPX11 is a fixed 512-byte segmented-object envelope carrying at most 480
+  payload bytes per KLF6 frame.
+- KUL11 is a fixed 512-byte staged uplink load.
+- KUA11 is a fixed 128-byte commit, cancellation, or acknowledgement record.
+- KAL11 uses a 128-byte header followed by fixed 64-byte action records.
+- KPD11 is a fixed 256-byte compact prediction summary.
+- KPP11 uses a 128-byte header followed by bounded 32-byte prediction points.
+- KGO11 and KGE11 are fixed 128-byte ground-observation and ground-estimate
+  records.
+- KEJ11 is a fixed 64-byte recoverable flight-package journal record.
+- KPC11 is a fixed 4,096-byte host procedure pack with a 128-byte header and
+  at most 64 fixed 60-byte steps.
+- KDR11 is a fixed 512-byte deterministic debrief summary.
+- KSD11 is a fixed 256-byte compiled host session-definition pack.
+- KSB11 is a segmented host mission-session archive. Each segment uses a
+  64-byte header and four-byte CRC trailer; a completed archive ends with a
+  strict 44-byte final manifest.
+
+The flight ABI remains profile-specific: KFS11 declares compatibility with
+KLR10 rather than replacing its sensor, command, or status cells. Command loads
+are staged and validated without changing active state; only a distinct KUA11
+commit may schedule activation. Host source JSON, role-filtered presentation,
+HTML reports, and operator hints remain noncanonical.
+
+### Banked stock-C64 packaging records
+
+The banked reference-operations endpoint adds two target-private build and
+acceptance records. Neither is a mission or simulation format:
+
+- KSB1 is a three-segment stock-RAM linker bundle containing the low helper,
+  main/state, and high helper banks plus their load addresses and lengths. Its
+  generated packaging manifest binds the raw bundle and every emitted PRG by
+  SHA-256. KSB1 is distinct from the KSB11 mission-session archive.
+- KOT1 is a bounded exactness transcript of endpoint requests and expected
+  replies. It drives the finite native/C64 comparison and does not replace
+  KLR10, KAL11, KEJ11, or canonical telemetry.
+
+The packaging tool validates every segment against the accepted memory map
+before emitting load-addressed PRGs and a SHA-256 manifest. The VICE probe
+rejects any bundle, transcript, bank guard, code-preservation, or response
+mismatch.

@@ -171,6 +171,11 @@ path = "src/bin/phase11_safehold_endpoint_c64.rs"
 required-features = ["c64"]
 
 [[bin]]
+name = "ksa64-phase11-reference-ops-endpoint-c64"
+path = "src/bin/phase11_reference_ops_endpoint_c64.rs"
+required-features = ["c64"]
+
+[[bin]]
 name = "ksa64-phase9-5-finalist-flight-endpoint-c64"
 path = "src/bin/phase9_5_finalist_flight_endpoint_c64.rs"
 required-features = ["c64"]

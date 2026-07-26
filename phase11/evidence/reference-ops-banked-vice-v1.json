@@ -1,0 +1,92 @@
+{
+  "schema": "ksa64.phase11.reference-ops-banked-vice.v1",
+  "target": "PAL stock C64 via pinned x64sc 3.10",
+  "warp": false,
+  "reu_required": false,
+  "records": 13,
+  "transcript_sha256": "4af467b2353a02111a29c3605d70c39af183192c09870075aaab3205cd9e46af",
+  "bundle_sha256": "cb1979fd4e5abf5c26bfbc71ef031ed4d4e0c2d2a9eee4e0522fdc306d9ab377",
+  "entry": "0x080d",
+  "banking": {
+    "cpu_port": "0x34",
+    "policy": "interrupts disabled; BASIC, KERNAL, and I/O mapped out after entry; no ROM or I/O calls",
+    "reu_required": false
+  },
+  "emergency_stack_capacity_bytes": 279,
+  "emergency_stack_high_water_bytes": 16,
+  "segment_guards_preserved": true,
+  "code_segments_preserved": true,
+  "final_epoch": 4,
+  "navigation_checksum": "c73060d2",
+  "flight_checksum": "6e07595c",
+  "command_checksum": "6ab926f2",
+  "operation_wall_seconds": [
+    {
+      "record": 1,
+      "operation": 1,
+      "wall_seconds": 2.734
+    },
+    {
+      "record": 2,
+      "operation": 6,
+      "wall_seconds": 0.313
+    },
+    {
+      "record": 3,
+      "operation": 2,
+      "wall_seconds": 0.859
+    },
+    {
+      "record": 4,
+      "operation": 3,
+      "wall_seconds": 0.391
+    },
+    {
+      "record": 5,
+      "operation": 5,
+      "wall_seconds": 0.109
+    },
+    {
+      "record": 6,
+      "operation": 1,
+      "wall_seconds": 1.938
+    },
+    {
+      "record": 7,
+      "operation": 1,
+      "wall_seconds": 1.875
+    },
+    {
+      "record": 8,
+      "operation": 1,
+      "wall_seconds": 1.906
+    },
+    {
+      "record": 9,
+      "operation": 1,
+      "wall_seconds": 2.547
+    },
+    {
+      "record": 10,
+      "operation": 5,
+      "wall_seconds": 0.094
+    },
+    {
+      "record": 11,
+      "operation": 7,
+      "wall_seconds": 0.109
+    },
+    {
+      "record": 12,
+      "operation": 7,
+      "wall_seconds": 0.094
+    },
+    {
+      "record": 13,
+      "operation": 6,
+      "wall_seconds": 0.312
+    }
+  ],
+  "timing_claim": "diagnostic host wall time only; no PAL realtime claim",
+  "complete_mission": false
+}
