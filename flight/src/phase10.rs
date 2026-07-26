@@ -39,9 +39,9 @@ pub struct GlobalFlightConfig {
     pub initial_frame: GlobalFrameId,
     pub initial_position_q12: [i32; 3],
     pub initial_attitude_q30: [i32; 4],
-    pub launch_target_q15: [i16; 3],
-    pub powered_target_q15: [i16; 3],
-    pub entry_target_q15: [i16; 3],
+    pub launch_target_q30: [i32; 4],
+    pub powered_target_q30: [i32; 4],
+    pub entry_target_q30: [i32; 4],
     pub pitch_program_end_q16: u32,
     pub proportional_gain_q15: [i16; 3],
     pub derivative_gain_q15: [i16; 3],
@@ -363,11 +363,12 @@ impl GlobalFlightComputer {
         let mut torque = [0; 3];
         let mut normalized_demand = [0i16; 3];
         if let Some(cell) = valid_fast {
+            let error_quaternion = attitude_error(self.navigation.attitude_q30, target);
             for axis in 0..3 {
-                let error = i32::from(cell.attitude_vector_q15[axis].saturating_sub(target[axis]));
+                let error = error_quaternion[axis + 1] >> 15;
                 let rate = i32::from(cell.angular_rate_q15[axis]);
                 let proportional =
-                    (-error * i32::from(self.config.proportional_gain_q15[axis])) >> 15;
+                    (error * i32::from(self.config.proportional_gain_q15[axis])) >> 15;
                 let derivative = (-rate * i32::from(self.config.derivative_gain_q15[axis])) >> 15;
                 normalized_demand[axis] = clamp_i16(proportional.saturating_add(derivative));
                 torque[axis] = ((i64::from(normalized_demand[axis])
@@ -405,7 +406,19 @@ impl GlobalFlightComputer {
             && matches!(self.mode, GlobalFlightMode::Coast | GlobalFlightMode::Entry)
         {
             for (axis, demand) in torque.iter().copied().enumerate() {
-                let quantum = ((demand.unsigned_abs() >> 10).min(8)) as u8;
+                let demand = if axis == 0 && descending_global(&self.navigation) {
+                    0
+                } else {
+                    demand
+                };
+                let pair_authority_q12 = if axis == 0 { 1_638u32 } else { 29_900u32 };
+                let magnitude = demand.unsigned_abs();
+                let quantum = if magnitude == 0 {
+                    0
+                } else {
+                    (((magnitude * 8 + pair_authority_q12 / 2) / pair_authority_q12).clamp(1, 8))
+                        as u8
+                };
                 if quantum != 0 {
                     let channel = axis * 4 + usize::from(demand < 0) * 2;
                     pulses[channel] = quantum;
@@ -499,6 +512,18 @@ impl GlobalFlightComputer {
             return;
         }
         self.transition_count = self.transition_count.saturating_add(1);
+        self.config.launch_target_q30 = normalize_quaternion(quaternion_product(
+            cell.rotation_q30,
+            self.config.launch_target_q30,
+        ));
+        self.config.powered_target_q30 = normalize_quaternion(quaternion_product(
+            cell.rotation_q30,
+            self.config.powered_target_q30,
+        ));
+        self.config.entry_target_q30 = normalize_quaternion(quaternion_product(
+            cell.rotation_q30,
+            self.config.entry_target_q30,
+        ));
         match cell.to {
             GlobalFrameId::EarthFixedEcefV1 => {
                 self.ecef_to_active_rotation = [Q30_ONE, 0, 0, 0];
@@ -610,27 +635,34 @@ impl GlobalFlightComputer {
         command
     }
 
-    fn guidance_target(&self) -> [i16; 3] {
-        match self.mode {
+    fn guidance_target(&self) -> [i32; 4] {
+        let quaternion = match self.mode {
             GlobalFlightMode::Ascent => {
                 if self.last_time_q16 >= self.config.pitch_program_end_q16 {
-                    self.config.powered_target_q15
+                    self.config.powered_target_q30
                 } else {
                     let fraction_q16 = ((u64::from(self.last_time_q16) << 16)
                         / u64::from(self.config.pitch_program_end_q16))
                         as i32;
-                    let mut target = [0; 3];
-                    for (axis, value) in target.iter_mut().enumerate() {
-                        let low = i32::from(self.config.launch_target_q15[axis]);
-                        let high = i32::from(self.config.powered_target_q15[axis]);
-                        *value = clamp_i16(low + (((high - low) * fraction_q16) >> 16));
+                    let mut target = [0; 4];
+                    for (component, value) in target.iter_mut().enumerate() {
+                        let low = self.config.launch_target_q30[component];
+                        let high = self.config.powered_target_q30[component];
+                        *value = low.saturating_add(
+                            (((i64::from(high) - i64::from(low)) * i64::from(fraction_q16)) >> 16)
+                                as i32,
+                        );
                     }
-                    target
+                    normalize_quaternion(target)
                 }
             }
-            GlobalFlightMode::Entry => self.config.entry_target_q15,
-            _ => self.config.powered_target_q15,
-        }
+            GlobalFlightMode::Coast if descending_global(&self.navigation) => {
+                body_x_attitude_from_velocity(self.navigation.velocity_q24)
+            }
+            GlobalFlightMode::Entry => body_x_attitude_from_velocity(self.navigation.velocity_q24),
+            _ => self.config.powered_target_q30,
+        };
+        quaternion
     }
 }
 
@@ -731,6 +763,41 @@ fn quaternion_product(left: [i32; 4], right: [i32; 4]) -> [i32; 4] {
     ]
 }
 
+fn descending_global(navigation: &GlobalNavigation) -> bool {
+    let radial = navigation
+        .position_q12
+        .iter()
+        .zip(navigation.velocity_q24)
+        .map(|(position, velocity)| i64::from(*position) * i64::from(velocity))
+        .sum::<i64>();
+    radial < 0
+}
+fn attitude_error(current: [i32; 4], target: [i32; 4]) -> [i32; 4] {
+    let conjugate = [current[0], -current[1], -current[2], -current[3]];
+    let mut error = normalize_quaternion(quaternion_product(conjugate, target));
+    if error[0] < 0 {
+        for component in &mut error {
+            *component = component.saturating_neg();
+        }
+    }
+    error
+}
+fn body_x_attitude_from_velocity(velocity: [i32; 3]) -> [i32; 4] {
+    let sum = velocity
+        .iter()
+        .map(|component| i64::from(*component) * i64::from(*component))
+        .sum::<i64>();
+    if sum <= 0 {
+        return [Q30_ONE, 0, 0, 0];
+    }
+    let magnitude = integer_sqrt(sum as u64).min(i32::MAX as u64) as i32;
+    normalize_quaternion([
+        magnitude.saturating_add(velocity[0]),
+        0,
+        velocity[2].saturating_neg(),
+        velocity[1],
+    ])
+}
 fn normalize_quaternion(value: [i32; 4]) -> [i32; 4] {
     let sum = value
         .iter()
@@ -846,9 +913,9 @@ mod tests {
             initial_frame: GlobalFrameId::LocalEnuV1,
             initial_position_q12: [0; 3],
             initial_attitude_q30: [Q30_ONE, 0, 0, 0],
-            launch_target_q15: [0, 8_192, 0],
-            powered_target_q15: [0, 5_006, 0],
-            entry_target_q15: [0; 3],
+            launch_target_q30: [759_250_125, 0, 759_250_125, 0],
+            powered_target_q30: [900_258_487, 0, 584_993_064, 0],
+            entry_target_q30: [Q30_ONE, 0, 0, 0],
             pitch_program_end_q16: 60 << 16,
             proportional_gain_q15: [16_384; 3],
             derivative_gain_q15: [8_192; 3],

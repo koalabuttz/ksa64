@@ -1,6 +1,14 @@
 //! Phase 10 deterministic global Earth world authority.
 
-use ksa64_core::numeric::{add, magnitude3_floor, multiply_scaled, subtract, NumericStatus};
+use crate::phase10_control::{
+    rcs_propellant_consumed_q21, sample_rcs_effectors, GlobalActuatorState,
+};
+use ksa64_core::numeric::{
+    add, divide_scaled, magnitude3_floor, multiply_scaled, subtract, NumericStatus,
+};
+use ksa64_core::phase10_attitude::{
+    step_global_rigid_body, GlobalBodyTorque, GlobalDiagonalInertiaQ19, GlobalRigidBodyState,
+};
 use ksa64_core::phase10_contract::{
     EarthModelPack, GlobalSegment, ReferenceFrameId, TransformPack,
 };
@@ -23,6 +31,7 @@ use ksa64_core::phase10_numeric::{
 use ksa64_core::phase10_vehicle::{
     GlobalAeroKnot, GlobalMissionPack, GlobalPackError, GlobalVehiclePack, PitchKnot,
 };
+use ksa64_core::phase2_numeric::sin_cos_binary_q15;
 use ksa64_core::phase8_numeric::{EnuAcceleration, EnuPosition, EnuVelocity};
 use ksa64_core::spatial_numeric::{FixedVec3, QuaternionQ30};
 use ksa64_interface::phase10::{
@@ -154,6 +163,7 @@ struct ForceSample {
     atmosphere: AtmosphereSample,
     mach_q24: i32,
     dynamic_pressure_q14_pa: i32,
+    torque_body_q12: GlobalBodyTorque,
 }
 
 pub struct GlobalWorldMachine<'a> {
@@ -169,6 +179,7 @@ pub struct GlobalWorldMachine<'a> {
     launch_direction_enu_q30: FixedVec3<30>,
     main_propellant_q21: i32,
     rcs_propellant_q21: i32,
+    actuators: GlobalActuatorState,
     descending: bool,
     drogue: bool,
     main: bool,
@@ -262,6 +273,7 @@ impl<'a> GlobalWorldMachine<'a> {
             launch_direction_enu_q30: direction,
             main_propellant_q21: vehicle.main_propellant_q21_kg,
             rcs_propellant_q21: vehicle.rcs_propellant_q21_kg,
+            actuators: GlobalActuatorState::NEUTRAL,
             descending: false,
             drogue: false,
             main: false,
@@ -325,15 +337,46 @@ impl<'a> GlobalWorldMachine<'a> {
         if self.complete {
             return Err(GlobalWorldError::Complete);
         }
+        let powered = self.current_time().raw() < self.vehicle.burn_time_q16_s
+            && self.main_propellant_q21 > 0;
+        if let Some(value) = command {
+            self.actuators.accept(
+                value,
+                self.vehicle,
+                powered,
+                self.segment == GlobalSegment::LocalLaunch,
+                self.rcs_propellant_q21,
+            );
+        }
+        let controlled = command.is_some();
+        let maximum_dt = match self.segment {
+            GlobalSegment::LocalLaunch | GlobalSegment::EcefAscent | GlobalSegment::EcefEntry => {
+                GLOBAL_POWERED_STEP_Q16
+            }
+            GlobalSegment::EciCoast | GlobalSegment::LocalRecovery => GLOBAL_COAST_STEP_Q16,
+        };
+        let phase_offset = self.current_time().raw() % maximum_dt;
+        let physical_dt = if phase_offset == 0 {
+            maximum_dt
+        } else {
+            maximum_dt - phase_offset
+        };
+        let dt = if controlled {
+            self.actuators.next_edge_q16(physical_dt)
+        } else {
+            physical_dt
+        };
+        let active_jets = self.actuators.active_mask().count_ones() as u8;
         self.events = 0;
         match self.segment {
             GlobalSegment::LocalLaunch => self.step_local_launch()?,
-            GlobalSegment::EcefAscent | GlobalSegment::EcefEntry => {
-                self.step_global(GLOBAL_POWERED_STEP_Q16)?
+            GlobalSegment::EcefAscent | GlobalSegment::EcefEntry | GlobalSegment::EciCoast => {
+                self.step_global(dt, controlled)?
             }
-            GlobalSegment::EciCoast => self.step_global(GLOBAL_COAST_STEP_Q16)?,
             GlobalSegment::LocalRecovery => self.step_local_recovery()?,
         }
+        self.consume_rcs_propellant(active_jets, dt)?;
+        self.actuators.advance_pulses(dt);
         self.process_events_and_transitions(command)?;
         self.update_checksum()?;
         self.snapshot()
@@ -622,12 +665,12 @@ impl<'a> GlobalWorldMachine<'a> {
         Ok(())
     }
 
-    fn step_global(&mut self, dt: u32) -> Result<(), GlobalWorldError> {
+    fn step_global(&mut self, dt: u32, controlled: bool) -> Result<(), GlobalWorldError> {
         let current = match self.coordinates {
             Coordinates::Global(state) => state,
             _ => return Err(GlobalWorldError::Transition),
         };
-        let first = self.force_sample(current)?;
+        let first = self.force_sample(current, controlled)?;
         let mut status = NumericStatus::CLEAR;
         let half_dt = (dt / 2) as i32;
         let midpoint_velocity = current.velocity.checked_add(
@@ -655,7 +698,7 @@ impl<'a> GlobalWorldMachine<'a> {
             current.angular_rate,
             midpoint_time,
         );
-        let second = self.force_sample_with_mass(midpoint, midpoint_mass)?;
+        let second = self.force_sample_with_mass(midpoint, midpoint_mass, controlled)?;
         let successor_velocity = current.velocity.checked_add(
             FixedVec3::<24>::new(
                 multiply_scaled(second.acceleration.x(), dt as i32, 20, &mut status),
@@ -673,15 +716,31 @@ impl<'a> GlobalWorldMachine<'a> {
             &mut status,
         );
         let successor_time = current.time.checked_add(dt, &mut status);
+        let rigid = if controlled {
+            step_global_rigid_body(
+                GlobalRigidBodyState {
+                    attitude: current.attitude,
+                    angular_rate: current.angular_rate,
+                },
+                GlobalDiagonalInertiaQ19::new(self.inertia_q19(midpoint_mass)?),
+                second.torque_body_q12,
+                dt as i32,
+                &mut status,
+            )
+        } else {
+            GlobalRigidBodyState {
+                attitude: self.commanded_attitude(successor_time, successor_position)?,
+                angular_rate: current.angular_rate,
+            }
+        };
         if !status.is_clear() {
             return Err(GlobalWorldError::Numeric);
         }
-        let attitude = self.commanded_attitude(successor_time, successor_position)?;
         self.coordinates = Coordinates::Global(GlobalKinematicState::new(
             successor_position,
             successor_velocity,
-            attitude,
-            current.angular_rate,
+            rigid.attitude,
+            rigid.angular_rate,
             successor_time,
         ));
         self.consume_main_propellant(dt)?;
@@ -742,14 +801,19 @@ impl<'a> GlobalWorldMachine<'a> {
         Ok(())
     }
 
-    fn force_sample(&self, state: GlobalKinematicState) -> Result<ForceSample, GlobalWorldError> {
-        self.force_sample_with_mass(state, self.total_mass_q21())
+    fn force_sample(
+        &self,
+        state: GlobalKinematicState,
+        controlled: bool,
+    ) -> Result<ForceSample, GlobalWorldError> {
+        self.force_sample_with_mass(state, self.total_mass_q21(), controlled)
     }
 
     fn force_sample_with_mass(
         &self,
         state: GlobalKinematicState,
         mass_q21: i32,
+        controlled: bool,
     ) -> Result<ForceSample, GlobalWorldError> {
         let transform = interpolate_transform(self.transforms, state.time)?;
         let ecef_state = if self.segment == GlobalSegment::EciCoast {
@@ -808,7 +872,25 @@ impl<'a> GlobalWorldMachine<'a> {
                 &mut status,
             );
         }
-        if state.time.raw() < self.vehicle.burn_time_q16_s && self.main_propellant_q21 > 0 {
+        let mut torque_body = GlobalBodyTorque::ZERO;
+        let powered =
+            state.time.raw() < self.vehicle.burn_time_q16_s && self.main_propellant_q21 > 0;
+        if controlled {
+            let (body_force, body_torque) = self.controlled_force_and_torque(
+                ecef_state,
+                air_velocity,
+                mach_q24,
+                dynamic_q14,
+                powered,
+                &mut status,
+            )?;
+            let force_ecef = ecef_state.attitude.rotate(body_force, &mut status);
+            acceleration_ecef = acceleration_ecef.checked_add(
+                force_vector_to_global_acceleration(force_ecef, mass_q21)?,
+                &mut status,
+            );
+            torque_body = body_torque;
+        } else if powered {
             let direction = self.commanded_direction_ecef(state.time)?;
             let thrust_accel = force_magnitude_to_global_q28(self.vehicle.thrust_q13_n, mass_q21)?;
             let thrust = scale_direction::<28>(direction, thrust_accel, &mut status);
@@ -830,7 +912,181 @@ impl<'a> GlobalWorldMachine<'a> {
             atmosphere,
             mach_q24,
             dynamic_pressure_q14_pa: dynamic_q14,
+            torque_body_q12: torque_body,
         })
+    }
+
+    fn controlled_force_and_torque(
+        &self,
+        ecef_state: GlobalKinematicState,
+        air_velocity: GlobalVelocityVec,
+        mach_q24: i32,
+        dynamic_q14: i32,
+        powered: bool,
+        status: &mut NumericStatus,
+    ) -> Result<(FixedVec3<13>, GlobalBodyTorque), GlobalWorldError> {
+        const TAN_15_DEGREES_Q24: i32 = 4_495_775;
+        let body_air = ecef_state.attitude.conjugate().rotate(air_velocity, status);
+        let aero = self.aero_knot(mach_q24)?;
+        let mut body_force = FixedVec3::<13>::ZERO;
+        let mut torque = GlobalBodyTorque::ZERO;
+        if !self.drogue && dynamic_q14 >= 1 << 14 {
+            if body_air.x() <= 0 {
+                return Err(GlobalWorldError::Envelope);
+            }
+            let alpha_y = divide_scaled(body_air.y(), body_air.x(), 24, status);
+            let alpha_z = divide_scaled(body_air.z(), body_air.x(), 24, status);
+            let alpha = magnitude3_floor(alpha_y, alpha_z, 0, status);
+            if alpha > TAN_15_DEGREES_Q24 as u32 {
+                return Err(GlobalWorldError::Envelope);
+            }
+            let q_area_q13 =
+                multiply_scaled(dynamic_q14, self.vehicle.reference_area_q29_m2, 29, status);
+            let normal_per_alpha =
+                multiply_scaled(q_area_q13, aero.normal_force_slope_q24, 24, status);
+            let normal = FixedVec3::<13>::new(
+                0,
+                -multiply_scaled(normal_per_alpha, alpha_y, 24, status),
+                -multiply_scaled(normal_per_alpha, alpha_z, 24, status),
+            );
+            body_force = body_force.checked_add(normal, status);
+            let cg_q28 = self.cg_from_nose_q28(self.total_mass_q21())?;
+            let arm_x_q28 = cg_q28.saturating_sub(aero.cp_from_nose_q28_m);
+            torque = torque.checked_add(
+                GlobalBodyTorque::new(
+                    0,
+                    -multiply_scaled(arm_x_q28, normal.z(), 29, status),
+                    multiply_scaled(arm_x_q28, normal.y(), 29, status),
+                ),
+                status,
+            );
+            let q_area_length_q12 =
+                multiply_scaled(q_area_q13, self.vehicle.length_q13_m, 14, status);
+            torque = torque.checked_add(
+                GlobalBodyTorque::new(
+                    0,
+                    -multiply_scaled(
+                        multiply_scaled(q_area_length_q12, aero.pitch_damping_q24, 24, status),
+                        ecef_state.angular_rate.y(),
+                        24,
+                        status,
+                    ),
+                    -multiply_scaled(
+                        multiply_scaled(q_area_length_q12, aero.yaw_damping_q24, 24, status),
+                        ecef_state.angular_rate.z(),
+                        24,
+                        status,
+                    ),
+                ),
+                status,
+            );
+        }
+        let cg_q28 = self.cg_from_nose_q28(self.total_mass_q21())?;
+        if powered {
+            let thrust_body = gimbaled_thrust_body(
+                self.vehicle.thrust_q13_n,
+                self.actuators.gimbal_turn16,
+                status,
+            );
+            body_force = body_force.checked_add(thrust_body, status);
+            let cg_q13 = cg_q28 >> 15;
+            let arm_q28 = self
+                .vehicle
+                .length_q13_m
+                .saturating_sub(cg_q13)
+                .saturating_mul(1 << 15);
+            torque = torque.checked_add(
+                GlobalBodyTorque::new(
+                    0,
+                    -multiply_scaled(arm_q28, thrust_body.z(), 29, status),
+                    multiply_scaled(arm_q28, thrust_body.y(), 29, status),
+                ),
+                status,
+            );
+        }
+        let rcs = sample_rcs_effectors(self.actuators, self.vehicle, cg_q28, status);
+        body_force = body_force.checked_add(rcs.force_body_q13, status);
+        torque = torque.checked_add(rcs.torque_body_q12, status);
+        if !status.is_clear() {
+            return Err(GlobalWorldError::Numeric);
+        }
+        Ok((body_force, torque))
+    }
+
+    fn cg_from_nose_q28(&self, mass_q21: i32) -> Result<i32, GlobalWorldError> {
+        let dry = self.vehicle.dry_mass_q21_kg;
+        let propellant = mass_q21.saturating_sub(dry).max(0);
+        let initial = self
+            .vehicle
+            .main_propellant_q21_kg
+            .saturating_add(self.vehicle.rcs_propellant_q21_kg)
+            .max(1);
+        let fraction = rounded_i64(i64::from(propellant) << 16, i64::from(initial))?;
+        let mut status = NumericStatus::CLEAR;
+        let value = add(
+            self.vehicle.dry_cg_q28_m,
+            multiply_scaled(
+                self.vehicle.wet_cg_q28_m - self.vehicle.dry_cg_q28_m,
+                fraction,
+                16,
+                &mut status,
+            ),
+            &mut status,
+        );
+        if status.is_clear() {
+            Ok(value)
+        } else {
+            Err(GlobalWorldError::Numeric)
+        }
+    }
+
+    fn inertia_q19(&self, mass_q21: i32) -> Result<[i32; 3], GlobalWorldError> {
+        let dry = self.vehicle.dry_mass_q21_kg;
+        let propellant = mass_q21.saturating_sub(dry).max(0);
+        let initial = self
+            .vehicle
+            .main_propellant_q21_kg
+            .saturating_add(self.vehicle.rcs_propellant_q21_kg)
+            .max(1);
+        let fraction = rounded_i64(i64::from(propellant) << 16, i64::from(initial))?;
+        let mut result = [0; 3];
+        let mut status = NumericStatus::CLEAR;
+        for (axis, value) in result.iter_mut().enumerate() {
+            *value = add(
+                self.vehicle.dry_inertia_q19[axis],
+                multiply_scaled(
+                    self.vehicle.wet_inertia_q19[axis] - self.vehicle.dry_inertia_q19[axis],
+                    fraction,
+                    16,
+                    &mut status,
+                ),
+                &mut status,
+            );
+        }
+        if status.is_clear() {
+            Ok(result)
+        } else {
+            Err(GlobalWorldError::Numeric)
+        }
+    }
+
+    fn consume_rcs_propellant(&mut self, active_jets: u8, dt: u32) -> Result<(), GlobalWorldError> {
+        let consumed = rcs_propellant_consumed_q21(self.vehicle, active_jets, dt)
+            .ok_or(GlobalWorldError::Numeric)?
+            .min(self.rcs_propellant_q21);
+        self.rcs_propellant_q21 = self.rcs_propellant_q21.saturating_sub(consumed);
+        Ok(())
+    }
+
+    pub const fn applied_gimbal_q15(&self) -> [i16; 2] {
+        [
+            self.actuators.gimbal_turn16[0] / 2,
+            self.actuators.gimbal_turn16[1] / 2,
+        ]
+    }
+
+    pub fn rcs_active_mask(&self) -> u16 {
+        self.actuators.active_mask()
     }
 
     fn wind_ecef(
@@ -1367,6 +1623,40 @@ fn force_magnitude_to_global_q28(force_q13: i32, mass_q21: i32) -> Result<i32, G
     rounded_i64(force_q13 as i64 * (1i64 << 28), mass_q13 as i64 * 1_000)
 }
 
+fn gimbaled_thrust_body(
+    thrust_q13: i32,
+    gimbal_turn16: [i16; 2],
+    status: &mut NumericStatus,
+) -> FixedVec3<13> {
+    let (sin_pitch, cos_pitch) = sin_cos_binary_q15(gimbal_turn16[0] as u16);
+    let (sin_yaw, cos_yaw) = sin_cos_binary_q15(gimbal_turn16[1] as u16);
+    FixedVec3::new(
+        multiply_scaled(
+            multiply_scaled(thrust_q13, i32::from(cos_pitch), 15, status),
+            i32::from(cos_yaw),
+            15,
+            status,
+        ),
+        multiply_scaled(thrust_q13, i32::from(sin_yaw), 15, status),
+        -multiply_scaled(thrust_q13, i32::from(sin_pitch), 15, status),
+    )
+}
+
+fn force_vector_to_global_acceleration(
+    force_q13: FixedVec3<13>,
+    mass_q21: i32,
+) -> Result<GlobalAccelerationVec, GlobalWorldError> {
+    let mass_q13 = (mass_q21 + 128) >> 8;
+    if mass_q13 <= 0 {
+        return Err(GlobalWorldError::Numeric);
+    }
+    let denominator = i64::from(mass_q13) * 1_000;
+    Ok(GlobalAccelerationVec::new(
+        rounded_i64(i64::from(force_q13.x()) * (1i64 << 28), denominator)?,
+        rounded_i64(i64::from(force_q13.y()) * (1i64 << 28), denominator)?,
+        rounded_i64(i64::from(force_q13.z()) * (1i64 << 28), denominator)?,
+    ))
+}
 fn force_to_global_acceleration(
     force_q13: i32,
     mass_q21: i32,

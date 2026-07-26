@@ -40,6 +40,7 @@ pub use phase5_telemetry_self_test::{
 };
 pub mod phase10;
 pub mod phase10_avionics;
+pub mod phase10_control;
 pub mod phase10_evaluation;
 pub mod phase5_vehicle;
 #[cfg(feature = "fixtures")]

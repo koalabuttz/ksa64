@@ -367,7 +367,7 @@ impl<'a> GlobalAvionicsMission<'a> {
             ],
             dynamic_pressure_q10: snapshot.dynamic_pressure_q14_pa >> 4,
             mach_q12: clamp_i16(snapshot.mach_q24 >> 12),
-            gimbal_applied_q15: self.held_command.gimbal_q15,
+            gimbal_applied_q15: self.world.applied_gimbal_q15(),
             rcs_propellant_q21: snapshot.rcs_propellant_q21_kg,
             actuator_feedback: self.world.deployment_feedback(),
             vehicle_status: u16::from(active.time.raw() < self.vehicle.burn_time_q16_s) << 1,
@@ -507,19 +507,15 @@ pub fn reference_global_flight_config(
     initial: GlobalKinematicState,
     mission: GlobalMissionPack,
 ) -> Result<GlobalFlightConfig, GlobalWorldError> {
-    let launch_direction = launch_direction_enu(
-        mission.launch_azimuth_q28_rad,
-        mission.launch_elevation_q28_rad,
-    )?;
-    let initial_vector = [
-        clamp_i16(initial.attitude.x() >> 15),
-        clamp_i16(initial.attitude.y() >> 15),
-        clamp_i16(initial.attitude.z() >> 15),
-    ];
-    let final_vector = [
-        clamp_i16(launch_direction.x() >> 15),
-        clamp_i16(launch_direction.y() >> 15),
-        clamp_i16(launch_direction.z() >> 15),
+    let initial_attitude = quaternion_array(initial);
+    let final_elevation = mission.pitch[mission.pitch_count as usize - 1].elevation_q28_rad;
+    let final_direction = launch_direction_enu(mission.launch_azimuth_q28_rad, final_elevation)?;
+    let final_attitude = ksa64_core::phase10_geodesy::body_x_attitude(final_direction)?;
+    let final_attitude = [
+        final_attitude.w(),
+        final_attitude.x(),
+        final_attitude.y(),
+        final_attitude.z(),
     ];
     Ok(GlobalFlightConfig {
         session,
@@ -529,13 +525,13 @@ pub fn reference_global_flight_config(
             initial.position.y(),
             initial.position.z(),
         ],
-        initial_attitude_q30: quaternion_array(initial),
-        launch_target_q15: initial_vector,
-        powered_target_q15: final_vector,
-        entry_target_q15: initial_vector,
+        initial_attitude_q30: initial_attitude,
+        launch_target_q30: initial_attitude,
+        powered_target_q30: final_attitude,
+        entry_target_q30: initial_attitude,
         pitch_program_end_q16: 60 << 16,
-        proportional_gain_q15: [12_288; 3],
-        derivative_gain_q15: [4_096; 3],
+        proportional_gain_q15: [8_192; 3],
+        derivative_gain_q15: [32_767; 3],
         torque_limit_q12: [4 << 12; 3],
         gimbal_limit_q15: 455,
         minimum_arming_time_q16: 60 << 16,
