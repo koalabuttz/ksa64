@@ -4,3 +4,29 @@
 *.sha256 text eol=lf
 *.csv text eol=lf
 *.html text eol=lf
+
+# Keep reviewable Unreal project and plugin source stable across Windows hosts.
+foundry/**/*.uproject text eol=lf
+foundry/**/*.uplugin text eol=lf
+foundry/**/*.ini text eol=lf
+foundry/**/*.cs text eol=lf
+foundry/**/*.cpp text eol=lf
+foundry/**/*.h text eol=lf
+foundry/**/*.md text eol=lf
+
+# Unreal authored binary assets and portable asset masters are versioned via
+# Git LFS. Generated engine output is ignored in .gitignore.
+*.uasset filter=lfs diff=lfs merge=lfs -text lockable
+*.umap filter=lfs diff=lfs merge=lfs -text lockable
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.glb filter=lfs diff=lfs merge=lfs -text
+*.gltf filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.tif filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.hdr filter=lfs diff=lfs merge=lfs -text
