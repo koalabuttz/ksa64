@@ -38,7 +38,11 @@ use crate::phase12b::{
 };
 use ksa64_core::evaluation::EvaluationOutcome;
 use ksa64_core::phase10_contract::ReferenceFrameId;
-use ksa64_core::phase10_telemetry::{GlobalEvaluationSummary, GlobalTelemetryHeader, KSR10_LENGTH};
+use ksa64_core::phase10_telemetry::{
+    GlobalEvaluationSummary, GlobalPlotHeader, GlobalPlotPoint, GlobalTelemetryHeader,
+    KPH10_HEADER_LENGTH, KPH10_POINT_LENGTH, KSR10_LENGTH,
+};
+use ksa64_core::scenario::crc32_ieee;
 use ksa64_flight::phase10::{GlobalFlightConfig, GlobalFlightEvidence};
 use ksa64_flight::phase11::{
     KsaG10rReferenceOpsV1, EVENT_JOURNAL_CAPACITY, KSA_G10R_REFERENCE_OPS_MANIFEST_ID,
@@ -80,9 +84,107 @@ pub const BRANCH_EFFECTIVE_RELEASE: u32 = 6_880;
 pub const FULL_MISSION_MAX_RELEASES: u32 = 24_000;
 
 static GLOBAL_FIXTURES: OnceLock<GlobalFixtureSet> = OnceLock::new();
+const ACCEPTED_NOMINAL_KPH10: &[u8] =
+    include_bytes!("../../phase10/evidence/ksa-g10r-nominal.kph10");
+const ACCEPTED_NOMINAL_KPH10_SHA256: [u8; 32] = [
+    0xcd, 0x66, 0x4e, 0x8b, 0x72, 0xef, 0xf7, 0xaf, 0xf1, 0xe3, 0xc4, 0xa5, 0xb7, 0xfb, 0x68, 0x59,
+    0xbb, 0x9d, 0x51, 0x78, 0xd3, 0xb6, 0xb6, 0xd4, 0xc2, 0xc0, 0x6f, 0x2c, 0x61, 0xed, 0x9c, 0xf2,
+];
 
 fn fixtures() -> &'static GlobalFixtureSet {
     GLOBAL_FIXTURES.get_or_init(GlobalFixtureSet::embedded)
+}
+
+pub const ACCEPTED_NOMINAL_REFERENCE_MODEL_ID: u32 = 0x12b5_0001;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlannedTrajectoryError {
+    ArtifactHash,
+    Header,
+    Identity,
+    Length,
+    Point,
+    Time,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PlannedTrajectoryPoint {
+    pub release_epoch: u32,
+    pub frame: ReferenceFrameId,
+    pub altitude_q12_km: i32,
+    pub downrange_q12_km: i32,
+    pub crossrange_q12_km: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PlannedTrajectoryReference {
+    pub path_identity: u32,
+    pub evaluation_identity: u32,
+    pub cadence_releases: u16,
+    pub artifact_crc32: u32,
+    pub points: Vec<PlannedTrajectoryPoint>,
+}
+
+/// Strictly decodes the accepted Phase 10 nominal KPH10 into a presentation-only
+/// reference path. The current mission's private truth is never consulted, and
+/// the KPH10 truth-checksum field is deliberately not copied into this view.
+pub fn accepted_nominal_reference_trajectory(
+) -> Result<PlannedTrajectoryReference, PlannedTrajectoryError> {
+    parse_accepted_nominal_reference_trajectory(ACCEPTED_NOMINAL_KPH10)
+}
+
+fn parse_accepted_nominal_reference_trajectory(
+    bytes: &[u8],
+) -> Result<PlannedTrajectoryReference, PlannedTrajectoryError> {
+    if bytes.len() < KPH10_HEADER_LENGTH {
+        return Err(PlannedTrajectoryError::Length);
+    }
+    let header = GlobalPlotHeader::decode(&bytes[..KPH10_HEADER_LENGTH])
+        .map_err(|_| PlannedTrajectoryError::Header)?;
+    if header.identity != crate::phase10_mission::PHASE10_PLOT_IDENTITY {
+        return Err(PlannedTrajectoryError::Identity);
+    }
+    let expected_length = KPH10_HEADER_LENGTH
+        .checked_add(usize::from(header.point_count) * KPH10_POINT_LENGTH)
+        .ok_or(PlannedTrajectoryError::Length)?;
+    if bytes.len() != expected_length {
+        return Err(PlannedTrajectoryError::Length);
+    }
+
+    let mut points = Vec::with_capacity(usize::from(header.point_count));
+    let mut previous_epoch = None;
+    for point_bytes in bytes[KPH10_HEADER_LENGTH..].chunks_exact(KPH10_POINT_LENGTH) {
+        let point =
+            GlobalPlotPoint::decode(point_bytes).map_err(|_| PlannedTrajectoryError::Point)?;
+        if !point.mission_time_q16.is_multiple_of(2_048) {
+            return Err(PlannedTrajectoryError::Time);
+        }
+        let release_epoch = point.mission_time_q16 / 2_048;
+        if previous_epoch.is_some_and(|previous| release_epoch <= previous) {
+            return Err(PlannedTrajectoryError::Time);
+        }
+        previous_epoch = Some(release_epoch);
+        points.push(PlannedTrajectoryPoint {
+            release_epoch,
+            frame: point.frame,
+            altitude_q12_km: point.altitude_q12_km,
+            downrange_q12_km: point.downrange_q12_km,
+            crossrange_q12_km: point.crossrange_q12_km,
+        });
+    }
+    if points.len() != usize::from(header.point_count) {
+        return Err(PlannedTrajectoryError::Length);
+    }
+    if crate::phase11_session::sha256(bytes) != ACCEPTED_NOMINAL_KPH10_SHA256 {
+        return Err(PlannedTrajectoryError::ArtifactHash);
+    }
+    Ok(PlannedTrajectoryReference {
+        path_identity: header.identity,
+        evaluation_identity: header.evaluation_identity,
+        cadence_releases: header.stride_releases,
+        artifact_crc32: crc32_ieee(bytes),
+        points,
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -1531,6 +1633,55 @@ mod tests {
             .package()
             .recover_journal_after(0, &mut records);
         records[..count].to_vec()
+    }
+
+    #[test]
+    fn accepted_nominal_reference_trajectory_is_strict_and_truth_free() {
+        let reference = accepted_nominal_reference_trajectory().unwrap();
+        assert_eq!(
+            reference.path_identity,
+            crate::phase10_mission::PHASE10_PLOT_IDENTITY
+        );
+        assert_ne!(reference.evaluation_identity, 0);
+        assert_eq!(reference.cadence_releases, PHASE10_RECORD_STRIDE_RELEASES);
+        assert_eq!(reference.points.len(), 697);
+        assert_eq!(reference.artifact_crc32, crc32_ieee(ACCEPTED_NOMINAL_KPH10));
+        assert!(reference
+            .points
+            .windows(2)
+            .all(|points| { points[0].release_epoch < points[1].release_epoch }));
+        assert!(reference.points.iter().all(|point| matches!(
+            point.frame,
+            ReferenceFrameId::LocalEnuV1
+                | ReferenceFrameId::EarthFixedEcefV1
+                | ReferenceFrameId::EarthInertialEciV1
+        )));
+
+        let mut corrupt_point = ACCEPTED_NOMINAL_KPH10.to_vec();
+        corrupt_point[KPH10_HEADER_LENGTH + 7] ^= 1;
+        assert_eq!(
+            parse_accepted_nominal_reference_trajectory(&corrupt_point),
+            Err(PlannedTrajectoryError::Point)
+        );
+        assert_eq!(
+            parse_accepted_nominal_reference_trajectory(
+                &ACCEPTED_NOMINAL_KPH10[..ACCEPTED_NOMINAL_KPH10.len() - 1]
+            ),
+            Err(PlannedTrajectoryError::Length)
+        );
+
+        let mut valid_but_unaccepted = ACCEPTED_NOMINAL_KPH10.to_vec();
+        let point_range = KPH10_HEADER_LENGTH..KPH10_HEADER_LENGTH + KPH10_POINT_LENGTH;
+        let mut changed =
+            GlobalPlotPoint::decode(&valid_but_unaccepted[point_range.clone()]).unwrap();
+        changed.altitude_q12_km = changed.altitude_q12_km.saturating_add(1);
+        let mut changed_bytes = [0; KPH10_POINT_LENGTH];
+        changed.encode(&mut changed_bytes).unwrap();
+        valid_but_unaccepted[point_range].copy_from_slice(&changed_bytes);
+        assert_eq!(
+            parse_accepted_nominal_reference_trajectory(&valid_but_unaccepted),
+            Err(PlannedTrajectoryError::ArtifactHash)
+        );
     }
 
     #[test]

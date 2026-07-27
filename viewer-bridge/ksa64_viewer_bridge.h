@@ -36,8 +36,13 @@ typedef struct Ksa64ViewerHandle Ksa64ViewerHandle;
 #define KSA64_VIEWER_FEATURE_OPERATIONS_V1 0x00000002u
 #define KSA64_VIEWER_FEATURE_TYPED_ACTIONS_V1 0x00000004u
 #define KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1 0x00000008u
+#define KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1 0x00000010u
 #define KSA64_VIEWER_SCENARIO_LEGACY_GNSS_FIXTURE 0x120A0001u
 #define KSA64_VIEWER_SCENARIO_FULL_GNSS_LOSS 0x12B00001u
+#define KSA64_VIEWER_TRAJECTORY_PLANNED_REFERENCE 1u
+#define KSA64_VIEWER_TRAJECTORY_ONBOARD_ESTIMATE 2u
+#define KSA64_VIEWER_TRAJECTORY_GROUND_ESTIMATE 3u
+#define KSA64_VIEWER_TRAJECTORY_PRODUCT_PLANNED_REFERENCE 5u
 
 typedef struct {
  uint32_t abi_version, struct_size, scenario_identity, role, initial_pace, flags;
@@ -151,6 +156,10 @@ int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_timeline_v1(const Ksa64ViewerHandle*
 int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_release_sample_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerReleaseSampleV1* output);
 int32_t KSA64_VIEWER_CALL ksa64_viewer_prediction_path_header_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerPredictionPathHeaderV1* output);
 int32_t KSA64_VIEWER_CALL ksa64_viewer_prediction_path_point_v1(const Ksa64ViewerHandle* handle, uint32_t point_index, Ksa64ViewerPredictionPathPointV1* output);
+/* Source-selected Phase 12B presentation paths. The planned KPH10 reference
+   populates altitude/downrange/crossrange; Cartesian position remains zero. */
+int32_t KSA64_VIEWER_CALL ksa64_viewer_trajectory_path_header_v1(const Ksa64ViewerHandle* handle, uint32_t source, Ksa64ViewerPredictionPathHeaderV1* output);
+int32_t KSA64_VIEWER_CALL ksa64_viewer_trajectory_path_point_v1(const Ksa64ViewerHandle* handle, uint32_t source, uint32_t point_index, Ksa64ViewerPredictionPathPointV1* output);
 int32_t KSA64_VIEWER_CALL ksa64_viewer_action_proposal_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerActionProposalV1* output);
 int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_action_proposal_v1(const Ksa64ViewerHandle* handle, uint32_t proposal_identity, uint32_t completed_event_mask);
 int32_t KSA64_VIEWER_CALL ksa64_viewer_commit_action_v1(const Ksa64ViewerHandle* handle, uint32_t proposal_identity);

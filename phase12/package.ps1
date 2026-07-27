@@ -37,8 +37,13 @@ if (-not (Test-Path -LiteralPath $project -PathType Leaf)) {
 if (-not (Test-Path -LiteralPath $runUat -PathType Leaf)) {
     throw "RunUAT does not exist: $runUat"
 }
-if (Get-Process -Name UnrealEditor -ErrorAction SilentlyContinue) {
-    throw "Close Unreal Editor before the Phase 12A package gate."
+$unrealProcesses = @(Get-Process -Name UnrealEditor, UnrealEditor-Cmd -ErrorAction SilentlyContinue)
+if ($unrealProcesses.Count -ne 0) {
+    throw "Close Unreal Editor process(es) before the Phase 12A package gate: $($unrealProcesses.Id -join ', ')"
+}
+$missionFoundryProcesses = @(Get-Process -Name Ksa64MissionFoundry -ErrorAction SilentlyContinue)
+if ($missionFoundryProcesses.Count -ne 0) {
+    throw "Close packaged Mission Foundry process(es) before the Phase 12A package gate: $($missionFoundryProcesses.Id -join ', ')"
 }
 
 if ([string]::IsNullOrWhiteSpace($ArchiveDirectory)) {
@@ -117,6 +122,10 @@ $process = Start-Process -FilePath $gameExe -ArgumentList $smokeArgs -WorkingDir
 if (-not $process.WaitForExit(120000)) {
     Stop-Process -Id $process.Id -Force
     throw "Packaged smoke process did not honor the explicit Quit command within 120 seconds."
+}
+$remainingMissionFoundry = @(Get-Process -Name Ksa64MissionFoundry -ErrorAction SilentlyContinue)
+if ($remainingMissionFoundry.Count -ne 0) {
+    throw "Packaged smoke left Mission Foundry process(es) running: $($remainingMissionFoundry.Id -join ', ')"
 }
 if ($process.ExitCode -ne 0) {
     throw "Packaged smoke process exited with code $($process.ExitCode)."

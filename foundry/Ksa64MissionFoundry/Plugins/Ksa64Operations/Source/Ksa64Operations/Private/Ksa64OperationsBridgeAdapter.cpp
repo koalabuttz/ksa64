@@ -146,7 +146,8 @@ public:
         Result.bTypedActions = bActions;
         Result.bTimeline = bOperations;
         Result.bReleaseHistory = bOperations;
-        Result.bPredictionPaths = bOperations;
+        Result.bPredictionPaths = bOperations
+            && Module.SupportsFeature(KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1);
         Result.bTransportStatus = bAsync;
         Result.bDisposition = bOperations;
         Result.bAsyncShutdown = bAsync;
@@ -165,6 +166,12 @@ public:
         CurrentReceipt = {};
         CachedPrediction.Reset();
         CachedPredictionIdentity = 0;
+        CachedPlannedReference.Reset();
+        CachedOnboardEstimate.Reset();
+        CachedGroundEstimate.Reset();
+        CachedPlannedReferenceIdentity = 0;
+        CachedOnboardEstimateIdentity = 0;
+        CachedGroundEstimateIdentity = 0;
         return bTyped ? Module.StartGuidedOperationsV1() : Module.StartGuidedGnssLoss();
     }
 
@@ -370,6 +377,7 @@ public:
             }
         }
         RefreshPrediction();
+        RefreshTrajectoryPaths();
         return EKsa64OperationsAdapterResult::Ok;
     }
 
@@ -424,6 +432,27 @@ public:
     virtual void ReadPredictionPath(TArray<FKsa64OperationsPredictionPoint>& OutPoints) override
     {
         OutPoints = CachedPrediction;
+    }
+
+    virtual void ReadTrajectoryPath(
+        EKsa64OperationsTrajectorySource Source,
+        TArray<FKsa64OperationsPredictionPoint>& OutPoints) override
+    {
+        switch (Source)
+        {
+        case EKsa64OperationsTrajectorySource::PlannedReference:
+            OutPoints = CachedPlannedReference;
+            break;
+        case EKsa64OperationsTrajectorySource::OnboardEstimate:
+            OutPoints = CachedOnboardEstimate;
+            break;
+        case EKsa64OperationsTrajectorySource::GroundEstimate:
+            OutPoints = CachedGroundEstimate;
+            break;
+        default:
+            OutPoints.Reset();
+            break;
+        }
     }
 
     virtual EKsa64OperationsAdapterResult ReviewAction() override
@@ -511,14 +540,92 @@ private:
         CachedPredictionIdentity = Header.path_identity;
     }
 
+    void RefreshTrajectoryPaths()
+    {
+        if (!bTyped || !FKsa64BridgeModule::IsAvailable()
+            || !FKsa64BridgeModule::Get().SupportsFeature(KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1))
+            return;
+        RefreshTrajectoryPath(
+            KSA64_VIEWER_TRAJECTORY_PLANNED_REFERENCE,
+            KSA64_VIEWER_TRAJECTORY_PRODUCT_PLANNED_REFERENCE,
+            CachedPlannedReference,
+            CachedPlannedReferenceIdentity);
+        RefreshTrajectoryPath(
+            KSA64_VIEWER_TRAJECTORY_ONBOARD_ESTIMATE,
+            2u,
+            CachedOnboardEstimate,
+            CachedOnboardEstimateIdentity);
+        RefreshTrajectoryPath(
+            KSA64_VIEWER_TRAJECTORY_GROUND_ESTIMATE,
+            3u,
+            CachedGroundEstimate,
+            CachedGroundEstimateIdentity);
+    }
+
+    void RefreshTrajectoryPath(
+        uint32 Source,
+        uint32 ExpectedProduct,
+        TArray<FKsa64OperationsPredictionPoint>& OutCache,
+        uint32& InOutIdentity)
+    {
+        FKsa64BridgeModule& Module = FKsa64BridgeModule::Get();
+        Ksa64ViewerPredictionPathHeaderV1 Header = {};
+        const int32 HeaderResult = Module.TrajectoryPathHeaderV1(Source, Header);
+        if (HeaderResult == KSA64_VIEWER_NO_DATA)
+        {
+            OutCache.Reset();
+            InOutIdentity = 0;
+            return;
+        }
+        if (HeaderResult != KSA64_VIEWER_OK
+            || Header.path_identity == 0
+            || Header.product != ExpectedProduct
+            || Header.path_identity == InOutIdentity)
+            return;
+        if (Header.point_count > MaximumPredictionPoints)
+        {
+            OutCache.Reset();
+            InOutIdentity = 0;
+            return;
+        }
+        TArray<FKsa64OperationsPredictionPoint> Candidate;
+        Candidate.Reserve(static_cast<int32>(Header.point_count));
+        for (uint32 Index = 0; Index < Header.point_count; ++Index)
+        {
+            Ksa64ViewerPredictionPathPointV1 Value = {};
+            if (Module.TrajectoryPathPointV1(Source, Index, Value) != KSA64_VIEWER_OK
+                || Value.path_identity != Header.path_identity
+                || Value.point_index != Index)
+                return;
+            FKsa64OperationsPredictionPoint Point;
+            Point.PathIdentity = Value.path_identity;
+            Point.ProductIdentity = Header.product;
+            Point.ReleaseEpoch = Value.release_epoch;
+            Point.FrameIdentity = Value.frame;
+            Point.AltitudeQ12Km = Value.altitude_q12_km;
+            Point.DownrangeQ12Km = Value.downrange_q12_km;
+            Point.CrossrangeQ12Km = Value.crossrange_q12_km;
+            for (int32 Axis = 0; Axis < 3; ++Axis) Point.PositionQ12Km[Axis] = Value.position_q12_km[Axis];
+            Candidate.Add(Point);
+        }
+        OutCache = MoveTemp(Candidate);
+        InOutIdentity = Header.path_identity;
+    }
+
     bool bTyped = false;
     FKsa64OperationsActionGate ActionGate;
     bool bHasLastOperational = false;
     uint32 CachedPredictionIdentity = 0;
+    uint32 CachedPlannedReferenceIdentity = 0;
+    uint32 CachedOnboardEstimateIdentity = 0;
+    uint32 CachedGroundEstimateIdentity = 0;
     Ksa64ViewerOperationalViewV1 LastOperational = {};
     Ksa64ViewerActionProposalV1 CurrentProposal = {};
     Ksa64ViewerActionReceiptV1 CurrentReceipt = {};
     TArray<FKsa64OperationsPredictionPoint> CachedPrediction;
+    TArray<FKsa64OperationsPredictionPoint> CachedPlannedReference;
+    TArray<FKsa64OperationsPredictionPoint> CachedOnboardEstimate;
+    TArray<FKsa64OperationsPredictionPoint> CachedGroundEstimate;
 };
 }
 

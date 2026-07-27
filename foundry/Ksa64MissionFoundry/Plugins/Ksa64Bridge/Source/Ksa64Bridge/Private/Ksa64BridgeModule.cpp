@@ -1,4 +1,5 @@
 #include "Ksa64BridgeModule.h"
+#include "Ksa64BridgeTypedValidation.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
@@ -30,7 +31,8 @@ constexpr uint32 KnownFeatureMask =
     KSA64_VIEWER_FEATURE_PANIC_PROBE
     | KSA64_VIEWER_FEATURE_OPERATIONS_V1
     | KSA64_VIEWER_FEATURE_TYPED_ACTIONS_V1
-    | KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1;
+    | KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1
+    | KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1;
 constexpr uint64 GuidedOperationalValidityMask = (1ull << 11) - 1ull;
 
 static_assert(sizeof(Ksa64ViewerAbiInfo) == 132);
@@ -296,6 +298,8 @@ struct FKsa64BridgeModule::FApi
     using FPollReleaseSampleV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerReleaseSampleV1*);
     using FPredictionHeaderV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerPredictionPathHeaderV1*);
     using FPredictionPointV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32, Ksa64ViewerPredictionPathPointV1*);
+    using FTrajectoryHeaderV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32, Ksa64ViewerPredictionPathHeaderV1*);
+    using FTrajectoryPointV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32, uint32, Ksa64ViewerPredictionPathPointV1*);
     using FActionProposalV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerActionProposalV1*);
     using FSubmitActionV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32, uint32);
     using FActionIdentityV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32);
@@ -334,6 +338,8 @@ struct FKsa64BridgeModule::FApi
     FPollReleaseSampleV1 PollReleaseSampleV1 = nullptr;
     FPredictionHeaderV1 PredictionHeaderV1 = nullptr;
     FPredictionPointV1 PredictionPointV1 = nullptr;
+    FTrajectoryHeaderV1 TrajectoryHeaderV1 = nullptr;
+    FTrajectoryPointV1 TrajectoryPointV1 = nullptr;
     FActionProposalV1 ActionProposalV1 = nullptr;
     FSubmitActionV1 SubmitActionV1 = nullptr;
     FActionIdentityV1 CommitActionV1 = nullptr;
@@ -378,6 +384,8 @@ struct FKsa64BridgeModule::FApi
         KSA64_OPTIONAL(PollReleaseSampleV1, "ksa64_viewer_poll_release_sample_v1");
         KSA64_OPTIONAL(PredictionHeaderV1, "ksa64_viewer_prediction_path_header_v1");
         KSA64_OPTIONAL(PredictionPointV1, "ksa64_viewer_prediction_path_point_v1");
+        KSA64_OPTIONAL(TrajectoryHeaderV1, "ksa64_viewer_trajectory_path_header_v1");
+        KSA64_OPTIONAL(TrajectoryPointV1, "ksa64_viewer_trajectory_path_point_v1");
         KSA64_OPTIONAL(ActionProposalV1, "ksa64_viewer_action_proposal_v1");
         KSA64_OPTIONAL(SubmitActionV1, "ksa64_viewer_submit_action_proposal_v1");
         KSA64_OPTIONAL(CommitActionV1, "ksa64_viewer_commit_action_v1");
@@ -395,6 +403,10 @@ struct FKsa64BridgeModule::FApi
         return StartV1 && PollOperationalV1 && ProcedureV1 && DispositionV1
             && PollTimelineV1 && PollReleaseSampleV1 && PredictionHeaderV1
             && PredictionPointV1;
+    }
+    bool HasTrajectorySourcesV1() const
+    {
+        return TrajectoryHeaderV1 && TrajectoryPointV1;
     }
     bool HasTypedActionsV1() const
     {
@@ -678,6 +690,7 @@ bool FKsa64BridgeModule::LoadBridge()
         || ((Info.feature_flags & KSA64_VIEWER_FEATURE_OPERATIONS_V1) != 0 && !Api->HasOperationsV1())
         || ((Info.feature_flags & KSA64_VIEWER_FEATURE_TYPED_ACTIONS_V1) != 0 && !Api->HasTypedActionsV1())
         || ((Info.feature_flags & KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1) != 0 && !Api->HasAsyncStatusV1())
+        || ((Info.feature_flags & KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1) != 0 && !Api->HasTrajectorySourcesV1())
         || Info.catalog_count != AcceptedCatalogCount
         || FixedUtf8(Info.source_commit, sizeof(Info.source_commit)) != Validation.SourceCommit.Left(12)
         || FixedUtf8(Info.target_triple, sizeof(Info.target_triple)) != TEXT("x86_64-pc-windows-msvc")
@@ -817,6 +830,13 @@ bool FKsa64BridgeModule::StartGuidedGnssLoss()
         Diagnostic = FString::Printf(TEXT("guided session start failed with code %d"), Result);
         return false;
     }
+    ActiveTypedScenarioIdentity = KSA64_VIEWER_SCENARIO_LEGACY_GNSS_FIXTURE;
+    ActiveTypedAdapterIdentity =
+        Ksa64BridgeTypedValidation::ExpectedAdapterForScenario(ActiveTypedScenarioIdentity);
+    ValidatedPredictionPathIdentity = 0;
+    ValidatedPredictionPointCount = 0;
+    FMemory::Memzero(ValidatedTrajectoryPathIdentities);
+    FMemory::Memzero(ValidatedTrajectoryPointCounts);
     Status = EKsa64BridgeStatus::SessionOpen;
     Diagnostic = TEXT("guided GNSS-loss session opened");
     return true;
@@ -836,13 +856,23 @@ bool FKsa64BridgeModule::StartGuidedOperationsV1(uint32 ScenarioIdentity)
         Diagnostic = TEXT("typed Phase 12B operations are unavailable in this bridge");
         return false;
     }
+    const uint32 ExpectedAdapterIdentity =
+        Ksa64BridgeTypedValidation::ExpectedAdapterForScenario(ScenarioIdentity);
+    if (ExpectedAdapterIdentity == 0)
+    {
+        Diagnostic = TEXT("guided operations rejected an unknown scenario identity");
+        return false;
+    }
 
     Ksa64ViewerStartRequestV1 Request = {};
     Request.abi_version = KSA64_VIEWER_ABI_VERSION;
     Request.struct_size = static_cast<uint32>(sizeof(Request));
     Request.scenario_identity = ScenarioIdentity;
     Request.role = 2;
-    Request.initial_pace = 2;
+    // Unreal owns presentation pacing and sends explicit bounded release counts.
+    // Fast is therefore the execution-side mode that honors those counts;
+    // realtime, pause, and single-step remain presentation scheduling policies.
+    Request.initial_pace = 1;
     Request.flags = 1;
     const int32 Result = Api->StartV1(&Request, &Session);
     if (Result != KSA64_VIEWER_OK || Session == nullptr)
@@ -851,6 +881,12 @@ bool FKsa64BridgeModule::StartGuidedOperationsV1(uint32 ScenarioIdentity)
         Diagnostic = FString::Printf(TEXT("guided operations start failed with code %d"), Result);
         return false;
     }
+    ActiveTypedScenarioIdentity = ScenarioIdentity;
+    ActiveTypedAdapterIdentity = ExpectedAdapterIdentity;
+    ValidatedPredictionPathIdentity = 0;
+    ValidatedPredictionPointCount = 0;
+    FMemory::Memzero(ValidatedTrajectoryPathIdentities);
+    FMemory::Memzero(ValidatedTrajectoryPointCounts);
     Status = EKsa64BridgeStatus::SessionOpen;
     Diagnostic = TEXT("full guided GNSS-loss operations session opened");
     return true;
@@ -877,7 +913,14 @@ int32 FKsa64BridgeModule::PollOperationalV1(Ksa64ViewerOperationalViewV1& OutVie
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->PollOperationalV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutView = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::Operational(
+            Value,
+            ActiveTypedScenarioIdentity,
+            ActiveTypedAdapterIdentity))
+        return KSA64_VIEWER_INTERNAL;
+    OutView = Value;
     return Result;
 }
 
@@ -889,7 +932,11 @@ int32 FKsa64BridgeModule::ProcedureV1(Ksa64ViewerProcedureViewV1& OutView) const
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->ProcedureV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutView = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::Procedure(Value))
+        return KSA64_VIEWER_INTERNAL;
+    OutView = Value;
     return Result;
 }
 
@@ -901,7 +948,11 @@ int32 FKsa64BridgeModule::DispositionV1(Ksa64ViewerDispositionV1& OutView) const
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->DispositionV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutView = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::Disposition(Value))
+        return KSA64_VIEWER_INTERNAL;
+    OutView = Value;
     return Result;
 }
 
@@ -913,7 +964,11 @@ int32 FKsa64BridgeModule::PollTimelineV1(Ksa64ViewerTimelineEventV1& OutEvent) c
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->PollTimelineV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutEvent = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::Timeline(Value))
+        return KSA64_VIEWER_INTERNAL;
+    OutEvent = Value;
     return Result;
 }
 
@@ -925,7 +980,11 @@ int32 FKsa64BridgeModule::PollReleaseSampleV1(Ksa64ViewerReleaseSampleV1& OutSam
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->PollReleaseSampleV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutSample = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::ReleaseSample(Value))
+        return KSA64_VIEWER_INTERNAL;
+    OutSample = Value;
     return Result;
 }
 
@@ -937,7 +996,21 @@ int32 FKsa64BridgeModule::PredictionPathHeaderV1(Ksa64ViewerPredictionPathHeader
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->PredictionHeaderV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutHeader = Value;
+    if (Result != KSA64_VIEWER_OK)
+    {
+        ValidatedPredictionPathIdentity = 0;
+        ValidatedPredictionPointCount = 0;
+        return Result;
+    }
+    if (!Ksa64BridgeTypedValidation::PredictionHeader(Value))
+    {
+        ValidatedPredictionPathIdentity = 0;
+        ValidatedPredictionPointCount = 0;
+        return KSA64_VIEWER_INTERNAL;
+    }
+    ValidatedPredictionPathIdentity = Value.path_identity;
+    ValidatedPredictionPointCount = Value.point_count;
+    OutHeader = Value;
     return Result;
 }
 
@@ -945,11 +1018,100 @@ int32 FKsa64BridgeModule::PredictionPathPointV1(uint32 PointIndex, Ksa64ViewerPr
 {
     if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->PredictionPointV1)
         return KSA64_VIEWER_UNSUPPORTED;
+    if (ValidatedPredictionPathIdentity == 0 || ValidatedPredictionPointCount == 0)
+        return KSA64_VIEWER_NO_DATA;
+    if (PointIndex >= ValidatedPredictionPointCount
+        || PointIndex >= Ksa64BridgeTypedValidation::MaximumPredictionPoints)
+        return KSA64_VIEWER_INVALID_ARGUMENT;
     Ksa64ViewerPredictionPathPointV1 Value = {};
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->PredictionPointV1(Session, PointIndex, &Value);
-    if (Result == KSA64_VIEWER_OK) OutPoint = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::PredictionPoint(
+            Value,
+            PointIndex,
+            ValidatedPredictionPathIdentity,
+            ValidatedPredictionPointCount))
+    {
+        ValidatedPredictionPathIdentity = 0;
+        ValidatedPredictionPointCount = 0;
+        return KSA64_VIEWER_INTERNAL;
+    }
+    OutPoint = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::TrajectoryPathHeaderV1(
+    uint32 Source,
+    Ksa64ViewerPredictionPathHeaderV1& OutHeader) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen
+        || Session == nullptr
+        || !SupportsFeature(KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1)
+        || !Api->TrajectoryHeaderV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    if (!Ksa64BridgeTypedValidation::IsTrajectorySource(Source))
+        return KSA64_VIEWER_INVALID_ARGUMENT;
+    Ksa64ViewerPredictionPathHeaderV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->TrajectoryHeaderV1(Session, Source, &Value);
+    if (Result != KSA64_VIEWER_OK)
+    {
+        ValidatedTrajectoryPathIdentities[Source] = 0;
+        ValidatedTrajectoryPointCounts[Source] = 0;
+        return Result;
+    }
+    if (!Ksa64BridgeTypedValidation::TrajectoryHeader(Value, Source))
+    {
+        ValidatedTrajectoryPathIdentities[Source] = 0;
+        ValidatedTrajectoryPointCounts[Source] = 0;
+        return KSA64_VIEWER_INTERNAL;
+    }
+    ValidatedTrajectoryPathIdentities[Source] = Value.path_identity;
+    ValidatedTrajectoryPointCounts[Source] = Value.point_count;
+    OutHeader = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::TrajectoryPathPointV1(
+    uint32 Source,
+    uint32 PointIndex,
+    Ksa64ViewerPredictionPathPointV1& OutPoint) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen
+        || Session == nullptr
+        || !SupportsFeature(KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1)
+        || !Api->TrajectoryPointV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    if (!Ksa64BridgeTypedValidation::IsTrajectorySource(Source))
+        return KSA64_VIEWER_INVALID_ARGUMENT;
+    const uint32 PathIdentity = ValidatedTrajectoryPathIdentities[Source];
+    const uint32 PointCount = ValidatedTrajectoryPointCounts[Source];
+    if (PathIdentity == 0 || PointCount == 0)
+        return KSA64_VIEWER_NO_DATA;
+    if (PointIndex >= PointCount
+        || PointIndex >= Ksa64BridgeTypedValidation::MaximumPredictionPoints)
+        return KSA64_VIEWER_INVALID_ARGUMENT;
+    Ksa64ViewerPredictionPathPointV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->TrajectoryPointV1(Session, Source, PointIndex, &Value);
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::PredictionPoint(
+            Value,
+            PointIndex,
+            PathIdentity,
+            PointCount))
+    {
+        ValidatedTrajectoryPathIdentities[Source] = 0;
+        ValidatedTrajectoryPointCounts[Source] = 0;
+        return KSA64_VIEWER_INTERNAL;
+    }
+    OutPoint = Value;
     return Result;
 }
 
@@ -961,7 +1123,11 @@ int32 FKsa64BridgeModule::ActionProposalV1(Ksa64ViewerActionProposalV1& OutPropo
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->ActionProposalV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutProposal = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::ActionProposal(Value))
+        return KSA64_VIEWER_INTERNAL;
+    OutProposal = Value;
     return Result;
 }
 
@@ -994,7 +1160,11 @@ int32 FKsa64BridgeModule::PollActionReceiptV1(Ksa64ViewerActionReceiptV1& OutRec
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->PollActionReceiptV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutReceipt = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::ActionReceipt(Value))
+        return KSA64_VIEWER_INTERNAL;
+    OutReceipt = Value;
     return Result;
 }
 
@@ -1006,7 +1176,11 @@ int32 FKsa64BridgeModule::TransportStatusV1(Ksa64ViewerTransportStatusV1& OutSta
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->TransportStatusV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutStatus = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::Transport(Value))
+        return KSA64_VIEWER_INTERNAL;
+    OutStatus = Value;
     return Result;
 }
 
@@ -1018,7 +1192,11 @@ int32 FKsa64BridgeModule::FinishStatusV1(Ksa64ViewerFinishStatusV1& OutStatus) c
     Value.abi_version = KSA64_VIEWER_ABI_VERSION;
     Value.struct_size = static_cast<uint32>(sizeof(Value));
     const int32 Result = Api->FinishStatusV1(Session, &Value);
-    if (Result == KSA64_VIEWER_OK) OutStatus = Value;
+    if (Result != KSA64_VIEWER_OK)
+        return Result;
+    if (!Ksa64BridgeTypedValidation::Finish(Value))
+        return KSA64_VIEWER_INTERNAL;
+    OutStatus = Value;
     return Result;
 }
 
@@ -1143,6 +1321,12 @@ void FKsa64BridgeModule::CloseSession()
         AsyncCloseTickerHandle.Reset();
     }
     bAsyncClosePending = false;
+    ActiveTypedScenarioIdentity = 0;
+    ActiveTypedAdapterIdentity = 0;
+    ValidatedPredictionPathIdentity = 0;
+    ValidatedPredictionPointCount = 0;
+    FMemory::Memzero(ValidatedTrajectoryPathIdentities);
+    FMemory::Memzero(ValidatedTrajectoryPointCounts);
     if (Session != nullptr && Api.IsValid() && Api->Destroy != nullptr)
     {
         Api->Destroy(Session);

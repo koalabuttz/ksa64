@@ -33,11 +33,12 @@ const FMargin PanelPadding(14.0f, 11.0f);
 void SKsa64OperationsPlot::Construct(const FArguments& Args)
 {
     Subsystem = Args._Subsystem;
+    PlotKind = Args._PlotKind;
 }
 
 FVector2D SKsa64OperationsPlot::ComputeDesiredSize(float LayoutScaleMultiplier) const
 {
-    return FVector2D(620.0f, 260.0f);
+    return FVector2D(620.0f, 245.0f);
 }
 
 int32 SKsa64OperationsPlot::OnPaint(
@@ -59,70 +60,162 @@ int32 SKsa64OperationsPlot::OnPaint(
     {
         const float X = Size.X * static_cast<float>(Line) / 8.0f;
         TArray<FVector2D> Points{FVector2D(X, 0.0f), FVector2D(X, Size.Y)};
-        FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None, FLinearColor(0.08f, 0.15f, 0.20f, 0.75f), true, 1.0f);
+        FSlateDrawElement::MakeLines(
+            OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(), Points,
+            ESlateDrawEffect::None, FLinearColor(0.08f, 0.15f, 0.20f, 0.75f), true, 1.0f);
     }
     for (int32 Line = 1; Line < 4; ++Line)
     {
         const float Y = Size.Y * static_cast<float>(Line) / 4.0f;
         TArray<FVector2D> Points{FVector2D(0.0f, Y), FVector2D(Size.X, Y)};
-        FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None, FLinearColor(0.08f, 0.15f, 0.20f, 0.75f), true, 1.0f);
+        FSlateDrawElement::MakeLines(
+            OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(), Points,
+            ESlateDrawEffect::None, FLinearColor(0.08f, 0.15f, 0.20f, 0.75f), true, 1.0f);
     }
-    if (!Subsystem.IsValid()) return LayerId + 1;
+    if (!Subsystem.IsValid())
+    {
+        return LayerId + 1;
+    }
 
-    const TArray<FKsa64OperationsReleasePoint>& History = Subsystem->GetReleaseHistory();
-    const TArray<FKsa64OperationsPredictionPoint>& Prediction = Subsystem->GetPredictionPath();
-    int32 MinHeight = MAX_int32;
-    int32 MaxHeight = MIN_int32;
-    uint32 MinRelease = MAX_uint32;
-    uint32 MaxRelease = 0;
-    for (const FKsa64OperationsReleasePoint& Point : History)
+    struct FLogicalPoint
     {
-        if (!Point.bHasPosition) continue;
-        MinRelease = FMath::Min(MinRelease, Point.ReleaseEpoch);
-        MaxRelease = FMath::Max(MaxRelease, Point.ReleaseEpoch);
-        MinHeight = FMath::Min(MinHeight, Point.PositionQ12[2]);
-        MaxHeight = FMath::Max(MaxHeight, Point.PositionQ12[2]);
-        if (Point.bHasGroundEstimate)
-        {
-            MinHeight = FMath::Min(MinHeight, Point.GroundPositionQ12[2]);
-            MaxHeight = FMath::Max(MaxHeight, Point.GroundPositionQ12[2]);
-        }
-    }
-    for (const FKsa64OperationsPredictionPoint& Point : Prediction)
-    {
-        MinRelease = FMath::Min(MinRelease, Point.ReleaseEpoch);
-        MaxRelease = FMath::Max(MaxRelease, Point.ReleaseEpoch);
-        MinHeight = FMath::Min(MinHeight, Point.AltitudeQ12Km);
-        MaxHeight = FMath::Max(MaxHeight, Point.AltitudeQ12Km);
-    }
-    if (MinRelease == MAX_uint32 || MaxRelease <= MinRelease) return LayerId + 1;
-    if (MaxHeight <= MinHeight) MaxHeight = MinHeight + 1;
-
-    const auto ScreenPoint = [&](uint32 Release, int32 Height)
-    {
-        const float X = static_cast<float>(static_cast<double>(Release - MinRelease) / static_cast<double>(MaxRelease - MinRelease)) * Size.X;
-        const float Y = Size.Y - static_cast<float>(static_cast<double>(Height - MinHeight) / static_cast<double>(MaxHeight - MinHeight)) * Size.Y;
-        return FVector2D(X, Y);
+        double X = 0.0;
+        double Y = 0.0;
     };
-    TArray<FVector2D> Onboard;
-    TArray<FVector2D> Ground;
-    for (const FKsa64OperationsReleasePoint& Point : History)
-    {
-        if (!Point.bHasPosition) continue;
-        Onboard.Add(ScreenPoint(Point.ReleaseEpoch, Point.PositionQ12[2]));
-        if (Point.bHasGroundEstimate) Ground.Add(ScreenPoint(Point.ReleaseEpoch, Point.GroundPositionQ12[2]));
-    }
-    TArray<FVector2D> Predicted;
-    for (const FKsa64OperationsPredictionPoint& Point : Prediction)
-        Predicted.Add(ScreenPoint(Point.ReleaseEpoch, Point.AltitudeQ12Km));
+    TArray<FLogicalPoint> Planned;
+    TArray<FLogicalPoint> Onboard;
+    TArray<FLogicalPoint> Ground;
+    TArray<FLogicalPoint> Observed;
 
-    if (Onboard.Num() >= 2)
-        FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(), Onboard, ESlateDrawEffect::None, Cyan, true, 2.2f);
-    if (Ground.Num() >= 2)
-        FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 3, AllottedGeometry.ToPaintGeometry(), Ground, ESlateDrawEffect::None, Amber, true, 1.5f);
-    if (Predicted.Num() >= 2)
-        FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 4, AllottedGeometry.ToPaintGeometry(), Predicted, ESlateDrawEffect::None, Green, true, 1.5f);
-    return LayerId + 4;
+    const auto AppendPrediction = [this](
+        const TArray<FKsa64OperationsPredictionPoint>& Source,
+        TArray<FLogicalPoint>& Destination)
+    {
+        for (const FKsa64OperationsPredictionPoint& Point : Source)
+        {
+            FLogicalPoint Logical;
+            if (PlotKind == EKsa64OperationsPlotKind::Altitude)
+            {
+                Logical.X = static_cast<double>(Point.ReleaseEpoch);
+                Logical.Y = static_cast<double>(Point.AltitudeQ12Km);
+            }
+            else
+            {
+                Logical.X = static_cast<double>(Point.DownrangeQ12Km);
+                Logical.Y = static_cast<double>(Point.CrossrangeQ12Km);
+            }
+            Destination.Add(Logical);
+        }
+    };
+    AppendPrediction(Subsystem->GetPlannedReferencePath(), Planned);
+    AppendPrediction(Subsystem->GetOnboardPredictionPath(), Onboard);
+    AppendPrediction(Subsystem->GetGroundPredictionPath(), Ground);
+
+    for (const FKsa64OperationsReleasePoint& Point : Subsystem->GetReleaseHistory())
+    {
+        if (!Point.bHasMissionTime)
+        {
+            continue;
+        }
+        FLogicalPoint Logical;
+        if (PlotKind == EKsa64OperationsPlotKind::Altitude)
+        {
+            Logical.X = static_cast<double>(Point.ReleaseEpoch);
+            Logical.Y = static_cast<double>(Point.AltitudeQ12Km);
+        }
+        else
+        {
+            Logical.X = static_cast<double>(Point.DownrangeQ12Km);
+            Logical.Y = static_cast<double>(Point.CrossrangeQ12Km);
+        }
+        Observed.Add(Logical);
+    }
+
+    double MinX = TNumericLimits<double>::Max();
+    double MaxX = TNumericLimits<double>::Lowest();
+    double MinY = TNumericLimits<double>::Max();
+    double MaxY = TNumericLimits<double>::Lowest();
+    const auto AccumulateBounds = [&MinX, &MaxX, &MinY, &MaxY](const TArray<FLogicalPoint>& Series)
+    {
+        for (const FLogicalPoint& Point : Series)
+        {
+            MinX = FMath::Min(MinX, Point.X);
+            MaxX = FMath::Max(MaxX, Point.X);
+            MinY = FMath::Min(MinY, Point.Y);
+            MaxY = FMath::Max(MaxY, Point.Y);
+        }
+    };
+    AccumulateBounds(Planned);
+    AccumulateBounds(Onboard);
+    AccumulateBounds(Ground);
+    AccumulateBounds(Observed);
+    if (MinX == TNumericLimits<double>::Max())
+    {
+        return LayerId + 1;
+    }
+    if (MaxX <= MinX)
+    {
+        MaxX = MinX + 1.0;
+    }
+    if (MaxY <= MinY)
+    {
+        MaxY = MinY + 1.0;
+    }
+
+    const auto ToScreen = [MinX, MaxX, MinY, MaxY, Size](const FLogicalPoint& Point)
+    {
+        return FVector2D(
+            static_cast<float>((Point.X - MinX) / (MaxX - MinX)) * Size.X,
+            Size.Y - static_cast<float>((Point.Y - MinY) / (MaxY - MinY)) * Size.Y);
+    };
+    const auto DrawSeries = [&](
+        const TArray<FLogicalPoint>& Series,
+        const FLinearColor& Color,
+        float Thickness,
+        int32 SeriesLayer)
+    {
+        if (Series.Num() < 2)
+        {
+            return;
+        }
+        TArray<FVector2D> ScreenPoints;
+        ScreenPoints.Reserve(Series.Num());
+        for (const FLogicalPoint& Point : Series)
+        {
+            ScreenPoints.Add(ToScreen(Point));
+        }
+        FSlateDrawElement::MakeLines(
+            OutDrawElements, SeriesLayer, AllottedGeometry.ToPaintGeometry(), ScreenPoints,
+            ESlateDrawEffect::None, Color, true, Thickness);
+    };
+    DrawSeries(Planned, White, 1.2f, LayerId + 2);
+    DrawSeries(Onboard, Cyan, 1.5f, LayerId + 3);
+    DrawSeries(Ground, Amber, 1.5f, LayerId + 4);
+    DrawSeries(Observed, Green, 2.3f, LayerId + 5);
+
+    FKsa64OperationsReleasePoint VisualPoint;
+    if (Subsystem->GetVisualObservedPoint(VisualPoint))
+    {
+        FLogicalPoint Logical;
+        if (PlotKind == EKsa64OperationsPlotKind::Altitude)
+        {
+            Logical.X = VisualPoint.PresentationReleaseEpoch >= 0.0
+                ? VisualPoint.PresentationReleaseEpoch
+                : static_cast<double>(VisualPoint.ReleaseEpoch);
+            Logical.Y = static_cast<double>(VisualPoint.AltitudeQ12Km);
+        }
+        else
+        {
+            Logical.X = static_cast<double>(VisualPoint.DownrangeQ12Km);
+            Logical.Y = static_cast<double>(VisualPoint.CrossrangeQ12Km);
+        }
+        const FVector2D Marker = ToScreen(Logical);
+        TArray<FVector2D> CrossA{Marker + FVector2D(-4.0f, 0.0f), Marker + FVector2D(4.0f, 0.0f)};
+        TArray<FVector2D> CrossB{Marker + FVector2D(0.0f, -4.0f), Marker + FVector2D(0.0f, 4.0f)};
+        FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 6, AllottedGeometry.ToPaintGeometry(), CrossA, ESlateDrawEffect::None, Green, true, 2.0f);
+        FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 6, AllottedGeometry.ToPaintGeometry(), CrossB, ESlateDrawEffect::None, Green, true, 2.0f);
+    }
+    return LayerId + 6;
 }
 
 void SKsa64OperationsDashboard::Construct(const FArguments& Args)
@@ -330,17 +423,70 @@ TSharedRef<SWidget> SKsa64OperationsDashboard::BuildTrajectoryPanel()
     const TSharedRef<SVerticalBox> Body = SNew(SVerticalBox)
         + SVerticalBox::Slot().AutoHeight()
         [
-            Label(
-                FText::FromString(
-                    TEXT("● ONBOARD ESTIMATE    ● GROUND ESTIMATE    ● GROUND-PROPAGATED PREDICTION")),
-                10,
-                Muted)
+            SNew(SHorizontalBox)
+            + SHorizontalBox::Slot().FillWidth(1.0f).VAlign(VAlign_Center)
+            [
+                SNew(SHorizontalBox)
+                + SHorizontalBox::Slot().FillWidth(0.22f).Padding(0.0f, 0.0f, 8.0f, 0.0f)
+                [
+                    Label(FText::FromString(TEXT("● PLANNED REFERENCE")), 8, White)
+                ]
+                + SHorizontalBox::Slot().FillWidth(0.25f).Padding(0.0f, 0.0f, 8.0f, 0.0f)
+                [
+                    Label(FText::FromString(TEXT("● ONBOARD EST PROJECTION")), 8, Cyan)
+                ]
+                + SHorizontalBox::Slot().FillWidth(0.25f).Padding(0.0f, 0.0f, 8.0f, 0.0f)
+                [
+                    Label(FText::FromString(TEXT("● GROUND EST PROJECTION")), 8, Amber)
+                ]
+                + SHorizontalBox::Slot().FillWidth(0.28f)
+                [
+                    Label(FText::FromString(TEXT("● TRACKING-DERIVED OBSERVED")), 8, Green)
+                ]
+            ]
+            + SHorizontalBox::Slot().AutoWidth().Padding(8.0f, 0.0f, 0.0f, 0.0f)
+            [
+                CommandButton(
+                    TAttribute<FText>::CreateSP(this, &SKsa64OperationsDashboard::DisplayModeText),
+                    FOnClicked::CreateSP(this, &SKsa64OperationsDashboard::OnDisplayMode),
+                    true,
+                    Cyan)
+            ]
         ]
         + SVerticalBox::Slot().FillHeight(1.0f).Padding(0.0f, 9.0f, 0.0f, 0.0f)
         [
-            SNew(SKsa64OperationsPlot).Subsystem(Subsystem)
+            SNew(SSplitter)
+            .PhysicalSplitterHandleSize(5.0f)
+            + SSplitter::Slot().Value(0.52f)
+            [
+                SNew(SVerticalBox)
+                + SVerticalBox::Slot().AutoHeight()
+                [
+                    Label(FText::FromString(TEXT("ALTITUDE / MISSION TIME (32 HZ RELEASE)")), 9, Cyan)
+                ]
+                + SVerticalBox::Slot().FillHeight(1.0f).Padding(0.0f, 4.0f, 3.0f, 0.0f)
+                [
+                    SNew(SKsa64OperationsPlot)
+                    .Subsystem(Subsystem)
+                    .PlotKind(EKsa64OperationsPlotKind::Altitude)
+                ]
+            ]
+            + SSplitter::Slot().Value(0.48f)
+            [
+                SNew(SVerticalBox)
+                + SVerticalBox::Slot().AutoHeight()
+                [
+                    Label(FText::FromString(TEXT("GROUND TRACK / DOWNRANGE × CROSSRANGE")), 9, Amber)
+                ]
+                + SVerticalBox::Slot().FillHeight(1.0f).Padding(3.0f, 4.0f, 0.0f, 0.0f)
+                [
+                    SNew(SKsa64OperationsPlot)
+                    .Subsystem(Subsystem)
+                    .PlotKind(EKsa64OperationsPlotKind::GroundTrack)
+                ]
+            ]
         ];
-    return Panel(FText::FromString(TEXT("TRAJECTORY  /  ALTITUDE PROFILE")), Body, Cyan);
+    return Panel(FText::FromString(TEXT("TRAJECTORY  /  ESTIMATE-AWARE OPERATIONS")), Body, Cyan);
 }
 
 TSharedRef<SWidget> SKsa64OperationsDashboard::BuildNavigationPanel()
@@ -453,10 +599,29 @@ TSharedRef<SWidget> SKsa64OperationsDashboard::BuildEngineeringPanel()
 {
     return Panel(
         FText::FromString(TEXT("ENGINEERING  /  INTEGRITY")),
-        Label(
-            TAttribute<FText>::CreateSP(this, &SKsa64OperationsDashboard::EngineeringText),
-            9,
-            Muted),
+        SNew(SVerticalBox)
+        + SVerticalBox::Slot().AutoHeight()
+        [
+            CommandButton(
+                TAttribute<FText>::CreateSP(this, &SKsa64OperationsDashboard::EngineeringToggleText),
+                FOnClicked::CreateSP(this, &SKsa64OperationsDashboard::OnEngineeringToggle),
+                true,
+                Muted)
+        ]
+        + SVerticalBox::Slot().FillHeight(1.0f).Padding(0.0f, 7.0f, 0.0f, 0.0f)
+        [
+            SNew(SBox)
+            .Visibility_Lambda([this]()
+            {
+                return bEngineeringExpanded ? EVisibility::Visible : EVisibility::Collapsed;
+            })
+            [
+                Label(
+                    TAttribute<FText>::CreateSP(this, &SKsa64OperationsDashboard::EngineeringText),
+                    9,
+                    Muted)
+            ]
+        ],
         Muted);
 }
 
@@ -564,17 +729,25 @@ TSharedRef<SWidget> SKsa64OperationsDashboard::CommandButton(
     TAttribute<bool> Enabled,
     const FLinearColor& Accent) const
 {
-    return SNew(SButton)
+    const TSharedRef<SButton> Button = SNew(SButton)
         .ButtonColorAndOpacity(FLinearColor(Accent.R * 0.20f, Accent.G * 0.20f, Accent.B * 0.20f, 1.0f))
         .ForegroundColor(Accent)
         .ContentPadding(FMargin(10.0f, 6.0f))
         .IsEnabled(Enabled)
+        .ToolTipText(Text)
         .OnClicked(OnClicked)
         [
             SNew(STextBlock)
             .Text(Text)
-            .Font(FCoreStyle::GetDefaultFontStyle(TEXT("Bold"), 10))
+            .Font_Lambda([this]()
+            {
+                return FCoreStyle::GetDefaultFontStyle(
+                    TEXT("Bold"),
+                    FMath::RoundToInt(10.0f * TextScale()));
+            })
         ];
+    Button->SetAccessibleBehavior(EAccessibleBehavior::Custom, Text);
+    return Button;
 }
 
 FReply SKsa64OperationsDashboard::OnKeyDown(
@@ -587,6 +760,8 @@ FReply SKsa64OperationsDashboard::OnKeyDown(
     if (Key == EKeys::One) return OnSetPace(EKsa64OperationsPace::Realtime);
     if (Key == EKeys::Four) return OnSetPace(EKsa64OperationsPace::FourX);
     if (Key == EKeys::Zero) return OnSetPace(EKsa64OperationsPace::Fastest);
+    if (Key == EKeys::E) return OnDisplayMode();
+    if (Key == EKeys::D) return OnEngineeringToggle();
     return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
 }
 
@@ -678,6 +853,18 @@ FReply SKsa64OperationsDashboard::OnSoundCues()
 FReply SKsa64OperationsDashboard::OnTextScale()
 {
     if (Subsystem.IsValid()) Subsystem->CycleTextScale();
+    return FReply::Handled();
+}
+
+FReply SKsa64OperationsDashboard::OnDisplayMode()
+{
+    if (Subsystem.IsValid()) Subsystem->ToggleDisplayMode();
+    return FReply::Handled();
+}
+
+FReply SKsa64OperationsDashboard::OnEngineeringToggle()
+{
+    bEngineeringExpanded = !bEngineeringExpanded;
     return FReply::Handled();
 }
 
@@ -828,9 +1015,41 @@ FText SKsa64OperationsDashboard::AccessibilityText() const
         Access.bSoundCues ? TEXT("CUES ON") : TEXT("CUES OFF")));
 }
 
+FText SKsa64OperationsDashboard::DisplayModeText() const
+{
+    if (!Subsystem.IsValid())
+    {
+        return FText::FromString(TEXT("VIEW EXACT"));
+    }
+    const bool bExact = Subsystem->GetDisplayMode() == EKsa64OperationsDisplayMode::Exact;
+    return FText::FromString(bExact ? TEXT("VIEW EXACT") : TEXT("VIEW SMOOTH"));
+}
+
+FText SKsa64OperationsDashboard::EngineeringToggleText() const
+{
+    return FText::FromString(
+        bEngineeringExpanded ? TEXT("HIDE ENGINEERING DETAILS") : TEXT("SHOW ENGINEERING DETAILS"));
+}
+
 bool SKsa64OperationsDashboard::HasSession() const
 {
-    return Subsystem.IsValid() && Subsystem->GetViewModel().bSessionOpen;
+    return IsRunnableSession();
+}
+
+bool SKsa64OperationsDashboard::IsRunnableSession() const
+{
+    if (!Subsystem.IsValid())
+    {
+        return false;
+    }
+    const FKsa64OperationsViewModel& View = Subsystem->GetViewModel();
+    return View.bSessionOpen
+        && View.Capabilities.bTypedActions
+        && !View.bShutdownRequested
+        && View.Lifecycle != 5
+        && View.Lifecycle != 6
+        && View.WorkerState != 3
+        && View.FinalizationState != 3;
 }
 
 bool SKsa64OperationsDashboard::CanStart() const
@@ -842,28 +1061,26 @@ bool SKsa64OperationsDashboard::CanStart() const
 
 bool SKsa64OperationsDashboard::CanReviewAction() const
 {
-    return Subsystem.IsValid()
-        && Subsystem->GetViewModel().bSessionOpen
-        && Subsystem->GetViewModel().Capabilities.bTypedActions
+    return IsRunnableSession()
         && Subsystem->GetViewModel().ActionState == EKsa64OperationsActionState::Available;
 }
 
 bool SKsa64OperationsDashboard::CanStageAction() const
 {
-    return Subsystem.IsValid()
+    return IsRunnableSession()
         && Subsystem->GetViewModel().ActionState == EKsa64OperationsActionState::Reviewing;
 }
 
 bool SKsa64OperationsDashboard::CanCommitAction() const
 {
-    return Subsystem.IsValid()
+    return IsRunnableSession()
         && Subsystem->GetViewModel().ActionState == EKsa64OperationsActionState::Staged
         && Subsystem->GetViewModel().ReleaseEpoch >= Subsystem->GetViewModel().ActionEarliestCommitEpoch;
 }
 
 bool SKsa64OperationsDashboard::CanCancelAction() const
 {
-    return Subsystem.IsValid()
+    return IsRunnableSession()
         && (Subsystem->GetViewModel().ActionState == EKsa64OperationsActionState::Staged
             || Subsystem->GetViewModel().ActionState == EKsa64OperationsActionState::Committed);
 }

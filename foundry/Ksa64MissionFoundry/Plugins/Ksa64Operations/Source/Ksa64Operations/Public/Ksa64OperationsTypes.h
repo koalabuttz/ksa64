@@ -11,6 +11,19 @@ enum class EKsa64OperationsPace : uint8
     Fastest
 };
 
+enum class EKsa64OperationsDisplayMode : uint8
+{
+    Smooth,
+    Exact
+};
+
+enum class EKsa64OperationsTrajectorySource : uint8
+{
+    PlannedReference = 1,
+    OnboardEstimate = 2,
+    GroundEstimate = 3
+};
+
 enum class EKsa64OperationsActionState : uint8
 {
     Unavailable,
@@ -51,6 +64,7 @@ struct FKsa64OperationsReleasePoint
     bool bHasMissionTime = false;
     bool bHasPosition = false;
     bool bHasGroundEstimate = false;
+    double PresentationReleaseEpoch = -1.0;
 };
 
 struct FKsa64OperationsPredictionPoint

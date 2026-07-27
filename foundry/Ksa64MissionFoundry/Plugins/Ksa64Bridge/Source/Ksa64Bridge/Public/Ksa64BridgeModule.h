@@ -62,6 +62,13 @@ public:
     int32 PollReleaseSampleV1(Ksa64ViewerReleaseSampleV1& OutSample) const;
     int32 PredictionPathHeaderV1(Ksa64ViewerPredictionPathHeaderV1& OutHeader) const;
     int32 PredictionPathPointV1(uint32 PointIndex, Ksa64ViewerPredictionPathPointV1& OutPoint) const;
+    int32 TrajectoryPathHeaderV1(
+        uint32 Source,
+        Ksa64ViewerPredictionPathHeaderV1& OutHeader) const;
+    int32 TrajectoryPathPointV1(
+        uint32 Source,
+        uint32 PointIndex,
+        Ksa64ViewerPredictionPathPointV1& OutPoint) const;
     int32 ActionProposalV1(Ksa64ViewerActionProposalV1& OutProposal) const;
     int32 SubmitActionProposalV1(uint32 ProposalIdentity, uint32 CompletedEventMask);
     int32 CommitActionV1(uint32 ProposalIdentity);
@@ -99,6 +106,12 @@ private:
     FString CatalogJson;
     FKsa64BridgeValidation Validation;
     uint32 FeatureFlags = 0;
+    uint32 ActiveTypedScenarioIdentity = 0;
+    uint32 ActiveTypedAdapterIdentity = 0;
+    mutable uint32 ValidatedPredictionPathIdentity = 0;
+    mutable uint32 ValidatedPredictionPointCount = 0;
+    mutable uint32 ValidatedTrajectoryPathIdentities[4] = {};
+    mutable uint32 ValidatedTrajectoryPointCounts[4] = {};
     FTSTicker::FDelegateHandle AsyncCloseTickerHandle;
     bool bAsyncClosePending = false;
 };

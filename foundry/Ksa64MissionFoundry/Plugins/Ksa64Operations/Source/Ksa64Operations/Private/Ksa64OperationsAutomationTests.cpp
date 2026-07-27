@@ -1,4 +1,6 @@
 #include "Ksa64OperationsBridgeAdapter.h"
+#include "Ksa64LiveMissionSubsystem.h"
+#include "Ksa64OperationsDashboard.h"
 #include "Ksa64OperationsPolicy.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -9,10 +11,89 @@
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
+#include "Engine/GameInstance.h"
+#include "Input/Events.h"
+#include "InputCoreTypes.h"
+#include "Layout/ArrangedChildren.h"
+#include "Layout/Children.h"
+#include "UObject/StrongObjectPtr.h"
+#include "Widgets/Input/SButton.h"
 
 namespace
 {
 using namespace Ksa64OperationsPolicy;
+
+FString AdapterFailure;
+
+void InspectDashboardAccessibility(
+    const TSharedRef<SWidget>& Widget,
+    int32& OutButtonCount,
+    bool& bOutAllButtonsCustom,
+    bool& bOutAllButtonsNamed)
+{
+    if (Widget->GetType() == FName(TEXT("SButton")))
+    {
+        ++OutButtonCount;
+        bOutAllButtonsCustom &=
+            Widget->GetAccessibleBehavior() == EAccessibleBehavior::Custom;
+        bOutAllButtonsNamed &= !Widget->GetAccessibleText().IsEmpty();
+    }
+    FChildren* Children = Widget->GetChildren();
+    if (Children == nullptr)
+    {
+        return;
+    }
+    for (int32 Index = 0; Index < Children->Num(); ++Index)
+    {
+        InspectDashboardAccessibility(
+            Children->GetChildAt(Index),
+            OutButtonCount,
+            bOutAllButtonsCustom,
+            bOutAllButtonsNamed);
+    }
+}
+
+TSharedPtr<SButton> FindDashboardButton(
+    const TSharedRef<SWidget>& Widget,
+    const FString& AccessibleName)
+{
+    if (Widget->GetType() == FName(TEXT("SButton"))
+        && Widget->GetAccessibleText().ToString() == AccessibleName)
+    {
+        return StaticCastSharedRef<SButton>(Widget);
+    }
+    FChildren* Children = Widget->GetChildren();
+    if (Children == nullptr)
+    {
+        return nullptr;
+    }
+    for (int32 Index = 0; Index < Children->Num(); ++Index)
+    {
+        TSharedPtr<SButton> Found = FindDashboardButton(
+            Children->GetChildAt(Index),
+            AccessibleName);
+        if (Found.IsValid())
+        {
+            return Found;
+        }
+    }
+    return nullptr;
+}
+
+FString AdapterState(const FKsa64OperationsViewModel& View)
+{
+    return FString::Printf(
+        TEXT("release=%u publication=%llu pending=%u command_result=%d worker=%u finalization=%u proposal=%08X receipt=%u overflow=%u"),
+        View.ReleaseEpoch,
+        static_cast<unsigned long long>(View.CommandSequence),
+        View.CommandsPending,
+        View.CommandResult,
+        View.WorkerState,
+        View.FinalizationState,
+        View.ActionProposalIdentity,
+        View.ActionReceiptState,
+        View.TransportOverflow);
+}
 
 uint32 RunDisplayFrames(int32 RefreshHz, int32 Seconds, EKsa64OperationsPace Pace)
 {
@@ -56,6 +137,7 @@ bool PollAdapterUntil(
         FPlatformProcess::Sleep(0.0005f);
     }
     while (FPlatformTime::Seconds() < Deadline);
+    AdapterFailure = FString::Printf(TEXT("poll timed out: %s"), *AdapterState(View));
     return false;
 }
 
@@ -72,6 +154,11 @@ bool AdvanceAdapterTo(
         if (Result != EKsa64OperationsAdapterResult::Ok
             && Result != EKsa64OperationsAdapterResult::Queued)
         {
+            AdapterFailure = FString::Printf(
+                TEXT("advance enqueue failed result=%u target=%u: %s"),
+                static_cast<uint32>(Result),
+                TargetRelease,
+                *AdapterState(View));
             return false;
         }
         const uint32 Expected = View.ReleaseEpoch + Count;
@@ -86,10 +173,29 @@ bool AdvanceAdapterTo(
                         && Candidate.CommandsPending == 0;
                 }))
         {
+            AdapterFailure = FString::Printf(
+                TEXT("advance expected release=%u from publication=%llu: %s"),
+                Expected,
+                static_cast<unsigned long long>(PriorPublication),
+                *AdapterState(View));
+            return false;
+        }
+        TArray<FKsa64OperationsTimelineItem> DiscardedTimeline;
+        TArray<FKsa64OperationsReleasePoint> DiscardedSamples;
+        Adapter.DrainTimeline(DiscardedTimeline);
+        Adapter.DrainReleaseSamples(DiscardedSamples);
+        if (View.TransportOverflow != 0 || !View.bObservationComplete)
+        {
+            AdapterFailure = FString::Printf(TEXT("presentation stream incomplete: %s"), *AdapterState(View));
             return false;
         }
     }
-    return View.ReleaseEpoch == TargetRelease;
+    if (View.ReleaseEpoch != TargetRelease)
+    {
+        AdapterFailure = FString::Printf(TEXT("advance missed target=%u: %s"), TargetRelease, *AdapterState(View));
+        return false;
+    }
+    return true;
 }
 
 bool ApplyAcceptedAction(
@@ -98,11 +204,27 @@ bool ApplyAcceptedAction(
     uint32 StageEpoch,
     uint32 CommitEpoch)
 {
-    if (!AdvanceAdapterTo(Adapter, View, StageEpoch)
-        || View.ActionProposalIdentity == 0
-        || Adapter.ReviewAction() != EKsa64OperationsAdapterResult::Ok
-        || Adapter.StageAction() != EKsa64OperationsAdapterResult::Queued
-        || !PollAdapterUntil(
+    AdapterFailure.Reset();
+    if (!AdvanceAdapterTo(Adapter, View, StageEpoch))
+    {
+        return false;
+    }
+    if (View.ActionProposalIdentity == 0)
+    {
+        AdapterFailure = FString::Printf(TEXT("no proposal at stage release=%u: %s"), StageEpoch, *AdapterState(View));
+        return false;
+    }
+    if (Adapter.ReviewAction() != EKsa64OperationsAdapterResult::Ok)
+    {
+        AdapterFailure = FString::Printf(TEXT("review rejected at release=%u: %s"), StageEpoch, *AdapterState(View));
+        return false;
+    }
+    if (Adapter.StageAction() != EKsa64OperationsAdapterResult::Queued)
+    {
+        AdapterFailure = FString::Printf(TEXT("stage did not queue at release=%u: %s"), StageEpoch, *AdapterState(View));
+        return false;
+    }
+    if (!PollAdapterUntil(
             Adapter,
             View,
             15.0,
@@ -113,13 +235,25 @@ bool ApplyAcceptedAction(
                     && Candidate.CommandsPending == 0;
             }))
     {
+        AdapterFailure = FString::Printf(TEXT("stage receipt missing at release=%u: %s"), StageEpoch, *AdapterState(View));
         return false;
     }
     const uint32 Proposal = View.ActionProposalIdentity;
-    if (!AdvanceAdapterTo(Adapter, View, CommitEpoch)
-        || View.ActionProposalIdentity != Proposal
-        || Adapter.CommitAction() != EKsa64OperationsAdapterResult::Queued
-        || !PollAdapterUntil(
+    if (!AdvanceAdapterTo(Adapter, View, CommitEpoch))
+    {
+        return false;
+    }
+    if (View.ActionProposalIdentity != Proposal)
+    {
+        AdapterFailure = FString::Printf(TEXT("proposal changed before commit=%u: %s"), CommitEpoch, *AdapterState(View));
+        return false;
+    }
+    if (Adapter.CommitAction() != EKsa64OperationsAdapterResult::Queued)
+    {
+        AdapterFailure = FString::Printf(TEXT("commit did not queue at release=%u: %s"), CommitEpoch, *AdapterState(View));
+        return false;
+    }
+    if (!PollAdapterUntil(
             Adapter,
             View,
             15.0,
@@ -131,6 +265,7 @@ bool ApplyAcceptedAction(
                     && Candidate.CommandsPending == 0;
             }))
     {
+        AdapterFailure = FString::Printf(TEXT("commit receipt missing at release=%u: %s"), CommitEpoch, *AdapterState(View));
         return false;
     }
     return true;
@@ -276,6 +411,212 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FKsa64OperationsPacing144Test::RunTest(const FString&) { TestEqual(TEXT("ten seconds produce 320 releases"), RunDisplayFrames(144, 10, EKsa64OperationsPace::Realtime), 320u); return true; }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64OperationsRealAdapterPacingTest,
+    "KSA64.Operations.Pacing.RealAdapterRefreshInvariance",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
+{
+    struct FOutcome
+    {
+        uint32 ReleaseEpoch = 0;
+        uint32 FlightChecksum = 0;
+        uint32 NavigationChecksum = 0;
+        uint32 CommandChecksum = 0;
+    };
+
+    const auto RunAtRefresh = [this](int32 RefreshHz, FOutcome& OutOutcome)
+    {
+        TUniquePtr<IKsa64OperationsBridgeAdapter> Adapter =
+            IKsa64OperationsBridgeAdapter::Create();
+        if (!Adapter.IsValid() || !Adapter->IsReady()
+            || !Adapter->StartGuidedOperations())
+        {
+            AdapterFailure = FString::Printf(
+                TEXT("%d Hz adapter start failed: %s"),
+                RefreshHz,
+                Adapter.IsValid() ? *Adapter->GetDiagnostic() : TEXT("adapter unavailable"));
+            return false;
+        }
+
+        FKsa64OperationsViewModel View;
+        if (!PollAdapterUntil(
+                *Adapter,
+                View,
+                15.0,
+                [](const FKsa64OperationsViewModel& Candidate)
+                {
+                    return Candidate.ReleaseEpoch == 0
+                        && Candidate.CommandsPending == 0
+                        && Candidate.bTruthFiltered;
+                }))
+        {
+            AdapterFailure = FString::Printf(
+                TEXT("%d Hz initial view failed: %s"),
+                RefreshHz,
+                *AdapterFailure);
+            Adapter->Close();
+            return false;
+        }
+
+        FKsa64OperationsPacingController Controller;
+        for (int32 Frame = 0; Frame < RefreshHz * 10; ++Frame)
+        {
+            const int64 StartNanoseconds =
+                static_cast<int64>(Frame) * 1'000'000'000 / RefreshHz;
+            const int64 EndNanoseconds =
+                static_cast<int64>(Frame + 1) * 1'000'000'000 / RefreshHz;
+            Controller.AccumulateNanoseconds(
+                EndNanoseconds - StartNanoseconds,
+                EKsa64OperationsPace::Realtime);
+            const uint32 Due = Controller.ReleasesDue(
+                EKsa64OperationsPace::Realtime,
+                31'250,
+                true,
+                false);
+            if (Due == 0)
+            {
+                continue;
+            }
+
+            const uint32 ExpectedRelease = View.ReleaseEpoch + Due;
+            const uint64 PriorPublication = View.CommandSequence;
+            const EKsa64OperationsAdapterResult AdvanceResult =
+                Adapter->AdvanceReleases(Due);
+            if (AdvanceResult != EKsa64OperationsAdapterResult::Ok
+                && AdvanceResult != EKsa64OperationsAdapterResult::Queued)
+            {
+                AdapterFailure = FString::Printf(
+                    TEXT("%d Hz advance failed at frame %d with result %u: %s"),
+                    RefreshHz,
+                    Frame,
+                    static_cast<uint32>(AdvanceResult),
+                    *AdapterState(View));
+                Adapter->Close();
+                return false;
+            }
+            if (!PollAdapterUntil(
+                    *Adapter,
+                    View,
+                    15.0,
+                    [ExpectedRelease, PriorPublication](
+                        const FKsa64OperationsViewModel& Candidate)
+                    {
+                        return Candidate.ReleaseEpoch == ExpectedRelease
+                            && Candidate.CommandSequence != PriorPublication
+                            && Candidate.CommandsPending == 0;
+                    }))
+            {
+                AdapterFailure = FString::Printf(
+                    TEXT("%d Hz advance observation failed at frame %d: %s"),
+                    RefreshHz,
+                    Frame,
+                    *AdapterFailure);
+                Adapter->Close();
+                return false;
+            }
+            TArray<FKsa64OperationsTimelineItem> DiscardedTimeline;
+            TArray<FKsa64OperationsReleasePoint> DiscardedSamples;
+            Adapter->DrainTimeline(DiscardedTimeline);
+            Adapter->DrainReleaseSamples(DiscardedSamples);
+            if (View.TransportOverflow != 0 || !View.bObservationComplete)
+            {
+                AdapterFailure = FString::Printf(
+                    TEXT("%d Hz presentation stream incomplete: %s"),
+                    RefreshHz,
+                    *AdapterState(View));
+                Adapter->Close();
+                return false;
+            }
+            Controller.CommitAcceptedAdvance(
+                Due,
+                31'250,
+                EKsa64OperationsPace::Realtime);
+        }
+
+        OutOutcome.ReleaseEpoch = View.ReleaseEpoch;
+        OutOutcome.FlightChecksum = View.FlightChecksum;
+        OutOutcome.NavigationChecksum = View.NavigationChecksum;
+        OutOutcome.CommandChecksum = View.CommandChecksum;
+        const EKsa64OperationsAdapterResult ShutdownResult =
+            Adapter->RequestShutdown();
+        if (ShutdownResult != EKsa64OperationsAdapterResult::Ok
+            && ShutdownResult != EKsa64OperationsAdapterResult::Queued)
+        {
+            AdapterFailure = FString::Printf(
+                TEXT("%d Hz shutdown request failed with result %u"),
+                RefreshHz,
+                static_cast<uint32>(ShutdownResult));
+            Adapter->Close();
+            return false;
+        }
+        if (!PollAdapterUntil(
+                *Adapter,
+                View,
+                15.0,
+                [](const FKsa64OperationsViewModel& Candidate)
+                {
+                    return Candidate.WorkerState == 2
+                        || Candidate.WorkerState == 3;
+                }))
+        {
+            AdapterFailure = FString::Printf(
+                TEXT("%d Hz worker shutdown failed: %s"),
+                RefreshHz,
+                *AdapterFailure);
+            Adapter->Close();
+            return false;
+        }
+        if (View.WorkerState != 2)
+        {
+            AdapterFailure = FString::Printf(
+                TEXT("%d Hz worker entered fault state"),
+                RefreshHz);
+            Adapter->Close();
+            return false;
+        }
+        Adapter->Close();
+        if (FKsa64BridgeModule::Get().GetStatus() != EKsa64BridgeStatus::Ready)
+        {
+            AdapterFailure = FString::Printf(
+                TEXT("%d Hz bridge did not return to ready"),
+                RefreshHz);
+            return false;
+        }
+        return true;
+    };
+
+    TArray<FOutcome> Outcomes;
+    for (const int32 RefreshHz : {30, 60, 144})
+    {
+        FOutcome Outcome;
+        if (!RunAtRefresh(RefreshHz, Outcome))
+        {
+            AddError(AdapterFailure);
+            return false;
+        }
+        TestEqual(
+            FString::Printf(TEXT("%d Hz reaches 320 exact releases"), RefreshHz),
+            Outcome.ReleaseEpoch,
+            320u);
+        TestNotEqual(
+            FString::Printf(TEXT("%d Hz flight checksum is populated"), RefreshHz),
+            Outcome.FlightChecksum,
+            0u);
+        Outcomes.Add(Outcome);
+    }
+
+    for (int32 Index = 1; Index < Outcomes.Num(); ++Index)
+    {
+        TestEqual(TEXT("flight checksum is refresh invariant"), Outcomes[Index].FlightChecksum, Outcomes[0].FlightChecksum);
+        TestEqual(TEXT("navigation checksum is refresh invariant"), Outcomes[Index].NavigationChecksum, Outcomes[0].NavigationChecksum);
+        TestEqual(TEXT("command checksum is refresh invariant"), Outcomes[Index].CommandChecksum, Outcomes[0].CommandChecksum);
+    }
+    return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64OperationsMixedPacingTest,
     "KSA64.Operations.Pacing.MixedModesAndPause",
@@ -327,6 +668,24 @@ bool FKsa64OperationsOutstandingTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64OperationsTimingPercentileTest,
+    "KSA64.Operations.Performance.NearestRankP99",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64OperationsTimingPercentileTest::RunTest(const FString&)
+{
+    TArray<int64> Samples;
+    for (int64 Value = 600; Value >= 1; --Value)
+    {
+        Samples.Add(Value);
+    }
+    TestEqual(TEXT("600-sample nearest-rank p99"), NearestRankP99Nanoseconds(Samples), 594ll);
+    TestEqual(TEXT("single-sample p99"), NearestRankP99Nanoseconds({42}), 42ll);
+    TestEqual(TEXT("empty p99 is invalid"), NearestRankP99Nanoseconds({}), -1ll);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64OperationsSparseBurstTest,
     "KSA64.Operations.Observation.SparseAndBurstPolling",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -369,18 +728,102 @@ bool FKsa64OperationsSemanticAccessibilityTest::RunTest(const FString&)
     View.ReleaseEpoch = 42;
     View.FlightChecksum = 0x11223344;
     const FString Baseline = View.ToDeterministicJson();
-    FKsa64OperationsAccessibilitySettings Accessibility;
-    Accessibility.TextScale = 1.5f;
-    Accessibility.bHighContrast = true;
-    Accessibility.bReducedMotion = true;
-    Accessibility.bSoundCues = false;
+
+    TStrongObjectPtr<UGameInstance> GameInstance(
+        NewObject<UGameInstance>(GetTransientPackage()));
+    TStrongObjectPtr<UKsa64LiveMissionSubsystem> Subsystem(
+        NewObject<UKsa64LiveMissionSubsystem>(GameInstance.Get()));
+    const TSharedRef<SKsa64OperationsDashboard> Dashboard =
+        SNew(SKsa64OperationsDashboard).Subsystem(Subsystem.Get());
+    TestTrue(TEXT("actual dashboard supports keyboard focus"), Dashboard->SupportsKeyboardFocus());
+
+    const FGeometry RootGeometry = FGeometry::MakeRoot(
+        FVector2f(1920.0f, 1080.0f),
+        FSlateLayoutTransform());
+    const FModifierKeysState NoModifiers;
+    const auto SendKey = [&Dashboard, &RootGeometry, &NoModifiers](const FKey& Key)
+    {
+        return Dashboard->OnKeyDown(
+            RootGeometry,
+            FKeyEvent(Key, NoModifiers, 0, false, 0, 0));
+    };
+    TestTrue(TEXT("realtime keyboard action handled"), SendKey(EKeys::One).IsEventHandled());
+    TestEqual(
+        TEXT("realtime keyboard action changes only presentation pace"),
+        Subsystem->GetViewModel().PresentationPace,
+        EKsa64OperationsPace::Realtime);
+    TestTrue(TEXT("four-times keyboard action handled"), SendKey(EKeys::Four).IsEventHandled());
+    TestEqual(
+        TEXT("four-times keyboard action changes only presentation pace"),
+        Subsystem->GetViewModel().PresentationPace,
+        EKsa64OperationsPace::FourX);
+    TestTrue(TEXT("maximum keyboard action handled"), SendKey(EKeys::Zero).IsEventHandled());
+    TestEqual(
+        TEXT("maximum keyboard action changes only presentation pace"),
+        Subsystem->GetViewModel().PresentationPace,
+        EKsa64OperationsPace::Fastest);
+    TestEqual(
+        TEXT("smooth display is the presentation default"),
+        Subsystem->GetDisplayMode(),
+        EKsa64OperationsDisplayMode::Smooth);
+    TestTrue(TEXT("exact-view keyboard action handled"), SendKey(EKeys::E).IsEventHandled());
+    TestEqual(
+        TEXT("exact-view keyboard action changes only display mode"),
+        Subsystem->GetDisplayMode(),
+        EKsa64OperationsDisplayMode::Exact);
+    TestTrue(TEXT("smooth-view keyboard action handled"), SendKey(EKeys::E).IsEventHandled());
+    TestEqual(
+        TEXT("second exact-view action restores smooth display"),
+        Subsystem->GetDisplayMode(),
+        EKsa64OperationsDisplayMode::Smooth);
+    TestTrue(TEXT("engineering drawer keyboard action handled"), SendKey(EKeys::D).IsEventHandled());
+    TestTrue(TEXT("pause keyboard action handled"), SendKey(EKeys::SpaceBar).IsEventHandled());
+    TestEqual(
+        TEXT("pause keyboard action returns to paused presentation"),
+        Subsystem->GetViewModel().PresentationPace,
+        EKsa64OperationsPace::Paused);
+
+    int32 ButtonCount = 0;
+    bool bAllButtonsCustom = true;
+    bool bAllButtonsNamed = true;
+    InspectDashboardAccessibility(
+        Dashboard,
+        ButtonCount,
+        bAllButtonsCustom,
+        bAllButtonsNamed);
+    TestEqual(TEXT("actual dashboard exposes every command button"), ButtonCount, 16);
+    TestTrue(TEXT("every command button uses custom accessible text"), bAllButtonsCustom);
+    TestTrue(TEXT("every command button accessible name is nonempty"), bAllButtonsNamed);
+
+    const FString SubsystemBaseline = Subsystem->GetViewModel().ToDeterministicJson();
+    Subsystem->ToggleHighContrast();
+    Subsystem->ToggleReducedMotion();
+    Subsystem->CycleTextScale();
+    Subsystem->CycleTextScale();
+    TestTrue(TEXT("actual dashboard high contrast is enabled"), Subsystem->GetAccessibility().bHighContrast);
+    TestTrue(TEXT("actual dashboard reduced motion is enabled"), Subsystem->GetAccessibility().bReducedMotion);
+    TestEqual(TEXT("actual dashboard text scale reaches 150 percent"), Subsystem->GetAccessibility().TextScale, 1.5f);
+
     const FIntPoint Sizes[] = {{1280, 720}, {1920, 1080}, {2560, 1440}};
     for (const FIntPoint Size : Sizes)
     {
-        TestTrue(TEXT("layout size is presentational"), Size.X > 0 && Size.Y > 0);
-        TestEqual(TEXT("resize and accessibility do not mutate operational semantics"), View.ToDeterministicJson(), Baseline);
+        Dashboard->SlatePrepass(1.0f);
+        const FVector2D Desired = Dashboard->GetDesiredSize();
+        TestTrue(TEXT("actual dashboard desired width remains positive"), Desired.X > 0.0f);
+        TestTrue(TEXT("actual dashboard desired height remains positive"), Desired.Y > 0.0f);
+        FArrangedChildren Arranged(EVisibility::Visible);
+        Dashboard->ArrangeChildren(
+            FGeometry::MakeRoot(
+                FVector2f(static_cast<float>(Size.X), static_cast<float>(Size.Y)),
+                FSlateLayoutTransform()),
+            Arranged);
+        TestTrue(TEXT("actual dashboard arranges visible content"), Arranged.Num() > 0);
+        TestEqual(TEXT("resize does not mutate detached operational semantics"), View.ToDeterministicJson(), Baseline);
+        TestEqual(
+            TEXT("resize/accessibility do not mutate subsystem operational semantics"),
+            Subsystem->GetViewModel().ToDeterministicJson(),
+            SubsystemBaseline);
     }
-    TestEqual(TEXT("accessibility settings remain noncanonical"), Accessibility.TextScale, 1.5f);
     TestEqual(TEXT("deterministic serialization repeats byte-for-byte"), View.ToDeterministicJson(), Baseline);
     return true;
 }
@@ -397,6 +840,15 @@ bool FKsa64OperationsEvidenceStatusTest::RunTest(const FString&)
     TestEqual(TEXT("zero-length evidence cannot masquerade as complete"), ClassifyEvidenceReadiness(5, 2, 2, 0, 1), EKsa64OperationsEvidenceReadiness::InProgress);
     TestEqual(TEXT("aborted lifecycle is failed"), ClassifyEvidenceReadiness(6, 3, 2, 0, 0), EKsa64OperationsEvidenceReadiness::Failed);
     TestEqual(TEXT("worker fault is failed"), ClassifyEvidenceReadiness(3, 1, 3, 0, 0), EKsa64OperationsEvidenceReadiness::Failed);
+    TestEqual(
+        TEXT("SHA-256 empty vector"),
+        Sha256Hex(nullptr, 0),
+        TEXT("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    static constexpr uint8 Abc[] = {'a', 'b', 'c'};
+    TestEqual(
+        TEXT("SHA-256 abc vector"),
+        Sha256Hex(Abc, UE_ARRAY_COUNT(Abc)),
+        TEXT("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
     return true;
 }
 
@@ -431,6 +883,104 @@ bool FKsa64OperationsAsyncShutdownTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64OperationsSlateActionTranscriptParityTest,
+    "KSA64.Operations.ZAcceptance.SlateActionTranscriptParity",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64OperationsSlateActionTranscriptParityTest::RunTest(const FString&)
+{
+    TStrongObjectPtr<UGameInstance> GameInstance(
+        NewObject<UGameInstance>(GetTransientPackage()));
+    TStrongObjectPtr<UKsa64LiveMissionSubsystem> Subsystem(
+        NewObject<UKsa64LiveMissionSubsystem>(GameInstance.Get()));
+    if (!Subsystem->InitializeForAutomation()
+        || !Subsystem->StartGuidedOperations())
+    {
+        AddError(FString::Printf(
+            TEXT("live subsystem could not start: %s"),
+            *Subsystem->GetViewModel().LastDiagnostic));
+        Subsystem->CloseForAutomation();
+        return false;
+    }
+    const TSharedRef<SKsa64OperationsDashboard> Dashboard =
+        SNew(SKsa64OperationsDashboard).Subsystem(Subsystem.Get());
+
+    const auto Click = [this, &Dashboard](const FString& Name)
+    {
+        const TSharedPtr<SButton> Button = FindDashboardButton(Dashboard, Name);
+        if (!Button.IsValid())
+        {
+            AddError(FString::Printf(TEXT("dashboard button not found: %s"), *Name));
+            return false;
+        }
+        if (!Button->IsEnabled())
+        {
+            AddError(FString::Printf(TEXT("dashboard button unexpectedly disabled: %s"), *Name));
+            return false;
+        }
+        Button->SimulateClick();
+        return true;
+    };
+    const auto ApplyThroughSlate = [this, &Subsystem, &Click](
+        uint32 StageEpoch,
+        uint32 CommitEpoch)
+    {
+        if (!Subsystem->AdvanceToReleaseForAutomation(StageEpoch, 30.0))
+        {
+            AddError(FString::Printf(TEXT("could not advance UI session to %u"), StageEpoch));
+            return false;
+        }
+        if (!Click(TEXT("1  REVIEW")))
+        {
+            return false;
+        }
+        // Poll the reviewed adapter state through the subsystem before Slate
+        // evaluates the Stage button's production IsEnabled attribute.
+        if (!Subsystem->AdvanceToReleaseForAutomation(StageEpoch, 5.0)
+            || !Click(TEXT("2  STAGE"))
+            || !Subsystem->WaitForActionReceiptForAutomation(1, 15.0))
+        {
+            AddError(FString::Printf(TEXT("Slate stage path failed at %u"), StageEpoch));
+            return false;
+        }
+        if (!Subsystem->AdvanceToReleaseForAutomation(CommitEpoch, 30.0)
+            || !Click(TEXT("3  COMMIT"))
+            || !Subsystem->WaitForActionReceiptForAutomation(2, 15.0))
+        {
+            AddError(FString::Printf(TEXT("Slate commit path failed at %u"), CommitEpoch));
+            return false;
+        }
+        return true;
+    };
+
+    if (!ApplyThroughSlate(6'080, 6'240)
+        || !ApplyThroughSlate(6'560, 6'720)
+        || !Subsystem->AdvanceToReleaseForAutomation(21'591, 60.0)
+        || !Subsystem->WaitForCompletionForAutomation(30.0))
+    {
+        AddError(FString::Printf(
+            TEXT("Slate transcript did not complete: release=%u diagnostic=%s"),
+            Subsystem->GetViewModel().ReleaseEpoch,
+            *Subsystem->GetViewModel().LastDiagnostic));
+        Subsystem->CloseForAutomation();
+        return false;
+    }
+    TArray<uint8> Evidence;
+    TestTrue(
+        TEXT("Slate-driven live subsystem exposes completed opaque evidence"),
+        Subsystem->CopyCompletedEvidenceForAutomation(Evidence));
+    TestEqual(TEXT("Slate transcript KSB11 length"), Evidence.Num(), 2'911'464);
+    TestEqual(
+        TEXT("Slate transcript KSB11 matches scripted oracle"),
+        Sha256Hex(Evidence.GetData(), static_cast<uint64>(Evidence.Num())),
+        TEXT("7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4"));
+    TestEqual(TEXT("Slate transcript contains four actions"), Subsystem->GetViewModel().ActionCount, 4u);
+    TestTrue(TEXT("Slate transcript stays truth filtered"), Subsystem->GetViewModel().bTruthFiltered);
+    Subsystem->CloseForAutomation();
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64OperationsFullMissionParityTest,
     "KSA64.Operations.ZAcceptance.FullMissionTranscriptParity",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -443,19 +993,50 @@ bool FKsa64OperationsFullMissionParityTest::RunTest(const FString&)
         AddError(Adapter.IsValid() ? Adapter->GetDiagnostic() : TEXT("adapter unavailable"));
         return false;
     }
-    TestTrue(TEXT("open typed Guided Operator full mission"), Adapter->StartGuidedOperations());
+    if (!Adapter->StartGuidedOperations())
+    {
+        AddError(FString::Printf(TEXT("typed Guided Operator start failed: %s"), *Adapter->GetDiagnostic()));
+        return false;
+    }
     FKsa64OperationsViewModel View;
-    TestTrue(TEXT("initial typed operational view"), PollAdapterUntil(*Adapter, View, 15.0, [](const FKsa64OperationsViewModel& Candidate) { return Candidate.ReleaseEpoch == 0 && Candidate.bTruthFiltered; }));
-    TestTrue(TEXT("ground update review-stage-commit at exact epochs"), ApplyAcceptedAction(*Adapter, View, 6'080, 6'240));
-    TestTrue(TEXT("branch review-stage-commit at exact epochs"), ApplyAcceptedAction(*Adapter, View, 6'560, 6'720));
-    TestTrue(TEXT("advance without crossing accepted completion"), AdvanceAdapterTo(*Adapter, View, 21'591));
-    TestTrue(TEXT("wait for Rust evidence finalization"), PollAdapterUntil(*Adapter, View, 30.0, [](const FKsa64OperationsViewModel& Candidate)
+    if (!PollAdapterUntil(*Adapter, View, 15.0, [](const FKsa64OperationsViewModel& Candidate) { return Candidate.ReleaseEpoch == 0 && Candidate.bTruthFiltered; }))
+    {
+        AddError(FString::Printf(TEXT("initial typed operational view failed: %s"), *AdapterFailure));
+        Adapter->Close();
+        return false;
+    }
+    if (!ApplyAcceptedAction(*Adapter, View, 6'080, 6'240))
+    {
+        AddError(FString::Printf(TEXT("ground update action failed: %s"), *AdapterFailure));
+        Adapter->Close();
+        return false;
+    }
+    if (!ApplyAcceptedAction(*Adapter, View, 6'560, 6'720))
+    {
+        AddError(FString::Printf(TEXT("branch action failed: %s"), *AdapterFailure));
+        Adapter->Close();
+        return false;
+    }
+    if (!AdvanceAdapterTo(*Adapter, View, 21'591))
+    {
+        AddError(FString::Printf(TEXT("mission completion advance failed: %s"), *AdapterFailure));
+        Adapter->Close();
+        return false;
+    }
+    if (!PollAdapterUntil(*Adapter, View, 30.0, [](const FKsa64OperationsViewModel& Candidate)
     {
         return Candidate.ReleaseEpoch == 21'591
             && Candidate.Lifecycle == 5
             && Candidate.WorkerState == 2
             && Candidate.FinalizationState == 2;
-    }));
+    }))
+    {
+        AddError(FString::Printf(TEXT("Rust evidence finalization failed: %s"), *AdapterFailure));
+        Adapter->Close();
+        return false;
+    }
+    TestTrue(TEXT("presentation queues remain complete"), View.bObservationComplete);
+    TestEqual(TEXT("presentation queues never overflow"), View.TransportOverflow, 0u);
     TestTrue(TEXT("Guided view remains truth filtered through completion"), View.bTruthFiltered);
     TestEqual(TEXT("overall disposition"), View.OverallDisposition, 2u);
     TestEqual(TEXT("complete evidence disposition"), View.EvidenceDisposition, 1u);
@@ -463,9 +1044,10 @@ bool FKsa64OperationsFullMissionParityTest::RunTest(const FString&)
     TArray<uint8> Evidence;
     TestEqual(TEXT("retrieve opaque Rust-verified KSB11"), Adapter->GetCompletedEvidence(Evidence), EKsa64OperationsAdapterResult::Ok);
     TestEqual(TEXT("accepted KSB11 length"), Evidence.Num(), 2'911'464);
-    FSHA256Signature Signature = {};
-    TestTrue(TEXT("compute KSB11 SHA-256"), FPlatformMisc::GetSHA256Signature(Evidence.GetData(), Evidence.Num(), Signature));
-    TestEqual(TEXT("accepted KSB11 SHA-256"), Signature.ToString().ToLower(), TEXT("7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4"));
+    TestEqual(
+        TEXT("accepted KSB11 SHA-256"),
+        Sha256Hex(Evidence.GetData(), static_cast<uint64>(Evidence.Num())),
+        TEXT("7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4"));
     Adapter->Close();
     TestEqual(TEXT("completed worker closes without blocking"), FKsa64BridgeModule::Get().GetStatus(), EKsa64BridgeStatus::Ready);
     return true;

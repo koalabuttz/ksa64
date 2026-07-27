@@ -17,8 +17,11 @@ public class Ksa64Operations : ModuleRules
         PrivateDependencyModuleNames.AddRange(new[]
         {
             "ApplicationCore",
+            "ImageCore",
+            "ImageWrapper",
             "InputCore",
             "Json",
+            "RHI",
             "Slate",
             "SlateCore"
         });

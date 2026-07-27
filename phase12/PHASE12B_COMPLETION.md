@@ -80,6 +80,11 @@ Phase 12B is additive:
   effector command was added.
 - Presentation pacing, polling, rendering, and storage remain outside mission
   identity.
+- Unreal opens the Rust session in `Fast` execution-capacity mode so bounded
+  `Advance(n)` requests are honored, while Unreal alone schedules realtime,
+  pause, single-step, 4x, 16x, and maximum-fast wall-clock presentation. This
+  internal setting is noncanonical, emits no pace evidence, and preserves exact
+  KSB11 for identical release and action transcripts.
 
 ## Acceptance state
 

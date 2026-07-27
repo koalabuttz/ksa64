@@ -45,6 +45,7 @@ FString FKsa64OperationsViewModel::ToDeterministicJson() const
     Writer->WriteValue(TEXT("flight_checksum"), FlightChecksum);
     Writer->WriteValue(TEXT("navigation_checksum"), NavigationChecksum);
     Writer->WriteValue(TEXT("command_checksum"), CommandChecksum);
+    Writer->WriteValue(TEXT("prediction_identity"), PredictionIdentity);
     Writer->WriteValue(TEXT("worker_state"), WorkerState);
     Writer->WriteValue(TEXT("finalization_state"), FinalizationState);
     Writer->WriteValue(TEXT("transport_overflow"), TransportOverflow);

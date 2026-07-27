@@ -40,6 +40,9 @@ public:
     virtual void DrainTimeline(TArray<FKsa64OperationsTimelineItem>& OutItems) = 0;
     virtual void DrainReleaseSamples(TArray<FKsa64OperationsReleasePoint>& OutSamples) = 0;
     virtual void ReadPredictionPath(TArray<FKsa64OperationsPredictionPoint>& OutPoints) = 0;
+    virtual void ReadTrajectoryPath(
+        EKsa64OperationsTrajectorySource Source,
+        TArray<FKsa64OperationsPredictionPoint>& OutPoints) = 0;
 
     virtual EKsa64OperationsAdapterResult ReviewAction() = 0;
     virtual EKsa64OperationsAdapterResult StageAction() = 0;

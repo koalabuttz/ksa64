@@ -74,4 +74,6 @@ The accepted scripted Rust reference now lands at release 21,591 (674.71875 seco
 
 Live Guided Operator views are truth-filtered before crossing the C ABI. The sealed KSB11 is role-neutral post-run evidence and crosses the bridge only as opaque bytes for custody and Rust-side verification; Unreal does not gain authority to parse its canonical internals.
 
+The typed Unreal bridge opens Rust in `Fast` execution-capacity mode solely so explicit bounded `Advance(n)` calls are honored. Unreal alone schedules realtime, pause, single-step, 4x, 16x, and maximum-fast wall-clock presentation. That internal setting is noncanonical, records no pace evidence, and preserves exact KSB11 whenever the release and action transcripts are identical.
+
 The presentation is a modern NASA-inspired, C64-accented 2-D operations desk. Phase 12C retains Earth-scale 3-D display domains, vehicle pose, entry, recovery, and cameras.

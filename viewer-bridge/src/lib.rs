@@ -49,6 +49,7 @@ pub const KSA64_VIEWER_FEATURE_PANIC_PROBE: u32 = 1 << 0;
 pub const KSA64_VIEWER_FEATURE_OPERATIONS_V1: u32 = 1 << 1;
 pub const KSA64_VIEWER_FEATURE_TYPED_ACTIONS_V1: u32 = 1 << 2;
 pub const KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1: u32 = 1 << 3;
+pub const KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1: u32 = 1 << 4;
 pub const KSA64_VIEWER_PRESENTATION_ADAPTER_LEGACY: u32 = 0x120b_1001;
 pub const VALID_FRAME: u64 = 1 << 0;
 pub const VALID_MISSION_TIME: u64 = 1 << 1;
@@ -229,6 +230,12 @@ struct Shared {
     samples: VecDeque<ReleaseSampleV1>,
     prediction_header: Option<PredictionPathHeaderV1>,
     prediction_points: Vec<PredictionPathPointV1>,
+    planned_trajectory_header: Option<PredictionPathHeaderV1>,
+    planned_trajectory_points: Vec<PredictionPathPointV1>,
+    onboard_trajectory_header: Option<PredictionPathHeaderV1>,
+    onboard_trajectory_points: Vec<PredictionPathPointV1>,
+    ground_trajectory_header: Option<PredictionPathHeaderV1>,
+    ground_trajectory_points: Vec<PredictionPathPointV1>,
     action_proposal: Option<ActionProposalV1>,
     action_receipt: Option<ActionReceiptV1>,
     recommended: Option<Vec<u8>>,
@@ -1146,6 +1153,50 @@ fn full_prediction(
     (Some(header), points)
 }
 
+fn planned_reference_trajectory(
+) -> Result<(PredictionPathHeaderV1, Vec<PredictionPathPointV1>), ResultCode> {
+    let reference = ksa64_host::phase12b_live::accepted_nominal_reference_trajectory()
+        .map_err(|_| ResultCode::Internal)?;
+    let first = reference.points.first().ok_or(ResultCode::Internal)?;
+    let source_epoch = first.release_epoch;
+    let header = PredictionPathHeaderV1 {
+        validity_mask: VIEW_VALID_PREDICTION,
+        path_identity: reference.path_identity,
+        product: KSA64_VIEWER_TRAJECTORY_PRODUCT_PLANNED_REFERENCE,
+        model_identity: ksa64_host::phase12b_live::ACCEPTED_NOMINAL_REFERENCE_MODEL_ID,
+        source_estimate_identity: reference.evaluation_identity,
+        source_estimate_checksum: reference.artifact_crc32,
+        source_epoch,
+        generation_epoch: source_epoch,
+        frame: first.frame as u32,
+        terminal_reason: 1,
+        point_count: reference.points.len() as u32,
+        cadence_releases: u32::from(reference.cadence_releases),
+        path_checksum: reference.artifact_crc32,
+        ..PredictionPathHeaderV1::default()
+    };
+    let points = reference
+        .points
+        .iter()
+        .enumerate()
+        .map(|(index, point)| PredictionPathPointV1 {
+            path_identity: reference.path_identity,
+            point_index: index as u32,
+            release_epoch: point.release_epoch,
+            frame: point.frame as u32,
+            // KPH10 carries geodetic/plot coordinates rather than a canonical
+            // Cartesian state. Keep the Cartesian field absent (all zero) and
+            // expose only its explicit altitude/downrange/crossrange fields.
+            position_q12_km: [0; 3],
+            altitude_q12_km: point.altitude_q12_km,
+            downrange_q12_km: point.downrange_q12_km,
+            crossrange_q12_km: point.crossrange_q12_km,
+            ..PredictionPathPointV1::default()
+        })
+        .collect();
+    Ok((header, points))
+}
+
 fn map_error(e: ksa64_host::phase11_live::MissionSessionError) -> ResultCode {
     use ksa64_host::phase11_live::MissionSessionError::*;
     match e {
@@ -1331,12 +1382,16 @@ fn publish_full(
     let legacy = full_snapshot_legacy(&snapshot, role, sequence, result);
     let operational = full_operational(&snapshot, role, sequence.saturating_add(1));
     let procedure = full_procedure(&snapshot);
-    let (prediction_header, prediction_points) = full_prediction(
-        snapshot
-            .latest_ground_prediction
-            .as_ref()
-            .or(snapshot.latest_onboard_prediction.as_ref()),
-    );
+    let (onboard_trajectory_header, onboard_trajectory_points) =
+        full_prediction(snapshot.latest_onboard_prediction.as_ref());
+    let (ground_trajectory_header, ground_trajectory_points) =
+        full_prediction(snapshot.latest_ground_prediction.as_ref());
+    let prediction_header = ground_trajectory_header.or(onboard_trajectory_header);
+    let prediction_points = if ground_trajectory_header.is_some() {
+        ground_trajectory_points.clone()
+    } else {
+        onboard_trajectory_points.clone()
+    };
     let mut state = shared.lock().map_err(|_| ResultCode::Internal)?;
     state.snapshot_publication = state.snapshot_publication.saturating_add(1);
     state.snapshot = Some(legacy);
@@ -1349,6 +1404,10 @@ fn publish_full(
     state.action_proposal = action_proposal;
     state.prediction_header = prediction_header;
     state.prediction_points = prediction_points;
+    state.onboard_trajectory_header = onboard_trajectory_header;
+    state.onboard_trajectory_points = onboard_trajectory_points;
+    state.ground_trajectory_header = ground_trajectory_header;
+    state.ground_trajectory_points = ground_trajectory_points;
     state.last_command_result = result as i32;
     for event in events {
         if event.kind != MissionSessionEventKind::Release {
@@ -1447,6 +1506,27 @@ fn full_worker_main(
     if operational_role(role_identity).is_none() {
         let _ = initialized.send(Err(ResultCode::Unsupported));
         return;
+    }
+    let (planned_header, planned_points) = match planned_reference_trajectory() {
+        Ok(value) => value,
+        Err(error) => {
+            diag(
+                &shared,
+                format!("accepted planned trajectory failed strict validation: {error:?}"),
+            );
+            let _ = initialized.send(Err(error));
+            return;
+        }
+    };
+    match shared.lock() {
+        Ok(mut state) => {
+            state.planned_trajectory_header = Some(planned_header);
+            state.planned_trajectory_points = planned_points;
+        }
+        Err(_) => {
+            let _ = initialized.send(Err(ResultCode::Internal));
+            return;
+        }
     }
     let request = MissionRequest {
         id: "ksa-g10r.operations".into(),
@@ -1794,7 +1874,8 @@ pub unsafe extern "C" fn ksa64_viewer_get_abi_info(out: *mut AbiInfo) -> i32 {
                     0
                 }) | KSA64_VIEWER_FEATURE_OPERATIONS_V1
                     | KSA64_VIEWER_FEATURE_TYPED_ACTIONS_V1
-                    | KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1,
+                    | KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1
+                    | KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1,
                 catalog_count: 13,
                 snapshot_size: size_of::<Snapshot>() as u32,
                 event_size: size_of::<Event>() as u32,
@@ -2348,6 +2429,114 @@ pub unsafe extern "C" fn ksa64_viewer_prediction_path_point_v1(
             return ResultCode::Panic;
         }
         match state.prediction_points.get(index as usize).copied() {
+            Some(value) => {
+                unsafe { *out = value }
+                ResultCode::Ok
+            }
+            None => ResultCode::NoData,
+        }
+    })
+}
+
+fn selected_trajectory_path(
+    state: &Shared,
+    source: u32,
+) -> Result<(Option<PredictionPathHeaderV1>, &[PredictionPathPointV1]), ResultCode> {
+    match source {
+        KSA64_VIEWER_TRAJECTORY_PLANNED_REFERENCE => Ok((
+            state.planned_trajectory_header,
+            &state.planned_trajectory_points,
+        )),
+        KSA64_VIEWER_TRAJECTORY_ONBOARD_ESTIMATE => Ok((
+            state.onboard_trajectory_header,
+            &state.onboard_trajectory_points,
+        )),
+        KSA64_VIEWER_TRAJECTORY_GROUND_ESTIMATE => Ok((
+            state.ground_trajectory_header,
+            &state.ground_trajectory_points,
+        )),
+        _ => Err(ResultCode::Unsupported),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ksa64_viewer_trajectory_path_header_v1(
+    h: *const Handle,
+    source: u32,
+    out: *mut PredictionPathHeaderV1,
+) -> i32 {
+    boundary(|| {
+        let h = match href(h) {
+            Ok(value) => value,
+            Err(error) => return error,
+        };
+        if out.is_null() {
+            return ResultCode::InvalidArgument;
+        }
+        let output_header = unsafe { &*out };
+        if let Err(error) = validate(
+            output_header.abi_version,
+            output_header.struct_size,
+            size_of::<PredictionPathHeaderV1>(),
+        ) {
+            return error;
+        }
+        let state = match h.shared.lock() {
+            Ok(value) => value,
+            Err(_) => return ResultCode::Internal,
+        };
+        if state.worker_failed {
+            return ResultCode::Panic;
+        }
+        let (header, _) = match selected_trajectory_path(&state, source) {
+            Ok(value) => value,
+            Err(error) => return error,
+        };
+        match header {
+            Some(value) => {
+                unsafe { *out = value }
+                ResultCode::Ok
+            }
+            None => ResultCode::NoData,
+        }
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ksa64_viewer_trajectory_path_point_v1(
+    h: *const Handle,
+    source: u32,
+    index: u32,
+    out: *mut PredictionPathPointV1,
+) -> i32 {
+    boundary(|| {
+        let h = match href(h) {
+            Ok(value) => value,
+            Err(error) => return error,
+        };
+        if out.is_null() {
+            return ResultCode::InvalidArgument;
+        }
+        let output_header = unsafe { &*out };
+        if let Err(error) = validate(
+            output_header.abi_version,
+            output_header.struct_size,
+            size_of::<PredictionPathPointV1>(),
+        ) {
+            return error;
+        }
+        let state = match h.shared.lock() {
+            Ok(value) => value,
+            Err(_) => return ResultCode::Internal,
+        };
+        if state.worker_failed {
+            return ResultCode::Panic;
+        }
+        let (_, points) = match selected_trajectory_path(&state, source) {
+            Ok(value) => value,
+            Err(error) => return error,
+        };
+        match points.get(index as usize).copied() {
             Some(value) => {
                 unsafe { *out = value }
                 ResultCode::Ok
@@ -2993,6 +3182,10 @@ mod tests {
             };
             assert_eq!(ksa64_viewer_get_abi_info(&mut i), 0);
             assert_eq!(i.snapshot_size as usize, size_of::<Snapshot>());
+            assert_ne!(
+                i.feature_flags & KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1,
+                0
+            );
             let mut a = buf();
             let mut b = buf();
             assert_eq!(ksa64_viewer_catalog(&mut a), 0);
@@ -3285,6 +3478,192 @@ mod tests {
                 "guided-operator sample exposed SIM truth"
             );
             assert_eq!(ksa64_viewer_destroy(output), 0);
+        }
+    }
+
+    #[test]
+    fn phase12b_trajectory_sources_are_distinct_strict_and_truth_blind() {
+        let _full_session_guard = FULL_SESSION_TEST_LOCK
+            .lock()
+            .expect("full session test lock");
+        unsafe {
+            let mut handle = ptr::null_mut();
+            let request = StartRequestV1 {
+                initial_pace: 1,
+                ..StartRequestV1::default()
+            };
+            assert_eq!(ksa64_viewer_start_v1(&request, &mut handle), 0);
+
+            let mut planned = PredictionPathHeaderV1::default();
+            assert_eq!(
+                ksa64_viewer_trajectory_path_header_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_PLANNED_REFERENCE,
+                    &mut planned,
+                ),
+                ResultCode::Ok as i32
+            );
+            assert_eq!(
+                planned.product,
+                KSA64_VIEWER_TRAJECTORY_PRODUCT_PLANNED_REFERENCE
+            );
+            assert_eq!(
+                planned.path_identity,
+                ksa64_host::phase10_mission::PHASE10_PLOT_IDENTITY
+            );
+            assert_eq!(
+                planned.model_identity,
+                ksa64_host::phase12b_live::ACCEPTED_NOMINAL_REFERENCE_MODEL_ID
+            );
+            assert_eq!(planned.point_count, 697);
+            assert_eq!(planned.cadence_releases, 32);
+            assert_ne!(planned.source_estimate_identity, 0);
+            assert_ne!(planned.source_estimate_checksum, 0);
+            assert_eq!(planned.path_checksum, planned.source_estimate_checksum);
+
+            let mut planned_first = PredictionPathPointV1::default();
+            assert_eq!(
+                ksa64_viewer_trajectory_path_point_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_PLANNED_REFERENCE,
+                    0,
+                    &mut planned_first,
+                ),
+                ResultCode::Ok as i32
+            );
+            assert_eq!(planned_first.path_identity, planned.path_identity);
+            assert_eq!(planned_first.point_index, 0);
+            assert_eq!(planned_first.flags, 0);
+            assert_eq!(
+                planned_first.position_q12_km, [0; 3],
+                "KPH10 plot coordinates must not masquerade as Cartesian state"
+            );
+            assert_eq!(
+                ksa64_viewer_trajectory_path_point_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_PLANNED_REFERENCE,
+                    planned.point_count,
+                    &mut PredictionPathPointV1::default(),
+                ),
+                ResultCode::NoData as i32
+            );
+
+            let mut onboard = PredictionPathHeaderV1::default();
+            let mut ground = PredictionPathHeaderV1::default();
+            assert_eq!(
+                ksa64_viewer_trajectory_path_header_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_ONBOARD_ESTIMATE,
+                    &mut onboard,
+                ),
+                ResultCode::NoData as i32
+            );
+            assert_eq!(
+                ksa64_viewer_trajectory_path_header_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_GROUND_ESTIMATE,
+                    &mut ground,
+                ),
+                ResultCode::NoData as i32
+            );
+            assert_eq!(
+                ksa64_viewer_trajectory_path_header_v1(handle, 99, &mut ground),
+                ResultCode::Unsupported as i32
+            );
+            let mut malformed = PredictionPathHeaderV1::default();
+            malformed.struct_size -= 1;
+            assert_eq!(
+                ksa64_viewer_trajectory_path_header_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_PLANNED_REFERENCE,
+                    &mut malformed,
+                ),
+                ResultCode::StructSize as i32
+            );
+
+            let initial = snap(handle);
+            assert_eq!(ksa64_viewer_advance(handle, 33), ResultCode::Queued as i32);
+            let advanced = wait(handle, initial.command_sequence);
+            assert_eq!(advanced.release_epoch, 33);
+
+            onboard = PredictionPathHeaderV1::default();
+            ground = PredictionPathHeaderV1::default();
+            assert_eq!(
+                ksa64_viewer_trajectory_path_header_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_ONBOARD_ESTIMATE,
+                    &mut onboard,
+                ),
+                ResultCode::Ok as i32
+            );
+            assert_eq!(
+                onboard.product,
+                ksa64_interface::phase11::PredictionProductKind::OnboardEstimateGroundPropagated
+                    as u32
+            );
+            assert_eq!(
+                ksa64_viewer_trajectory_path_header_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_GROUND_ESTIMATE,
+                    &mut ground,
+                ),
+                ResultCode::Ok as i32
+            );
+            assert_eq!(
+                ground.product,
+                ksa64_interface::phase11::PredictionProductKind::GroundEstimate as u32
+            );
+            assert_ne!(
+                onboard.source_estimate_identity,
+                ground.source_estimate_identity
+            );
+            assert_ne!(planned.path_identity, onboard.path_identity);
+            assert_ne!(planned.path_identity, ground.path_identity);
+
+            let mut legacy = PredictionPathHeaderV1::default();
+            assert_eq!(
+                ksa64_viewer_prediction_path_header_v1(handle, &mut legacy),
+                ResultCode::Ok as i32
+            );
+            assert_eq!(
+                legacy, ground,
+                "the legacy function retains ground-first behavior"
+            );
+
+            let mut onboard_first = PredictionPathPointV1::default();
+            let mut ground_first = PredictionPathPointV1::default();
+            assert_eq!(
+                ksa64_viewer_trajectory_path_point_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_ONBOARD_ESTIMATE,
+                    0,
+                    &mut onboard_first,
+                ),
+                ResultCode::Ok as i32
+            );
+            assert_eq!(
+                ksa64_viewer_trajectory_path_point_v1(
+                    handle,
+                    KSA64_VIEWER_TRAJECTORY_GROUND_ESTIMATE,
+                    0,
+                    &mut ground_first,
+                ),
+                ResultCode::Ok as i32
+            );
+            assert_eq!(onboard_first.path_identity, onboard.path_identity);
+            assert_eq!(ground_first.path_identity, ground.path_identity);
+
+            let mut sample = ReleaseSampleV1::default();
+            while ksa64_viewer_poll_release_sample_v1(handle, &mut sample) == ResultCode::Ok as i32
+            {
+                assert_eq!(
+                    sample.flags & 1,
+                    0,
+                    "guided trajectory sample exposed SIM truth"
+                );
+                sample = ReleaseSampleV1::default();
+            }
+            assert_eq!(ksa64_viewer_destroy(handle), ResultCode::Ok as i32);
         }
     }
 

@@ -8,6 +8,7 @@ param(
     [switch]$RunUnrealBuild,
     [switch]$RunUnrealAutomation,
     [switch]$RunPackage,
+    [switch]$RunPresentationEvidence,
     [string]$UnrealRoot = "D:\Games\UE_5.8",
     [string]$DerivedDataCache = "E:\Unreal\DDC",
     [string]$PackageArchive = ""
@@ -39,6 +40,101 @@ function Get-Sha256([string]$Path) {
     }
 }
 
+function Get-PngInspection([string]$Path) {
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    if ($bytes.Length -lt 33) { throw "PNG is shorter than its minimum structure: $Path" }
+    $signature = [byte[]](0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)
+    for ($index = 0; $index -lt $signature.Length; $index++) {
+        if ($bytes[$index] -ne $signature[$index]) { throw "PNG signature mismatch: $Path" }
+    }
+
+    $position = 8
+    $chunkIndex = 0
+    $seenIhdr = $false
+    $seenIend = $false
+    while ($position -lt $bytes.Length) {
+        if ($bytes.Length - $position -lt 12) { throw "PNG has a truncated chunk header: $Path" }
+        $chunkLength =
+            ([uint32]$bytes[$position] -shl 24) -bor
+            ([uint32]$bytes[$position + 1] -shl 16) -bor
+            ([uint32]$bytes[$position + 2] -shl 8) -bor
+            [uint32]$bytes[$position + 3]
+        $chunkEnd = [int64]$position + 12 + [int64]$chunkLength
+        if ($chunkEnd -gt $bytes.Length) { throw "PNG has a truncated chunk payload: $Path" }
+        $chunkType = [Text.Encoding]::ASCII.GetString($bytes, $position + 4, 4)
+        if ($chunkIndex -eq 0 -and ($chunkType -ne "IHDR" -or $chunkLength -ne 13)) {
+            throw "PNG first chunk is not a canonical IHDR: $Path"
+        }
+        if ($chunkType -eq "IHDR") { $seenIhdr = $true }
+        if ($chunkType -eq "IEND") {
+            if ($chunkLength -ne 0 -or $chunkEnd -ne $bytes.Length) {
+                throw "PNG IEND is malformed or not terminal: $Path"
+            }
+            $seenIend = $true
+        }
+        $position = [int]$chunkEnd
+        $chunkIndex++
+    }
+    if (-not $seenIhdr -or -not $seenIend) { throw "PNG is missing IHDR or terminal IEND: $Path" }
+
+    Add-Type -AssemblyName System.Drawing.Common -ErrorAction Stop
+    $stream = $null
+    $image = $null
+    $bitmap = $null
+    $reencoded = $null
+    try {
+        $stream = [System.IO.File]::OpenRead($Path)
+        $image = [System.Drawing.Image]::FromStream($stream, $true, $true)
+        $bitmap = [System.Drawing.Bitmap]::new($image)
+        $reencoded = [System.IO.MemoryStream]::new()
+        $bitmap.Save($reencoded, [System.Drawing.Imaging.ImageFormat]::Png)
+        if ($reencoded.Length -le 33) { throw "Decoded PNG could not be re-encoded: $Path" }
+
+        $stepX = [Math]::Max(1, [Math]::Floor($bitmap.Width / 64))
+        $stepY = [Math]::Max(1, [Math]::Floor($bitmap.Height / 36))
+        $minimumLuminance = 255
+        $maximumLuminance = 0
+        $nonDarkSamples = 0
+        $sampledPixels = 0
+        $colorBuckets = [Collections.Generic.HashSet[int]]::new()
+        for ($y = 0; $y -lt $bitmap.Height; $y += $stepY) {
+            for ($x = 0; $x -lt $bitmap.Width; $x += $stepX) {
+                $pixel = $bitmap.GetPixel($x, $y)
+                $luminance = (54 * [int]$pixel.R + 183 * [int]$pixel.G + 19 * [int]$pixel.B) -shr 8
+                $minimumLuminance = [Math]::Min($minimumLuminance, $luminance)
+                $maximumLuminance = [Math]::Max($maximumLuminance, $luminance)
+                if ($luminance -gt 16) { $nonDarkSamples++ }
+                $bucket = (([int]$pixel.R -shr 5) -shl 6) -bor (([int]$pixel.G -shr 5) -shl 3) -bor ([int]$pixel.B -shr 5)
+                [void]$colorBuckets.Add($bucket)
+                $sampledPixels++
+            }
+        }
+        $luminanceRange = $maximumLuminance - $minimumLuminance
+        if (
+            $sampledPixels -le 0 -or
+            $luminanceRange -lt 24 -or
+            $colorBuckets.Count -lt 8 -or
+            $nonDarkSamples -lt [Math]::Max(1, [Math]::Floor($sampledPixels / 100))
+        ) { throw "Decoded PNG does not contain a visibly nonblank dashboard: $Path" }
+        return [pscustomobject]@{
+            Width = $bitmap.Width
+            Height = $bitmap.Height
+            ChunkCount = $chunkIndex
+            ReencodedBytes = [int64]$reencoded.Length
+            SampledPixels = $sampledPixels
+            DistinctColorBuckets = $colorBuckets.Count
+            LuminanceRange = $luminanceRange
+            NonDarkSamples = $nonDarkSamples
+        }
+    }
+    finally {
+        if ($null -ne $reencoded) { $reencoded.Dispose() }
+        if ($null -ne $bitmap) { $bitmap.Dispose() }
+        if ($null -ne $image) { $image.Dispose() }
+        if ($null -ne $stream) { $stream.Dispose() }
+    }
+}
+
 function Gate([string]$Label, [scriptblock]$Action) {
     Write-Host ""
     Write-Host "=== $Label ==="
@@ -51,6 +147,13 @@ function Assert-NoUnrealEditor {
     $processes = @(Get-Process -Name UnrealEditor, UnrealEditor-Cmd -ErrorAction SilentlyContinue)
     if ($processes.Count -ne 0) {
         throw "Close Unreal Editor process(es) before this gate: $($processes.Id -join ', ')"
+    }
+}
+
+function Assert-NoMissionFoundryRuntime {
+    $processes = @(Get-Process -Name Ksa64MissionFoundry -ErrorAction SilentlyContinue)
+    if ($processes.Count -ne 0) {
+        throw "Close packaged Mission Foundry process(es) before this gate: $($processes.Id -join ', ')"
     }
 }
 
@@ -109,12 +212,18 @@ function Invoke-OperationsAutomation {
     $index = Join-Path $report "index.json"
     if (-not (Test-Path -LiteralPath $index -PathType Leaf)) { throw "Unreal automation did not produce $index." }
     $result = Get-Content -LiteralPath $index -Raw | ConvertFrom-Json
-    if ($result.failed -and [int]$result.failed -ne 0) { throw "Unreal Operations automation reported failures." }
+    if (
+        [int]$result.succeeded -ne 17 -or
+        [int]$result.failed -ne 0 -or
+        [int]$result.notRun -ne 0 -or
+        [int]$result.inProcess -ne 0
+    ) { throw "Unreal Operations automation did not report the accepted 17/17 result." }
     Assert-NoUnrealEditor
 }
 
 function Invoke-PackagedOperationsAcceptance([string]$ArchiveDirectory) {
     Assert-NoUnrealEditor
+    Assert-NoMissionFoundryRuntime
     $archive = [IO.Path]::GetFullPath($ArchiveDirectory)
     $gameRoot = Join-Path $archive "Windows\Ksa64MissionFoundry"
     $gameExe = Join-Path $gameRoot "Binaries\Win64\Ksa64MissionFoundry.exe"
@@ -143,6 +252,7 @@ function Invoke-PackagedOperationsAcceptance([string]$ArchiveDirectory) {
     $process = Start-Process -FilePath $gameExe -ArgumentList $arguments `
         -WorkingDirectory (Split-Path -Parent $gameExe) -WindowStyle Hidden -PassThru
     $process.WaitForExit()
+    Assert-NoMissionFoundryRuntime
     if ($process.ExitCode -ne 0) {
         throw "Packaged Phase 12B acceptance exited with code $($process.ExitCode). See $log."
     }
@@ -180,10 +290,202 @@ function Invoke-PackagedOperationsAcceptance([string]$ArchiveDirectory) {
     }
     $record | ConvertTo-Json -Depth 5 | Set-Content `
         -LiteralPath (Join-Path $archive "phase12b-package-acceptance.json") -Encoding utf8NoBOM
+    Assert-NoMissionFoundryRuntime
+    Assert-NoUnrealEditor
+}
+
+function Invoke-PackagedPresentationEvidence([string]$ArchiveDirectory) {
+    Assert-NoUnrealEditor
+    Assert-NoMissionFoundryRuntime
+    $archive = [IO.Path]::GetFullPath($ArchiveDirectory)
+    $gameRoot = Join-Path $archive "Windows\Ksa64MissionFoundry"
+    $gameExe = Join-Path $gameRoot "Binaries\Win64\Ksa64MissionFoundry.exe"
+    if (-not (Test-Path -LiteralPath $gameExe -PathType Leaf)) {
+        throw "Packaged game executable is missing: $gameExe"
+    }
+
+    $presentationDirectory = Join-Path $gameRoot "Saved\KSA64\PresentationEvidence"
+    $screenshot = Join-Path $presentationDirectory "phase12b-gnss-loss-operations-1920x1080.png"
+    $semantic = Join-Path $presentationDirectory "phase12b-gnss-loss-operations-semantic.json"
+    $manifestPath = Join-Path $presentationDirectory "phase12b-presentation-evidence.json"
+    foreach ($path in @($screenshot, $semantic, $manifestPath)) {
+        if (Test-Path -LiteralPath $path) {
+            throw "Packaged presentation evidence requires fresh fixed outputs; found $path"
+        }
+    }
+
+    $log = Join-Path $archive "packaged-phase12b-presentation-evidence.log"
+    if (Test-Path -LiteralPath $log) {
+        throw "Packaged presentation evidence requires a fresh log: $log"
+    }
+    $arguments = @(
+        "-windowed",
+        "-ResX=1920",
+        "-ResY=1080",
+        "-RenderOffscreen",
+        "-Benchmark",
+        "-UseFixedTimeStep",
+        "-FPS=60",
+        "-nosound",
+        "-unattended",
+        "-nosplash",
+        "-DisablePlugins=ModelContextProtocol,ToolsetRegistry,AllToolsets,PythonScriptPlugin",
+        "-Ksa64Phase12bPresentationEvidence",
+        "-abslog=$log"
+    )
+    $process = Start-Process -FilePath $gameExe -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $gameExe) -WindowStyle Hidden -PassThru
+    # This wait is intentionally unbounded. Duration alone is never evidence of
+    # failure and must not terminate an otherwise progressing simulation.
+    $process.WaitForExit()
+    Assert-NoMissionFoundryRuntime
+    if ($process.ExitCode -ne 0) {
+        throw "Packaged Phase 12B presentation evidence exited with code $($process.ExitCode). See $log."
+    }
+    foreach ($path in @($log, $screenshot, $semantic, $manifestPath)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Packaged presentation evidence output is missing: $path"
+        }
+    }
+
+    $logText = Get-Content -LiteralPath $log -Raw
+    $markerPattern = "KSA64_PHASE12B_PRESENTATION_EVIDENCE_PASS release=6080 width=1920 height=1080 frames=600 p99_ns=(?<p99>[0-9]+) max_ns=(?<max>[0-9]+)"
+    $markers = [regex]::Matches($logText, $markerPattern)
+    if ($markers.Count -ne 1 -or $logText.Contains("KSA64_PHASE12B_PRESENTATION_EVIDENCE_FAIL")) {
+        throw "Packaged presentation evidence did not emit exactly one exact PASS marker. See $log."
+    }
+
+    $pngInspection = Get-PngInspection $screenshot
+    if ($pngInspection.Width -ne 1920 -or $pngInspection.Height -ne 1080) {
+        throw "Presentation PNG is $($pngInspection.Width)x$($pngInspection.Height), expected 1920x1080."
+    }
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    if (
+        $manifest.schema -ne "ksa64.phase12b.presentation-evidence.v1" -or
+        -not $manifest.pass -or
+        $manifest.scenario -ne "ksa-g10r.operations/gnss-loss" -or
+        $manifest.role -ne "guided-operator" -or
+        -not $manifest.truth_filtered -or
+        -not $manifest.async_shutdown_complete -or
+        $manifest.screenshot_release_epoch -ne 6080 -or
+        $manifest.screenshot.width -ne 1920 -or
+        $manifest.screenshot.height -ne 1080 -or
+        -not $manifest.screenshot.fully_decoded -or
+        $manifest.screenshot.sampled_pixels -le 0 -or
+        $manifest.screenshot.distinct_color_buckets -lt 8 -or
+        $manifest.screenshot.luminance_range -lt 24 -or
+        $manifest.screenshot.non_dark_samples -le 0 -or
+        -not $manifest.screenshot.slate_inclusive -or
+        -not $manifest.screenshot.real_rhi -or
+        $manifest.screenshot.rhi_name -notmatch "D3D12" -or
+        $manifest.trajectory.planned_reference_points -le 0 -or
+        $manifest.trajectory.onboard_estimate_points -le 0 -or
+        $manifest.trajectory.ground_estimate_points -le 0 -or
+        $manifest.trajectory.observed_points -le 0 -or
+        -not $manifest.trajectory.altitude_plot -or
+        -not $manifest.trajectory.ground_track_plot -or
+        $manifest.trajectory.display_mode -ne "exact" -or
+        $manifest.performance.refresh_hz -ne 60 -or
+        $manifest.performance.cadence -ne "simulated-fixed-step" -or
+        -not $manifest.performance.fixed_timestep -or
+        $manifest.performance.fixed_delta_seconds -ne "0.016666666666666667" -or
+        $manifest.performance.warmup_frames -ne 120 -or
+        $manifest.performance.measured_frames -ne 600 -or
+        $manifest.performance.logical_seconds -ne 10 -or
+        $manifest.performance.release_delta -ne 320 -or
+        $manifest.performance.expected_release_delta -ne 320 -or
+        $manifest.performance.end_release -ne $manifest.performance.start_release + 320 -or
+        $manifest.performance.end_publication -le $manifest.performance.start_publication -or
+        $manifest.performance.commands_pending -ne 0 -or
+        $manifest.performance.transport_overflow -ne 0 -or
+        -not $manifest.performance.observation_complete -or
+        $manifest.performance.advance_outstanding -or
+        $manifest.performance.percentile_method -ne "nearest-rank" -or
+        -not $manifest.performance.pass -or
+        [int64]$manifest.performance.p99_ns -ge 1000000 -or
+        [int64]$manifest.performance.max_ns -ge 2000000 -or
+        [int64]$manifest.performance.p99_ns -ne [int64]$markers[0].Groups["p99"].Value -or
+        [int64]$manifest.performance.max_ns -ne [int64]$markers[0].Groups["max"].Value
+    ) { throw "Phase 12B packaged presentation manifest failed its acceptance contract." }
+
+    $semanticRecord = Get-Content -LiteralPath $semantic -Raw | ConvertFrom-Json
+    if ($semanticRecord.schema -ne "ksa64.mission-foundry-semantic-state.v1") {
+        throw "Presentation semantic evidence schema mismatch."
+    }
+    $semanticView = $semanticRecord.view | ConvertFrom-Json
+    if (
+        $semanticRecord.presentation_pace -ne "PAUSED" -or
+        $semanticRecord.text_scale -ne 1.25 -or
+        -not $semanticRecord.high_contrast -or
+        -not $semanticRecord.reduced_motion -or
+        $semanticRecord.sound_cues -or
+        $semanticRecord.display_mode -ne "exact" -or
+        $semanticRecord.planned_reference_point_count -le 0 -or
+        $semanticRecord.onboard_prediction_point_count -le 0 -or
+        $semanticRecord.ground_prediction_point_count -le 0 -or
+        -not $semanticRecord.dashboard_installed -or
+        $semanticRecord.capture_release_epoch -ne 6080 -or
+        $semanticView.schema -ne "ksa64.operations-view.v1" -or
+        $semanticView.release_epoch -ne 6080 -or
+        -not $semanticView.session_open -or
+        -not $semanticView.truth_filtered -or
+        -not $semanticView.observation_complete -or
+        $semanticView.transport_overflow -ne 0 -or
+        $semanticView.action_state -ne 1 -or
+        $semanticView.action_proposal_identity -eq 0 -or
+        $semanticView.procedure_identity -eq 0 -or
+        $semanticView.prediction_identity -eq 0
+    ) { throw "Presentation semantic evidence is not the accepted paused GNSS-loss action epoch." }
+
+    $record = [ordered]@{
+        schema = "ksa64.phase12b.presentation-evidence-validation.v1"
+        release_epoch = 6080
+        screenshot = [ordered]@{
+            path = $screenshot.Substring($archive.Length + 1).Replace('\', '/')
+            bytes = [int64](Get-Item -LiteralPath $screenshot).Length
+            sha256 = Get-Sha256 $screenshot
+            width = $pngInspection.Width
+            height = $pngInspection.Height
+            chunk_count = $pngInspection.ChunkCount
+            reencoded_bytes = $pngInspection.ReencodedBytes
+            sampled_pixels = $pngInspection.SampledPixels
+            distinct_color_buckets = $pngInspection.DistinctColorBuckets
+            luminance_range = $pngInspection.LuminanceRange
+            non_dark_samples = $pngInspection.NonDarkSamples
+        }
+        semantic = [ordered]@{
+            path = $semantic.Substring($archive.Length + 1).Replace('\', '/')
+            sha256 = Get-Sha256 $semantic
+        }
+        manifest = [ordered]@{
+            path = $manifestPath.Substring($archive.Length + 1).Replace('\', '/')
+            sha256 = Get-Sha256 $manifestPath
+        }
+        performance = [ordered]@{
+            cadence = $manifest.performance.cadence
+            frames = 600
+            releases = [int]$manifest.performance.release_delta
+            start_release = [int]$manifest.performance.start_release
+            end_release = [int]$manifest.performance.end_release
+            start_publication = [int64]$manifest.performance.start_publication
+            end_publication = [int64]$manifest.performance.end_publication
+            p99_ns = [int64]$manifest.performance.p99_ns
+            max_ns = [int64]$manifest.performance.max_ns
+            observation_complete = [bool]$manifest.performance.observation_complete
+            transport_overflow = [int]$manifest.performance.transport_overflow
+        }
+        exit_code = $process.ExitCode
+        log = $log.Substring($archive.Length + 1).Replace('\', '/')
+        log_sha256 = Get-Sha256 $log
+    }
+    $record | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $archive "phase12b-presentation-evidence-validation.json") -Encoding utf8NoBOM
+    Assert-NoMissionFoundryRuntime
     Assert-NoUnrealEditor
 }
 
 New-Item -ItemType Directory -Path $auditRoot | Out-Null
+if ($RunPresentationEvidence -and -not $RunPackage) {
+    throw "-RunPresentationEvidence requires -RunPackage so the real-RHI gate uses a freshly packaged build."
+}
 if ($RunPackage -and [string]::IsNullOrWhiteSpace($PackageArchive)) {
     $PackageArchive = Join-Path $projectRoot ("target\phase12b-package-" + [Guid]::NewGuid().ToString("N"))
 }
@@ -272,13 +574,21 @@ try {
         }
     }
 
+    if ($RunPresentationEvidence) {
+        Gate "packaged Phase 12B real-RHI presentation evidence" {
+            Invoke-PackagedPresentationEvidence $PackageArchive
+        }
+    }
+
     Write-Host ""
-    if ($RunUnrealBuild -and $RunUnrealAutomation -and $RunPackage) {
+    if ($RunUnrealBuild -and $RunUnrealAutomation -and $RunPackage -and $RunPresentationEvidence) {
+        Write-Host "PHASE 12B PRODUCT ACCEPTANCE GATES: PASS"
+    } elseif ($RunUnrealBuild -and $RunUnrealAutomation -and $RunPackage) {
         Write-Host "PHASE 12B IMPLEMENTATION GATES: PASS"
-        Write-Host "Product acceptance remains pending until presentation timing, screenshot/semantic, and accessibility evidence are recorded."
+        Write-Host "Product acceptance remains pending until explicit -RunPresentationEvidence timing, screenshot, and semantic evidence passes."
     } else {
         Write-Host "PHASE 12B CORE/BRIDGE AUDIT: PASS"
-        Write-Host "Full product acceptance remains pending. Use explicit -RunUnrealBuild, -RunUnrealAutomation, and -RunPackage switches for Unreal gates."
+        Write-Host "Full product acceptance remains pending. Use explicit -RunUnrealBuild, -RunUnrealAutomation, -RunPackage, and -RunPresentationEvidence switches for all gates."
     }
 }
 finally {

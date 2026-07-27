@@ -68,7 +68,7 @@ The original `ksa64_viewer_start` remains the compressed compatibility entry and
 
 ## Unreal runtime and presentation
 
-Keep `FKsa64BridgeModule` as the qualified DLL loader. Add one `UKsa64LiveMissionSubsystem` as the sole Unreal-side bridge consumer. It owns command serialization, integer wall-clock release scheduling, polling, immutable view models, visual interpolation, atomic evidence output, and asynchronous lifecycle handling. Widgets never poll the bridge independently.
+Keep `FKsa64BridgeModule` as the qualified DLL loader. Add one `UKsa64LiveMissionSubsystem` as the sole Unreal-side bridge consumer. It owns command serialization, integer wall-clock release scheduling, polling, immutable view models, visual interpolation, atomic evidence output, and asynchronous lifecycle handling. Widgets never poll the bridge independently. Open the Rust live session in `Fast` execution-capacity mode so explicit bounded `Advance(n)` calls are honored; Unreal alone schedules realtime, pause, single-step, 4x, 16x, and maximum-fast wall-clock presentation. The internal capacity setting is noncanonical, emits no pace evidence, and must produce the same KSB11 for an identical release/action transcript.
 
 Default to continuous realtime at 1x. Provide pause, resume, exact single-release step, 4x, 16x, and maximum-fast. Never skip releases or use floating-point release accumulation. Rendering stalls cause bounded catch-up or slower-than-realtime execution. Permit one outstanding lifecycle/action command, and never pause, submit, cancel, or change speed automatically.
 

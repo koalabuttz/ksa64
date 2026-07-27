@@ -7,11 +7,18 @@
 
 class UKsa64LiveMissionSubsystem;
 
+enum class EKsa64OperationsPlotKind : uint8
+{
+    Altitude,
+    GroundTrack
+};
+
 class SKsa64OperationsPlot final : public SLeafWidget
 {
 public:
     SLATE_BEGIN_ARGS(SKsa64OperationsPlot) {}
         SLATE_ARGUMENT(TWeakObjectPtr<UKsa64LiveMissionSubsystem>, Subsystem)
+        SLATE_ARGUMENT(EKsa64OperationsPlotKind, PlotKind)
     SLATE_END_ARGS()
 
     void Construct(const FArguments& Args);
@@ -27,6 +34,7 @@ public:
 
 private:
     TWeakObjectPtr<UKsa64LiveMissionSubsystem> Subsystem;
+    EKsa64OperationsPlotKind PlotKind = EKsa64OperationsPlotKind::Altitude;
 };
 
 class SKsa64OperationsDashboard final : public SCompoundWidget
@@ -77,6 +85,8 @@ private:
     FReply OnHighContrast();
     FReply OnSoundCues();
     FReply OnTextScale();
+    FReply OnDisplayMode();
+    FReply OnEngineeringToggle();
 
     FText HeaderMissionText() const;
     FText HeaderStateText() const;
@@ -89,7 +99,10 @@ private:
     FText EngineeringText() const;
     FText PauseResumeText() const;
     FText AccessibilityText() const;
+    FText DisplayModeText() const;
+    FText EngineeringToggleText() const;
     bool HasSession() const;
+    bool IsRunnableSession() const;
     bool CanStart() const;
     bool CanReviewAction() const;
     bool CanStageAction() const;
@@ -100,5 +113,6 @@ private:
     FLinearColor PrimaryText() const;
 
     TWeakObjectPtr<UKsa64LiveMissionSubsystem> Subsystem;
+    bool bEngineeringExpanded = false;
 };
 
