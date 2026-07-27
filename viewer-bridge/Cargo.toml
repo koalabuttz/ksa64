@@ -1,0 +1,16 @@
+[package]
+name = "ksa64-viewer-bridge"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+ksa64-host = { path = "../host" }
+ksa64-interface = { path = "../interface" }
+serde_json = "1"
+
+[features]
+panic-probe = []

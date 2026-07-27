@@ -89,10 +89,14 @@ on forbidden data presence.
 - Build the bridge with a dedicated unwind-enabled viewer profile even though
   the existing workspace release profile may abort.
 - Wrap every export and worker entry in panic containment.
-- Translate panic, invalid state, malformed input, allocation failure, worker
-  death, and queue failure into stable result codes and diagnostics.
-- No exception or panic crosses the C boundary.
-- Do not retain caller pointers after an export returns.
+- Translate recoverable panic, invalid state, malformed input, fallible-allocation
+  errors, worker death, and queue failure into stable result codes and diagnostics.
+- No exception or Rust panic crosses the C boundary. Process-level allocator OOM,
+  native access violations, and explicit aborts are not unwindable guarantees; any
+  observed case stops in-process acceptance and triggers the documented sidecar
+  decision boundary.
+- Copy bounded caller spans during the export and do not retain caller pointers
+  after it returns.
 - A failed validation call leaves session state unchanged.
 - After worker failure, only diagnostics and destruction remain valid.
 

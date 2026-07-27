@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "flight", "host", "interface", "sim"]
+members = ["core", "flight", "host", "interface", "sim", "viewer-bridge"]
 exclude = ["third_party/clap", "third_party/anstyle"]
 resolver = "2"
 
@@ -12,5 +12,8 @@ inherits = "release"
 opt-level = "z"
 codegen-units = 1
 
+[profile.viewer]
+inherits = "release"
+panic = "unwind"
 [patch.crates-io]
 anstyle = { path = "third_party/anstyle/crates/anstyle" }

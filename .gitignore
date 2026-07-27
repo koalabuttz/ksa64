@@ -3,6 +3,7 @@
 
 # Toolchain smoke-test outputs
 toolchains/smoke/rust-mos/target/
+/viewer-bridge/harness/bin/
 toolchains/smoke/oscar64/out/
 phase0/candidates/rust/target/
 phase0/candidates/oscar64/out/
@@ -16,3 +17,30 @@ __pycache__/
 
 # Production Rust workspace output
 /target/
+
+# Unreal Engine local/generated output. Source project metadata and authored
+# content remain tracked; generated binaries, cook output, and captures do not.
+/foundry/**/Binaries/
+/foundry/**/DerivedDataCache/
+/foundry/**/Intermediate/
+/foundry/**/Saved/
+/foundry/**/.vs/
+/foundry/**/.idea/
+/foundry/**/Plugins/**/Binaries/
+/foundry/**/Plugins/**/Intermediate/
+/foundry/**/Build/**/FileOpenOrder/
+/foundry/**/Build/**/Cooked/
+/foundry/**/*.sln
+/foundry/**/*.suo
+/foundry/**/*.user
+/foundry/**/*.VC.db
+/foundry/**/*.opendb
+/foundry/**/Content/__ExternalActors__/
+/foundry/**/Content/__ExternalObjects__/
+/foundry/**/Content/Collections/
+/foundry/**/Saved/Logs/
+/foundry/**/Saved/Crashes/
+/foundry/**/Saved/StagedBuilds/
+/foundry/**/Saved/Automation/
+/foundry/**/Saved/Profiling/
+/foundry/**/Saved/ScreenShots/
