@@ -1,0 +1,22 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "12A.1",
+  "FriendlyName": "KSA64 Viewer Bridge",
+  "Description": "Validated, asynchronous consumer of the prebuilt KSA64 Rust viewer bridge.",
+  "Category": "KSA64",
+  "CreatedBy": "KSA64",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "Ksa64Bridge",
+      "Type": "Runtime",
+      "LoadingPhase": "PreDefault"
+    }
+  ],
+  "SupportedTargetPlatforms": [
+    "Win64"
+  ]
+}
