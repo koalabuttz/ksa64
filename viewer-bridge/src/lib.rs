@@ -227,6 +227,8 @@ enum Command {
     Commit(UplinkControlRecord),
     Cancel(UplinkControlRecord),
     Abort(u32),
+    #[cfg(test)]
+    TestBarrier(SyncSender<()>, std::sync::mpsc::Receiver<()>),
     #[cfg(any(test, feature = "panic-probe"))]
     PanicProbe,
     Shutdown,
@@ -564,6 +566,11 @@ fn apply(command: Command, live: &mut LiveMissionSession) -> Result<bool, Result
                 .map_err(map_error)?;
         }
         Command::Abort(x) => live.abort(x).map_err(map_error)?,
+        #[cfg(test)]
+        Command::TestBarrier(reached, release) => {
+            reached.send(()).map_err(|_| ResultCode::Internal)?;
+            release.recv().map_err(|_| ResultCode::Internal)?;
+        }
         #[cfg(any(test, feature = "panic-probe"))]
         Command::PanicProbe => panic!("contained viewer bridge panic probe"),
         Command::Shutdown => return Ok(false),
@@ -1209,6 +1216,41 @@ mod tests {
             thread::yield_now()
         }
     }
+    unsafe fn complete_with_recommended_actions(h: *mut Handle, mut x: Snapshot) -> Vec<u8> {
+        while x.lifecycle != 5 {
+            if let Some(load) = unsafe { optional(ksa64_viewer_recommended_load, h) } {
+                let s = Span {
+                    abi_version: 1,
+                    struct_size: size_of::<Span>() as u32,
+                    data: load.as_ptr(),
+                    length: load.len() as u64,
+                };
+                assert_eq!(unsafe { ksa64_viewer_submit_stage(h, &s, 0) }, 1);
+                x = unsafe { wait(h, x.command_sequence) };
+                let commit =
+                    unsafe { optional(ksa64_viewer_commit_request, h) }.expect("commit request");
+                let s = Span {
+                    abi_version: 1,
+                    struct_size: size_of::<Span>() as u32,
+                    data: commit.as_ptr(),
+                    length: commit.len() as u64,
+                };
+                assert_eq!(unsafe { ksa64_viewer_submit_commit(h, &s) }, 1);
+                x = unsafe { wait(h, x.command_sequence) };
+            }
+            assert_eq!(unsafe { ksa64_viewer_advance(h, 32) }, 1);
+            x = unsafe { wait(h, x.command_sequence) };
+            assert_eq!(x.command_result, 0);
+        }
+        let end = Instant::now() + Duration::from_secs(5);
+        loop {
+            if let Some(bundle) = unsafe { optional(ksa64_viewer_completed_ksb11, h) } {
+                break bundle;
+            }
+            assert!(Instant::now() < end);
+            thread::yield_now();
+        }
+    }
     unsafe fn optional(
         f: unsafe extern "C" fn(*const Handle, *mut OwnedBuffer) -> i32,
         h: *mut Handle,
@@ -1273,6 +1315,20 @@ mod tests {
     #[test]
     fn rejects_before_enqueue() {
         unsafe {
+            let invalid_role = "unknown-role";
+            let invalid_role = Span {
+                abi_version: 1,
+                struct_size: size_of::<Span>() as u32,
+                data: invalid_role.as_ptr(),
+                length: invalid_role.len() as u64,
+            };
+            let mut rejected_handle = ptr::dangling_mut::<Handle>();
+            assert_eq!(
+                ksa64_viewer_start(&invalid_role, &mut rejected_handle),
+                ResultCode::Unsupported as i32
+            );
+            assert!(rejected_handle.is_null());
+
             let h = start();
             let x = snap(h);
             let oversized = Span {
@@ -1369,41 +1425,66 @@ mod tests {
                 .unwrap()
                 .bundle;
             let h = start();
-            let mut x = snap(h);
-            while x.lifecycle != 5 {
-                if let Some(load) = optional(ksa64_viewer_recommended_load, h) {
-                    let s = Span {
-                        abi_version: 1,
-                        struct_size: size_of::<Span>() as u32,
-                        data: load.as_ptr(),
-                        length: load.len() as u64,
-                    };
-                    assert_eq!(ksa64_viewer_submit_stage(h, &s, 0), 1);
-                    x = wait(h, x.command_sequence);
-                    let commit = optional(ksa64_viewer_commit_request, h).unwrap();
-                    let s = Span {
-                        abi_version: 1,
-                        struct_size: size_of::<Span>() as u32,
-                        data: commit.as_ptr(),
-                        length: commit.len() as u64,
-                    };
-                    assert_eq!(ksa64_viewer_submit_commit(h, &s), 1);
-                    x = wait(h, x.command_sequence)
-                }
-                assert_eq!(ksa64_viewer_advance(h, 32), 1);
-                x = wait(h, x.command_sequence);
-                assert_eq!(x.command_result, 0)
-            }
-            let end = Instant::now() + Duration::from_secs(5);
-            let got = loop {
-                if let Some(b) = optional(ksa64_viewer_completed_ksb11, h) {
-                    break b;
-                }
-                assert!(Instant::now() < end);
-                thread::yield_now()
-            };
+            let initial = snap(h);
+            let got = complete_with_recommended_actions(h, initial);
             assert_eq!(got, direct);
             assert_eq!(ksa64_viewer_destroy(h), 0)
+        }
+    }
+    #[test]
+    fn command_queue_saturation_is_fail_closed_and_preserves_ksb11() {
+        unsafe {
+            let direct = Ksa64Application::default()
+                .start_mission(&MissionRequest {
+                    id: "ksa-g10r.operations".into(),
+                    scenario: Some("gnss-loss".into()),
+                    role: Some("guided-operator".into()),
+                    display: MissionDisplay::None,
+                    pace: MissionPace::Fast,
+                    scripted: false,
+                    output: None,
+                })
+                .unwrap()
+                .run_scripted_to_completion()
+                .unwrap()
+                .bundle;
+            let h = start();
+            let initial = snap(h);
+            let state = href(h).expect("registered handle");
+            let (reached_tx, reached_rx) = sync_channel(0);
+            let (release_tx, release_rx) = sync_channel(0);
+            assert_eq!(
+                enqueue(
+                    Arc::clone(&state),
+                    Command::TestBarrier(reached_tx, release_rx)
+                ),
+                ResultCode::Queued
+            );
+            reached_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("worker reached test barrier");
+            for _ in 0..KSA64_VIEWER_COMMAND_CAPACITY {
+                assert_eq!(
+                    enqueue(Arc::clone(&state), Command::Pace(MissionSessionPace::Fast)),
+                    ResultCode::Queued
+                );
+            }
+            assert_eq!(
+                enqueue(Arc::clone(&state), Command::Pace(MissionSessionPace::Fast)),
+                ResultCode::QueueFull
+            );
+            release_tx.send(()).expect("release test barrier");
+            let drained = wait(
+                h,
+                initial.command_sequence + KSA64_VIEWER_COMMAND_CAPACITY as u64,
+            );
+            assert_eq!(
+                drained.command_sequence,
+                initial.command_sequence + KSA64_VIEWER_COMMAND_CAPACITY as u64 + 1
+            );
+            let got = complete_with_recommended_actions(h, drained);
+            assert_eq!(got, direct);
+            assert_eq!(ksa64_viewer_destroy(h), ResultCode::Ok as i32);
         }
     }
     #[test]
