@@ -857,6 +857,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FKsa64OperationsEvidenceStatusTest::RunTest(const FString&)
 {
     TestEqual(TEXT("running evidence remains pending"), ClassifyEvidenceReadiness(3, 1, 1, 0, 0), EKsa64OperationsEvidenceReadiness::InProgress);
+    TestEqual(TEXT("completed snapshot waits for asynchronous finalization"), ClassifyEvidenceReadiness(5, 1, 1, 0, 0), EKsa64OperationsEvidenceReadiness::InProgress);
     TestEqual(TEXT("only verified completed evidence is complete"), ClassifyEvidenceReadiness(5, 2, 2, 100, 1), EKsa64OperationsEvidenceReadiness::Complete);
     TestEqual(TEXT("zero-length evidence cannot masquerade as complete"), ClassifyEvidenceReadiness(5, 2, 2, 0, 1), EKsa64OperationsEvidenceReadiness::InProgress);
     TestEqual(TEXT("aborted lifecycle is failed"), ClassifyEvidenceReadiness(6, 3, 2, 0, 0), EKsa64OperationsEvidenceReadiness::Failed);
