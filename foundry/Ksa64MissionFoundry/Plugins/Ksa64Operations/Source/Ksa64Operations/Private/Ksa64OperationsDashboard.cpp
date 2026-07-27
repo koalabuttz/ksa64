@@ -1049,7 +1049,9 @@ bool SKsa64OperationsDashboard::IsRunnableSession() const
         && View.Lifecycle != 5
         && View.Lifecycle != 6
         && View.WorkerState != 3
-        && View.FinalizationState != 3;
+        && View.FinalizationState != 3
+        && !View.bAdvanceOutstanding
+        && View.CommandsPending == 0;
 }
 
 bool SKsa64OperationsDashboard::CanStart() const

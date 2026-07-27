@@ -227,7 +227,9 @@ void UKsa64LiveMissionSubsystem::StepOneRelease()
     if (Result == EKsa64OperationsAdapterResult::Ok
         || Result == EKsa64OperationsAdapterResult::Queued)
     {
-        AdvanceTracker.MarkAccepted(ViewModel.CommandSequence);
+        AdvanceTracker.MarkAccepted(
+            ViewModel.CommandSequence,
+            ViewModel.ReleaseEpoch);
         ViewModel.bAdvanceOutstanding = true;
     }
 }
@@ -251,6 +253,8 @@ void UKsa64LiveMissionSubsystem::ReviewAction()
         && ViewModel.bSessionOpen
         && ViewModel.Capabilities.bTypedActions
         && !ViewModel.bShutdownRequested
+        && !AdvanceTracker.IsOutstanding()
+        && ViewModel.CommandsPending == 0
         && ViewModel.Lifecycle != 5
         && ViewModel.Lifecycle != 6)
     {
@@ -264,6 +268,8 @@ void UKsa64LiveMissionSubsystem::StageAction()
         && ViewModel.bSessionOpen
         && ViewModel.Capabilities.bTypedActions
         && !ViewModel.bShutdownRequested
+        && !AdvanceTracker.IsOutstanding()
+        && ViewModel.CommandsPending == 0
         && ViewModel.Lifecycle != 5
         && ViewModel.Lifecycle != 6)
     {
@@ -277,6 +283,8 @@ void UKsa64LiveMissionSubsystem::CommitAction()
         && ViewModel.bSessionOpen
         && ViewModel.Capabilities.bTypedActions
         && !ViewModel.bShutdownRequested
+        && !AdvanceTracker.IsOutstanding()
+        && ViewModel.CommandsPending == 0
         && ViewModel.Lifecycle != 5
         && ViewModel.Lifecycle != 6)
     {
@@ -290,6 +298,8 @@ void UKsa64LiveMissionSubsystem::CancelAction()
         && ViewModel.bSessionOpen
         && ViewModel.Capabilities.bTypedActions
         && !ViewModel.bShutdownRequested
+        && !AdvanceTracker.IsOutstanding()
+        && ViewModel.CommandsPending == 0
         && ViewModel.Lifecycle != 5
         && ViewModel.Lifecycle != 6)
     {
@@ -614,12 +624,12 @@ bool UKsa64LiveMissionSubsystem::AdvanceToReleaseForAutomation(
     double TimeoutSeconds)
 {
     const double Deadline = FPlatformTime::Seconds() + TimeoutSeconds;
-    while (ViewModel.ReleaseEpoch < TargetRelease)
+    for (;;)
     {
         PollBridge();
-        if (ViewModel.ReleaseEpoch >= TargetRelease)
+        if (ViewModel.ReleaseEpoch > TargetRelease)
         {
-            break;
+            return false;
         }
         if (ViewModel.WorkerState == 3
             || ViewModel.FinalizationState == 3
@@ -628,6 +638,12 @@ bool UKsa64LiveMissionSubsystem::AdvanceToReleaseForAutomation(
             || !Bridge.IsValid())
         {
             return false;
+        }
+        if (ViewModel.ReleaseEpoch == TargetRelease
+            && !AdvanceTracker.IsOutstanding()
+            && ViewModel.CommandsPending == 0)
+        {
+            return true;
         }
         if (!AdvanceTracker.IsOutstanding())
         {
@@ -640,7 +656,9 @@ bool UKsa64LiveMissionSubsystem::AdvanceToReleaseForAutomation(
             {
                 return false;
             }
-            AdvanceTracker.MarkAccepted(ViewModel.CommandSequence);
+            AdvanceTracker.MarkAccepted(
+                ViewModel.CommandSequence,
+                ViewModel.ReleaseEpoch);
             ViewModel.bAdvanceOutstanding = true;
         }
         if (FPlatformTime::Seconds() >= Deadline)
@@ -649,8 +667,6 @@ bool UKsa64LiveMissionSubsystem::AdvanceToReleaseForAutomation(
         }
         FPlatformProcess::Sleep(0.0005f);
     }
-    PollBridge();
-    return ViewModel.ReleaseEpoch == TargetRelease;
 }
 
 bool UKsa64LiveMissionSubsystem::WaitForActionReceiptForAutomation(
@@ -767,7 +783,9 @@ bool UKsa64LiveMissionSubsystem::Tick(float DeltaSeconds)
             Releases,
             ViewModel.ReleasePeriodMicros,
             ViewModel.PresentationPace);
-        AdvanceTracker.MarkAccepted(ViewModel.CommandSequence);
+        AdvanceTracker.MarkAccepted(
+            ViewModel.CommandSequence,
+            ViewModel.ReleaseEpoch);
         ViewModel.bAdvanceOutstanding = true;
     }
     return true;
@@ -851,6 +869,7 @@ void UKsa64LiveMissionSubsystem::PollBridge()
     LastObservedCommandSequence = ViewModel.CommandSequence;
     if (AdvanceTracker.Observe(
         ViewModel.CommandSequence,
+        ViewModel.ReleaseEpoch,
         ViewModel.CommandsPending,
         ViewModel.Lifecycle))
     {
@@ -932,7 +951,9 @@ bool UKsa64LiveMissionSubsystem::QueueAcceptanceAdvance(uint32 TargetRelease)
         FailAcceptance(FString::Printf(TEXT("advance to release %u failed"), TargetRelease));
         return false;
     }
-    AdvanceTracker.MarkAccepted(ViewModel.CommandSequence);
+    AdvanceTracker.MarkAccepted(
+        ViewModel.CommandSequence,
+        ViewModel.ReleaseEpoch);
     ViewModel.bAdvanceOutstanding = true;
     return true;
 }
@@ -1199,7 +1220,9 @@ bool UKsa64LiveMissionSubsystem::QueuePresentationEvidenceAdvance(uint32 TargetR
             static_cast<uint32>(Result)));
         return false;
     }
-    AdvanceTracker.MarkAccepted(ViewModel.CommandSequence);
+    AdvanceTracker.MarkAccepted(
+        ViewModel.CommandSequence,
+        ViewModel.ReleaseEpoch);
     ViewModel.bAdvanceOutstanding = true;
     return true;
 }
@@ -1722,7 +1745,9 @@ void UKsa64LiveMissionSubsystem::TickPresentationEvidence(float DeltaSeconds)
                     RemainingReleases,
                     ViewModel.ReleasePeriodMicros,
                     EKsa64OperationsPace::Realtime);
-                AdvanceTracker.MarkAccepted(ViewModel.CommandSequence);
+                AdvanceTracker.MarkAccepted(
+                    ViewModel.CommandSequence,
+                    ViewModel.ReleaseEpoch);
                 ViewModel.bAdvanceOutstanding = true;
                 break;
             }
@@ -1757,7 +1782,9 @@ void UKsa64LiveMissionSubsystem::TickPresentationEvidence(float DeltaSeconds)
                     Releases,
                     ViewModel.ReleasePeriodMicros,
                     EKsa64OperationsPace::Realtime);
-                AdvanceTracker.MarkAccepted(ViewModel.CommandSequence);
+                AdvanceTracker.MarkAccepted(
+                    ViewModel.CommandSequence,
+                    ViewModel.ReleaseEpoch);
                 ViewModel.bAdvanceOutstanding = true;
             }
         }

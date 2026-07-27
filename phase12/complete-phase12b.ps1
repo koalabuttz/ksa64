@@ -218,6 +218,47 @@ function Invoke-OperationsAutomation {
         [int]$result.notRun -ne 0 -or
         [int]$result.inProcess -ne 0
     ) { throw "Unreal Operations automation did not report the accepted 17/17 result." }
+
+    if (-not [string]::IsNullOrWhiteSpace($PackageArchive)) {
+        $archive = [IO.Path]::GetFullPath($PackageArchive)
+        if (-not (Test-Path -LiteralPath $archive -PathType Container)) {
+            throw "Cannot preserve Unreal automation evidence because the package archive does not exist: $archive"
+        }
+        $stableDirectory = Join-Path $archive "phase12b-unreal-automation"
+        if (Test-Path -LiteralPath $stableDirectory) {
+            throw "Unreal automation evidence requires a fresh destination: $stableDirectory"
+        }
+        New-Item -ItemType Directory -Path $stableDirectory | Out-Null
+        $stableIndex = Join-Path $stableDirectory "index.json"
+        $stableHtml = Join-Path $stableDirectory "index.html"
+        $stableLog = Join-Path $stableDirectory "unreal-operations-automation.log"
+        Copy-Item -LiteralPath $index -Destination $stableIndex
+        Copy-Item -LiteralPath (Join-Path $report "index.html") -Destination $stableHtml
+        Copy-Item -LiteralPath $log -Destination $stableLog
+        $record = [ordered]@{
+            schema = "ksa64.phase12b.unreal-automation-validation.v1"
+            filter = "KSA64.Operations"
+            succeeded = [int]$result.succeeded
+            failed = [int]$result.failed
+            not_run = [int]$result.notRun
+            in_process = [int]$result.inProcess
+            duration_seconds = [double]$result.totalDuration
+            exit_code = $process.ExitCode
+            report = [ordered]@{
+                path = $stableIndex.Substring($archive.Length + 1).Replace('\', '/')
+                sha256 = Get-Sha256 $stableIndex
+            }
+            html = [ordered]@{
+                path = $stableHtml.Substring($archive.Length + 1).Replace('\', '/')
+                sha256 = Get-Sha256 $stableHtml
+            }
+            log = [ordered]@{
+                path = $stableLog.Substring($archive.Length + 1).Replace('\', '/')
+                sha256 = Get-Sha256 $stableLog
+            }
+        }
+        $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $archive "phase12b-unreal-automation-validation.json") -Encoding utf8NoBOM
+    }
     Assert-NoUnrealEditor
 }
 

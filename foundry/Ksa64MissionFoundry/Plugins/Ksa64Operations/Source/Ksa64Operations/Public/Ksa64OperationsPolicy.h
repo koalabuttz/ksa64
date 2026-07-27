@@ -50,11 +50,16 @@ class KSA64OPERATIONS_API FKsa64OperationsAdvanceTracker
 public:
     void Reset();
     bool IsOutstanding() const { return bOutstanding; }
-    void MarkAccepted(uint64 PublicationSequence);
-    bool Observe(uint64 PublicationSequence, uint32 CommandsPending, uint32 Lifecycle);
+    void MarkAccepted(uint64 PublicationSequence, uint32 BaselineReleaseEpoch);
+    bool Observe(
+        uint64 PublicationSequence,
+        uint32 ReleaseEpoch,
+        uint32 CommandsPending,
+        uint32 Lifecycle);
 
 private:
     uint64 BaselinePublicationSequence = 0;
+    uint32 BaselineReleaseEpoch = 0;
     bool bOutstanding = false;
 };
 

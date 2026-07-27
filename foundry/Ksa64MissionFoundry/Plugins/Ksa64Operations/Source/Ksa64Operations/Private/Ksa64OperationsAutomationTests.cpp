@@ -114,6 +114,26 @@ uint32 RunDisplayFrames(int32 RefreshHz, int32 Seconds, EKsa64OperationsPace Pac
     return Releases;
 }
 
+void CloseAdapterAndWait(IKsa64OperationsBridgeAdapter& Adapter)
+{
+    Adapter.Close();
+    const double Deadline = FPlatformTime::Seconds() + 15.0;
+    while (FKsa64BridgeModule::Get().GetStatus() == EKsa64BridgeStatus::SessionOpen
+        && FPlatformTime::Seconds() < Deadline)
+    {
+        FTSTicker::GetCoreTicker().Tick(0.001f);
+        FPlatformProcess::Sleep(0.001f);
+    }
+    if (FKsa64BridgeModule::Get().GetStatus() == EKsa64BridgeStatus::SessionOpen)
+    {
+        // A shutdown request that remains open beyond the bounded close gate is
+        // already a lifecycle failure, not a slow valid mission. Release the
+        // test-owned handle so it cannot corrupt the following automation case.
+        AdapterFailure = TEXT("adapter asynchronous close did not complete");
+        FKsa64BridgeModule::Get().CloseSession();
+    }
+}
+
 bool PollAdapterUntil(
     IKsa64OperationsBridgeAdapter& Adapter,
     FKsa64OperationsViewModel& View,
@@ -457,7 +477,7 @@ bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
                 TEXT("%d Hz initial view failed: %s"),
                 RefreshHz,
                 *AdapterFailure);
-            Adapter->Close();
+            CloseAdapterAndWait(*Adapter);
             return false;
         }
 
@@ -494,7 +514,7 @@ bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
                     Frame,
                     static_cast<uint32>(AdvanceResult),
                     *AdapterState(View));
-                Adapter->Close();
+                CloseAdapterAndWait(*Adapter);
                 return false;
             }
             if (!PollAdapterUntil(
@@ -514,7 +534,7 @@ bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
                     RefreshHz,
                     Frame,
                     *AdapterFailure);
-                Adapter->Close();
+                CloseAdapterAndWait(*Adapter);
                 return false;
             }
             TArray<FKsa64OperationsTimelineItem> DiscardedTimeline;
@@ -527,7 +547,7 @@ bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
                     TEXT("%d Hz presentation stream incomplete: %s"),
                     RefreshHz,
                     *AdapterState(View));
-                Adapter->Close();
+                CloseAdapterAndWait(*Adapter);
                 return false;
             }
             Controller.CommitAcceptedAdvance(
@@ -549,7 +569,7 @@ bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
                 TEXT("%d Hz shutdown request failed with result %u"),
                 RefreshHz,
                 static_cast<uint32>(ShutdownResult));
-            Adapter->Close();
+            CloseAdapterAndWait(*Adapter);
             return false;
         }
         if (!PollAdapterUntil(
@@ -566,7 +586,7 @@ bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
                 TEXT("%d Hz worker shutdown failed: %s"),
                 RefreshHz,
                 *AdapterFailure);
-            Adapter->Close();
+            CloseAdapterAndWait(*Adapter);
             return false;
         }
         if (View.WorkerState != 2)
@@ -574,10 +594,10 @@ bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
             AdapterFailure = FString::Printf(
                 TEXT("%d Hz worker entered fault state"),
                 RefreshHz);
-            Adapter->Close();
+            CloseAdapterAndWait(*Adapter);
             return false;
         }
-        Adapter->Close();
+        CloseAdapterAndWait(*Adapter);
         if (FKsa64BridgeModule::Get().GetStatus() != EKsa64BridgeStatus::Ready)
         {
             AdapterFailure = FString::Printf(
@@ -657,13 +677,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FKsa64OperationsOutstandingTest::RunTest(const FString&)
 {
     FKsa64OperationsAdvanceTracker Tracker;
-    Tracker.MarkAccepted(7);
+    Tracker.MarkAccepted(7, 6'240);
     TestTrue(TEXT("advance marked outstanding"), Tracker.IsOutstanding());
-    TestFalse(TEXT("publication alone does not clear while commands remain"), Tracker.Observe(8, 1, 3));
-    TestTrue(TEXT("drained queue and new publication clear"), Tracker.Observe(8, 0, 3));
+    TestFalse(TEXT("delayed publication without release progress does not clear"), Tracker.Observe(8, 6'240, 0, 3));
+    TestFalse(TEXT("release progress does not clear while commands remain"), Tracker.Observe(9, 6'304, 1, 3));
+    TestTrue(TEXT("new publication with drained queue and release progress clears"), Tracker.Observe(9, 6'304, 0, 3));
     TestFalse(TEXT("tracker now clear"), Tracker.IsOutstanding());
-    Tracker.MarkAccepted(8);
-    TestTrue(TEXT("terminal lifecycle clears outstanding"), Tracker.Observe(8, 1, 5));
+    Tracker.MarkAccepted(9, 6'304);
+    TestTrue(TEXT("terminal lifecycle clears outstanding"), Tracker.Observe(9, 6'304, 1, 5));
     return true;
 }
 
@@ -936,18 +957,44 @@ bool FKsa64OperationsSlateActionTranscriptParityTest::RunTest(const FString&)
         }
         // Poll the reviewed adapter state through the subsystem before Slate
         // evaluates the Stage button's production IsEnabled attribute.
-        if (!Subsystem->AdvanceToReleaseForAutomation(StageEpoch, 5.0)
-            || !Click(TEXT("2  STAGE"))
-            || !Subsystem->WaitForActionReceiptForAutomation(1, 15.0))
+        if (!Subsystem->AdvanceToReleaseForAutomation(StageEpoch, 5.0))
         {
-            AddError(FString::Printf(TEXT("Slate stage path failed at %u"), StageEpoch));
+            AddError(FString::Printf(TEXT("review poll missed stage release %u (now %u)"), StageEpoch, Subsystem->GetViewModel().ReleaseEpoch));
             return false;
         }
-        if (!Subsystem->AdvanceToReleaseForAutomation(CommitEpoch, 30.0)
-            || !Click(TEXT("3  COMMIT"))
-            || !Subsystem->WaitForActionReceiptForAutomation(2, 15.0))
+        if (!Click(TEXT("2  STAGE")))
         {
-            AddError(FString::Printf(TEXT("Slate commit path failed at %u"), CommitEpoch));
+            AddError(FString::Printf(TEXT("Slate stage button failed at %u"), StageEpoch));
+            return false;
+        }
+        if (!Subsystem->WaitForActionReceiptForAutomation(1, 15.0))
+        {
+            const FKsa64OperationsViewModel& Failed = Subsystem->GetViewModel();
+            AddError(FString::Printf(
+                TEXT("Slate stage receipt failed at %u: release=%u proposal=%08X receipt=%llu state=%u accepted=%u pending=%u overflow=%u"),
+                StageEpoch,
+                Failed.ReleaseEpoch,
+                Failed.ActionProposalIdentity,
+                static_cast<unsigned long long>(Failed.ActionReceiptSequence),
+                Failed.ActionReceiptState,
+                Failed.ActionReceiptAccepted,
+                Failed.CommandsPending,
+                Failed.TransportOverflow));
+            return false;
+        }
+        if (!Subsystem->AdvanceToReleaseForAutomation(CommitEpoch, 30.0))
+        {
+            AddError(FString::Printf(TEXT("could not advance UI session to commit %u (now %u)"), CommitEpoch, Subsystem->GetViewModel().ReleaseEpoch));
+            return false;
+        }
+        if (!Click(TEXT("3  COMMIT")))
+        {
+            AddError(FString::Printf(TEXT("Slate commit button failed at %u"), CommitEpoch));
+            return false;
+        }
+        if (!Subsystem->WaitForActionReceiptForAutomation(2, 15.0))
+        {
+            AddError(FString::Printf(TEXT("Slate commit receipt failed at %u"), CommitEpoch));
             return false;
         }
         return true;
@@ -1002,25 +1049,25 @@ bool FKsa64OperationsFullMissionParityTest::RunTest(const FString&)
     if (!PollAdapterUntil(*Adapter, View, 15.0, [](const FKsa64OperationsViewModel& Candidate) { return Candidate.ReleaseEpoch == 0 && Candidate.bTruthFiltered; }))
     {
         AddError(FString::Printf(TEXT("initial typed operational view failed: %s"), *AdapterFailure));
-        Adapter->Close();
+        CloseAdapterAndWait(*Adapter);
         return false;
     }
     if (!ApplyAcceptedAction(*Adapter, View, 6'080, 6'240))
     {
         AddError(FString::Printf(TEXT("ground update action failed: %s"), *AdapterFailure));
-        Adapter->Close();
+        CloseAdapterAndWait(*Adapter);
         return false;
     }
     if (!ApplyAcceptedAction(*Adapter, View, 6'560, 6'720))
     {
         AddError(FString::Printf(TEXT("branch action failed: %s"), *AdapterFailure));
-        Adapter->Close();
+        CloseAdapterAndWait(*Adapter);
         return false;
     }
     if (!AdvanceAdapterTo(*Adapter, View, 21'591))
     {
         AddError(FString::Printf(TEXT("mission completion advance failed: %s"), *AdapterFailure));
-        Adapter->Close();
+        CloseAdapterAndWait(*Adapter);
         return false;
     }
     if (!PollAdapterUntil(*Adapter, View, 30.0, [](const FKsa64OperationsViewModel& Candidate)
@@ -1032,7 +1079,7 @@ bool FKsa64OperationsFullMissionParityTest::RunTest(const FString&)
     }))
     {
         AddError(FString::Printf(TEXT("Rust evidence finalization failed: %s"), *AdapterFailure));
-        Adapter->Close();
+        CloseAdapterAndWait(*Adapter);
         return false;
     }
     TestTrue(TEXT("presentation queues remain complete"), View.bObservationComplete);
@@ -1048,7 +1095,7 @@ bool FKsa64OperationsFullMissionParityTest::RunTest(const FString&)
         TEXT("accepted KSB11 SHA-256"),
         Sha256Hex(Evidence.GetData(), static_cast<uint64>(Evidence.Num())),
         TEXT("7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4"));
-    Adapter->Close();
+    CloseAdapterAndWait(*Adapter);
     TestEqual(TEXT("completed worker closes without blocking"), FKsa64BridgeModule::Get().GetStatus(), EKsa64BridgeStatus::Ready);
     return true;
 }

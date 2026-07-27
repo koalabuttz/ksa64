@@ -423,17 +423,22 @@ void FKsa64OperationsPacingController::CommitAcceptedAdvance(
 void FKsa64OperationsAdvanceTracker::Reset()
 {
     BaselinePublicationSequence = 0;
+    BaselineReleaseEpoch = 0;
     bOutstanding = false;
 }
 
-void FKsa64OperationsAdvanceTracker::MarkAccepted(uint64 PublicationSequence)
+void FKsa64OperationsAdvanceTracker::MarkAccepted(
+    uint64 PublicationSequence,
+    uint32 InBaselineReleaseEpoch)
 {
     BaselinePublicationSequence = PublicationSequence;
+    BaselineReleaseEpoch = InBaselineReleaseEpoch;
     bOutstanding = true;
 }
 
 bool FKsa64OperationsAdvanceTracker::Observe(
     uint64 PublicationSequence,
+    uint32 ReleaseEpoch,
     uint32 CommandsPending,
     uint32 Lifecycle)
 {
@@ -442,8 +447,13 @@ bool FKsa64OperationsAdvanceTracker::Observe(
         return false;
     }
     const bool bTerminal = Lifecycle == 5 || Lifecycle == 6;
-    if (bTerminal || (CommandsPending == 0 && PublicationSequence != BaselinePublicationSequence))
+    const bool bAdvanceCompletionPublished =
+        ReleaseEpoch > BaselineReleaseEpoch
+        && CommandsPending == 0
+        && PublicationSequence != BaselinePublicationSequence;
+    if (bTerminal || bAdvanceCompletionPublished)
     {
+        BaselineReleaseEpoch = 0;
         bOutstanding = false;
         return true;
     }
