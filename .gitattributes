@@ -3,6 +3,8 @@
 # Phase 8 froze this provenance source by exact raw-byte hash before the
 # repository-wide LF rule existed. Preserve those accepted mixed-ending bytes.
 phase8/source-data/firestorm54-spatial.json -text -diff
+# Phase 10 likewise binds its vehicle source by accepted raw-byte CRC/SHA.
+phase10/source-data/ksa-g10r-source.json -text -diff
 *.rs text eol=lf
 *.sha256 text eol=lf
 *.csv text eol=lf
