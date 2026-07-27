@@ -590,15 +590,20 @@ try {
 
     if ($RunUnrealBuild -or $RunUnrealAutomation -or $RunPackage) {
         Gate "explicit inherited Phase 12A Unreal gates" {
-            $arguments = @("-SkipLegacy", "-SkipMos", "-SkipHarness")
-            if ($RunUnrealBuild) { $arguments += "-RunUnrealBuild" }
-            if ($RunUnrealAutomation) { $arguments += "-RunUnrealAutomation" }
-            if ($RunPackage) { $arguments += "-RunPackage" }
-            $arguments += @("-UnrealRoot", $UnrealRoot, "-DerivedDataCache", $DerivedDataCache)
-            if (-not [string]::IsNullOrWhiteSpace($PackageArchive)) {
-                $arguments += @("-PackageArchive", $PackageArchive)
+            $phase12aParameters = @{
+                SkipLegacy = $true
+                SkipMos = $true
+                SkipHarness = $true
+                UnrealRoot = $UnrealRoot
+                DerivedDataCache = $DerivedDataCache
             }
-            & phase12/complete.ps1 @arguments
+            if ($RunUnrealBuild) { $phase12aParameters.RunUnrealBuild = $true }
+            if ($RunUnrealAutomation) { $phase12aParameters.RunUnrealAutomation = $true }
+            if ($RunPackage) { $phase12aParameters.RunPackage = $true }
+            if (-not [string]::IsNullOrWhiteSpace($PackageArchive)) {
+                $phase12aParameters.PackageArchive = $PackageArchive
+            }
+            & phase12/complete.ps1 @phase12aParameters
         }
     }
 
