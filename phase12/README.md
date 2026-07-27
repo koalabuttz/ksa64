@@ -1,6 +1,6 @@
 # Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12B.5 is next and ready to plan.
+Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12B.5 implementation is active from entry commit `b9f2c79`.
 
 Phase 12 began with an accepted native-Windows Unreal presentation and now
 expands through portable Rust authority, desktop Unreal, web/PWA, SDL2/Vita,
@@ -14,7 +14,7 @@ The work is divided so that each slice proves one coherent boundary:
 |---|---|
 | 12A | **Complete:** pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaged smoke test, and optional MCP feasibility |
 | 12B | **Complete:** accepted 674.71875-second GNSS-loss mission, human-scale operations, multi-axis outcomes, packaged 2-D command desk, 17/17 automation, exact evidence, and bounded presentation-service timing |
-| 12B.5 | **Next:** cross-platform Rust/session foundation, Linux and macOS lanes, 8 GB Duet ARM64, React/Babylon PWA plus Rust/WASM World feasibility, and Vita/SDL2 |
+| 12B.5 | **Active:** portable session authority and KPS1 presentation protocol, native platform matrix, 8 GB Duet ARM64, compact React/Babylon PWA with exact Rust/WASM authority, paired LAN, and Vita/SDL2 |
 | 12C | Renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2 |
 | 12C.5 | Portable web/PWA, Vita/SDL2, Android, and iOS operations clients |
 | 12D | Mission Foundry vehicle/mission authoring and GUI/headless compiler parity |
@@ -30,7 +30,9 @@ The work is divided so that each slice proves one coherent boundary:
 - [PHASE12B_PLAN.md](PHASE12B_PLAN.md) — accepted live-operations implementation and acceptance contract.
 - [PHASE12B_COMPLETION.md](PHASE12B_COMPLETION.md) — accepted live-operations outcome, Unreal evidence, measurements, and limitations.
 - [phase12b-completion-audit.json](phase12b-completion-audit.json) — machine-readable full-reference hashes, outcome axes, authority boundary, and accepted product gates.
-- [PHASE12B5_HANDOFF.md](PHASE12B5_HANDOFF.md) — active cross-platform runtime, browser, mobile, and Vita foundation boundary.
+- [PHASE12B5_HANDOFF.md](PHASE12B5_HANDOFF.md) — historical cross-platform runtime, browser, mobile, and Vita planning boundary.
+- [PHASE12B5_PLAN.md](PHASE12B5_PLAN.md) — active implementation and acceptance contract.
+- [CI.md](CI.md) — hosted native/WASM checks and the explicit physical-device exclusions.
 - [WEB_PLATFORM.md](WEB_PLATFORM.md) — accepted Babylon.js, React/TypeScript, Rust/WASM, browser-authority, lifecycle, and Duet decision.
 - [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md) — frozen Phase 12B global-viewer boundary, consumed after 12B.5.
 - [complete-phase12b.ps1](complete-phase12b.ps1) — composed Phase 12A, Rust, C++ harness, and explicit optional Unreal audit.

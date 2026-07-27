@@ -673,6 +673,8 @@ Phase 12C consumes typed streams and recordings through this same boundary. It o
 Phase 12B.5 separates the accepted application/session authority from any one
 loader, process model, renderer, or operating system:
 
+The portable boundary is implemented in two deliberately narrow crates: `ksa64-session` owns exact mission advancement and in-memory KSB11 finalization, while `ksa64-presentation` owns `no_std + alloc` role-filtered DTOs and the noncanonical KPS1 codec. Filesystem/report/process services remain in `ksa64-host`.
+
 ```text
                  Ksa64Application / LiveMissionSession
                                |

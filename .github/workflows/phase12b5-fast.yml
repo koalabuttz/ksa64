@@ -1,0 +1,110 @@
+name: Phase 12B.5 fast portability
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase12b5-fast-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+
+jobs:
+  rust:
+    name: Rust / ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            runner: windows-2025-vs2026
+            rust_host: x86_64-pc-windows-msvc
+          - name: Linux x64
+            runner: ubuntu-24.04
+            rust_host: x86_64-unknown-linux-gnu
+          - name: Linux ARM64
+            runner: ubuntu-24.04-arm
+            rust_host: aarch64-unknown-linux-gnu
+          - name: macOS ARM64
+            runner: macos-15
+            rust_host: aarch64-apple-darwin
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+
+      - name: Verify pinned toolchain and runner architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc --version
+          cargo --version
+          actual_host="$(rustc -vV | sed -n 's/^host: //p')"
+          test "${actual_host}" = "${{ matrix.rust_host }}"
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --features fixtures --locked -- -D warnings
+
+      - name: Native workspace tests
+        run: cargo test --workspace --features fixtures --locked
+
+      - name: Bridge library and contained panic tests
+        run: cargo test -p ksa64-viewer-bridge --lib --profile viewer --features panic-probe --locked
+
+  web:
+    name: Web lockfile, tests, and production build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+
+      - name: Detect web workspace
+        id: web
+        shell: bash
+        run: |
+          if [[ -f web/package-lock.json ]]; then
+            echo "ready=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "ready=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice::web/package-lock.json is not present yet; the web gate will activate when it is committed."
+          fi
+
+      - name: Set up Node
+        if: steps.web.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install locked web dependencies
+        if: steps.web.outputs.ready == 'true'
+        run: npm ci --prefix web
+
+      - name: Run web tests
+        if: steps.web.outputs.ready == 'true'
+        run: npm test --prefix web
+
+      - name: Build self-hosted web product
+        if: steps.web.outputs.ready == 'true'
+        run: npm run build --prefix web

@@ -1601,3 +1601,15 @@ close, suspension, discard, worker failure, or panic during local authority
 leaves an explicitly incomplete session unless a separately validated resume
 contract reconstructs it. No web product may imply continuous execution when
 the authoritative worker did not advance.
+
+## D-118: Freeze the Phase 12B.5 portable session and presentation contract
+
+Date: 2026-07-27
+
+Status: accepted for implementation.
+
+Enter Phase 12B.5 at commit `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615`. Preserve all accepted Phase 0-12B artifacts, the 13-entry catalog, ABI-v1 layouts, and the exact 2,911,464-byte guided GNSS-loss KSB11. Extract exact session authority into `ksa64-session` and role-filtered, renderer-neutral DTOs plus the noncanonical KPS1 protocol into `ksa64-presentation`; desktop services remain in `ksa64-host`.
+
+Pin native/WASM work to Rust 1.93 while keeping rust-mos and Vita nightlies isolated. Qualify Windows x64, Linux x64, Linux ARM64, and macOS ARM64 in hosted CI, with full exact missions on main/manual gates. Require physical Lenovo Duet 11 and Vita evidence before claiming those devices accepted.
+
+Use loopback-only browser transport by default. Native and Vita LAN clients require explicit Noise XX pairing, locally compared handshake codes, stored peer keys, immutable role binding, and Noise IK reconnect. No discovery, wildcard listener, cloud relay, or Internet service is authorized. React/TypeScript/Vite owns the compact PWA; Babylon remains presentation-only and full global 3-D remains Phase 12C. Unreal Linux/macOS evidence is conditional on qualified engine hosts.

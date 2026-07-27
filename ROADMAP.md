@@ -483,7 +483,7 @@ Explicit non-goals remain new physics, avionics, formats, target implementations
 ## Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
 Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12B.5
-is next and ready to plan. Phase 11.5 and its accepted hardening amendment
+implementation is active from `b9f2c79` under `phase12/PHASE12B5_PLAN.md`. Phase 11.5 and its accepted hardening amendment
 remain the frozen product, application, and live-session foundation. Phase 12A
 completion evidence is in `phase12/COMPLETION.md`; Phase 12B acceptance is in
 `phase12/PHASE12B_COMPLETION.md`; and the next boundary is
@@ -536,7 +536,7 @@ Accepted product evidence includes 17/17 Unreal operations tests, a 54-file stan
 
 ### Phase 12B.5: cross-platform runtime and presentation foundation
 
-Status: next and ready to plan under `phase12/PHASE12B5_HANDOFF.md`.
+Status: active from entry commit `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615` under `phase12/PHASE12B5_PLAN.md`; the earlier handoff remains historical context.
 
 Purpose: make Windows the accepted first platform rather than a permanent
 product boundary before the global viewer and authoring surfaces harden
