@@ -32,6 +32,9 @@ struct FKsa64BridgeValidation
 class KSA64BRIDGE_API FKsa64BridgeModule final : public IModuleInterface
 {
 public:
+    FKsa64BridgeModule();
+    virtual ~FKsa64BridgeModule() override;
+
     static FKsa64BridgeModule& Get();
     static bool IsAvailable();
 

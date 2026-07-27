@@ -326,6 +326,9 @@ struct FKsa64BridgeModule::FApi
     }
 };
 
+FKsa64BridgeModule::FKsa64BridgeModule() = default;
+FKsa64BridgeModule::~FKsa64BridgeModule() = default;
+
 IMPLEMENT_MODULE(FKsa64BridgeModule, Ksa64Bridge)
 
 FKsa64BridgeModule& FKsa64BridgeModule::Get()
