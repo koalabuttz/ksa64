@@ -2766,9 +2766,12 @@ pub unsafe extern "C" fn ksa64_viewer_transport_status_v1(
                 shutdown_requested: u32::from(state.shutdown_requested),
                 finalization_state: if state.bundle.is_some() {
                     2
-                } else if state.worker_done {
+                } else if state.worker_failed {
                     3
                 } else {
+                    // A requested shutdown may end a running session cleanly
+                    // without producing completed KSB11 evidence. That is an
+                    // unfinished finalization state, not a failed one.
                     1
                 },
                 event_overflow: u32::from(state.event_overflow),
@@ -2812,7 +2815,7 @@ pub unsafe extern "C" fn ksa64_viewer_finish_status_v1(
             lifecycle: snapshot.lifecycle,
             finalization_state: if state.bundle.is_some() {
                 2
-            } else if state.worker_done {
+            } else if state.worker_failed {
                 3
             } else {
                 1
@@ -3760,6 +3763,7 @@ mod tests {
                 assert_eq!(ksa64_viewer_transport_status_v1(handle, &mut status), 0);
                 if status.worker_state == 2 {
                     assert_eq!(status.shutdown_requested, 1);
+                    assert_eq!(status.finalization_state, 1);
                     break;
                 }
                 assert!(Instant::now() < deadline);
@@ -3767,7 +3771,11 @@ mod tests {
             }
             let mut finish = FinishStatusV1::default();
             assert_eq!(ksa64_viewer_finish_status_v1(handle, &mut finish), 0);
+            assert_eq!(finish.lifecycle, 2);
+            assert_eq!(finish.finalization_state, 1);
             assert_eq!(finish.shutdown_state, 2);
+            assert_eq!(finish.validity_mask, 0);
+            assert_eq!(finish.evidence_length, 0);
             assert_eq!(ksa64_viewer_destroy(handle), 0);
         }
     }

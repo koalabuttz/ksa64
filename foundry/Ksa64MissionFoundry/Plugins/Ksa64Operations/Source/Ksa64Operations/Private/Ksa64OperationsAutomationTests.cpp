@@ -589,11 +589,13 @@ bool FKsa64OperationsRealAdapterPacingTest::RunTest(const FString&)
             CloseAdapterAndWait(*Adapter);
             return false;
         }
-        if (View.WorkerState != 2)
+        if (View.WorkerState != 2 || View.FinalizationState != 1)
         {
             AdapterFailure = FString::Printf(
-                TEXT("%d Hz worker entered fault state"),
-                RefreshHz);
+                TEXT("%d Hz clean partial shutdown reported worker=%u finalization=%u"),
+                RefreshHz,
+                View.WorkerState,
+                View.FinalizationState);
             CloseAdapterAndWait(*Adapter);
             return false;
         }

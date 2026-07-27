@@ -363,6 +363,7 @@ function Invoke-PackagedPresentationEvidence([string]$ArchiveDirectory) {
         "-windowed",
         "-ResX=1920",
         "-ResY=1080",
+        "-ForceRes",
         "-RenderOffscreen",
         "-Benchmark",
         "-UseFixedTimeStep",
