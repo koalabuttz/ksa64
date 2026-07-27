@@ -1,6 +1,6 @@
 #include "../ksa64_viewer_bridge.h"
-#include <windows.h>
-#include <bcrypt.h>
+#include "platform.hpp"
+#include "sha256.hpp"
 #include <array>
 #include <cassert>
 #include <chrono>
@@ -10,15 +10,14 @@
 #include <string>
 #include <thread>
 #include <vector>
-#pragma comment(lib, "bcrypt.lib")
 
 namespace {
 constexpr uint32_t kCompleted=5,kAborted=6,kSingleStep=4;
-std::array<uint8_t,32> sha256(const uint8_t*d,size_t n){BCRYPT_ALG_HANDLE a=nullptr;BCRYPT_HASH_HANDLE h=nullptr;DWORD z=0,r=0;std::array<uint8_t,32> out{};assert(BCryptOpenAlgorithmProvider(&a,BCRYPT_SHA256_ALGORITHM,nullptr,0)>=0);assert(BCryptGetProperty(a,BCRYPT_OBJECT_LENGTH,reinterpret_cast<PUCHAR>(&z),sizeof(z),&r,0)>=0);std::vector<uint8_t> obj(z);assert(BCryptCreateHash(a,&h,obj.data(),z,nullptr,0,0)>=0);assert(n<=ULONG_MAX);assert(BCryptHashData(h,const_cast<PUCHAR>(d),static_cast<ULONG>(n),0)>=0);assert(BCryptFinishHash(h,out.data(),static_cast<ULONG>(out.size()),0)>=0);BCryptDestroyHash(h);BCryptCloseAlgorithmProvider(a,0);return out;}
+std::array<uint8_t,32> sha256(const uint8_t*d,size_t n){return ksa64::crypto::sha256(d,n);}
 uint32_t crc32(const uint8_t*d,size_t n){uint32_t c=UINT32_MAX;for(size_t i=0;i<n;++i){c^=d[i];for(unsigned b=0;b<8;++b)c=(c>>1u)^(0xedb88320u&(0u-(c&1u)));}return ~c;}
 void put32(uint8_t*p,uint32_t v){p[0]=static_cast<uint8_t>(v);p[1]=static_cast<uint8_t>(v>>8u);p[2]=static_cast<uint8_t>(v>>16u);p[3]=static_cast<uint8_t>(v>>24u);}
-template<class T>T required(HMODULE d,const char*n){auto p=reinterpret_cast<T>(GetProcAddress(d,n));assert(p);return p;}
-template<class T>T optional(HMODULE d,const char*n){return reinterpret_cast<T>(GetProcAddress(d,n));}
+template<class T>T required(ksa64::native::LibraryHandle d,const char*n){return ksa64::native::required_symbol<T>(d,n);}
+template<class T>T optional(ksa64::native::LibraryHandle d,const char*n){return ksa64::native::optional_symbol<T>(d,n);}
 struct Api{
  int32_t(*abi)(Ksa64ViewerAbiInfo*);int32_t(*catalog)(Ksa64ViewerOwnedBuffer*);int32_t(*free_buffer)(Ksa64ViewerOwnedBuffer*);int32_t(*library_diagnostic)(Ksa64ViewerOwnedBuffer*);
  int32_t(*start)(const Ksa64ViewerSpan*,Ksa64ViewerHandle**);int32_t(*destroy)(Ksa64ViewerHandle*);
@@ -38,7 +37,7 @@ void cancel_abort(const Api&a,const Ksa64ViewerSpan&role){Ksa64ViewerHandle*h=nu
 }
 
 int main(int argc,char**argv){
- const char*path=argc>1?argv[1]:"..\\..\\target\\viewer\\ksa64_viewer_bridge.dll";HMODULE dll=LoadLibraryA(path);if(!dll){std::cerr<<"LoadLibrary failed: "<<GetLastError()<<"\n";return 2;}
+ const char*path=argc>1?argv[1]:ksa64::native::kDefaultBridgePath;auto dll=ksa64::native::open_library(path);if(!dll){std::cerr<<"dynamic library load failed: "<<ksa64::native::loader_error()<<"\n";return 2;}
  Api a{
   required<decltype(Api::abi)>(dll,"ksa64_viewer_get_abi_info"),required<decltype(Api::catalog)>(dll,"ksa64_viewer_catalog"),required<decltype(Api::free_buffer)>(dll,"ksa64_viewer_free_buffer"),required<decltype(Api::library_diagnostic)>(dll,"ksa64_viewer_library_diagnostic"),
   required<decltype(Api::start)>(dll,"ksa64_viewer_start"),required<decltype(Api::destroy)>(dll,"ksa64_viewer_destroy"),
@@ -58,5 +57,5 @@ int main(int argc,char**argv){
  std::chrono::steady_clock::duration enqueue_max{};while(s.lifecycle!=kCompleted){auto load=empty_buffer();int32_t lr=a.recommended(h,&load);assert(lr==0||lr==KSA64_VIEWER_NO_DATA);if(lr==0){assert(load.length==512);auto p=make_span(load.data,load.length);assert(a.submit_stage(h,&p,0)==1);assert(a.free_buffer(&load)==0);s=wait_command(a,h,s.command_sequence);assert(s.command_result==0);auto commit=empty_buffer();assert(a.commit_request(h,&commit)==0&&commit.length==128);p=make_span(commit.data,commit.length);assert(a.submit_commit(h,&p)==1);assert(a.free_buffer(&commit)==0);s=wait_command(a,h,s.command_sequence);assert(s.command_result==0);}auto begin=std::chrono::steady_clock::now();assert(a.advance(h,32)==1);auto elapsed=std::chrono::steady_clock::now()-begin;if(elapsed>enqueue_max)enqueue_max=elapsed;assert(elapsed<std::chrono::milliseconds(250));s=wait_command(a,h,s.command_sequence);assert(s.command_result==0);}
  assert(s.evidence_identity!=0);auto ksb=empty_buffer();auto end=std::chrono::steady_clock::now()+std::chrono::seconds(5);int32_t kr;while((kr=a.completed(h,&ksb))==KSA64_VIEWER_NO_DATA){assert(std::chrono::steady_clock::now()<end);std::this_thread::yield();}assert(kr==0&&ksb.length==22369&&std::memcmp(ksb.data,"KSB1",4)==0);const std::array<uint8_t,32> expected{0x38,0xa3,0xef,0x2e,0x49,0x7b,0x8e,0x24,0xd1,0xcf,0x53,0xa5,0x6d,0xb8,0x5b,0x3d,0x8b,0xea,0x0b,0xdb,0x27,0x58,0x62,0x15,0xa0,0x2f,0xf7,0x5d,0x0e,0xe3,0x9d,0xc8};assert(sha256(ksb.data,static_cast<size_t>(ksb.length))==expected);assert(a.free_buffer(&ksb)==0);
  drain_events(a,h);assert(a.destroy(h)==0);auto stale=snap_header();assert(a.poll(h,&stale)==KSA64_VIEWER_INVALID_ARGUMENT);cancel_abort(a,role);
- FreeLibrary(dll);std::cout<<"KSA64 viewer ABI harness passed (controls, misuse, event order, frozen KSB11 length and SHA-256 verified)\n";std::cout<<"nonblocking latency: enqueue_max_us="<<std::chrono::duration_cast<std::chrono::microseconds>(enqueue_max).count()<<" poll_samples="<<kPollSamples<<" poll_total_us="<<std::chrono::duration_cast<std::chrono::microseconds>(poll_total).count()<<" poll_max_us="<<std::chrono::duration_cast<std::chrono::microseconds>(poll_max).count()<<"\n";return 0;
+ ksa64::native::close_library(dll);std::cout<<"KSA64 viewer ABI harness passed (controls, misuse, event order, frozen KSB11 length and SHA-256 verified)\n";std::cout<<"nonblocking latency: enqueue_max_us="<<std::chrono::duration_cast<std::chrono::microseconds>(enqueue_max).count()<<" poll_samples="<<kPollSamples<<" poll_total_us="<<std::chrono::duration_cast<std::chrono::microseconds>(poll_total).count()<<" poll_max_us="<<std::chrono::duration_cast<std::chrono::microseconds>(poll_max).count()<<"\n";return 0;
 }

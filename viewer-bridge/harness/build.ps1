@@ -69,16 +69,51 @@ try {
     $source = Join-Path $repo "target\viewer\ksa64_viewer_bridge.dll"
     $staged = Join-Path $repo "target\viewer\ksa64_viewer_bridge_$commit.dll"
     Copy-Item -LiteralPath $source -Destination $staged -Force
+    $rustcVersion = (& rustc -vV)
+    if ($LASTEXITCODE -ne 0) { throw "could not inspect Rust target identity" }
+    $targetTriple = (($rustcVersion | Where-Object { $_ -like "host: *" }) -replace "^host: ", "").Trim()
+    if (-not $targetTriple) { throw "rustc did not report a host target triple" }
     [ordered]@{
-        schema = "ksa64.viewer-bridge-artifact.v1"
+        schema = "ksa64.viewer-bridge-artifact.v2"
         abi_version = 1
-        commit = $commit
-        file = (Split-Path $staged -Leaf)
+        build_identity = 0x120b0001
+        source_commit = $commit
+        profile = "viewer"
+        library_file = (Split-Path $staged -Leaf)
+        target_triple = $targetTriple
+        operating_system = "windows"
+        architecture = "x86_64"
         sha256 = Get-Sha256 $staged
-    } | ConvertTo-Json | Set-Content -LiteralPath "$staged.json" -Encoding utf8
+        catalog_identity = "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13"
+        structure_sizes = [ordered]@{
+            abi_info = 132
+            span = 24
+            owned_buffer = 32
+            event = 24
+            snapshot = 184
+            start_request_v1 = 48
+            operational_view_v1 = 208
+            procedure_view_v1 = 376
+            disposition_v1 = 72
+            action_proposal_v1 = 144
+            action_receipt_v1 = 80
+            timeline_event_v1 = 136
+            release_sample_v1 = 112
+            prediction_path_header_v1 = 88
+            prediction_path_point_v1 = 56
+            transport_status_v1 = 96
+            finish_status_v1 = 64
+        }
+    } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath "$staged.json" -Encoding utf8
 
     $harnessBin = Join-Path $PSScriptRoot "bin"
     New-Item -ItemType Directory -Path $harnessBin -Force | Out-Null
+    $headerSmokeExe = Join-Path $harnessBin "ksa64_viewer_header_smoke.exe"
+    $headerSmokeObj = Join-Path $harnessBin "header_smoke.obj"
+    & cl.exe /nologo /TC /std:c11 /W4 /WX (Join-Path $PSScriptRoot "header_smoke.c") "/Fo$headerSmokeObj" "/Fe:$headerSmokeExe"
+    if ($LASTEXITCODE -ne 0) { throw "portable C header smoke build failed" }
+    & $headerSmokeExe
+    if ($LASTEXITCODE -ne 0) { throw "portable C header smoke failed" }
     $harnessExe = Join-Path $harnessBin "ksa64_viewer_harness.exe"
     $harnessObj = Join-Path $harnessBin "main.obj"
     $compilerArgs = @(

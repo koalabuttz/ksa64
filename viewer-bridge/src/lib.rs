@@ -10,6 +10,7 @@
 //! exactly once without modifying their pointer or length.
 #![allow(clippy::missing_safety_doc)]
 
+pub mod artifact_manifest;
 mod presentation;
 pub use presentation::*;
 

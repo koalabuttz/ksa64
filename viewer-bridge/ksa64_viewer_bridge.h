@@ -2,8 +2,20 @@
 #define KSA64_VIEWER_BRIDGE_H
 #include <stdint.h>
 #include <stddef.h>
-#ifdef _WIN32
+#if defined(_WIN32)
 #define KSA64_VIEWER_CALL __cdecl
+#if defined(KSA64_VIEWER_BUILD)
+#define KSA64_VIEWER_API __declspec(dllexport)
+#else
+#define KSA64_VIEWER_API
+#endif
+#elif defined(__GNUC__) || defined(__clang__)
+#define KSA64_VIEWER_CALL
+#define KSA64_VIEWER_API __attribute__((visibility("default")))
+#else
+#define KSA64_VIEWER_CALL
+#define KSA64_VIEWER_API
+#endif
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -139,6 +151,7 @@ static_assert(sizeof(Ksa64ViewerPredictionPathPointV1) == 56, "prediction point 
 static_assert(sizeof(Ksa64ViewerTransportStatusV1) == 96, "transport status v1 ABI drift");
 static_assert(sizeof(Ksa64ViewerFinishStatusV1) == 64, "finish status v1 ABI drift");
 
+static_assert(sizeof(Ksa64ViewerAbiInfo) == 132, "Ksa64ViewerAbiInfo ABI drift");
 static_assert(sizeof(Ksa64ViewerSpan) == 24, "Ksa64ViewerSpan ABI drift");
 static_assert(sizeof(Ksa64ViewerOwnedBuffer) == 32, "Ksa64ViewerOwnedBuffer ABI drift");
 static_assert(sizeof(Ksa64ViewerEvent) == 24, "Ksa64ViewerEvent ABI drift");
@@ -148,53 +161,52 @@ static_assert(offsetof(Ksa64ViewerSnapshot, navigation_position_q12) == 60, "sna
 static_assert(offsetof(Ksa64ViewerSnapshot, prediction_impact_position_q12_km) == 172, "snapshot offset drift");
 #endif
 
-int32_t KSA64_VIEWER_CALL ksa64_viewer_start_v1(const Ksa64ViewerStartRequestV1* request, Ksa64ViewerHandle** output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_operational_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerOperationalViewV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_procedure_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerProcedureViewV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_disposition_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerDispositionV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_timeline_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerTimelineEventV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_release_sample_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerReleaseSampleV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_prediction_path_header_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerPredictionPathHeaderV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_prediction_path_point_v1(const Ksa64ViewerHandle* handle, uint32_t point_index, Ksa64ViewerPredictionPathPointV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_start_v1(const Ksa64ViewerStartRequestV1* request, Ksa64ViewerHandle** output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_operational_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerOperationalViewV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_procedure_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerProcedureViewV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_disposition_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerDispositionV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_timeline_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerTimelineEventV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_release_sample_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerReleaseSampleV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_prediction_path_header_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerPredictionPathHeaderV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_prediction_path_point_v1(const Ksa64ViewerHandle* handle, uint32_t point_index, Ksa64ViewerPredictionPathPointV1* output);
 /* Source-selected Phase 12B presentation paths. The planned KPH10 reference
    populates altitude/downrange/crossrange; Cartesian position remains zero. */
-int32_t KSA64_VIEWER_CALL ksa64_viewer_trajectory_path_header_v1(const Ksa64ViewerHandle* handle, uint32_t source, Ksa64ViewerPredictionPathHeaderV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_trajectory_path_point_v1(const Ksa64ViewerHandle* handle, uint32_t source, uint32_t point_index, Ksa64ViewerPredictionPathPointV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_action_proposal_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerActionProposalV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_action_proposal_v1(const Ksa64ViewerHandle* handle, uint32_t proposal_identity, uint32_t completed_event_mask);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_commit_action_v1(const Ksa64ViewerHandle* handle, uint32_t proposal_identity);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_cancel_action_v1(const Ksa64ViewerHandle* handle, uint32_t proposal_identity);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_action_receipt_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerActionReceiptV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_transport_status_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerTransportStatusV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_finish_status_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerFinishStatusV1* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_request_shutdown_v1(const Ksa64ViewerHandle* handle);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_trajectory_path_header_v1(const Ksa64ViewerHandle* handle, uint32_t source, Ksa64ViewerPredictionPathHeaderV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_trajectory_path_point_v1(const Ksa64ViewerHandle* handle, uint32_t source, uint32_t point_index, Ksa64ViewerPredictionPathPointV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_action_proposal_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerActionProposalV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_action_proposal_v1(const Ksa64ViewerHandle* handle, uint32_t proposal_identity, uint32_t completed_event_mask);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_commit_action_v1(const Ksa64ViewerHandle* handle, uint32_t proposal_identity);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_cancel_action_v1(const Ksa64ViewerHandle* handle, uint32_t proposal_identity);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_action_receipt_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerActionReceiptV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_transport_status_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerTransportStatusV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_finish_status_v1(const Ksa64ViewerHandle* handle, Ksa64ViewerFinishStatusV1* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_request_shutdown_v1(const Ksa64ViewerHandle* handle);
 
-int32_t KSA64_VIEWER_CALL ksa64_viewer_get_abi_info(Ksa64ViewerAbiInfo* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_catalog(Ksa64ViewerOwnedBuffer* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_start(const Ksa64ViewerSpan* role, Ksa64ViewerHandle** output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_destroy(Ksa64ViewerHandle* handle);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_pause(const Ksa64ViewerHandle* handle);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_resume(const Ksa64ViewerHandle* handle);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_set_pace(const Ksa64ViewerHandle* handle, uint32_t pace);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_step(const Ksa64ViewerHandle* handle);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_advance(const Ksa64ViewerHandle* handle, uint32_t maximum_releases);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_abort(const Ksa64ViewerHandle* handle, uint32_t reason_identity);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_snapshot(const Ksa64ViewerHandle* handle, Ksa64ViewerSnapshot* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_event(const Ksa64ViewerHandle* handle, Ksa64ViewerEvent* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_recommended_load(const Ksa64ViewerHandle* handle, Ksa64ViewerOwnedBuffer* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_commit_request(const Ksa64ViewerHandle* handle, Ksa64ViewerOwnedBuffer* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_completed_ksb11(const Ksa64ViewerHandle* handle, Ksa64ViewerOwnedBuffer* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_library_diagnostic(Ksa64ViewerOwnedBuffer* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_diagnostic(const Ksa64ViewerHandle* handle, Ksa64ViewerOwnedBuffer* output);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_stage(const Ksa64ViewerHandle* handle, const Ksa64ViewerSpan* payload, uint32_t completed_event_mask);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_commit(const Ksa64ViewerHandle* handle, const Ksa64ViewerSpan* payload);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_cancel(const Ksa64ViewerHandle* handle, const Ksa64ViewerSpan* payload);
-int32_t KSA64_VIEWER_CALL ksa64_viewer_free_buffer(Ksa64ViewerOwnedBuffer* buffer);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_get_abi_info(Ksa64ViewerAbiInfo* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_catalog(Ksa64ViewerOwnedBuffer* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_start(const Ksa64ViewerSpan* role, Ksa64ViewerHandle** output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_destroy(Ksa64ViewerHandle* handle);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_pause(const Ksa64ViewerHandle* handle);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_resume(const Ksa64ViewerHandle* handle);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_set_pace(const Ksa64ViewerHandle* handle, uint32_t pace);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_step(const Ksa64ViewerHandle* handle);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_advance(const Ksa64ViewerHandle* handle, uint32_t maximum_releases);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_abort(const Ksa64ViewerHandle* handle, uint32_t reason_identity);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_snapshot(const Ksa64ViewerHandle* handle, Ksa64ViewerSnapshot* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_poll_event(const Ksa64ViewerHandle* handle, Ksa64ViewerEvent* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_recommended_load(const Ksa64ViewerHandle* handle, Ksa64ViewerOwnedBuffer* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_commit_request(const Ksa64ViewerHandle* handle, Ksa64ViewerOwnedBuffer* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_completed_ksb11(const Ksa64ViewerHandle* handle, Ksa64ViewerOwnedBuffer* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_library_diagnostic(Ksa64ViewerOwnedBuffer* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_diagnostic(const Ksa64ViewerHandle* handle, Ksa64ViewerOwnedBuffer* output);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_stage(const Ksa64ViewerHandle* handle, const Ksa64ViewerSpan* payload, uint32_t completed_event_mask);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_commit(const Ksa64ViewerHandle* handle, const Ksa64ViewerSpan* payload);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_submit_cancel(const Ksa64ViewerHandle* handle, const Ksa64ViewerSpan* payload);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_free_buffer(Ksa64ViewerOwnedBuffer* buffer);
 /* Present only when built with --features panic-probe. */
-int32_t KSA64_VIEWER_CALL ksa64_viewer_test_panic_probe(const Ksa64ViewerHandle* handle);
+KSA64_VIEWER_API int32_t KSA64_VIEWER_CALL ksa64_viewer_test_panic_probe(const Ksa64ViewerHandle* handle);
 
 #ifdef __cplusplus
 }
-#endif
 #endif
 #endif

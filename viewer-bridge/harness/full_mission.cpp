@@ -1,10 +1,6 @@
 #include "../ksa64_viewer_bridge.h"
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <bcrypt.h>
+#include "platform.hpp"
+#include "sha256.hpp"
 
 #include <algorithm>
 #include <array>
@@ -21,7 +17,6 @@
 #include <thread>
 #include <vector>
 
-#pragma comment(lib, "bcrypt.lib")
 
 namespace {
 
@@ -61,12 +56,8 @@ void require(bool condition, const std::string& message) {
 }
 
 template <class T>
-T required_symbol(HMODULE library, const char* name) {
-    auto symbol = reinterpret_cast<T>(GetProcAddress(library, name));
-    if (symbol == nullptr) {
-        fail(std::string("missing required ABI-v1 symbol: ") + name);
-    }
-    return symbol;
+T required_symbol(ksa64::native::LibraryHandle library, const char* name) {
+    return ksa64::native::required_symbol<T>(library, name);
 }
 
 uint16_t read_u16(const uint8_t* input) {
@@ -93,47 +84,7 @@ uint32_t crc32(const uint8_t* data, size_t length) {
 }
 
 std::array<uint8_t, 32> sha256(const uint8_t* data, size_t length) {
-    BCRYPT_ALG_HANDLE algorithm = nullptr;
-    BCRYPT_HASH_HANDLE hash = nullptr;
-    DWORD object_length = 0;
-    DWORD returned = 0;
-    std::array<uint8_t, 32> output{};
-
-    require(
-        BCryptOpenAlgorithmProvider(
-            &algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) >= 0,
-        "BCryptOpenAlgorithmProvider failed");
-    require(
-        BCryptGetProperty(
-            algorithm,
-            BCRYPT_OBJECT_LENGTH,
-            reinterpret_cast<PUCHAR>(&object_length),
-            sizeof(object_length),
-            &returned,
-            0) >= 0,
-        "BCryptGetProperty failed");
-    std::vector<uint8_t> object(object_length);
-    require(
-        BCryptCreateHash(
-            algorithm, &hash, object.data(), object_length, nullptr, 0, 0) >= 0,
-        "BCryptCreateHash failed");
-    require(
-        length <= static_cast<size_t>(std::numeric_limits<ULONG>::max()),
-        "SHA-256 input is too large for BCryptHashData");
-    require(
-        BCryptHashData(
-            hash,
-            const_cast<PUCHAR>(data),
-            static_cast<ULONG>(length),
-            0) >= 0,
-        "BCryptHashData failed");
-    require(
-        BCryptFinishHash(
-            hash, output.data(), static_cast<ULONG>(output.size()), 0) >= 0,
-        "BCryptFinishHash failed");
-    BCryptDestroyHash(hash);
-    BCryptCloseAlgorithmProvider(algorithm, 0);
-    return output;
+    return ksa64::crypto::sha256(data, length);
 }
 
 std::string hex(const std::array<uint8_t, 32>& bytes) {
@@ -329,7 +280,7 @@ struct Api {
     int32_t (*free_buffer)(Ksa64ViewerOwnedBuffer*);
 };
 
-Api load_api(HMODULE library) {
+Api load_api(ksa64::native::LibraryHandle library) {
     return {
         required_symbol<decltype(Api::get_abi_info)>(
             library, "ksa64_viewer_get_abi_info"),
@@ -648,11 +599,9 @@ void commit_action(
 }
 
 int run(const char* library_path, const std::string& expected_hash) {
-    HMODULE library = LoadLibraryA(library_path);
+    auto library = ksa64::native::open_library(library_path);
     if (library == nullptr) {
-        std::ostringstream message;
-        message << "LoadLibrary failed with Win32 error " << GetLastError();
-        fail(message.str());
+        fail("dynamic library load failed: " + ksa64::native::loader_error());
     }
 
     try {
@@ -805,7 +754,7 @@ int run(const char* library_path, const std::string& expected_hash) {
 
             require(api.destroy(handle) == KSA64_VIEWER_OK, "bridge destroy failed");
             handle = nullptr;
-            FreeLibrary(library);
+            ksa64::native::close_library(library);
             library = nullptr;
 
             std::cout
@@ -834,7 +783,7 @@ int run(const char* library_path, const std::string& expected_hash) {
             throw;
         }
     } catch (...) {
-        FreeLibrary(library);
+        ksa64::native::close_library(library);
         throw;
     }
 }
@@ -844,7 +793,7 @@ int run(const char* library_path, const std::string& expected_hash) {
 int main(int argc, char** argv) {
     try {
         const char* library_path =
-            argc > 1 ? argv[1] : "..\\..\\target\\viewer\\ksa64_viewer_bridge.dll";
+            argc > 1 ? argv[1] : ksa64::native::kDefaultBridgePath;
         const std::string expected_hash = normalize_hash(
             argc > 2 ? argv[2] : kPhase12bAcceptedKsb11Sha256);
         return run(library_path, expected_hash);
