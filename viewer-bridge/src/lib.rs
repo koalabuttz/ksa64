@@ -1087,6 +1087,7 @@ fn full_release_sample(value: ksa64_host::phase12b::ReleaseSampleView) -> Releas
     ReleaseSampleV1 {
         validity_mask: VIEW_VALID_MISSION_TIME | VIEW_VALID_NAVIGATION | VIEW_VALID_GROUND_ESTIMATE,
         release_epoch: value.epoch,
+        frame: u32::from(value.frame),
         mission_time_q16: value.mission_time_q16,
         flags: value.flags,
         onboard_position_q12: [
@@ -1099,7 +1100,8 @@ fn full_release_sample(value: ksa64_host::phase12b::ReleaseSampleView) -> Releas
             value.crossrange_q12_km,
             value.ground_altitude_q12_km,
         ],
-        predicted_apogee_q12_km: value.onboard_altitude_q12_km,
+        // This sampled history carries estimates, not a prediction product.
+        predicted_apogee_q12_km: 0,
         altitude_q12_km: value.altitude_q12_km,
         speed_q24_km_s: value.speed_q24_km_s,
         downrange_q12_km: value.downrange_q12_km,
@@ -3661,6 +3663,9 @@ mod tests {
                     0,
                     "guided trajectory sample exposed SIM truth"
                 );
+                assert!((1..=3).contains(&sample.frame));
+                assert_eq!(sample.validity_mask & VIEW_VALID_PREDICTION, 0);
+                assert_eq!(sample.predicted_apogee_q12_km, 0);
                 sample = ReleaseSampleV1::default();
             }
             assert_eq!(ksa64_viewer_destroy(handle), ResultCode::Ok as i32);

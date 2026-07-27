@@ -219,6 +219,8 @@ pub struct TimelineEventView {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct ReleaseSampleView {
     pub epoch: u32,
+    /// Public active-frame identity carried with the operational estimate.
+    pub frame: u8,
     pub mission_time_q16: u32,
     pub altitude_q12_km: i32,
     pub speed_q24_km_s: i32,

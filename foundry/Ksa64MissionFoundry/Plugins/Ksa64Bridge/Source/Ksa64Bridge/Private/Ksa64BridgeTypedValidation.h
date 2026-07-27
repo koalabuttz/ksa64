@@ -270,6 +270,14 @@ inline bool Disposition(const Ksa64ViewerDispositionV1& Value)
     return ((Value.validity_mask & ValidEvidence) != 0) == (Value.evidence == 1);
 }
 
+inline bool Event(const Ksa64ViewerEvent& Value)
+{
+    return HasExpectedHeader(Value)
+        && Value.sequence != 0
+        && Value.kind >= 1
+        && Value.kind <= 12;
+}
+
 inline bool Timeline(const Ksa64ViewerTimelineEventV1& Value)
 {
     return HasExpectedHeader(Value)

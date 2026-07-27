@@ -55,6 +55,7 @@ public:
     int32 AdvanceOneRelease();
     int32 AdvanceReleases(uint32 MaximumReleases);
     int32 PollSnapshot(Ksa64ViewerSnapshot& OutSnapshot) const;
+    int32 PollEvent(Ksa64ViewerEvent& OutEvent) const;
     int32 PollOperationalV1(Ksa64ViewerOperationalViewV1& OutView) const;
     int32 ProcedureV1(Ksa64ViewerProcedureViewV1& OutView) const;
     int32 DispositionV1(Ksa64ViewerDispositionV1& OutView) const;

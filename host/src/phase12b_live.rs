@@ -1096,6 +1096,7 @@ impl FullMissionSession {
         let sim_director = self.role == OperationalRole::SimDirector;
         ReleaseSampleView {
             epoch,
+            frame: update.frame.frame as u8,
             mission_time_q16: update.frame.mission_time_q16,
             altitude_q12_km: if sim_director {
                 update.plot.altitude_q12_km

@@ -1291,6 +1291,30 @@ int32 FKsa64BridgeModule::AdvanceOneRelease()
     return Api->Step(Session);
 }
 
+int32 FKsa64BridgeModule::PollEvent(Ksa64ViewerEvent& OutEvent) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen
+        || Session == nullptr
+        || !Api.IsValid()
+        || Api->PollEvent == nullptr)
+    {
+        return KSA64_VIEWER_LIFECYCLE;
+    }
+    Ksa64ViewerEvent Candidate = {};
+    Candidate.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Candidate.struct_size = static_cast<uint32>(sizeof(Candidate));
+    const int32 Result = Api->PollEvent(Session, &Candidate);
+    if (Result == KSA64_VIEWER_OK)
+    {
+        if (!Ksa64BridgeTypedValidation::Event(Candidate))
+        {
+            return KSA64_VIEWER_INTERNAL;
+        }
+        OutEvent = Candidate;
+    }
+    return Result;
+}
+
 int32 FKsa64BridgeModule::PollSnapshot(Ksa64ViewerSnapshot& OutSnapshot) const
 {
     if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr)

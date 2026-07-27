@@ -334,6 +334,24 @@ public:
             OutView.UplinkLabel += TEXT("\n") + OutView.ActionReceiptLabel;
         }
 
+        // The legacy event stream remains part of ABI v1 even though Phase
+        // 12B presents the richer typed timeline. Consume and validate it so
+        // a typed client cannot silently overflow an unobserved compatibility
+        // queue during a long mission.
+        for (int32 Count = 0; Count < MaximumDrainPerPoll; ++Count)
+        {
+            Ksa64ViewerEvent Event = {};
+            const int32 EventResult = Module.PollEvent(Event);
+            if (EventResult == KSA64_VIEWER_NO_DATA)
+            {
+                break;
+            }
+            if (EventResult != KSA64_VIEWER_OK)
+            {
+                return MapResult(EventResult);
+            }
+        }
+
         Ksa64ViewerTransportStatusV1 Transport = {};
         if (Module.TransportStatusV1(Transport) == KSA64_VIEWER_OK)
         {
@@ -346,7 +364,9 @@ public:
             OutView.WorkerState = Transport.worker_state;
             OutView.FinalizationState = Transport.finalization_state;
             OutView.CommandResult = Transport.last_command_result;
-            OutView.TransportOverflow = Transport.event_overflow | Transport.timeline_overflow | Transport.sample_overflow;
+            OutView.TransportOverflow = Transport.event_overflow
+                | (Transport.timeline_overflow << 1)
+                | (Transport.sample_overflow << 2);
             if (OutView.TransportOverflow != 0) OutView.bObservationComplete = false;
         }
 
