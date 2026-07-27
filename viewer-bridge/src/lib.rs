@@ -697,7 +697,7 @@ pub unsafe extern "C" fn ksa64_viewer_get_abi_info(out: *mut AbiInfo) -> i32 {
         }
         unsafe {
             let catalog =
-                serde_json::to_vec_pretty(&Ksa64Application::default().catalog().json(false))
+                serde_json::to_vec_pretty(&Ksa64Application::default().catalog().json(true))
                     .expect("accepted catalog JSON");
             *out = AbiInfo {
                 abi_version: 1,
@@ -734,8 +734,7 @@ pub unsafe extern "C" fn ksa64_viewer_catalog(out: *mut OwnedBuffer) -> i32 {
         if !h.data.is_null() || h.length != 0 || h.allocation_id != 0 {
             return ResultCode::InvalidArgument;
         }
-        let b = match serde_json::to_vec_pretty(&Ksa64Application::default().catalog().json(false))
-        {
+        let b = match serde_json::to_vec_pretty(&Ksa64Application::default().catalog().json(true)) {
             Ok(x) => x,
             Err(_) => return ResultCode::Internal,
         };
@@ -1263,6 +1262,10 @@ mod tests {
             assert_eq!(ksa64_viewer_catalog(&mut b), 0);
             let a = take(a);
             assert_eq!(a, take(b));
+            assert_eq!(
+                a.as_slice(),
+                include_bytes!("../../phase11_5/product-catalog-v1.json")
+            );
             let j: serde_json::Value = serde_json::from_slice(&a).unwrap();
             assert_eq!(j["experiences"].as_array().unwrap().len(), 13)
         }
