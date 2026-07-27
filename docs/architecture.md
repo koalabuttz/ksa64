@@ -667,3 +667,109 @@ The accepted product qualifies the additive ABI-v1 bridge at build identity `0x1
 Worker termination and evidence finalization are separate states. A clean request to stop a partial presentation session terminates the worker but leaves finalization `InProgress` with no archive; it is not reported as mission or evidence failure. Only an actual worker/finalizer error produces `Failed`, and only a Rust-sealed archive produces `Completed`.
 
 Phase 12C consumes typed streams and recordings through this same boundary. It owns passive ENU/ECEF/GCRF display conversion, large-world origin management, Earth and vehicle pose, cameras, entry/recovery views, and exact visual snapping. It cannot use Chaos or scene state as physical authority, derive events from rendering, parse canonical K records, expose truth to operational roles, or modify Phase 12B dispositions. The accepted 2-D operations desk remains a regression surface and companion overlay.
+
+## Phase 12B.5 cross-platform presentation boundary
+
+Phase 12B.5 separates the accepted application/session authority from any one
+loader, process model, renderer, or operating system:
+
+```text
+                 Ksa64Application / LiveMissionSession
+                               |
+              Rust-owned role filtering and action broker
+                               |
+        typed presentation-session and replay view contract
+             /                 |                 \
+    in-process ABI       sidecar/network       local WASM
+       /   |   \          /    |    \             |
+ Windows Linux macOS   web  Vita mobile       browser worker
+       |                  presentation clients
+       +---- Unreal ---- WebGPU/WebGL ---- SDL2 -----------+
+```
+
+The shared layer contains view semantics, release and event identities, role
+permissions, action proposals and receipts, lifecycle, staleness, integrity,
+and deterministic replay fixtures. It does not contain renderer objects,
+windowing, input widgets, authoritative physics, or a client-side canonical
+evidence parser.
+
+Desktop in-process libraries use platform-native `.dll`, `.so`, or `.dylib`
+artifacts. Vita uses a statically linked Rust/VitaSDK plus SDL2 executable.
+Browser clients begin remote or replay-first; local WebAssembly authority runs
+in a dedicated worker and is accepted only when it reproduces native KSB11.
+Android and iOS use native static/shared Rust packaging appropriate to their
+lifecycle rather than pretending the desktop dynamic-loader contract applies
+unchanged.
+
+The 8 GB Lenovo Chromebook Duet 11 has a specific all-local placement:
+
+```text
+Debian Crostini: Rust world + flight + LiveMissionSession
+                         |
+ChromeOS browser: role-filtered PWA Mission Control + WebGPU/WebGL viewer
+```
+
+The browser may be closed, throttled, or reconnected without changing the
+Crostini-owned mission. An explicit local mission pause still occurs only at
+an accepted release boundary and enters the action/lifecycle evidence when the
+contract requires it.
+
+Vita, browser, and mobile clients may submit only the same high-level Phase 11
+actions as desktop Mission Control. Network exposure is loopback-only by
+default. LAN operation requires explicit pairing, authentication, role binding,
+origin policy, bounded sequencing, stale-message rejection, and a deterministic
+disconnect/reconnect contract.
+
+### Browser presentation and local authority
+
+The accepted web stack is React plus TypeScript for semantic Mission Control,
+Vite for builds with an explicit audited manifest/service-worker packaging
+layer, and Babylon.js for 3-D. Babylon is integrated
+directly through an imperative scene adapter rather than a React-specific
+renderer wrapper:
+
+```text
+Browser main thread
+  React DOM/SVG/Canvas operations UI
+  Babylon.js WebGPU -> WebGL2 viewer
+  presentation interpolation only
+                         |
+             transferable typed views
+                         |
+Dedicated Web Worker
+  Rust/WASM browser session
+  authoritative world + flight package
+  operations + role filtering + KSB11 finalizer
+```
+
+The same presentation adapter may instead connect to a remote native authority
+or a Rust-owned replay reader. Babylon receives camera-relative positions,
+orientations, paths, source labels, validity, and exact-event metadata. Rust
+alone owns ENU/ECEF/GCRF transformations, time, physics, event detection,
+mission outcome, actions, role filtering, and canonical evidence. Babylon
+physics and collision integration are disabled.
+
+WebGPU selection is explicit: the client accepts it only after capability and
+asynchronous initialization succeed, otherwise it constructs a separately
+tested WebGL2 engine. Complete 2-D operations remain available without a valid
+3-D adapter. Rendering backend, frame cadence, interpolation, quality, and
+client lifetime remain outside simulation identity.
+
+The Web Worker advances by accepted releases, never render ticks. A service
+worker may cache the PWA but cannot own a mission. Remote authority continues
+through browser disconnect according to the transport contract. A local-WASM
+session interrupted by page close, browser discard, suspension, worker failure,
+or panic remains incomplete unless a later validated checkpoint/replay contract
+reconstructs it exactly; it cannot claim uninterrupted execution.
+
+Local browser authority uses the accepted simulator and in-memory evidence
+encoder through a browser-safe session crate. It does not compile desktop
+filesystem, terminal, process, native-thread, target, campaign, optimizer, or
+C-ABI code into WebAssembly. Native/WASM acceptance requires the identical
+catalog, definition, action transcript, release/event ordering, checksum chains,
+outcome axes, terminal release, KSB11 bytes, and SHA-256.
+
+Phase 12C supplies one renderer-neutral global display model to desktop Unreal
+and Babylon.js WebGPU/WebGL2. Phase 12C.5 productizes portable web, Vita/SDL2,
+Android, and iOS clients and accepts the polished all-browser world plus viewer.
+Rendering quality and placement remain outside simulation and evidence identity.

@@ -1508,3 +1508,96 @@ Accept both native C++ harnesses, 17/17 Unreal operations automation tests, stan
 Distinguish clean partial shutdown from failed evidence. A requested worker stop may leave finalization InProgress with no archive; Failed is reserved for an actual worker or finalizer error. Completed exists only after Rust seals the archive.
 
 Phase 12C is now unblocked and owns passive Earth-scale 3-D presentation, ENU/ECEF/GCRF display conversion, large-world origin management, vehicle pose, entry, recovery, cameras, and event snapping. It must consume Rust-owned typed streams or recordings, preserve exact-versus-smooth labels, and keep the accepted 2-D desk as a regression surface. It may not propagate physics, infer authoritative events from the scene, parse canonical K records, expose SIM truth to operational roles, or reclassify Phase 12B outcomes.
+
+## D-116: Make portability and disposable clients first-class before the global viewer
+
+Date: 2026-07-27
+
+Status: accepted for forward planning.
+
+Treat Windows x86-64 and D3D12 as the first accepted Phase 12 product lane,
+not the permanent product boundary. Insert Phase 12B.5 before the global
+viewer to qualify the Rust authority, CLI/TUI, evidence, bridge, and live
+session behavior on Linux x86-64, Linux ARM64, and macOS ARM64. Preserve every
+accepted Phase 12A/B Win64 binary, ABI-v1 layout, hash, KSB11, and completion
+record unchanged.
+
+Freeze one transport-neutral, role-filtered presentation-session contract above
+`Ksa64Application` and `LiveMissionSession`. Unreal, WebGPU/WebGL, SDL2,
+Android, iOS, and future clients share typed views, action semantics, exact
+fixtures, and lifecycle rules rather than one renderer. No client may parse
+canonical evidence as an integration shortcut, receive unauthorized truth,
+construct direct effector commands, or run a second mission loop.
+
+Make the 8 GB Lenovo Chromebook Duet 11 a priority ARM64 reference. Require a
+native Crostini Rust package and measure world, flight, CLI/TUI, evidence, and
+bounded campaign behavior. Prefer a local ChromeOS PWA using WebGPU with a
+WebGL2 fallback for graphical operation; Crostini-hosted Unreal remains an
+experimental lane and cannot block portable Rust or browser acceptance.
+
+Make web and PlayStation Vita explicit priorities. The web product begins as a
+PWA supporting remote live sessions and local replay, then admits local WASM
+authority only after native/WASM evidence parity. The Vita uses Rust’s
+VitaSDK-backed target and a statically linked SDL2 shell. It begins with
+Mission Control, replay, and high-level actions, then measures host-world with
+Vita flight, Vita-world/host-flight, and selected all-in-one placements
+on physical hardware.
+
+Android ARM64 is the first native mobile lane and iOS/iPadOS follows after a
+pinned Mac/Xcode/signing path exists. Both begin remote-first; local flight or
+world ownership requires explicit suspension, thermal, memory, timing, and
+exact-evidence gates. Disconnect, browser throttling, or mobile suspension may
+never silently change an authoritative mission.
+
+Phase 12C keeps its global-viewer physics-neutral scope but uses a renderer-
+neutral display model with desktop Unreal and native web renderers. Phase
+12C.5 productizes web, Vita/SDL2, Android, and iOS operations clients. Phase
+12D remains desktop-first authoring, and Phase 12E owns cross-platform visual
+assets, packaging, quality tiers, and performance.
+
+## D-117: Use Babylon.js for native web 3-D and Rust/WASM for browser authority
+
+Date: 2026-07-27
+
+Status: accepted for forward planning.
+
+Specialize D-116's web lane around React with TypeScript for semantic DOM/SVG
+Mission Control, Vite for builds with explicit audited manifest/service-worker
+packaging, and Babylon.js through tree-shakeable `@babylonjs/*` modules for 3-D. Integrate Babylon directly
+through an imperative scene adapter rather than a React-specific Babylon
+wrapper. Pin every web dependency and self-host production assets.
+
+Select Babylon because its maintained WebGPU and WebGL implementations,
+large-world rendering, geospatial support, glTF/KTX2 pipeline, LOD, picking,
+and browser tooling closely match the Phase 10 global viewer. Attempt WebGPU
+explicitly and accept it only after asynchronous initialization succeeds;
+otherwise construct the separately tested WebGL2 engine. Preserve a complete
+2-D-only mode. Three.js remains a credible fallback, raw `wgpu` remains a
+possible later shared-renderer experiment, and Unreal Pixel Streaming remains
+an optional remote viewport rather than the native web product.
+
+Babylon owns no physics, collision, coordinate-frame, time, event, outcome,
+role, action, or evidence authority. Rust supplies role-filtered,
+camera-relative display samples and exact-event metadata. Babylon may
+interpolate for presentation only and may never feed a derived result into the
+mission.
+
+Support remote live, local WebAssembly, and replay modes through the same typed
+presentation-session contract. In local mode, one dedicated Rust/WASM Web
+Worker owns the accepted world, truth-blind flight package, operations engine,
+role filtering, and in-memory KSB11 finalizer. React and Babylon remain on the
+main thread. Do not force the native C ABI, filesystem, terminal, process,
+native-thread, report, campaign, or optimizer layers into the browser adapter.
+
+Accept local browser authority only when identical inputs and ordered actions
+reproduce native release and event order, action receipts, checksum chains,
+outcome axes, terminal release, exact KSB11 length and bytes, and SHA-256.
+Renderer backend, frame rate, interpolation, polling, and quality must not
+change that evidence.
+
+A service worker caches the application and never owns the running mission.
+Remote authority continues according to the disconnect contract. Browser
+close, suspension, discard, worker failure, or panic during local authority
+leaves an explicitly incomplete session unless a separately validated resume
+contract reconstructs it. No web product may imply continuous execution when
+the authoritative worker did not advance.

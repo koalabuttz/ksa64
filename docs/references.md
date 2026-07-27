@@ -160,3 +160,51 @@ rights, credit, third-party content, hash, and transformation review. Every
 such asset declares `engineering_authority: false`; KSA64's accepted packs and
 telemetry remain the source for vehicle geometry, frames, events, and physical
 state.
+
+## Phase 12 cross-platform and portable-client references
+
+Phase 12B.5 treats Windows as the first accepted graphical platform rather
+than the permanent product boundary. Primary platform and toolchain references
+are:
+
+- Unreal Linux requirements and x86-64 cross-toolchain policy: <https://dev.epicgames.com/documentation/unreal-engine/linux-development-requirements-for-unreal-engine>
+- Unreal installed-build targets, including Linux ARM64: <https://dev.epicgames.com/documentation/en-us/unreal-engine/installed-build-reference-guide-for-unreal-engine>
+- Unreal macOS and Apple Silicon requirements: <https://dev.epicgames.com/documentation/unreal-engine/macos-development-requirements-for-unreal-engine>
+- Unreal Android requirements: <https://dev.epicgames.com/documentation/unreal-engine/android-quick-start>
+- Unreal iOS/iPadOS/tvOS requirements: <https://dev.epicgames.com/documentation/en-us/unreal-engine/ios-ipados-and-tvos-development-requirements-for-unreal-engine>
+- Rust ARM64 Linux target support: <https://doc.rust-lang.org/rustc/platform-support/aarch64-unknown-linux-gnu.html>
+- Rust PlayStation Vita target support: <https://doc.rust-lang.org/rustc/platform-support/armv7-sony-vita-newlibeabihf.html>
+- SDL2 PlayStation Vita backend: <https://wiki.libsdl.org/SDL2/README-vita>
+- VitaSDK: <https://vitasdk.org/>
+- ChromeOS Linux environment limits: <https://support.google.com/chromebook/answer/9145439>
+- Chrome WebGPU availability and fallback diagnostics: <https://developer.chrome.com/docs/web-platform/webgpu/troubleshooting-tips>
+- WebGL browser fallback: <https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API>
+- Babylon.js engine capabilities: <https://www.babylonjs.com/specifications/>
+- Babylon.js source and Apache-2.0 license: <https://github.com/BabylonJS/Babylon.js/>
+- Babylon.js WebGPU support: <https://doc.babylonjs.com/setup/support/webGPU/>
+- Babylon.js large-world rendering: <https://doc.babylonjs.com/typedoc/interfaces/BABYLON.EngineOptions>
+- Babylon.js geospatial features: <https://doc.babylonjs.com/features/featuresDeepDive/geospatial/>
+- Babylon.js KTX2 compressed textures: <https://doc.babylonjs.com/features/featuresDeepDive/materials/using/ktx2Compression>
+- Babylon.js ES-module and TypeScript scaffolding: <https://doc.babylonjs.com/setup/createBabylonJS/>
+- React TypeScript guidance: <https://react.dev/learn/typescript>
+- Vite guide: <https://vite.dev/guide/>
+- Rust browser WebAssembly target: <https://doc.rust-lang.org/rustc/platform-support/wasm32-unknown-unknown.html>
+- Browser Web Workers: <https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers>
+- Browser page visibility: <https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API>
+- Unreal Pixel Streaming architecture: <https://dev.epicgames.com/documentation/unreal-engine/overview-of-pixel-streaming-in-unreal-engine>
+- Lenovo Chromebook Duet 11M889 reference specification: <https://psref.lenovo.com/syspool/Sys/PDF/Lenovo/Lenovo_Chromebook_Duet_11M889/Lenovo_Chromebook_Duet_11M889_Spec.pdf>
+
+The Linux ARM64 Unreal target exists, but Epic documents its supplied and
+tested Windows cross-toolchain lane for Linux x86-64. Linux ARM64 Unreal is
+therefore a measured source/installed-build feasibility target; portable Rust
+ARM64 execution does not depend on it.
+
+The web product is a purpose-built React/TypeScript PWA with a Babylon.js
+renderer, not an attempted Unreal Engine 5 HTML export. WebGPU is attempted
+explicitly, WebGL2 is the tested fallback, and 2-D Mission Control remains
+useful without either 3-D backend. Rust/WASM in a dedicated Web Worker may own
+a local mission only after exact native evidence parity.
+
+The Vita Rust target is community maintained and unaffiliated with Sony.
+VitaSDK/SDL packages are unofficial homebrew outputs and must be labelled as
+such; they are not official PlayStation distribution artifacts.

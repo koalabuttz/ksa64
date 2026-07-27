@@ -482,7 +482,12 @@ Explicit non-goals remain new physics, avionics, formats, target implementations
 
 ## Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12C is next and ready to plan. Phase 11.5 and its accepted hardening amendment remain the frozen product, application, and live-session foundation. Phase 12A completion evidence is in `phase12/COMPLETION.md`; Phase 12B acceptance is in `phase12/PHASE12B_COMPLETION.md`; and the next boundary is `phase12/PHASE12C_HANDOFF.md`.
+Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12B.5
+is next and ready to plan. Phase 11.5 and its accepted hardening amendment
+remain the frozen product, application, and live-session foundation. Phase 12A
+completion evidence is in `phase12/COMPLETION.md`; Phase 12B acceptance is in
+`phase12/PHASE12B_COMPLETION.md`; and the next boundary is
+`phase12/PHASE12B5_HANDOFF.md`.
 
 The hard entry criterion applies to every Phase 12 subphase: a graphical client
 operates a live mission only through `LiveMissionSession`. It may not build
@@ -529,23 +534,103 @@ The frozen full-reference evidence contains four accepted actions and a 2,911,46
 
 Accepted product evidence includes 17/17 Unreal operations tests, a 54-file standalone package, byte-exact packaged full-mission finalization, and a nonblank 1920x1080 D3D12 capture. The fixed-60-Hz bridge/presentation service sample recorded zero overflow, 258,900 ns p99, and 460,000 ns maximum latency. The 30/60/144-Hz fixtures establish scheduling and checksum invariance rather than a universal GPU frame-rate claim.
 
+### Phase 12B.5: cross-platform runtime and presentation foundation
+
+Status: next and ready to plan under `phase12/PHASE12B5_HANDOFF.md`.
+
+Purpose: make Windows the accepted first platform rather than a permanent
+product boundary before the global viewer and authoring surfaces harden
+platform-specific assumptions.
+
+This phase qualifies the Rust application, world, flight packages, evidence
+tools, CLI, and TUI on Windows x86-64, Linux x86-64, Linux ARM64, and macOS
+ARM64. It generalizes the presentation bridge and staging rules across
+`.dll`, `.so`, and `.dylib` artifacts while preserving every accepted Win64
+ABI-v1 symbol, binary, hash, and KSB11 result.
+
+It also freezes one transport-neutral, role-filtered presentation-session
+contract for disposable clients. The contract carries typed snapshots, paths,
+events, procedures, action proposals, receipts, lifecycle state, and bounded
+replay data; it never exposes private truth to unauthorized roles, lets a
+client parse canonical evidence, or creates another mission loop. In-process,
+sidecar, browser, mobile, Vita, and future hardware placements must all reach
+the same `LiveMissionSession` and stage-validate-commit authority.
+
+The accepted 2-D operations desk is ported to Linux and macOS where qualified
+Unreal build hosts are available. The 8 GB Lenovo Chromebook Duet 11 becomes a
+priority Linux ARM64 acceptance target for the native Rust host, flight
+computer, CLI/TUI, evidence tools, and bounded campaign benchmarks. Its
+Crostini environment is not required to run Unreal. A minimal browser/PWA
+client instead proves a local Duet topology in which Crostini owns the mission
+and ChromeOS renders role-filtered operations through its native browser GPU.
+
+Web and PlayStation Vita are explicit priority clients from this phase onward.
+The web stack is React plus TypeScript for semantic Mission Control, Vite for
+builds with explicit audited PWA packaging, Babylon.js for 3-D, and a dedicated Rust/WASM Web Worker for optional local world, flight, operations, and evidence authority.
+Phase 12B.5 establishes remote/replay operation, the browser-safe session
+boundary, and native/WASM exactness. Local authority is admitted only after it
+reproduces the native release/event order, checksum chains, outcome, and exact
+KSB11 bytes. The Vita baseline is a statically linked Rust/VitaSDK plus SDL2
+shell, exact portable numeric and wire-contract probes, and a constrained
+Mission Control/replay client. Host-world/Vita-flight and selected Vita-world
+execution remain measured follow-ons rather than assumptions.
+
 ### Phase 12C: complete global engineering viewer
 
-Status: next and ready to plan under `phase12/PHASE12C_HANDOFF.md`.
+Status: planned after Phase 12B.5. The frozen global-viewer boundary remains
+`phase12/PHASE12C_HANDOFF.md`.
 
 Purpose: replay the complete accepted Phase 10 KSA-G10R mission to prove the
 engineering-viewer responsibilities that the short GNSS-loss coast scenario
 does not exercise.
 
-This phase owns ENU/ECEF/GCRF display conversion, large-world display domains,
-Earth rendering, vehicle pose and component-event presentation, exact event
-snapping, trajectory-source labels, entry, recovery, fixed screenshot
-regressions, and packaged performance. Rust telemetry and recordings remain
-authoritative; cameras, interpolation, effects, and rendering are passive.
+This phase owns a renderer-neutral global display model: ENU/ECEF/GCRF display
+conversion, large-world display domains, Earth rendering, vehicle pose and
+component-event presentation, exact event snapping, trajectory-source labels,
+entry, recovery, fixed screenshot regressions, and packaged performance. Rust
+telemetry and recordings remain authoritative; cameras, interpolation,
+effects, and rendering are passive.
+
+The full desktop Unreal renderer targets Windows/D3D12, Linux/Vulkan, and
+macOS/Metal. A separate Babylon.js renderer explicitly attempts WebGPU and
+falls back to WebGL2 while consuming the same typed display samples and
+exact-event fixtures; it is the preferred native-feeling Chromebook 3-D path. Unreal, web, and later SDL2 clients share
+contracts and evidence, not one renderer implementation. Low, medium, and high
+presentation budgets begin here, and no high-end Unreal feature may become an
+authority or base-tier requirement.
+
+### Phase 12C.5: portable operations clients
+
+Status: planned after the renderer-neutral Phase 12C display contract.
+
+Purpose: productize constrained and mobile presentations without forcing the
+desktop Unreal application onto every device.
+
+The first accepted portable client is a web/PWA Mission Control, replay, and
+3-D viewer supporting ChromeOS, ordinary desktop browsers, Android, and iOS.
+It operates remote-first against a Rust authority and then accepts a complete
+local Rust/WASM world, flight computer, `LiveMissionSession`, and evidence
+finalizer only after byte-identical native/WASM evidence parity.
+Optional Unreal Pixel Streaming may provide a desktop-quality remote viewport,
+but streamed video is not the operational telemetry or action authority.
+
+The SDL2 lane targets PlayStation Vita first, then other constrained or
+non-Unreal platforms. It begins with role-filtered Mission Control, compact
+plots, replay, procedure state, and high-level operator actions at 960x544.
+It then measures host-world/Vita-flight, Vita-world/host-flight, and selected
+all-in-one missions through the portable Rust/VitaSDK target. Campaigns,
+optimization, and authoring remain host work, and physical Vita timing—not an
+emulator alone—governs realtime claims.
+
+Android ARM64 follows as the first native mobile package, with the 8 GB Duet as
+a reference device. iOS/iPadOS follows once a pinned Mac/Xcode/signing lane
+exists. Both are remote-world/remote-flight clients first; local flight
+packages and bounded worlds are enabled only when lifecycle, suspension,
+thermal, memory, and exact-evidence gates pass.
 
 ### Phase 12D: Mission Foundry authoring and compiler parity
 
-Status: planned after the viewer boundaries are accepted.
+Status: planned after the viewer and portable-client boundaries are accepted.
 
 Purpose: provide a KSP/Juno-inspired host authoring experience while keeping
 compiled packs, authority lanes, provenance, and evidence maturity distinct.
@@ -566,15 +651,24 @@ visual reference material, materials, lighting, bounded Niagara effects,
 quality tiers, and packaged performance gates.
 
 Open-format masters and complete provenance remain source authority for visual
-assets; `.uasset` and `.umap` files are generated target assets. NASA material
-is visual/reference input only and must declare
-`engineering_authority: false`.
+assets; `.uasset`, `.umap`, web, and SDL2 packages are generated target assets.
+NASA material is visual/reference input only and must declare
+`engineering_authority: false`. Performance and packaging gates cover the
+Windows/D3D12, Linux/Vulkan, macOS/Metal, web, Android/iOS mobile, and Vita
+tiers that have reached accepted product status. Reduced visual quality,
+resolution, effects, or retained history can never change simulation or
+evidence.
 
 ### Shared Phase 12 limits
 
 - No universal CAD, CFD, FEA, or arbitrary plug-in execution system.
 - No hidden automatic wiring of mechanical, propellant, power, data, or
   control interfaces.
+- No client may become a second simulator merely because it uses Unreal,
+  WebGPU/WebGL, SDL2, Android, iOS, or a browser.
+- Browser, mobile, and Vita disconnection or suspension must have an explicit
+  deterministic policy. They may not silently pause or advance an
+  authoritative remote mission.
 - No unrecorded HOTAS/manual-control path. A later manual-input source must use
   the Phase 11 epoch-tagged command contract and deterministic replay.
 - The stock C64 consumes compiled packs and replay products; it is not required

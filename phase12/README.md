@@ -1,10 +1,12 @@
 # Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12C is next and ready to plan.
+Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12B.5 is next and ready to plan.
 
-Phase 12 adds a native-Windows Unreal presentation and authoring surface above
-the frozen KSA64 Rust application. It does not move simulation authority,
-role filtering, action validation, or evidence construction into Unreal.
+Phase 12 began with an accepted native-Windows Unreal presentation and now
+expands through portable Rust authority, desktop Unreal, web/PWA, SDL2/Vita,
+Android, and iOS presentation lanes. It does not move simulation authority,
+role filtering, action validation, or evidence construction into a renderer or
+client.
 
 The work is divided so that each slice proves one coherent boundary:
 
@@ -12,7 +14,9 @@ The work is divided so that each slice proves one coherent boundary:
 |---|---|
 | 12A | **Complete:** pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaged smoke test, and optional MCP feasibility |
 | 12B | **Complete:** accepted 674.71875-second GNSS-loss mission, human-scale operations, multi-axis outcomes, packaged 2-D command desk, 17/17 automation, exact evidence, and bounded presentation-service timing |
-| 12C | **Next:** complete Phase 10 global engineering viewer, coordinate/display domains, events, Earth, vehicle pose, entry, recovery, cameras, and packaged performance |
+| 12B.5 | **Next:** cross-platform Rust/session foundation, Linux and macOS lanes, 8 GB Duet ARM64, React/Babylon PWA plus Rust/WASM World feasibility, and Vita/SDL2 |
+| 12C | Renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2 |
+| 12C.5 | Portable web/PWA, Vita/SDL2, Android, and iOS operations clients |
 | 12D | Mission Foundry vehicle/mission authoring and GUI/headless compiler parity |
 | 12E | Production visual assets, NASA-derived reference material, effects, quality tiers, and visual performance |
 
@@ -26,7 +30,9 @@ The work is divided so that each slice proves one coherent boundary:
 - [PHASE12B_PLAN.md](PHASE12B_PLAN.md) — accepted live-operations implementation and acceptance contract.
 - [PHASE12B_COMPLETION.md](PHASE12B_COMPLETION.md) — accepted live-operations outcome, Unreal evidence, measurements, and limitations.
 - [phase12b-completion-audit.json](phase12b-completion-audit.json) — machine-readable full-reference hashes, outcome axes, authority boundary, and accepted product gates.
-- [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md) — frozen Phase 12B boundary and global-viewer entry contract.
+- [PHASE12B5_HANDOFF.md](PHASE12B5_HANDOFF.md) — active cross-platform runtime, browser, mobile, and Vita foundation boundary.
+- [WEB_PLATFORM.md](WEB_PLATFORM.md) — accepted Babylon.js, React/TypeScript, Rust/WASM, browser-authority, lifecycle, and Duet decision.
+- [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md) — frozen Phase 12B global-viewer boundary, consumed after 12B.5.
 - [complete-phase12b.ps1](complete-phase12b.ps1) — composed Phase 12A, Rust, C++ harness, and explicit optional Unreal audit.
 - [ENGINE_DECISION.md](ENGINE_DECISION.md) — accepted engine, authority, and
   rollout decision, including deliberate changes to the supplied Unreal guide.
@@ -48,10 +54,11 @@ The work is divided so that each slice proves one coherent boundary:
 ## Non-negotiable authority rule
 
 `Ksa64Application` is the application facade and `LiveMissionSession` is the
-only accepted live mission boundary. Unreal may request work and display typed
-results. It may not parse CLI text, spawn phase executables as an integration
-mechanism, run substitute physics, infer hidden truth, mutate canonical
-evidence, or recreate the mission loop.
+only accepted live mission boundary. Unreal, Babylon, web/PWA, SDL2, and mobile
+clients may request work and display typed results. They may not parse CLI
+text, spawn phase executables as an integration mechanism, run substitute
+physics, infer hidden truth, mutate canonical evidence, or recreate the mission
+loop.
 
 MCP and Unreal Python are supervised editor-development aids. A normal build,
 automation run, cook, package, and shipped Mission Foundry session must not
@@ -77,3 +84,13 @@ Live Guided Operator views are truth-filtered before crossing the C ABI. The sea
 The typed Unreal bridge opens Rust in `Fast` execution-capacity mode solely so explicit bounded `Advance(n)` calls are honored. Unreal alone schedules realtime, pause, single-step, 4x, 16x, and maximum-fast wall-clock presentation. That internal setting is noncanonical, records no pace evidence, and preserves exact KSB11 whenever the release and action transcripts are identical.
 
 The presentation is a modern NASA-inspired, C64-accented 2-D operations desk. Phase 12C retains Earth-scale 3-D display domains, vehicle pose, entry, recovery, and cameras.
+
+## Cross-platform direction
+
+Windows/D3D12 remains the frozen first accepted graphical lane, not the permanent product boundary. Phase 12B.5 qualifies native Rust execution on Linux x86-64, Linux ARM64, and macOS ARM64; generalizes the bridge; and freezes a role-filtered presentation-session contract for Unreal, web, SDL2/Vita, Android, and iOS clients.
+
+The 8 GB Lenovo Chromebook Duet 11 is the reference ARM64 Linux and ChromeOS device. Crostini may own the Rust world and flight computer while a ChromeOS PWA renders Mission Control and Babylon.js WebGPU/WebGL2 3-D locally. Android is a second native graphical path; Crostini-hosted Unreal remains experimental.
+
+The web stack is React plus TypeScript and Vite for the PWA, Babylon.js for 3-D, and a dedicated Rust/WASM Web Worker for optional local authority. The browser may ultimately run World, flight computer, operations, evidence, Mission Control, and 3-D together, but only after its complete KSB11 is byte-identical to native Rust. Babylon remains presentation-only and its physics integration is disabled.
+
+PlayStation Vita is a first-class constrained SDL2 target. Its initial product is Mission Control, replay, and high-level operations; bounded host-world/Vita-flight and selected Vita-world placements follow exact compile, vector, and physical timing evidence.
