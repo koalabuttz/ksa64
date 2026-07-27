@@ -158,9 +158,36 @@ function Assert-NoMissionFoundryRuntime {
 }
 
 function Assert-Phase12bRecord {
-    $record = Get-Content -LiteralPath (Join-Path $projectRoot "phase12\phase12b-completion-audit.json") -Raw | ConvertFrom-Json
+    $record = Get-Content -LiteralPath (Join-Path $projectRoot "phase12/phase12b-completion-audit.json") -Raw | ConvertFrom-Json
+    $expectedGates = @(
+        "rust_full_reference",
+        "rust_no_action",
+        "rust_role_and_action_boundaries",
+        "phase12a_frozen_audit",
+        "cpp_phase12a_harness",
+        "cpp_phase12b_full_mission_harness",
+        "unreal_editor_build",
+        "unreal_operations_automation",
+        "packaged_full_mission",
+        "presentation_30_60_144_hz",
+        "bridge_frame_latency",
+        "screenshot_semantic_accessibility",
+        "async_shutdown_and_finalization"
+    )
+    foreach ($gate in $expectedGates) {
+        if ($record.gates.$gate -ne "pass") {
+            throw "Phase 12B completion gate is not accepted: $gate"
+        }
+    }
     if (
         $record.schema -ne "ksa64.phase12b.completion-audit.v1" -or
+        $record.status -ne "complete" -or
+        $record.accepted_source_commit -ne "423c116cf58632f344d4a48774a97a4487c34113" -or
+        $record.accepted_source.bridge_abi_major -ne 1 -or
+        $record.accepted_source.bridge_build_identity -ne "0x120B0001" -or
+        $record.accepted_source.bridge_dll_sha256 -ne "da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565" -or
+        $record.accepted_source.catalog_count -ne 13 -or
+        $record.accepted_source.catalog_sha256 -ne "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13" -or
         $record.full_reference_session.releases -ne 21591 -or
         $record.full_reference_session.elapsed_seconds -ne "674.71875" -or
         $record.full_reference_session.actions -ne 4 -or
@@ -179,6 +206,36 @@ function Assert-Phase12bRecord {
         $record.disposition.operator -ne "TimelyReference" -or
         $record.disposition.avionics -ne "DegradedOperational" -or
         $record.disposition.evidence -ne "Complete" -or
+        $record.unreal_metrics.operations_automation.succeeded -ne 17 -or
+        $record.unreal_metrics.operations_automation.failed -ne 0 -or
+        $record.unreal_metrics.operations_automation.not_run -ne 0 -or
+        $record.unreal_metrics.operations_automation.in_process -ne 0 -or
+        $record.unreal_metrics.base_package.editor_plugin_binaries_packaged -ne 0 -or
+        $record.unreal_metrics.packaged_full_mission.exit_code -ne 0 -or
+        $record.unreal_metrics.packaged_full_mission.release_epoch -ne 21591 -or
+        $record.unreal_metrics.packaged_full_mission.ksb11_bytes -ne 2911464 -or
+        $record.unreal_metrics.packaged_full_mission.ksb11_sha256 -ne $acceptedKsb11Sha256 -or
+        $record.unreal_metrics.presentation.rhi -ne "D3D12" -or
+        $record.unreal_metrics.presentation.width -ne 1920 -or
+        $record.unreal_metrics.presentation.height -ne 1080 -or
+        $record.unreal_metrics.presentation.capture_release_epoch -ne 6080 -or
+        $record.unreal_metrics.presentation.screenshot_sha256 -ne "55ea4b4c94a7a50fac29fd4e981197ee53a3e6bc01eb3614959d754f4a687fd0" -or
+        $record.unreal_metrics.presentation.semantic_sha256 -ne "557a4d9a83917f539464818f24d44cd142e8b987dc2eebddea0bc6acda4d6bb3" -or
+        $record.unreal_metrics.presentation.manifest_sha256 -ne "6c48d17b7ecca8c0f82c4bcd316e88dc2ba9f09aedfde859a1454d78d9921dd8" -or
+        $record.unreal_metrics.presentation.p99_ns -ne 258900 -or
+        $record.unreal_metrics.presentation.maximum_ns -ne 460000 -or
+        $record.unreal_metrics.presentation.p99_limit_ns -ne 1000000 -or
+        $record.unreal_metrics.presentation.maximum_limit_ns -ne 2000000 -or
+        $record.unreal_metrics.presentation.cadence_hz -ne 60 -or
+        $record.unreal_metrics.presentation.measured_frames -ne 600 -or
+        $record.unreal_metrics.presentation.releases_advanced -ne 320 -or
+        $record.unreal_metrics.presentation.pending_commands -ne 0 -or
+        $record.unreal_metrics.presentation.transport_overflow -or
+        -not $record.unreal_metrics.presentation.observation_complete -or
+        -not $record.unreal_metrics.presentation.reduced_motion -or
+        -not $record.unreal_metrics.presentation.high_contrast -or
+        $record.unreal_metrics.presentation.text_scale -ne "1.25" -or
+        $record.unreal_metrics.presentation.sound_cues_enabled -or
         -not $record.authority.guided_live_surfaces_truth_filtered -or
         -not $record.authority.completed_ksb11_role_neutral -or
         -not $record.authority.completed_ksb11_crosses_bridge_as_opaque_bytes
@@ -632,10 +689,10 @@ try {
         Write-Host "PHASE 12B PRODUCT ACCEPTANCE GATES: PASS"
     } elseif ($RunUnrealBuild -and $RunUnrealAutomation -and $RunPackage) {
         Write-Host "PHASE 12B IMPLEMENTATION GATES: PASS"
-        Write-Host "Product acceptance remains pending until explicit -RunPresentationEvidence timing, screenshot, and semantic evidence passes."
+        Write-Host "Canonical Phase 12B acceptance is recorded; this invocation omitted the explicit presentation recheck."
     } else {
         Write-Host "PHASE 12B CORE/BRIDGE AUDIT: PASS"
-        Write-Host "Full product acceptance remains pending. Use explicit -RunUnrealBuild, -RunUnrealAutomation, -RunPackage, and -RunPresentationEvidence switches for all gates."
+        Write-Host "Canonical Phase 12B acceptance is recorded; this invocation revalidated only core/bridge gates. Use explicit -RunUnrealBuild, -RunUnrealAutomation, -RunPackage, and -RunPresentationEvidence switches to rerun every live gate."
     }
 }
 finally {

@@ -1,7 +1,8 @@
 {
   "schema": "ksa64.phase12b.completion-audit.v1",
-  "status": "pending_unreal_acceptance",
+  "status": "complete",
   "date": "2026-07-27",
+  "accepted_source_commit": "423c116cf58632f344d4a48774a97a4487c34113",
   "phase12a_baseline": {
     "preserved": true,
     "completion_record": "phase12/COMPLETION.md",
@@ -9,6 +10,16 @@
     "catalog_count": 13,
     "compressed_ksb11_bytes": 22369,
     "compressed_ksb11_sha256": "38a3ef2e497b8e24d1cf53a56db85b3d8bea0bdb27586215a02ff75d0ee39dc8"
+  },
+  "accepted_source": {
+    "bridge_abi_major": 1,
+    "bridge_build_identity": "0x120B0001",
+    "bridge_dll": "ksa64_viewer_bridge-423c116cf586-120b0001.dll",
+    "bridge_dll_bytes": 944640,
+    "bridge_dll_sha256": "da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565",
+    "bridge_manifest_sha256": "b618e31c08b185e40db83955dc47cb8440e488779dfab1f7899307abf9852365",
+    "catalog_count": 13,
+    "catalog_sha256": "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13"
   },
   "full_reference_session": {
     "scenario": "FullMissionGnssLossV1",
@@ -61,27 +72,98 @@
     "canonical_formats_added": false,
     "physics_changed": false,
     "direct_effector_command_added": false,
-    "phase12a_files_rewritten": false
+    "phase12a_files_rewritten": false,
+    "abi_v1_additive_compatibility": true
   },
   "gates": {
     "rust_full_reference": "pass",
     "rust_no_action": "pass",
     "rust_role_and_action_boundaries": "pass",
-    "phase12a_frozen_audit": "required_in_completion_script",
-    "cpp_phase12a_harness": "pending_current_audit",
-    "cpp_phase12b_full_mission_harness": "pending_current_audit",
-    "unreal_editor_build": "pending",
-    "unreal_operations_automation": "pending",
-    "packaged_full_mission": "pending",
-    "presentation_30_60_144_hz": "pending",
-    "bridge_frame_latency": "pending",
-    "screenshot_semantic_accessibility": "pending"
+    "phase12a_frozen_audit": "pass",
+    "cpp_phase12a_harness": "pass",
+    "cpp_phase12b_full_mission_harness": "pass",
+    "unreal_editor_build": "pass",
+    "unreal_operations_automation": "pass",
+    "packaged_full_mission": "pass",
+    "presentation_30_60_144_hz": "pass",
+    "bridge_frame_latency": "pass",
+    "screenshot_semantic_accessibility": "pass",
+    "async_shutdown_and_finalization": "pass"
   },
-  "unreal_metrics": null,
+  "unreal_metrics": {
+    "operations_automation": {
+      "succeeded": 17,
+      "failed": 0,
+      "not_run": 0,
+      "in_process": 0,
+      "duration_seconds": "4.317767143249512",
+      "report_sha256": "7d20f060084c3a9071cd8e37fad5ec54158f8fe74f0fc932f49f744e8df9b2f0",
+      "html_sha256": "175cb8553a1df1d901f371e50f9846d2e3f7d86030c04aa9bbbb838ed708f6c6",
+      "log_sha256": "777e4bd440dd0275d7eb908286360daa6c7fc8bbd2677940554f5e33edcac1da"
+    },
+    "base_package": {
+      "file_count": 54,
+      "total_bytes": 1033569675,
+      "game_executable_sha256": "7d9182c2263d976310a2ac1f96483bb056e332986b3349d878a2c2be0897019c",
+      "bridge_manifest_sha256": "b618e31c08b185e40db83955dc47cb8440e488779dfab1f7899307abf9852365",
+      "smoke_exit_code": 0,
+      "smoke_log_sha256": "117c2dfa687707bfa12a56edd1201c7f76847ced10cf4e52887f82647e36360b",
+      "editor_plugin_binaries_packaged": 0
+    },
+    "packaged_full_mission": {
+      "exit_code": 0,
+      "release_epoch": 21591,
+      "ksb11_bytes": 2911464,
+      "ksb11_sha256": "7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4",
+      "acceptance_log_sha256": "d385f265c3385b5fe9624fe4572eb819bfaae4a03e701437031eebd12729b109"
+    },
+    "presentation": {
+      "rhi": "D3D12",
+      "shader_model": "SM6",
+      "width": 1920,
+      "height": 1080,
+      "capture_release_epoch": 6080,
+      "screenshot_bytes": 253051,
+      "screenshot_sha256": "55ea4b4c94a7a50fac29fd4e981197ee53a3e6bc01eb3614959d754f4a687fd0",
+      "screenshot_chunk_count": 33,
+      "screenshot_reencoded_bytes": 211495,
+      "sampled_pixels": 2304,
+      "distinct_color_buckets": 27,
+      "luminance_range": 238,
+      "non_dark_samples": 2206,
+      "semantic_sha256": "557a4d9a83917f539464818f24d44cd142e8b987dc2eebddea0bc6acda4d6bb3",
+      "manifest_sha256": "6c48d17b7ecca8c0f82c4bcd316e88dc2ba9f09aedfde859a1454d78d9921dd8",
+      "log_sha256": "9e619e94adae82d51b02f01666cef06e7558e7fe1e9b88a25f44f214c4da91fd",
+      "cadence_hz": 60,
+      "warmup_frames": 120,
+      "measured_frames": 600,
+      "logical_seconds": 10,
+      "release_start": 6144,
+      "release_end": 6464,
+      "releases_advanced": 320,
+      "publication_start": 160,
+      "publication_end": 480,
+      "p99_ns": 258900,
+      "maximum_ns": 460000,
+      "p99_limit_ns": 1000000,
+      "maximum_limit_ns": 2000000,
+      "transport_overflow": false,
+      "pending_commands": 0,
+      "observation_complete": true,
+      "reduced_motion": true,
+      "high_contrast": true,
+      "text_scale": "1.25",
+      "sound_cues_enabled": false,
+      "gpu": "NVIDIA GeForce RTX 2080 SUPER",
+      "driver": "581.15"
+    }
+  },
   "limitations": [
-    "This record does not claim final Phase 12B product acceptance until the pending Unreal and current C++ gates pass.",
+    "The real-RHI screenshot is pinned-workstation noncanonical evidence, not a cross-GPU pixel oracle.",
+    "The latency measurement covers bridge poll, typed drain, prediction-path service, and advance enqueue work; it is not total GPU frame time.",
+    "The 30/60/144-Hz fixtures prove scheduling and checksum invariance, not universal rendered frame-rate qualification.",
     "The sealed KSB11 is role-neutral post-run evidence; live Guided Operator views remain truth-filtered.",
-    "No Unreal performance, package, screenshot, or current automation metric is recorded yet.",
+    "Earth-scale 3-D visualization, ENU/ECEF/GCRF display conversion, vehicle pose, entry, recovery, and cameras remain Phase 12C.",
     "Results are engineering simulation evidence, not launch approval, certification, regulatory evidence, or safety authority."
   ]
 }

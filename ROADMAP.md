@@ -482,11 +482,7 @@ Explicit non-goals remain new physics, avionics, formats, target implementations
 
 ## Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: active. Phase 12A is complete and accepted; Phase 12B is in
-implementation. Phase 11.5 and its accepted hardening amendment remain
-the frozen product, application, and live-session foundation. Phase 12A
-completion evidence is in `phase12/COMPLETION.md`, with the next boundary in
-`phase12/PHASE12B_HANDOFF.md`.
+Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12C is next and ready to plan. Phase 11.5 and its accepted hardening amendment remain the frozen product, application, and live-session foundation. Phase 12A completion evidence is in `phase12/COMPLETION.md`; Phase 12B acceptance is in `phase12/PHASE12B_COMPLETION.md`; and the next boundary is `phase12/PHASE12C_HANDOFF.md`.
 
 The hard entry criterion applies to every Phase 12 subphase: a graphical client
 operates a live mission only through `LiveMissionSession`. It may not build
@@ -519,7 +515,7 @@ asset, new K-format, physics, or alternate simulator.
 
 ### Phase 12B: live GNSS-loss operations presentation
 
-Status: active under the accepted `phase12/PHASE12B_PLAN.md` contract. The exact Rust reference evidence is frozen in `phase12/PHASE12B_COMPLETION.md`; final Unreal presentation, package, accessibility, and performance gates remain open.
+Status: complete and accepted at `423c116cf58632f344d4a48774a97a4487c34113`. See `phase12/PHASE12B_COMPLETION.md` and `phase12/phase12b-completion-audit.json`.
 
 Purpose: add the first bidirectional graphical operations slice over the accepted live-session boundary.
 
@@ -531,9 +527,11 @@ The bridge change is additive to ABI v1. Existing functions and structures remai
 
 The frozen full-reference evidence contains four accepted actions and a 2,911,464-byte KSB11 with SHA-256 `7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4`. Its overall result is Degraded Success with Primary Achieved / Nominal Vehicle / Completed Procedure / Timely Reference Operator / Degraded Operational Avionics / Complete Evidence. The sealed KSB11 is role-neutral post-run evidence transported as opaque bytes; live Guided Operator surfaces remain truth-filtered in Rust.
 
+Accepted product evidence includes 17/17 Unreal operations tests, a 54-file standalone package, byte-exact packaged full-mission finalization, and a nonblank 1920x1080 D3D12 capture. The fixed-60-Hz bridge/presentation service sample recorded zero overflow, 258,900 ns p99, and 460,000 ns maximum latency. The 30/60/144-Hz fixtures establish scheduling and checksum invariance rather than a universal GPU frame-rate claim.
+
 ### Phase 12C: complete global engineering viewer
 
-Status: planned after 12B acceptance.
+Status: next and ready to plan under `phase12/PHASE12C_HANDOFF.md`.
 
 Purpose: replay the complete accepted Phase 10 KSA-G10R mission to prove the
 engineering-viewer responsibilities that the short GNSS-loss coast scenario

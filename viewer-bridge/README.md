@@ -1,6 +1,6 @@
 # KSA64 Phase 12 viewer bridge
 
-This crate is KSA64's only in-process presentation ABI. The Phase 12A entry points remain frozen: they call `Ksa64Application::start_mission` and give one dedicated Rust worker exclusive ownership of the compact accepted `LiveMissionSession`.
+This crate is KSA64's current in-process presentation ABI. The Phase 12A entry points remain frozen: they call `Ksa64Application::start_mission` and give one dedicated Rust worker exclusive ownership of the compact accepted `LiveMissionSession`.
 
 Phase 12B adds a strictly additive operations API. A versioned start request can select the complete guided GNSS-loss scenario, which runs the accepted host `FullMissionSession`. Unreal receives role-filtered operational, procedure, disposition, prediction, timeline, release-sample, action-receipt, and transport views. High-level operator actions still pass through the existing Phase 11 review, stage, commit, and cancel boundary. The legacy `ksa64_viewer_start` function and its frozen C++ harness behavior are unchanged.
 
@@ -26,3 +26,11 @@ Snapshot polling is stateful per handle: the first published snapshot returns `K
 - Polling status, timelines, release samples, receipts, and prediction points is passive and cannot advance the mission.
 - `ksa64_viewer_request_shutdown_v1` is asynchronous. `ksa64_viewer_finish_status_v1` and transport status expose progress without blocking the game thread.
 - Destroy remains the final ownership boundary and joins the worker only after shutdown has been requested or completion has occurred.
+
+## Accepted Phase 12B build
+
+The accepted operations build is `ksa64_viewer_bridge-423c116cf586-120b0001.dll` (944,640 bytes) with SHA-256 `da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565`. It preserves ABI major 1, advertises build identity `0x120B0001`, and retains the 13-entry catalog hash.
+
+The full bridge-driven mission ends at release 21,591 and produces the exact 2,911,464-byte KSB11 archive with SHA-256 `7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4`. Both native harnesses, 17/17 Unreal operations tests, standalone packaging, and the bounded D3D12 presentation gate pass. Clean partial shutdown leaves finalization unfinished rather than falsely reporting failed evidence.
+
+The sidecar remains a reviewed fallback for future containment problems; it was not required for Phase 12B. See [the accepted completion record](../phase12/PHASE12B_COMPLETION.md).

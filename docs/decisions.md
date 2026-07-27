@@ -1492,3 +1492,19 @@ Require Review, Stage, validation, and Commit through the accepted Phase 11 comm
 Classify mission objective, vehicle state, procedure performance, operator performance, avionics state, and evidence integrity independently. A mission need not follow the nominal plan to succeed. Inertial continuation, delayed valid action, no action, or conservative recovery may yield nominal, degraded, contingency, or failed results according to physical objectives and declared safety criteria. A mistimed or failed procedure alone never converts physical success into failure.
 
 Preserve every ABI-v1 Phase 12A function and layout. Add feature-negotiated presentation structures and exports, advance only the bridge build identity, and introduce no new canonical `K*` format. Use a modern NASA-inspired dark 2-D command desk with restrained C64 accents. Defer 3-D Earth, frame-domain display conversion, vehicle pose, entry, recovery, and cameras to Phase 12C.
+
+## D-115: Accept the Phase 12B operations product and freeze the global-viewer boundary
+
+Date: 2026-07-27
+
+Status: accepted.
+
+Accept the Phase 12B product at source commit `423c116cf58632f344d4a48774a97a4487c34113`. The additive ABI-v1 bridge uses build identity `0x120B0001` and preserves the frozen Phase 12A functions, layouts, 13-entry catalog, compressed compatibility session, physics, flight software, and canonical formats.
+
+The accepted four-action GNSS-loss mission ends at exact release 21,591 and produces the frozen 2,911,464-byte KSB11 archive. Its primary objective, vehicle/recovery, procedure, operator, and evidence axes pass; persistent GNSS loss keeps the avionics axis degraded. Record the aggregate as Degraded Success rather than rewriting technical success as either nominal success or failure.
+
+Accept both native C++ harnesses, 17/17 Unreal operations automation tests, standalone packaged execution, exact packaged KSB11 finalization, and the 1920x1080 D3D12 presentation evidence. The fixed-60-Hz bridge/presentation service sample records 258,900 ns p99 and 460,000 ns maximum with zero overflow, below the accepted 1 ms and 2 ms limits. Treat the 30/60/144-Hz cases as scheduling/checksum invariance and the latency sample as scoped service work, not universal GPU frame-rate evidence.
+
+Distinguish clean partial shutdown from failed evidence. A requested worker stop may leave finalization InProgress with no archive; Failed is reserved for an actual worker or finalizer error. Completed exists only after Rust seals the archive.
+
+Phase 12C is now unblocked and owns passive Earth-scale 3-D presentation, ENU/ECEF/GCRF display conversion, large-world origin management, vehicle pose, entry, recovery, cameras, and event snapping. It must consume Rust-owned typed streams or recordings, preserve exact-versus-smooth labels, and keep the accepted 2-D desk as a regression surface. It may not propagate physics, infer authoritative events from the scene, parse canonical K records, expose SIM truth to operational roles, or reclassify Phase 12B outcomes.

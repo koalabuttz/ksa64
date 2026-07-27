@@ -438,3 +438,5 @@ Phase 12B introduces no canonical `K*` format and does not widen or reinterpret 
 Existing ABI-v1 symbols and layouts remain byte-for-byte compatible. The Phase 12B bridge advances its build identity to `0x120B0001` and advertises new functions through feature discovery. The original start function continues to own the compressed Phase 11 compatibility session and unchanged KSB11 output.
 
 Unreal receives typed, role-filtered views and Rust-generated proposal identities. It does not parse canonical KSB11 segments, construct KUL11/KUA11 bytes, or derive missing evidence. Multi-axis outcome classifications are views over accepted records; they do not replace owning physical or operational summaries.
+
+The accepted Phase 12B completion JSON, bridge manifest, automation reports, screenshot/semantic manifests, performance samples, and package audits are noncanonical validation metadata. They bind the qualified ABI-v1 build `0x120B0001` and accepted product evidence without becoming mission inputs or canonical records. The frozen evidence and limitations are indexed by `phase12/PHASE12B_COMPLETION.md`; Phase 12C inherits the same ownership rule.

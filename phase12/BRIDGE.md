@@ -1,4 +1,6 @@
-# Phase 12A Rust-to-Unreal bridge contract
+# Phase 12 Rust-to-Unreal bridge contract
+
+The Phase 12A base contract is frozen. Phase 12B extends it additively; no ABI-v1 entry point or layout is reinterpreted.
 
 Status: normative 12A interface and containment contract.
 
@@ -125,3 +127,13 @@ Both consumers must prove:
 
 The Unreal plugin additionally proves the prebuilt DLL is staged into and
 loaded by a packaged Development build with MCP and Python disabled.
+
+## Accepted Phase 12B operations extension
+
+Phase 12B qualifies the additive API at ABI major 1 and build identity `0x120B0001`. `ksa64_viewer_start_v1` selects the complete GNSS-loss operations session without changing the original `ksa64_viewer_start` fixture. Feature discovery exposes operational, procedure, disposition, action-receipt, prediction-path, timeline, release-sample, transport, and finalization views only when supported.
+
+Polling and draining are passive. High-level actions use Rust-generated proposals and the exact Phase 11 stage/commit/cancel boundary. KSB11 crosses only as an opaque Rust-owned buffer after successful finalization; Unreal never parses its canonical segments.
+
+Shutdown is asynchronous and distinct from evidence finalization. A requested clean stop of a partial session may terminate the worker while finalization remains `InProgress` with no archive. It is not an evidence failure. `Failed` requires an actual worker/finalizer error, and `Completed` requires a Rust-sealed archive.
+
+The accepted build is `ksa64_viewer_bridge-423c116cf586-120b0001.dll` with SHA-256 `da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565`. Both C++ harnesses, 17/17 Unreal operations tests, the standalone full mission, exact KSB11 finalization, and the D3D12 presentation gate pass. See [PHASE12B_COMPLETION.md](PHASE12B_COMPLETION.md) and [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md).
