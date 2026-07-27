@@ -593,6 +593,7 @@ dependencies = [
  "ksa64-core",
  "ksa64-flight",
  "ksa64-interface",
+ "ksa64-session",
  "ksa64-sim",
  "ratatui",
  "rodio",
@@ -603,6 +604,27 @@ dependencies = [
 [[package]]
 name = "ksa64-interface"
 version = "0.1.0"
+
+[[package]]
+name = "ksa64-presentation"
+version = "0.1.0"
+dependencies = [
+ "ksa64-interface",
+]
+
+[[package]]
+name = "ksa64-session"
+version = "0.1.0"
+dependencies = [
+ "crc32fast",
+ "ksa64-core",
+ "ksa64-flight",
+ "ksa64-interface",
+ "ksa64-presentation",
+ "ksa64-sim",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "ksa64-sim"
@@ -619,6 +641,7 @@ version = "0.1.0"
 dependencies = [
  "ksa64-host",
  "ksa64-interface",
+ "serde",
  "serde_json",
 ]
 

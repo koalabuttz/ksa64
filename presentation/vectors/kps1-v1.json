@@ -1,0 +1,27 @@
+{
+  "schema": "ksa64.presentation-session.v1.golden-vectors",
+  "byte_order": "little-endian",
+  "crc32": "IEEE 802.3 over KPS1 header bytes 0..43 followed by payload",
+  "vectors": [
+    {
+      "name": "snapshot-envelope",
+      "kind": "Snapshot",
+      "hex": "4b50533101000000300000010400000008070605040302012a00000000000000000000000000000004000000a0ed0a0c10203040"
+    },
+    {
+      "name": "action-intent-commit",
+      "kind": "ActionIntent payload",
+      "hex": "504149310100200001000b120100c01103000000031400000900000000000000"
+    },
+    {
+      "name": "independent-cursors",
+      "kind": "ReplayControl payload",
+      "hex": "4b4352310100300002000000000000000300000000000000040000000000000005000000000000000600000000000000"
+    },
+    {
+      "name": "sealed-evidence-metadata",
+      "kind": "EvidenceMetadata payload",
+      "hex": "50454d310100300001e0b51278563412e86c2c0000000000dcff00002d00000001010000000000000000000000000000"
+    }
+  ]
+}

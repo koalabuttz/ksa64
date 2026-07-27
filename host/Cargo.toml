@@ -9,6 +9,7 @@ default-run = "ksa64"
 ksa64-core = { path = "../core" }
 ksa64-flight = { path = "../flight" }
 ksa64-interface = { path = "../interface" }
+ksa64-session = { path = "../session", features = ["native"] }
 ksa64-sim = { path = "../sim", features = ["fixtures"] }
 crc32fast = "1.4"
 clap = { path = "../third_party/clap", default-features = false, features = ["derive", "std", "help", "usage", "error-context", "suggestions"] }

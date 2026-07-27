@@ -67,6 +67,34 @@ jobs:
       - name: Bridge library and contained panic tests
         run: cargo test -p ksa64-viewer-bridge --lib --profile viewer --features panic-probe --locked
 
+  wasm:
+    name: Browser-safe Rust session and presentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+
+      - name: Install the pinned WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Check portable session without native services
+        env:
+          RUSTFLAGS: -D warnings
+        run: >-
+          cargo check -p ksa64-session --no-default-features
+          --target wasm32-unknown-unknown --locked
+
+      - name: Check no_std presentation protocol
+        env:
+          RUSTFLAGS: -D warnings
+        run: >-
+          cargo check -p ksa64-presentation --no-default-features --target wasm32-unknown-unknown
+          --locked
+
   web:
     name: Web lockfile, tests, and production build
     runs-on: ubuntu-24.04

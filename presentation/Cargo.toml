@@ -1,0 +1,11 @@
+[package]
+name = "ksa64-presentation"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+ksa64-interface = { path = "../interface" }
+
+[lib]
+path = "src/lib.rs"

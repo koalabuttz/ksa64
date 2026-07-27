@@ -55,7 +55,7 @@ jobs:
 
       - name: Reproduce the accepted full mission
         run: >-
-          cargo test -p ksa64-host --lib --locked
+          cargo test -p ksa64-session --lib --locked
           phase12b_live::tests::scripted_full_mission_seals_exact_evidence_and_succeeds
           -- --ignored --exact
 
