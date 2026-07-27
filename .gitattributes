@@ -14,6 +14,9 @@ foundry/**/*.cpp text eol=lf
 foundry/**/*.h text eol=lf
 foundry/**/*.md text eol=lf
 viewer-bridge/**/*.h text eol=lf
+phase12/**/*.md text eol=lf
+phase12/**/*.toml text eol=lf
+phase12/**/*.ps1 text eol=lf
 
 # Unreal authored binary assets and portable asset masters are versioned via
 # Git LFS. Generated engine output is ignored in .gitignore.

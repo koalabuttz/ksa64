@@ -1,0 +1,6 @@
+# Optional, supervised UE 5.8 editor tooling only.
+# Do not expose this unauthenticated endpoint beyond loopback.
+# Normal KSA64 builds, tests, packaging, and runtime do not use this server.
+
+[mcp_servers.unreal-mcp]
+url = "http://127.0.0.1:8000/mcp"

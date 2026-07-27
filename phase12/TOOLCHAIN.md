@@ -19,6 +19,14 @@ Do not move the Codex-managed project mirror. Create a new short-path checkout
 from verified `origin/main`. Do not keep simultaneous writers active in the
 mirror and short-path checkout.
 
+## Observed Phase 12A installation
+
+The verified Launcher build is UE 5.8.0, changelist 55116800. The user-selected Launcher path resolved to `D:\Games\UE_5.8`, rather than the planned E: engine volume. The exact path is recorded and accepted as a non-authority-affecting toolchain deviation; the Derived Data Cache remains on `E:\Unreal\DDC`.
+
+This Launcher installation exposes **Templates and Feature Packs** but not a separate **Starter Content** component. The installed feature-pack set contains no `StarterContent.upack`. Phase 12A therefore keeps the accepted empty C++ shell instead of acquiring unrelated assets through an unpinned source. Starter Content is presentation-only and is not required by any 12A acceptance criterion.
+
+After changing `UE-LocalDataCachePath`, restart Unreal Editor and every process that launches it, including Epic Launcher and Visual Studio. Automated gates also set the variable explicitly and verify the resolved path in the Editor log.
+
 ## Required components
 
 - Fully updated Windows 11 and a current stable GPU driver.

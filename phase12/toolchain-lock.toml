@@ -1,0 +1,76 @@
+# Noncanonical Phase 12A workstation/toolchain evidence. No credentials.
+schema = "ksa64-phase12-toolchain-lock-v1"
+recorded_utc = "2026-07-27T05:43:41.916Z"
+baseline_commit = "8208d53"
+validated_source_commit = "4913e205146333132c7678636669cc3b0a200128"
+remote_url = "https://github.com/koalabuttz/ksa64.git"
+checkout_path = 'C:\dev\KSA64'
+checkout_clean = true
+
+[host]
+windows_edition = "Microsoft Windows 11 Education 25H2"
+windows_version = "10.0.26200.8894"
+windows_build = "26200"
+cpu = "AMD Ryzen 5 2600 Six-Core Processor"
+logical_processors = 12
+physical_ram_bytes = 17105256448
+gpu = "NVIDIA GeForce RTX 2080 SUPER"
+gpu_vram_bytes = 8589934592
+gpu_driver = "581.15"
+
+[tools]
+git = "2.55.0.windows.3"
+git_lfs = "3.7.1"
+rustc = "1.93.0 (254b59607 2026-01-19)"
+cargo = "1.93.0 (083ac5135 2025-12-15)"
+rust_host = "x86_64-pc-windows-msvc"
+visual_studio = "Visual Studio Community 2026 18.8.1+12021.73"
+visual_studio_path = 'E:\Microsoft Visual Studio\2026\Community'
+msvc_tools = "14.51.36231"
+msvc_compiler = "19.51.36252"
+windows_sdk = "10.0.26100.0"
+
+[unreal]
+semantic_version = "5.8.0"
+build_id = "55116800"
+branch = "++UE5+Release-5.8"
+launcher_item_id = "ue:18b3b415bc434c5b974f50488360ca31:UE_5.8"
+installation_guid = "3A77571F4A9BE18B83F010A82B6FED7B"
+install_path = 'D:\Games\UE_5.8'
+planned_install_volume = "E:"
+install_path_deviation = 'User-selected Launcher install resolved to D:\Games\UE_5.8; exact path accepted and recorded.'
+derived_data_cache_path = 'E:\Unreal\DDC'
+project_path = 'C:\dev\KSA64\foundry\Ksa64MissionFoundry'
+renderer = "DX12"
+shader_model = "SM6"
+hardware_ray_tracing = false
+starter_content = "Not exposed as a separate Launcher component; omitted from the deliberately empty 12A shell."
+templates_and_feature_packs_installed = true
+
+[unreal.plugins]
+model_context_protocol = "1.0"
+toolset_registry = "1.0"
+all_toolsets = "1.0"
+python_editor_script = "1.0"
+
+[mcp]
+enabled_for_feasibility_only = true
+bind_address = "127.0.0.1"
+port = 8000
+path = "/mcp"
+authentication = "none-loopback-only"
+
+[clean_editor_build]
+command = 'Build.bat Ksa64MissionFoundryEditor Win64 Development C:\dev\KSA64\foundry\Ksa64MissionFoundry\Ksa64MissionFoundry.uproject -WaitMutex -NoHotReloadFromIDE'
+started_utc = "2026-07-27T05:10:11Z"
+duration_seconds = 587.396
+result = "succeeded"
+log_path = 'C:\dev\KSA64\foundry\Ksa64MissionFoundry\Saved\Logs\Phase12A-CleanEditorBuild.log'
+
+[bridge]
+abi_version = 1
+build_identity = "0x120A0001"
+dll_filename = "ksa64_viewer_bridge-4913e2051463-120a0001.dll"
+dll_sha256 = "0f0377414bd5ba075152287aee4a230ee8f8e879da6829e26ffcbef7adb34123"
+catalog_sha256 = "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13"
+unreal_automation = "2 passed, 0 failed"

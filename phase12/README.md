@@ -26,6 +26,12 @@ The work is divided so that each slice proves one coherent boundary:
   procedure.
 - [toolchain-lock.example.toml](toolchain-lock.example.toml) — noncanonical
   machine/toolchain manifest template.
+- [toolchain-lock.toml](toolchain-lock.toml) — sanitized accepted workstation and
+  toolchain evidence.
+- [package.ps1](package.ps1) — reproducible Development cook, package, and
+  headless bridge smoke gate.
+- [unreal-mcp.codex.toml.example](unreal-mcp.codex.toml.example) — sanitized,
+  loopback-only optional editor-tool configuration.
 - [BRIDGE.md](BRIDGE.md) — versioned C ABI, ownership, threading, role, and
   failure-containment contract.
 - [ASSETS.md](ASSETS.md) — source, LFS, provenance, generated-asset, and rights

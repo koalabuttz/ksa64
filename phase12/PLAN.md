@@ -23,8 +23,9 @@ accepted catalog remain frozen.
 ### 2. Native Windows toolchain
 
 - Use native Windows 11, not WSL, for Unreal, MSVC, the bridge, and packaging.
-- Install the current UE 5.8 Launcher patch under `E:` and place its
-  Derived Data Cache on `E:`.
+- Use the pinned UE 5.8 Launcher patch at its recorded resolved path. The
+  accepted workstation uses `D:\Games\UE_5.8`; its Derived Data Cache remains
+  on `E:\Unreal\DDC`. This path deviation is noncanonical and recorded.
 - Use Visual Studio 2026 with Game Development with C++, Desktop C++, Unreal
   integration, profiling tools, AddressSanitizer, the Epic-supported MSVC
   toolset, and Windows SDK.
@@ -46,7 +47,9 @@ accepted catalog remain frozen.
 ### 4. Empty Unreal project
 
 - Create `foundry/Ksa64MissionFoundry` as a Blank C++ desktop project with
-  Starter Content and hardware ray tracing disabled.
+  hardware ray tracing disabled. The verified Launcher installation exposes
+  Templates and Feature Packs but no separate Starter Content pack, so the
+  accepted 12A shell deliberately contains no presentation content.
 - Use DX12 and SM6. Lumen, Nanite, Niagara, CommonUI, and any quality tier are
   not 12A acceptance requirements.
 - Enable only Unreal MCP and its Toolset Registry/AllToolsets dependencies plus
