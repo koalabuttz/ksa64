@@ -562,3 +562,61 @@ RecentSessions         --> derived evidence with an explicit origin
 ```
 
 The UI may present these together but cannot merge their identities. Reusing an accepted model profile does not make a user vehicle or mission accepted. Unknown binary evidence is opaque until an owning strict parser recognizes it.
+
+## Phase 12A integration boundary
+
+Phase 12A adds a host presentation seam, not another authority layer:
+
+```text
+Unreal packaged runtime / native C++ harness
+                  |
+       validated C function table
+                  |
+    versioned viewer-bridge DLL
+      command + snapshot queues
+                  |
+     dedicated Rust session worker
+                  |
+          Ksa64Application
+                  |
+         LiveMissionSession
+                  |
+   accepted Phase 11 state and KSB11
+```
+
+The C ABI uses opaque handles, fixed-width structures carrying ABI and layout
+sizes, explicit caller/Rust buffer ownership, typed errors, and immutable roles.
+The DLL and adjacent manifest are commit-qualified and hash-validated before
+use. UnrealBuildTool stages a prebuilt DLL; it does not run Cargo. Each handle
+owns one Rust worker so the Unreal game thread only enqueues commands or polls
+immutable snapshots/events. Queue pressure, render cadence, and passive pacing
+cannot change release order, accepted actions, or final evidence.
+
+Role filtering happens in Rust before data crosses the ABI. A guided operator
+never receives SIM Director truth for UMG or C++ to hide. Canonical KSB11 bytes
+are built by the existing finalizer and returned unchanged; catalog JSON,
+snapshots, bridge diagnostics, camera state, and performance records remain
+noncanonical host metadata.
+
+Phase 12A keeps development and product layers separate:
+
+```text
+Editor-only development       Packaged Mission Foundry
+-----------------------       -------------------------
+Unreal MCP (optional)         runtime C++ plugin
+Unreal Python (optional)      versioned Rust bridge
+asset/import tooling          role-filtered application data
+Codex-assisted inspection     no editor/MCP/Python dependency
+```
+
+MCP stays loopback-only and serialized because the experimental UE 5.8 server
+has no authentication and executes tool calls on the game thread. Its success
+or failure cannot change build, automation, cook, packaging, or runtime
+acceptance.
+
+The first bridge proof uses the live guided GNSS-loss session solely for
+lifecycle, action, role, and evidence fidelity. Phase 12B adds its operations
+presentation. Phase 12C separately consumes the complete Phase 10 recording to
+prove coordinate display domains, large-world continuity, component events,
+entry, and recovery. No Phase 12A component owns rendering or coordinate
+conversion.

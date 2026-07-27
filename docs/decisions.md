@@ -1430,3 +1430,39 @@ Do not let Phase 12 implement its own mission loop or present a completed replay
 The first accepted live adapter is the flagship KSA-G10R GNSS-loss operations scenario. Other synchronous evaluators fail closed when asked for a live session. Capability discovery is additive application metadata and does not change the frozen product-catalog bytes.
 
 The existing completed-session command becomes a compatibility wrapper over the same session engine for this scenario. Identical ordered action transcripts must produce identical procedure, prediction, journal, checksum, and bundle evidence. Phase 12 owns graphical timelines, forms, maps, 3-D views, and wall-clock scheduling only; it cannot co-own simulation state.
+
+## D-113: Select Unreal Engine 5.8 and stage Phase 12
+
+Date: 2026-07-26
+
+Status: accepted.
+
+Use the current Unreal Engine 5.8 Epic Games Launcher build on native Windows
+11 for Phase 12, pinned to its exact installed build, supported Visual Studio
+2026/MSVC/Windows SDK toolchain, and resolved E: installation/cache paths. Use
+a short-path `C:\dev\KSA64` checkout and Git LFS before adding Unreal binary
+content. Do not build the engine from source in Phase 12A.
+
+Connect Unreal through a versioned in-process Rust `cdylib`/C ABI that calls
+`Ksa64Application` directly and owns each `LiveMissionSession` on a dedicated
+worker. Require opaque handles, fixed-width layouts, ABI and structure sizes,
+explicit buffer ownership, immutable role selection, bounded nonblocking
+queues, typed diagnostics, commit-qualified/hash-verified DLLs, and panic
+containment. Retain an out-of-process sidecar as a separately decided fallback
+if the in-process boundary cannot protect the harness and editor adequately.
+
+Treat Unreal MCP and Python as supervised editor-development tools only. Keep
+MCP loopback-only and optional; normal builds, tests, cook, packaging, and the
+shipped product cannot depend on the editor, MCP, Python, Codex, or CLI text.
+Rust remains sole authority for simulation, live lifecycle, role filtering,
+actions, and canonical evidence. Unreal owns presentation and wall-clock
+scheduling only.
+
+Split Phase 12 into 12A toolchain/bridge feasibility, 12B live GNSS-loss
+operations, 12C complete Phase 10 global engineering replay, 12D Mission
+Foundry authoring/compiler parity, and 12E production visual assets and
+performance. GNSS-loss proves the live application/action/evidence boundary;
+it cannot alone prove ENU/ECEF/GCRF transitions, large-world continuity, entry,
+or recovery. Defer all rendering, coordinates, NASA assets, and authoring UI
+from 12A. Preserve every Phase 0–11.5 artifact, catalog identity, authority
+lane, and K-format.

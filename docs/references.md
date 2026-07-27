@@ -128,3 +128,35 @@ and the non-correlation warning are frozen in `phase7/PLAN.md`.
 - Stanford SSI Firestorm post-flight reports: <https://wiki.stanfordssi.org/L2_Post-Flight_Analyses>
 
 Normalized source inventory, provenance labels, hashes, OpenRocket `.ork` files, settings manifests, and exported CSV evidence are committed under `phase8/`. The completion audit consumes the checked-in evidence without network access. Stanford material is retained as a qualified contextual comparison because configuration and raw-data limitations prevent treating it as a numerical oracle.
+
+## Phase 12 engine, editor, and visual references
+
+The supplied `KSA64_Unreal_Codex_Windows_Guide.md` is research input rather
+than an accepted implementation contract. `phase12/ENGINE_DECISION.md`,
+`phase12/PLAN.md`, and the Phase 11.5 handoff control when the guide differs
+from the current repository. In particular, Phase 12 uses a live session before
+claiming live operation and separates the GNSS-loss operations proof from the
+complete global engineering replay.
+
+Primary Unreal references:
+
+- Unreal Engine 5.8 announcement: <https://www.unrealengine.com/news/unreal-engine-5-8-is-now-available>
+- UE 5.8 release notes and Windows toolchain: <https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-5-8-release-notes>
+- Hardware and software specifications: <https://dev.epicgames.com/documentation/unreal-engine/hardware-and-software-specifications-for-unreal-engine>
+- Unreal MCP setup, security limitations, and tool execution: <https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor>
+
+Unreal MCP is experimental, incomplete, local and unauthenticated by default,
+and serializes editor tool calls on the game thread. It is optional supervised
+development tooling, never an evidence source, CI dependency, or shipped
+product requirement.
+
+Primary NASA visual-material references:
+
+- NASA 3D Resources: <https://science.nasa.gov/3d-resources/>
+- NASA Images and Media Usage Guidelines: <https://www.nasa.gov/nasa-brand-center/images-and-media/>
+
+NASA content may be used later as visual/reference input only after per-asset
+rights, credit, third-party content, hash, and transformation review. Every
+such asset declares `engineering_authority: false`; KSA64's accepted packs and
+telemetry remain the source for vehicle geometry, frames, events, and physical
+state.

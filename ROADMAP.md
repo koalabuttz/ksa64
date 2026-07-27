@@ -480,58 +480,101 @@ Accepted evidence:
 
 Explicit non-goals remain new physics, avionics, formats, target implementations, GUI, 3-D viewer, repository migration, REU overlay, Ultimate acceleration, physical-link acceptance, and the deferred 6502 rewrite.
 
-## Phase 12: Mission Foundry and passive 3-D operations
+## Phase 12: Unreal feasibility, passive operations, and Mission Foundry
 
-Status: planned. Phase 11.5 and its accepted hardening amendment have frozen the required product, application, and live-session contracts. A hard entry criterion is that Mission Foundry consumes `LiveMissionSession` directly; it may not build another execution loop or fake live operation from completed evidence. See
-`phase11_5/PHASE12_HANDOFF.md` and `phase11_5/HARDENING.md`.
+Status: active. Phase 11.5 and its accepted hardening amendment have frozen the
+required product, application, and live-session contracts. The implementation
+contract and engine decision are in `phase12/PLAN.md` and
+`phase12/ENGINE_DECISION.md`.
+
+The hard entry criterion applies to every Phase 12 subphase: a graphical client
+operates a live mission only through `LiveMissionSession`. It may not build
+another execution loop, drive flight packages directly, or present completed
+evidence as live operation. Unreal owns presentation and wall-clock scheduling;
+Rust owns mission state, role filtering, actions, and evidence.
+
+### Phase 12A: Unreal toolchain and live-bridge feasibility
+
+Status: active; acceptance evidence pending.
+
+Purpose: prove on native Windows that a pinned Unreal Engine 5.8 Launcher build
+can consume `Ksa64Application` through a versioned, failure-contained C ABI
+without changing any accepted Phase 0–11.5 artifact.
+
+The bounded slice includes the Windows toolchain lock, short-path checkout,
+empty C++ Unreal project, Git LFS/source policy, Rust bridge, independent native
+C++ harness, minimal runtime plugin, packaged smoke test, and one supervised
+loopback-only MCP inspection/mutation experiment. It adds no renderer, scene
+graph, coordinate conversion, visual interpolation, authoring UI, NASA asset,
+new K-format, physics, or alternate simulator.
+
+Exit requires catalog identity, role-data absence, nonblocking session access,
+byte-identical guided GNSS-loss KSB11 finalization, contained bridge failures,
+clean Unreal build/cook/package, and operation with MCP and Python disabled.
+
+### Phase 12B: live GNSS-loss operations presentation
+
+Status: planned after 12A acceptance.
+
+Purpose: add the first bidirectional graphical operations slice over the
+accepted live-session boundary.
+
+The guided-operator GNSS-loss experience owns role-filtered live snapshots,
+procedures, operator forms, stage/validate/commit actions, pacing, exact and
+smooth presentation, simple orbit visualization, and exact KSB11 finalization.
+It proves live operations and evidence fidelity, not a complete physical
+mission or local-to-global world presentation.
+
+### Phase 12C: complete global engineering viewer
+
+Status: planned after 12B acceptance.
+
+Purpose: replay the complete accepted Phase 10 KSA-G10R mission to prove the
+engineering-viewer responsibilities that the short GNSS-loss coast scenario
+does not exercise.
+
+This phase owns ENU/ECEF/GCRF display conversion, large-world display domains,
+Earth rendering, vehicle pose and component-event presentation, exact event
+snapping, trajectory-source labels, entry, recovery, fixed screenshot
+regressions, and packaged performance. Rust telemetry and recordings remain
+authoritative; cameras, interpolation, effects, and rendering are passive.
+
+### Phase 12D: Mission Foundry authoring and compiler parity
+
+Status: planned after the viewer boundaries are accepted.
 
 Purpose: provide a KSP/Juno-inspired host authoring experience while keeping
-KSA64's compiled packs, authority boundaries, provenance, and evidence model
-distinct.
+compiled packs, authority lanes, provenance, and evidence maturity distinct.
 
-Planned capabilities:
+Planned capabilities include a bounded component tree and attachment workflow,
+vehicle integration and derived engineering overlays, world/flight-software/
+ground/SIM Director mission lanes, avionics binding, and explicit Sketch,
+Evaluated, and Frozen Candidate states. GUI and headless compilation of the same
+source must produce byte-identical packs and derivation ledgers. Editing a
+source creates a new identity and never mutates frozen evidence.
 
-- A host-only vehicle-integration editor with component trees, attachment
-  nodes, symmetry, procedural geometry, internal placement, staging, and
-  cutaway views.
-- Live wet/dry mass, CG, inertia, CP, static margin, control-authority,
-  propellant, connection, provenance, representability, and model-envelope
-  overlays derived through the same headless compiler used outside the GUI.
-- A multi-lane mission composer separating world events, flight-software
-  decisions, ground operations, and SIM Director faults.
-- An avionics lab that binds sensors, flight-software packages, release
-  budgets, capabilities, and safe states. Visual plan/procedure authoring is in
-  scope; visual flight-program authoring is accepted only if it compiles into
-  the Phase 11 package ABI with deterministic resource evidence.
-- Explicit Sketch, Evaluated, and Frozen Candidate maturity states. Sketches
-  may run with visible assumption warnings; only compiled identified packs can
-  become canonical evidence.
-- A passive 3-D viewer consuming canonical telemetry and mission recordings,
-  with continuous local-to-global scaling and role-filtered truth, onboard,
-  ground, predicted, and planned trajectories.
-- A first bounded component vocabulary covering the accepted Firestorm and
-  KSA-G10R families. Generalization follows demonstrated needs rather than an
-  up-front universal parts engine.
+### Phase 12E: production visual baseline
 
-Exit criteria:
+Status: planned after 12D.
 
-- GUI and headless compilation of the same source produce byte-identical packs
-  and derivation ledgers.
-- Editing a source produces a new identity and never mutates evidence from a
-  frozen candidate.
-- Viewer state, camera, rendering rate, and role-filtering cannot alter the
-  authoritative run.
-- Truth remains unavailable outside SIM Director products.
-- The stock C64 consumes compiled packs and replay products; it is not required
-  to parse authoring projects or render the 3-D scene.
+Purpose: establish reviewable KSA-G10R and Firestorm visual assets, NASA-derived
+visual reference material, materials, lighting, bounded Niagara effects,
+quality tiers, and packaged performance gates.
 
-Explicit non-goals:
+Open-format masters and complete provenance remain source authority for visual
+assets; `.uasset` and `.umap` files are generated target assets. NASA material
+is visual/reference input only and must declare
+`engineering_authority: false`.
+
+### Shared Phase 12 limits
 
 - No universal CAD, CFD, FEA, or arbitrary plug-in execution system.
 - No hidden automatic wiring of mechanical, propellant, power, data, or
   control interfaces.
 - No unrecorded HOTAS/manual-control path. A later manual-input source must use
   the Phase 11 epoch-tagged command contract and deterministic replay.
+- The stock C64 consumes compiled packs and replay products; it is not required
+  to parse authoring projects or render the 3-D scene.
 
 ## Parallel target-engineering track
 

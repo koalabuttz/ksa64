@@ -1,0 +1,60 @@
+# Copy to the path selected by the Phase 12A implementation and replace every
+# REQUIRED value with observed output. This is noncanonical environment
+# metadata. Never place credentials or tokens in this file.
+
+schema = "ksa64-phase12-toolchain-lock-v1"
+recorded_utc = "REQUIRED"
+baseline_commit = "8208d53"
+remote_url = "https://github.com/koalabuttz/ksa64.git"
+checkout_path = "C:\\dev\\KSA64"
+checkout_clean = false
+
+[host]
+windows_edition = "REQUIRED"
+windows_build = "REQUIRED"
+cpu = "REQUIRED"
+physical_ram_bytes = 0
+gpu = "REQUIRED"
+gpu_vram_bytes = 0
+gpu_driver = "REQUIRED"
+
+[tools]
+git = "REQUIRED"
+git_lfs = "REQUIRED"
+rustc = "REQUIRED"
+cargo = "REQUIRED"
+rust_host = "REQUIRED"
+visual_studio = "REQUIRED"
+msvc = "REQUIRED"
+windows_sdk = "REQUIRED"
+
+[unreal]
+semantic_version = "5.8.REQUIRED"
+build_id = "REQUIRED"
+launcher_item_id = "REQUIRED"
+install_path = "E:\\REQUIRED"
+derived_data_cache_path = "E:\\REQUIRED"
+project_path = "C:\\dev\\KSA64\\foundry\\Ksa64MissionFoundry"
+renderer = "DX12"
+shader_model = "SM6"
+hardware_ray_tracing = false
+
+[unreal.plugins]
+model_context_protocol = "REQUIRED"
+toolset_registry = "REQUIRED"
+all_toolsets = "REQUIRED"
+python_editor_script = "REQUIRED"
+
+[mcp]
+enabled_for_feasibility_only = true
+bind_address = "127.0.0.1"
+port = 8000
+path = "/mcp"
+authentication = "none-loopback-only"
+
+[clean_editor_build]
+command = "REQUIRED"
+started_utc = "REQUIRED"
+duration_seconds = 0
+result = "REQUIRED"
+log_path = "REQUIRED"
