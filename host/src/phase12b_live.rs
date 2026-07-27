@@ -1771,6 +1771,32 @@ mod tests {
     }
 
     #[test]
+    fn undeclared_branch_is_rejected_before_package_or_transcript_mutation() {
+        let mut session = FullMissionSession::new(OperationalRole::GuidedOperator).unwrap();
+        session.prepare().unwrap();
+        advance_to(&mut session, UPDATE_STAGE_RELEASE);
+        let mut load = session
+            .branch_load(session.release_epoch, session.release_epoch + 2)
+            .unwrap();
+        load.arguments[0] = 99;
+        let journal_before = journal_snapshot(&session);
+        let events_before = session.events.len();
+
+        assert_eq!(
+            session.submit_operator_action(MissionOperatorAction::Stage {
+                load,
+                completed_event_mask: 0,
+            }),
+            Err(MissionSessionError::ActionRejected)
+        );
+        assert!(session.staged_load.is_none());
+        assert!(session.transcript.records.is_empty());
+        assert_eq!(session.rejected_loads, 0);
+        assert_eq!(session.events.len(), events_before);
+        assert_eq!(journal_snapshot(&session), journal_before);
+    }
+
+    #[test]
     fn expired_staged_load_cannot_be_committed_later() {
         let mut session = FullMissionSession::new(OperationalRole::GuidedOperator).unwrap();
         session.prepare().unwrap();
