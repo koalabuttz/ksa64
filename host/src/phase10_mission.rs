@@ -10,7 +10,8 @@ use ksa64_core::phase10_telemetry::{
 };
 use ksa64_sim::phase10::{FrameTransitionRecord, GlobalWorldError};
 use ksa64_sim::phase10_avionics::{
-    reference_global_flight_config, GlobalAvionicsMission, GlobalSensorFaults,
+    reference_global_flight_config, GlobalAvionicsMission, GlobalFlightReleaseProcessor,
+    GlobalSensorFaults,
 };
 use ksa64_sim::phase10_evaluation::{evaluate_global, GlobalEvaluationRequest};
 use serde_json::json;
@@ -36,6 +37,7 @@ pub struct GlobalMissionUpdate {
 #[derive(Clone, Debug)]
 pub struct GlobalMissionCapture {
     pub telemetry_header: GlobalTelemetryHeader,
+    pub plot_identity: u32,
     pub frames: Vec<GlobalTelemetryFrame>,
     pub plot_points: Vec<GlobalPlotPoint>,
     pub summary: GlobalEvaluationSummary,
@@ -142,6 +144,7 @@ where
     };
     Ok(GlobalMissionCapture {
         telemetry_header,
+        plot_identity: PHASE10_PLOT_IDENTITY,
         frames,
         plot_points,
         summary,
@@ -151,11 +154,21 @@ where
     })
 }
 
-fn mission_update(
-    runner: &GlobalAvionicsMission<'_>,
+pub(crate) fn mission_update<P: GlobalFlightReleaseProcessor>(
+    runner: &GlobalAvionicsMission<'_, P>,
     snapshot: ksa64_sim::phase10::GlobalWorldSnapshot,
     flight: ksa64_flight::phase10::GlobalFlightEvidence,
     release: u32,
+) -> Result<GlobalMissionUpdate, GlobalWorldError> {
+    mission_update_with_case(runner, snapshot, flight, release, PHASE10_NOMINAL_CASE_SEED)
+}
+
+pub(crate) fn mission_update_with_case<P: GlobalFlightReleaseProcessor>(
+    runner: &GlobalAvionicsMission<'_, P>,
+    snapshot: ksa64_sim::phase10::GlobalWorldSnapshot,
+    flight: ksa64_flight::phase10::GlobalFlightEvidence,
+    release: u32,
+    case_seed: u32,
 ) -> Result<GlobalMissionUpdate, GlobalWorldError> {
     let state = snapshot.state;
     let ecef = runner.world().ecef_state_public()?;
@@ -213,7 +226,7 @@ fn mission_update(
             flight.command.command_checksum,
             flight.status.map_or(0, |status| status.flight_checksum),
             flight.deadline_misses.into(),
-            PHASE10_NOMINAL_CASE_SEED,
+            case_seed,
         ],
     };
     let plot = GlobalPlotPoint {
@@ -268,7 +281,7 @@ pub fn encode_kph10(capture: &GlobalMissionCapture) -> Result<Vec<u8>, String> {
         .try_into()
         .map_err(|_| "too many KPH10 points")?;
     let header = GlobalPlotHeader {
-        identity: PHASE10_PLOT_IDENTITY,
+        identity: capture.plot_identity,
         evaluation_identity: global_evaluation_identity(&capture.summary),
         point_count,
         stride_releases: PHASE10_RECORD_STRIDE_RELEASES,

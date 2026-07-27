@@ -629,3 +629,33 @@ presentation. Phase 12C separately consumes the complete Phase 10 recording to
 prove coordinate display domains, large-world continuity, component events,
 entry, and recovery. No Phase 12A component owns rendering or coordinate
 conversion.
+
+## Phase 12B live operations boundary
+
+Phase 12B generalizes the accepted global runner without creating a second mission authority:
+
+```text
+Phase 10 GlobalWorldMachine
+        | KLR10 sensor and transition cells
+        v
+KsaG10rReferenceOpsV1
+        | accepted flight commands
+        v
+Phase 10 world
+        | public delayed/noisy tracking observations
+        v
+ground estimator -> procedure -> uplink broker -> existing KSB11 finalizer
+        |
+        v
+role-filtered presentation views -> UKsa64LiveMissionSubsystem -> Slate desk
+```
+
+The full viewer session runs the accepted KSA-G10R mission and injects persistent GNSS loss during GCRF coast. The untouched/no-action path remains 22,015 releases; the accepted reference command transcript changes the later guided path and lands at release 21,591. The nine-release session remains a compatibility fixture, not a human-facing realtime exercise.
+
+`UKsa64LiveMissionSubsystem` is the only Unreal object that talks to the bridge. It schedules exact releases with integer wall-clock accumulation, serializes commands, polls snapshots and cursored histories, publishes immutable view models, and saves evidence through Rust. Widgets cannot poll the bridge, parse canonical records, or construct uplink bytes.
+
+The ABI change is additive. Every ABI-v1 Phase 12A function and structure remains unchanged; feature bits expose fixed-layout operational, procedure, action, path, timeline, transport, and disposition views. Existing KLR10/KUL11/KUA11/KSB11 owners remain authoritative. A ground-navigation update is accepted only when its estimator identity, latest checksum, frame, and exact state fields match the current independent ground estimate; callers cannot author or alter its position or velocity.
+
+Disposition deliberately separates mission objective, vehicle, procedure, operator, avionics, and evidence outcomes. A procedure deviation is operational evidence, not an automatic rewrite of the physical result. Realtime, pause, step, fast pacing, polling, sound, interpolation, runtime role, and hints do not enter the full-session identity. With an identical ordered action transcript, role and hints cannot change canonical evidence; role permissions may only govern which explicit recorded actions can be submitted. Exact releases, guards, receipts, events, and actions are never interpolated, prediction sources remain labelled, and Guided Operator never receives SIM Director truth.
+
+The Phase 12B command desk is a 2-D operational view. Phase 12C alone owns Earth-scale 3-D domains, ENU/ECEF/GCRF display conversion, vehicle pose, cameras, entry, and recovery visualization.

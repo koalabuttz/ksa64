@@ -1,0 +1,87 @@
+{
+  "schema": "ksa64.phase12b.completion-audit.v1",
+  "status": "pending_unreal_acceptance",
+  "date": "2026-07-27",
+  "phase12a_baseline": {
+    "preserved": true,
+    "completion_record": "phase12/COMPLETION.md",
+    "completion_audit": "phase12/completion-audit.json",
+    "catalog_count": 13,
+    "compressed_ksb11_bytes": 22369,
+    "compressed_ksb11_sha256": "38a3ef2e497b8e24d1cf53a56db85b3d8bea0bdb27586215a02ff75d0ee39dc8"
+  },
+  "full_reference_session": {
+    "scenario": "FullMissionGnssLossV1",
+    "releases": 21591,
+    "release_rate_hz": 32,
+    "elapsed_seconds": "674.71875",
+    "actions": 4,
+    "ksb11": {
+      "bytes": 2911464,
+      "sha256": "7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4"
+    },
+    "ktt10": {
+      "bytes": 175232,
+      "sha256": "456c512825388b7df1d65c1fa8f08a0c086c4be794c6912cc7e1223cd406e2e1"
+    },
+    "kph10": {
+      "bytes": 32896,
+      "sha256": "cef09c40f95fd75f52ec7a15f8e9db0e12f9d2ffd12b6c107bbc4c6cfb853223"
+    },
+    "ksr10": {
+      "bytes": 512,
+      "sha256": "6aee34461cc0da65b79ba1954a48a6ad90803d29857bf444a53998ae9de622d1"
+    }
+  },
+  "no_action_reference": {
+    "releases": 22015,
+    "release_rate_hz": 32,
+    "elapsed_seconds": "687.96875",
+    "physical_outcome": "GroundContact",
+    "overall_disposition": "DegradedSuccess"
+  },
+  "disposition": {
+    "overall": "DegradedSuccess",
+    "objective": "PrimaryAchieved",
+    "vehicle": "Nominal",
+    "procedure": "Completed",
+    "operator": "TimelyReference",
+    "avionics": "DegradedOperational",
+    "evidence": "Complete"
+  },
+  "authority": {
+    "rust_is_sole_mission_authority": true,
+    "guided_live_surfaces_truth_filtered": true,
+    "completed_ksb11_role_neutral": true,
+    "completed_ksb11_crosses_bridge_as_opaque_bytes": true,
+    "canonical_post_run_parsing_owned_by_rust": true,
+    "unreal_canonical_parser": false
+  },
+  "compatibility": {
+    "canonical_formats_added": false,
+    "physics_changed": false,
+    "direct_effector_command_added": false,
+    "phase12a_files_rewritten": false
+  },
+  "gates": {
+    "rust_full_reference": "pass",
+    "rust_no_action": "pass",
+    "rust_role_and_action_boundaries": "pass",
+    "phase12a_frozen_audit": "required_in_completion_script",
+    "cpp_phase12a_harness": "pending_current_audit",
+    "cpp_phase12b_full_mission_harness": "pending_current_audit",
+    "unreal_editor_build": "pending",
+    "unreal_operations_automation": "pending",
+    "packaged_full_mission": "pending",
+    "presentation_30_60_144_hz": "pending",
+    "bridge_frame_latency": "pending",
+    "screenshot_semantic_accessibility": "pending"
+  },
+  "unreal_metrics": null,
+  "limitations": [
+    "This record does not claim final Phase 12B product acceptance until the pending Unreal and current C++ gates pass.",
+    "The sealed KSB11 is role-neutral post-run evidence; live Guided Operator views remain truth-filtered.",
+    "No Unreal performance, package, screenshot, or current automation metric is recorded yet.",
+    "Results are engineering simulation evidence, not launch approval, certification, regulatory evidence, or safety authority."
+  ]
+}

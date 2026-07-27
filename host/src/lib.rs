@@ -341,6 +341,8 @@ pub mod phase11_prediction;
 pub mod phase11_scenarios;
 pub mod phase11_session;
 pub mod phase11_tui;
+pub mod phase12b;
+pub mod phase12b_live;
 pub mod phase9;
 pub mod phase9_5_archive;
 pub mod phase9_5_compiler;

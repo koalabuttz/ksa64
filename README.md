@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–12A are complete. Phase 12B is next: it will turn the accepted Unreal bridge into a live, role-filtered GNSS-loss operations presentation without moving simulation authority out of Rust. Phase 12A pinned the native-Windows Unreal Engine 5.8 toolchain, proved a versioned failure-contained bridge to the frozen Rust application facade, and packaged a standalone Development build before adding any 3-D scene or authoring UI. The accepted missions, operations, workbenches, evidence, and C64 targets remain discoverable through one `ksa64` application and deterministic product catalog. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, physical-link acceptance, and the portable C64 world remain parallel priority tracks.
+> **Project status:** Phases 0–12A are complete. Phase 12B is active: its full role-filtered KSA-G10R GNSS-loss reference mission now seals exact Rust evidence at release 21,591 (674.71875 seconds), while final Unreal presentation, package, and performance acceptance remains in progress. The experience uses human-scale commanding, continuous realtime, explicit Review/Stage/Validate/Commit actions, and independent mission, vehicle, procedure, operator, avionics, and evidence outcomes. Phase 12A pinned the native-Windows Unreal Engine 5.8 toolchain, proved a versioned failure-contained bridge to the frozen Rust application facade, and packaged a standalone Development build before adding presentation. The accepted missions, workbenches, evidence, and C64 targets remain discoverable through one `ksa64` application and deterministic product catalog. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, physical-link acceptance, and the portable C64 world remain parallel priority tracks.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -79,7 +79,8 @@ KSA64 currently provides:
 - Phase 11 profile-specific flight-package manifests, compiled mission plans, atomic stage/validate/commit uplinks, separate ground-communications faults, compact onboard prediction, independent ground estimation, deterministic procedures/roles, event-journal recovery, and exact action replay;
 - nominal, GNSS-loss, planned-update, blackout, invalid-command, and limited `SafeholdRecoveryV1` operational scenarios, plus a live operations console and headless `lint/compile/inspect/run/script/replay/debrief/verify` mission SDK;
 - a 32,857-byte flat stock-C64 safehold endpoint and an authorized banked stock-RAM reference-operations stopgap: 13 native/C64 exact operations, no REU, 16/279 emergency-stack bytes used, preserved bank guards/code, and warp-disabled one-instance VICE acceptance.
-- one host-facing `ksa64` product shell with 13 current experiences, seven C64 targets, deterministic human/JSON discovery, unified request routing, focused domain adapters, safe target dispatch, Phase 11 compatibility wrappers, and distinct accepted-product, authored-project, and recent-session models.
+- one host-facing `ksa64` product shell with 13 current experiences, seven C64 targets, deterministic human/JSON discovery, unified request routing, focused domain adapters, safe target dispatch, Phase 11 compatibility wrappers, and distinct accepted-product, authored-project, and recent-session models;
+- a Phase 12B full GNSS-loss operations lane whose four-action scripted reference completes at release 21,591, seals 2,911,464 bytes of exact KSB11 evidence, and records **Degraded Success** across independent mission, vehicle, procedure, operator, avionics, and evidence axes; final Unreal presentation acceptance remains pending.
 
 An REU is **not required** to run the simulation, calculate campaign aggregates, browse the stock analysis UI, or export the default stock report. More REU capacity increases retained summaries and detailed histories without changing physics or campaign results.
 
@@ -149,7 +150,7 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 
 | Phase | Intended result |
 |---|---|
-| 12B — Live operations | Role-filtered guided GNSS-loss presentation, procedures, actions, pacing, and exact KSB11 finalization. |
+| 12B — Live operations | Active: the 674.71875-second scripted Rust reference now freezes exact KSB11/KTT10/KPH10/KSR10 evidence; Unreal command-desk, package, accessibility, and performance acceptance remains open. |
 | 12C — Global engineering viewer | Complete Phase 10 KSA-G10R replay with ENU/ECEF/GCRF display domains, Earth, exact events, entry, recovery, and packaged performance. |
 | 12D — Mission Foundry | Vehicle and authority-lane mission authoring, avionics binding, evidence maturity, and byte-identical GUI/headless compilation. |
 | 12E — Visual baseline | Production KSA64 assets, NASA-derived reference material, effects, quality tiers, provenance, and visual performance acceptance. |
@@ -187,7 +188,7 @@ The legacy Phase 3/4 accuracy-first closed-loop path still projects to 243.7 min
 - [Phase 10](phase10/README.md), [implementation contract](phase10/PLAN.md), [validation](phase10/VALIDATION.md), [completion record](phase10/COMPLETION.md), and [next-phase handoff](phase10/NEXT_PHASE_HANDOFF.md)
 - [Phase 11](phase11/README.md), [implementation contract](phase11/PLAN.md), [completion record](phase11/COMPLETION.md), [banked stock-C64 endpoint](phase11/C64_BANKED_REFERENCE_OPS.md), and [operations handoff](phase11/PHASE12_HANDOFF.md)
 - [Phase 11.5](phase11_5/README.md), [product commands](phase11_5/COMMANDS.md), [target guide](phase11_5/TARGETS.md), [completion record](phase11_5/COMPLETION.md), [pre-Phase 12 hardening](phase11_5/HARDENING.md), and [Mission Foundry API handoff](phase11_5/PHASE12_HANDOFF.md)
-- [Phase 12](phase12/README.md), [12A implementation contract](phase12/PLAN.md), [completion record](phase12/COMPLETION.md), [completion audit](phase12/complete.ps1), [Phase 12B handoff](phase12/PHASE12B_HANDOFF.md), [engine decision](phase12/ENGINE_DECISION.md), [toolchain lock procedure](phase12/TOOLCHAIN.md), [bridge contract](phase12/BRIDGE.md), and [asset policy](phase12/ASSETS.md)
+- [Phase 12](phase12/README.md), [12A implementation contract](phase12/PLAN.md), [completion record](phase12/COMPLETION.md), [completion audit](phase12/complete.ps1), [Phase 12B handoff](phase12/PHASE12B_HANDOFF.md), [12B implementation contract](phase12/PHASE12B_PLAN.md), [12B completion candidate](phase12/PHASE12B_COMPLETION.md), [12B audit](phase12/complete-phase12b.ps1), [engine decision](phase12/ENGINE_DECISION.md), [toolchain lock procedure](phase12/TOOLCHAIN.md), [bridge contract](phase12/BRIDGE.md), and [asset policy](phase12/ASSETS.md)
 
 ### Phase 4 detail
 

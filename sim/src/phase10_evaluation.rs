@@ -42,10 +42,10 @@ pub fn evaluate_global(
         request.case_seed,
     )?;
     let result = runner.run()?;
-    adapt_global(request, result)
+    adapt_global_result(request, result)
 }
 
-fn adapt_global(
+pub fn adapt_global_result(
     request: GlobalEvaluationRequest<'_>,
     result: GlobalAvionicsMissionSummary,
 ) -> Result<GlobalEvaluationSummary, GlobalWorldError> {

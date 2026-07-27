@@ -44,6 +44,7 @@ pub enum MissionScenario {
     GroundBlackout = 4,
     InvalidOperations = 5,
     SafeholdRecovery = 6,
+    GnssLossFull = 7,
 }
 
 impl MissionScenario {
@@ -55,6 +56,7 @@ impl MissionScenario {
             "ground-blackout" => Ok(Self::GroundBlackout),
             "invalid-operations" => Ok(Self::InvalidOperations),
             "safehold-recovery" => Ok(Self::SafeholdRecovery),
+            "gnss-loss-full" => Ok(Self::GnssLossFull),
             _ => Err(AuthoringError::Scenario),
         }
     }
@@ -193,12 +195,24 @@ pub fn lint_project_source(input: &str) -> Result<MissionProjectSource, Authorin
 
 pub fn compile_project_source(input: &str) -> Result<CompiledMissionProject, AuthoringError> {
     let source = lint_project_source(input)?;
-    let canonical_source = serde_json::to_vec(&source).map_err(|_| AuthoringError::Json)?;
     let declared_definition = parse_exact_u32(&source.definition_identity)?;
     let master_seed = parse_exact_u32(&source.master_seed)?;
     let scenario = MissionScenario::parse(&source.scenario)?;
     let package = MissionPackage::parse(&source.package)?;
     let role = role(&source.role)?;
+    let mut identity_source = source.clone();
+    let (definition_role, definition_hints) = if scenario == MissionScenario::GnssLossFull {
+        // The Phase 12B experiment binds the ground-operations authority, while
+        // presentation role and hints remain runtime policy. Canonicalizing only
+        // this additive scenario preserves every accepted Phase 11 source byte.
+        identity_source.role = "flight-controller".into();
+        identity_source.hints = false;
+        (OperationalRole::FlightController, false)
+    } else {
+        (role, source.hints)
+    };
+    let canonical_source =
+        serde_json::to_vec(&identity_source).map_err(|_| AuthoringError::Json)?;
     let manifest = match package {
         MissionPackage::ReferenceOps => ksa_g10r_reference_ops_manifest(),
         MissionPackage::SafeholdRecovery => safehold_recovery_manifest(),
@@ -216,17 +230,25 @@ pub fn compile_project_source(input: &str) -> Result<CompiledMissionProject, Aut
         master_seed,
         scenario,
         manifest,
-        role,
-        source.hints,
+        definition_role,
+        definition_hints,
         hash_bytes(&[&canonical_source]),
     );
     let mut package_manifest = [0; KFS11_LENGTH];
     write_kfs11(&manifest, &mut package_manifest).map_err(|_| AuthoringError::Codec)?;
     let (mission_plan, procedure_pack) = if package == MissionPackage::ReferenceOps {
-        let plan = ksa_g10r_reference_mission_plan();
+        let plan = if scenario == MissionScenario::GnssLossFull {
+            crate::phase12b::full_gnss_loss_mission_plan()
+        } else {
+            ksa_g10r_reference_mission_plan()
+        };
         let mut plan_bytes = [0; KMP11_LENGTH];
         write_kmp11(&plan, &mut plan_bytes).map_err(|_| AuthoringError::Codec)?;
-        let procedure = crate::phase11_operations::gnss_loss_procedure_pack(plan.plan_identity);
+        let procedure = if scenario == MissionScenario::GnssLossFull {
+            crate::phase12b::full_gnss_loss_procedure_pack(plan.plan_identity)
+        } else {
+            crate::phase11_operations::gnss_loss_procedure_pack(plan.plan_identity)
+        };
         let mut procedure_bytes = [0; KPC11_LENGTH];
         write_kpc11(&procedure, &mut procedure_bytes).map_err(|_| AuthoringError::Codec)?;
         (Some(plan_bytes), Some(procedure_bytes))
@@ -270,6 +292,9 @@ pub fn run_project(
         MissionScenario::GuidanceUpdate => from_operational(run_guidance_update_probe()),
         MissionScenario::GroundBlackout => from_operational(run_ground_blackout_probe()),
         MissionScenario::InvalidOperations => from_operational(run_invalid_operations_probe()),
+        MissionScenario::GnssLossFull => {
+            return crate::phase12b_live::run_full_gnss_loss_scripted_evidence(project);
+        }
         MissionScenario::SafeholdRecovery => {
             let value = ksa64_sim::run_safehold_probe();
             SessionRunEvidence {
@@ -296,15 +321,29 @@ pub fn complete_project_session(
     project: &CompiledMissionProject,
     scripted: bool,
 ) -> Result<CompletedMissionSession, AuthoringError> {
-    if project.package == MissionPackage::ReferenceOps
-        && project.scenario == MissionScenario::GnssLoss
-    {
-        let mut session = crate::phase11_live::LiveMissionSession::compiled(project.clone())
-            .map_err(|_| AuthoringError::Compatibility)?;
-        session.prepare().map_err(|_| AuthoringError::Replay)?;
-        return session
-            .run_scripted_to_completion()
-            .map_err(|_| AuthoringError::Replay);
+    if project.package == MissionPackage::ReferenceOps {
+        match project.scenario {
+            MissionScenario::GnssLoss => {
+                let mut session =
+                    crate::phase11_live::LiveMissionSession::compiled(project.clone())
+                        .map_err(|_| AuthoringError::Compatibility)?;
+                session.prepare().map_err(|_| AuthoringError::Replay)?;
+                return session
+                    .run_scripted_to_completion()
+                    .map_err(|_| AuthoringError::Replay);
+            }
+            MissionScenario::GnssLossFull => {
+                let mut session =
+                    crate::phase12b_live::FullMissionSession::compiled(project.clone())
+                        .map_err(|_| AuthoringError::Compatibility)?;
+                session.prepare().map_err(|_| AuthoringError::Replay)?;
+                return session
+                    .run_scripted_to_completion()
+                    .map(|completed| completed.session)
+                    .map_err(|_| AuthoringError::Replay);
+            }
+            _ => {}
+        }
     }
     let evidence = run_project(project, scripted)?;
     complete_project_session_from_evidence(project, evidence)
@@ -316,7 +355,11 @@ pub(crate) fn complete_project_session_from_evidence(
 ) -> Result<CompletedMissionSession, AuthoringError> {
     let action_identity = evidence.action_chain.max(1);
     let completed_identity = evidence.evidence_identity.max(1);
-    let debrief = (project.scenario == MissionScenario::GnssLoss).then(|| {
+    let debrief = matches!(
+        project.scenario,
+        MissionScenario::GnssLoss | MissionScenario::GnssLossFull
+    )
+    .then(|| {
         build_gnss_loss_debrief(
             project.definition_identity,
             action_identity,
@@ -418,7 +461,7 @@ pub fn write_debrief_reports(
     fs::write(directory.join("debrief.html"), debrief_html(debrief)).map_err(|_| AuthoringError::Io)
 }
 
-fn push_definition_segments(
+pub(crate) fn push_definition_segments(
     builder: &mut SessionBundleBuilder,
     project: &CompiledMissionProject,
 ) -> Result<(), AuthoringError> {
@@ -471,7 +514,7 @@ fn project_from_scan(scan: &SessionBundleScan) -> Result<CompiledMissionProject,
     Ok(project)
 }
 
-fn encode_action_log(
+pub(crate) fn encode_action_log(
     project: &CompiledMissionProject,
     evidence: &SessionRunEvidence,
 ) -> Result<Vec<u8>, AuthoringError> {

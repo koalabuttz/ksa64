@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/Ticker.h"
 #include "Modules/ModuleInterface.h"
 #include "ksa64_viewer_bridge.h"
 
@@ -45,10 +46,33 @@ public:
     const FString& GetDiagnostic() const { return Diagnostic; }
     const FString& GetCatalogJson() const { return CatalogJson; }
     const FKsa64BridgeValidation& GetValidation() const { return Validation; }
+    uint32 GetFeatureFlags() const { return FeatureFlags; }
+    bool SupportsFeature(uint32 Feature) const { return (FeatureFlags & Feature) == Feature; }
 
     bool StartGuidedGnssLoss();
+    bool StartGuidedOperationsV1(
+        uint32 ScenarioIdentity = KSA64_VIEWER_SCENARIO_FULL_GNSS_LOSS);
     int32 AdvanceOneRelease();
+    int32 AdvanceReleases(uint32 MaximumReleases);
     int32 PollSnapshot(Ksa64ViewerSnapshot& OutSnapshot) const;
+    int32 PollOperationalV1(Ksa64ViewerOperationalViewV1& OutView) const;
+    int32 ProcedureV1(Ksa64ViewerProcedureViewV1& OutView) const;
+    int32 DispositionV1(Ksa64ViewerDispositionV1& OutView) const;
+    int32 PollTimelineV1(Ksa64ViewerTimelineEventV1& OutEvent) const;
+    int32 PollReleaseSampleV1(Ksa64ViewerReleaseSampleV1& OutSample) const;
+    int32 PredictionPathHeaderV1(Ksa64ViewerPredictionPathHeaderV1& OutHeader) const;
+    int32 PredictionPathPointV1(uint32 PointIndex, Ksa64ViewerPredictionPathPointV1& OutPoint) const;
+    int32 ActionProposalV1(Ksa64ViewerActionProposalV1& OutProposal) const;
+    int32 SubmitActionProposalV1(uint32 ProposalIdentity, uint32 CompletedEventMask);
+    int32 CommitActionV1(uint32 ProposalIdentity);
+    int32 CancelActionV1(uint32 ProposalIdentity);
+    int32 PollActionReceiptV1(Ksa64ViewerActionReceiptV1& OutReceipt) const;
+    int32 TransportStatusV1(Ksa64ViewerTransportStatusV1& OutStatus) const;
+    int32 FinishStatusV1(Ksa64ViewerFinishStatusV1& OutStatus) const;
+    int32 RequestShutdownV1();
+    bool RequestAsyncClose();
+    bool IsAsyncClosePending() const { return bAsyncClosePending; }
+    int32 GetCompletedKsb11(TArray<uint8>& OutBytes) const;
     void CloseSession();
 
     /** Validation-only helper used by automation before any DLL is loaded. */
@@ -65,6 +89,7 @@ private:
     FString ReadLibraryDiagnostic() const;
     void UnloadBridge();
     void SetFault(const FString& Message);
+    bool TickAsyncClose(float DeltaSeconds);
 
     TUniquePtr<FApi> Api;
     void* DllHandle = nullptr;
@@ -73,4 +98,7 @@ private:
     FString Diagnostic;
     FString CatalogJson;
     FKsa64BridgeValidation Validation;
+    uint32 FeatureFlags = 0;
+    FTSTicker::FDelegateHandle AsyncCloseTickerHandle;
+    bool bAsyncClosePending = false;
 };

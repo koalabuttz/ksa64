@@ -1,0 +1,22 @@
+{
+  "schema": "ksa64.phase11.mission-project.v1",
+  "name": "KSA-G10R full-flight GNSS-loss operations",
+  "scenario": "gnss-loss-full",
+  "package": "KsaG10rReferenceOpsV1",
+  "role": "guided-operator",
+  "definition_identity": "0x12b01001",
+  "master_seed": "0x4b5341b2",
+  "hints": true,
+  "provenance": [
+    {
+      "kind": "accepted-model",
+      "source": "KSA64 frozen Phase 10 KSA-G10R global flight",
+      "identity": "0x10a00001"
+    },
+    {
+      "kind": "operations-shell",
+      "source": "KSA64 Phase 11 mission operations contracts",
+      "identity": "0x11f5a001"
+    }
+  ]
+}

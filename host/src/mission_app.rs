@@ -20,6 +20,7 @@ use crate::phase11_live::{
     LiveMissionCapability, LiveMissionSession, MissionSessionPace, GNSS_LOSS_LIVE_CAPABILITY,
 };
 use crate::phase11_tui::run_operations_console;
+use crate::phase12b_live::{FullMissionSession, FULL_GNSS_LOSS_SOURCE};
 use crate::phase7::{capture_hobby_mission, telemetry_frame_count};
 use crate::phase7_plot::build_stock_kph7;
 use crate::phase8::{run_checked_in_phase8, run_checked_in_phase8_crosswind};
@@ -39,6 +40,66 @@ use serde_json::json;
 use std::fs;
 
 impl Ksa64Application {
+    pub fn start_full_operations_mission(
+        &self,
+        request: &MissionRequest,
+    ) -> Result<FullMissionSession, ApplicationError> {
+        let descriptor = self.experience(&request.id)?;
+        require_action(descriptor, SupportedAction::MissionControl)?;
+        if descriptor.service != ApplicationService::MissionOperations
+            || scenario(request, "gnss-loss-full") != "gnss-loss-full"
+        {
+            return Err(ApplicationError::unsupported(
+                "mission.full-live-session",
+                format!(
+                    "{} does not expose the full Phase 12B operations adapter",
+                    request.id
+                ),
+            ));
+        }
+        let role = request.role.as_deref().unwrap_or("guided-operator");
+        let role = match role {
+            "observer" => ksa64_interface::phase11::OperationalRole::Observer,
+            "guided-operator" => ksa64_interface::phase11::OperationalRole::GuidedOperator,
+            "flight-controller" => ksa64_interface::phase11::OperationalRole::FlightController,
+            "flight-software-engineer" => {
+                ksa64_interface::phase11::OperationalRole::FlightSoftwareEngineer
+            }
+            "sim-director" => ksa64_interface::phase11::OperationalRole::SimDirector,
+            "scripted-operator" => ksa64_interface::phase11::OperationalRole::ScriptedOperator,
+            _ => {
+                return Err(ApplicationError::invalid(
+                    "mission.role",
+                    "unsupported operational role",
+                ))
+            }
+        };
+        let mut session = FullMissionSession::new(role).map_err(|error| {
+            ApplicationError::execution(
+                "mission.full-live-session",
+                format!("could not compile full operations session: {error:?}"),
+            )
+        })?;
+        session.prepare().map_err(|error| {
+            ApplicationError::execution(
+                "mission.full-live-session",
+                format!("could not prepare full operations session: {error:?}"),
+            )
+        })?;
+        session
+            .set_pace(match request.pace {
+                MissionPace::Fast => MissionSessionPace::Fast,
+                MissionPace::Realtime => MissionSessionPace::Realtime,
+            })
+            .map_err(|error| {
+                ApplicationError::execution(
+                    "mission.full-live-session",
+                    format!("could not set full operations pace: {error:?}"),
+                )
+            })?;
+        Ok(session)
+    }
+
     pub fn live_mission_capability(
         &self,
         id: &str,
@@ -435,7 +496,12 @@ fn operation_source(scenario: &str, role: &str) -> Result<String, ApplicationErr
     }
     if !matches!(
         scenario,
-        "nominal" | "gnss-loss" | "guidance-update" | "ground-blackout" | "invalid-operations"
+        "nominal"
+            | "gnss-loss"
+            | "gnss-loss-full"
+            | "guidance-update"
+            | "ground-blackout"
+            | "invalid-operations"
     ) {
         return Err(ApplicationError::invalid(
             "mission.scenario",
@@ -456,6 +522,18 @@ fn operation_source(scenario: &str, role: &str) -> Result<String, ApplicationErr
             "mission.role",
             format!("unsupported operational role `{role}`"),
         ));
+    }
+    if scenario == "gnss-loss-full" {
+        return Ok(FULL_GNSS_LOSS_SOURCE
+            .replace("guided-operator", role)
+            .replace(
+                "\"hints\": true",
+                if role == "guided-operator" {
+                    "\"hints\": true"
+                } else {
+                    "\"hints\": false"
+                },
+            ));
     }
     let source = json!({
         "schema": "ksa64.phase11.mission-project.v1",
@@ -479,6 +557,7 @@ const fn operation_definition_identity(scenario: &str) -> u32 {
     match scenario.as_bytes() {
         b"nominal" => 0x11d1_0020,
         b"gnss-loss" => 0x11d1_0011,
+        b"gnss-loss-full" => 0x12b0_1001,
         b"guidance-update" => 0x11d1_0021,
         b"ground-blackout" => 0x11d1_0022,
         b"invalid-operations" => 0x11d1_0023,

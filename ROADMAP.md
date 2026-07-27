@@ -480,10 +480,10 @@ Accepted evidence:
 
 Explicit non-goals remain new physics, avionics, formats, target implementations, GUI, 3-D viewer, repository migration, REU overlay, Ultimate acceleration, physical-link acceptance, and the deferred 6502 rewrite.
 
-## Phase 12: Unreal feasibility, passive operations, and Mission Foundry
+## Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: active. Phase 12A is complete and accepted; Phase 12B is the next
-implementation slice. Phase 11.5 and its accepted hardening amendment remain
+Status: active. Phase 12A is complete and accepted; Phase 12B is in
+implementation. Phase 11.5 and its accepted hardening amendment remain
 the frozen product, application, and live-session foundation. Phase 12A
 completion evidence is in `phase12/COMPLETION.md`, with the next boundary in
 `phase12/PHASE12B_HANDOFF.md`.
@@ -519,16 +519,17 @@ asset, new K-format, physics, or alternate simulator.
 
 ### Phase 12B: live GNSS-loss operations presentation
 
-Status: next; ready to plan from the accepted Phase 12A handoff.
+Status: active under the accepted `phase12/PHASE12B_PLAN.md` contract. The exact Rust reference evidence is frozen in `phase12/PHASE12B_COMPLETION.md`; final Unreal presentation, package, accessibility, and performance gates remain open.
 
-Purpose: add the first bidirectional graphical operations slice over the
-accepted live-session boundary.
+Purpose: add the first bidirectional graphical operations slice over the accepted live-session boundary.
 
-The guided-operator GNSS-loss experience owns role-filtered live snapshots,
-procedures, operator forms, stage/validate/commit actions, pacing, exact and
-smooth presentation, simple orbit visualization, and exact KSB11 finalization.
-It proves live operations and evidence fidelity, not a complete physical
-mission or local-to-global world presentation.
+The Guided Operator experience runs the complete KSA-G10R mission with persistent GCRF-coast GNSS failure and human-scale operational windows. The accepted scripted reference completes at release 21,591, exactly 674.71875 seconds; the no-action baseline remains 22,015 releases, exactly 687.96875 seconds. It owns role-filtered snapshots, explicit Review/Stage/Validate/Commit actions, continuous realtime plus manual pacing, exact and smooth presentation, a modern NASA-inspired 2-D command desk, and exact KSB11 finalization. The compressed nine-release session remains the byte-exact compatibility oracle.
+
+Phase 12B evaluates mission objective, vehicle outcome, procedure performance, operator performance, avionics condition, and evidence integrity separately. Nominal-plan deviation alone is not mission failure: inertial continuation, safe recovery, delayed valid action, or no action can produce nominal, degraded, contingency, or failed outcomes according to the physical and operational evidence.
+
+The bridge change is additive to ABI v1. Existing functions and structures remain exact while feature-negotiated operational views, action receipts, prediction paths, histories, queue diagnostics, and shutdown status support the command desk. No new canonical K-format is introduced.
+
+The frozen full-reference evidence contains four accepted actions and a 2,911,464-byte KSB11 with SHA-256 `7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4`. Its overall result is Degraded Success with Primary Achieved / Nominal Vehicle / Completed Procedure / Timely Reference Operator / Degraded Operational Avionics / Complete Evidence. The sealed KSB11 is role-neutral post-run evidence transported as opaque bytes; live Guided Operator surfaces remain truth-filtered in Rust.
 
 ### Phase 12C: complete global engineering viewer
 

@@ -113,8 +113,9 @@ At minimum, Phase 12B should prove:
 - Guided Operator data contains no truth-only field;
 - no frame-rate, pause, polling-frequency, or interpolation choice changes
   release or event order;
-- stage, reject, commit, cancel, blackout, and reacquisition states are
-  represented without inventing authority;
+- stage, reject, commit, and cancel states are represented without inventing
+  authority; blackout and reacquisition retain their frozen Phase 11 probe and
+  replay evidence rather than being claimed as live states of this GNSS-loss slice;
 - bridge queue pressure fails visibly and deterministically;
 - destroying a running or paused session shuts down its worker cleanly;
 - the packaged Development build completes the experience without editor,

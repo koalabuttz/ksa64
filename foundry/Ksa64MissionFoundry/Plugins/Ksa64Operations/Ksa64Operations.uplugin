@@ -1,0 +1,28 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "12B.1",
+  "FriendlyName": "KSA64 Mission Operations",
+  "Description": "Source-controlled, truth-blind Phase 12B Mission Foundry operations presentation.",
+  "Category": "KSA64",
+  "CreatedBy": "KSA64",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "Ksa64Operations",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "Ksa64Bridge",
+      "Enabled": true
+    }
+  ],
+  "SupportedTargetPlatforms": [
+    "Win64"
+  ]
+}

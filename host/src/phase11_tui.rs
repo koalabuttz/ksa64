@@ -95,6 +95,7 @@ impl OperationsConsoleModel {
             .collect();
         let procedure_label = match project.scenario {
             MissionScenario::GnssLoss => "ASCENT/GLOBAL COAST — LOSS OF GNSS AIDING",
+            MissionScenario::GnssLossFull => "FULL GLOBAL FLIGHT — LOSS OF GNSS AIDING",
             MissionScenario::GuidanceUpdate => "PLANNED COAST GUIDANCE UPDATE",
             MissionScenario::GroundBlackout => "GROUND COMMUNICATIONS BLACKOUT",
             MissionScenario::InvalidOperations => "INVALID COMMAND REJECTION",

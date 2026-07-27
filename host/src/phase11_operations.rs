@@ -133,6 +133,10 @@ impl ProcedureEngine {
         self.current_step
     }
 
+    pub const fn entered_epoch(&self) -> u32 {
+        self.entered_epoch
+    }
+
     pub fn current(&self) -> Option<&ProcedureStep> {
         find_step(&self.pack, self.current_step)
     }
@@ -223,6 +227,23 @@ impl ProcedureEngine {
             | ProcedureStepKind::RequestAction
             | ProcedureStepKind::Caution
             | ProcedureStepKind::Warning => {}
+        }
+        Ok(())
+    }
+
+    /// Force the active step through its declared timeout edge at an external
+    /// absolute mission deadline. This preserves the procedure's normal failure
+    /// branch while preventing per-step relative deadlines from drifting.
+    pub fn expire_at(&mut self, epoch: u32) -> Result<(), ProcedureError> {
+        if self.state != ProcedureState::Active {
+            return Ok(());
+        }
+        let step = *self.current().ok_or(ProcedureError::Step)?;
+        self.record(epoch, ProcedureEvidenceKind::Timeout, step.step_id, 0);
+        if step.next_failure == 0 {
+            self.state = ProcedureState::Mistimed;
+        } else {
+            self.transition(epoch, step.next_failure, ProcedureEvidenceKind::Branch)?;
         }
         Ok(())
     }

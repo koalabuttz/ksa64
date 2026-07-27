@@ -519,3 +519,19 @@ The accepted bridge DLL SHA-256 is
 This evidence qualifies the presentation boundary and failure containment only.
 It adds no simulation authority, renderer, physics, real-vehicle validation, or
 new canonical evidence semantics.
+
+## Phase 12B live-operations validation
+
+Phase 12B retains the entire Phase 12A gate and adds two distinct fixtures: the unchanged compressed nine-release session remains the ABI and exact 22,369-byte KSB11 compatibility oracle, while `FullMissionGnssLossV1` runs the complete mission with human-scale operator windows. The no-action path retains 22,015 releases (687.96875 seconds); the accepted four-action reference transcript lands at release 21,591 (674.71875 seconds) because its ground update changes the subsequent guided trajectory.
+
+The measured scripted reference seals 2,911,464 KSB11 bytes with SHA-256 `7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4`. Its nested evidence is 175,232 KTT10 bytes (`456c512825388b7df1d65c1fa8f08a0c086c4be794c6912cc7e1223cd406e2e1`), 32,896 KPH10 bytes (`cef09c40f95fd75f52ec7a15f8e9db0e12f9d2ffd12b6c107bbc4c6cfb853223`), and a 512-byte KSR10 summary (`6aee34461cc0da65b79ba1954a48a6ad90803d29857bf444a53998ae9de622d1`). The accepted disposition is Degraded Success with PrimaryAchieved, Nominal, Completed, TimelyReference, DegradedOperational, and Complete axes.
+
+The full-mission gate covers reference commanding, inertial continuation, conservative recovery, no action, and invalid/rejected actions. Delayed-valid classification is covered by bounded disposition fixtures; ground-communications blackout and reacquisition remain separately validated by the frozen Phase 11 operational probe. Each case records mission, vehicle, procedure, operator, avionics, and evidence disposition separately. Procedure nonconformance is not a proxy for physical mission failure.
+
+Phase 12B completion acceptance requires inactive operations to reproduce Phase 10 exactly; scripted and UI copies of the same action epochs to yield byte-identical KSB11; presentation choices not to change release or evidence order; invalid actions to fail before state changes; Guided Operator buffers to contain no truth; prediction sources to remain bound and labelled; incomplete history, worker failure, abort, overflow, or failed finalization never to appear complete; exact data to snap across discontinuities; both C++ harnesses to preserve additive ABI-v1 compatibility; and the packaged 2-D desk to complete without Editor, MCP, Python, network, Starter Content, or NASA assets.
+
+The role boundary is validated in two layers. Live Guided Operator surfaces are filtered in Rust and contain no SIM Director truth. A completed KSB11 is a sealed, role-neutral post-run archive; it crosses the bridge as opaque bytes for hashing, storage, and the owning Rust verifier, not as a viewer-readable source of live truth.
+
+The Rust reference hashes above are accepted. Native C++ harness, Unreal build/automation, packaged full-session, accessibility, screenshot/semantic, and presentation-performance measurements remain pending in `phase12/PHASE12B_COMPLETION.md`; no Unreal metric is claimed before those gates run.
+
+Measure presentation at 30, 60, and 144 Hz. The pinned-workstation target is 60 fps at 1920x1080 with bridge work below 1 ms p99 and 2 ms maximum on a hot frame. These are presentation gates, not simulation identity or real-vehicle evidence.

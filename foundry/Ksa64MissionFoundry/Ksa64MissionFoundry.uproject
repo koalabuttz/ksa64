@@ -2,7 +2,7 @@
   "FileVersion": 3,
   "EngineAssociation": "5.8",
   "Category": "KSA64",
-  "Description": "Phase 12A Mission Foundry bridge feasibility shell.",
+  "Description": "KSA64 Mission Foundry operations presentation shell.",
   "Modules": [
     {
       "Name": "Ksa64MissionFoundry",
@@ -13,6 +13,10 @@
   "Plugins": [
     {
       "Name": "Ksa64Bridge",
+      "Enabled": true
+    },
+    {
+      "Name": "Ksa64Operations",
       "Enabled": true
     },
     {

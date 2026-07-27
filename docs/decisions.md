@@ -1476,3 +1476,19 @@ runtime. The exact existing KSB11 session is returned unchanged. The sidecar
 fallback was therefore not required or implemented; it remains available only
 through a future reviewed decision if later editor or runtime evidence reveals a
 containment problem. Unreal MCP also remained optional development tooling.
+
+## D-114: Use a full human-scale mission for Phase 12B and separate success axes
+
+Date: 2026-07-27
+
+Status: accepted.
+
+Keep the accepted Phase 11 nine-release GNSS-loss session byte-exact as a compatibility oracle. Do not present its compressed command timing as realistic human mission operations.
+
+Build Phase 12B around a separately identified full KSA-G10R operations session: an untouched/no-action duration of 22,015 releases and a reference-command completion at release 21,591, with persistent GNSS loss at T+180 seconds, delayed/noisy public ground tracking, and human-scale staged-command windows. Run continuously at realtime by default. Do not automatically pause or choose an action; permit explicit pause, exact step, and manual fast modes.
+
+Require Review, Stage, validation, and Commit through the accepted Phase 11 command authority. Unreal may not construct direct effector commands, edit stale proposals, infer world truth, or redefine canonical records.
+
+Classify mission objective, vehicle state, procedure performance, operator performance, avionics state, and evidence integrity independently. A mission need not follow the nominal plan to succeed. Inertial continuation, delayed valid action, no action, or conservative recovery may yield nominal, degraded, contingency, or failed results according to physical objectives and declared safety criteria. A mistimed or failed procedure alone never converts physical success into failure.
+
+Preserve every ABI-v1 Phase 12A function and layout. Add feature-negotiated presentation structures and exports, advance only the bridge build identity, and introduce no new canonical `K*` format. Use a modern NASA-inspired dark 2-D command desk with restrained C64 accents. Defer 3-D Earth, frame-domain display conversion, vehicle pose, entry, recovery, and cameras to Phase 12C.

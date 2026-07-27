@@ -25,9 +25,27 @@ constexpr TCHAR CatalogSchema[] = TEXT("ksa64.product-catalog.v1");
 constexpr TCHAR AcceptedCatalogHash[] =
     TEXT("b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13");
 constexpr uint32 AcceptedCatalogCount = 13;
+constexpr uint32 LegacyPhase12ABuildIdentity = 0x120A0001u;
+constexpr uint32 KnownFeatureMask =
+    KSA64_VIEWER_FEATURE_PANIC_PROBE
+    | KSA64_VIEWER_FEATURE_OPERATIONS_V1
+    | KSA64_VIEWER_FEATURE_TYPED_ACTIONS_V1
+    | KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1;
 constexpr uint64 GuidedOperationalValidityMask = (1ull << 11) - 1ull;
 
 static_assert(sizeof(Ksa64ViewerAbiInfo) == 132);
+static_assert(sizeof(Ksa64ViewerStartRequestV1) == 48);
+static_assert(sizeof(Ksa64ViewerOperationalViewV1) == 208);
+static_assert(sizeof(Ksa64ViewerProcedureViewV1) == 376);
+static_assert(sizeof(Ksa64ViewerDispositionV1) == 72);
+static_assert(sizeof(Ksa64ViewerActionProposalV1) == 144);
+static_assert(sizeof(Ksa64ViewerActionReceiptV1) == 80);
+static_assert(sizeof(Ksa64ViewerTimelineEventV1) == 136);
+static_assert(sizeof(Ksa64ViewerReleaseSampleV1) == 112);
+static_assert(sizeof(Ksa64ViewerPredictionPathHeaderV1) == 88);
+static_assert(sizeof(Ksa64ViewerPredictionPathPointV1) == 56);
+static_assert(sizeof(Ksa64ViewerTransportStatusV1) == 96);
+static_assert(sizeof(Ksa64ViewerFinishStatusV1) == 64);
 static_assert(sizeof(Ksa64ViewerSpan) == 24);
 static_assert(sizeof(Ksa64ViewerOwnedBuffer) == 32);
 static_assert(sizeof(Ksa64ViewerEvent) == 24);
@@ -244,6 +262,12 @@ bool LoadRequiredExport(void* Dll, const TCHAR* Name, T& Out, FString& Diagnosti
     }
     return true;
 }
+
+template <typename T>
+void LoadOptionalExport(void* Dll, const TCHAR* Name, T& Out)
+{
+    Out = reinterpret_cast<T>(FPlatformProcess::GetDllExport(Dll, Name));
+}
 }
 
 struct FKsa64BridgeModule::FApi
@@ -251,6 +275,7 @@ struct FKsa64BridgeModule::FApi
     using FGetAbiInfo = int32(KSA64_VIEWER_CALL*)(Ksa64ViewerAbiInfo*);
     using FCatalog = int32(KSA64_VIEWER_CALL*)(Ksa64ViewerOwnedBuffer*);
     using FStart = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerSpan*, Ksa64ViewerHandle**);
+    using FStartV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerStartRequestV1*, Ksa64ViewerHandle**);
     using FDestroy = int32(KSA64_VIEWER_CALL*)(Ksa64ViewerHandle*);
     using FPause = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*);
     using FResume = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*);
@@ -258,21 +283,26 @@ struct FKsa64BridgeModule::FApi
     using FStep = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*);
     using FAdvance = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32);
     using FAbort = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32);
-    using FPollSnapshot =
-        int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerSnapshot*);
-    using FPollEvent =
-        int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerEvent*);
-    using FOutput = int32(KSA64_VIEWER_CALL*)(
-        const Ksa64ViewerHandle*,
-        Ksa64ViewerOwnedBuffer*);
-    using FSubmitStage = int32(KSA64_VIEWER_CALL*)(
-        const Ksa64ViewerHandle*,
-        const Ksa64ViewerSpan*,
-        uint32);
-    using FSubmit = int32(KSA64_VIEWER_CALL*)(
-        const Ksa64ViewerHandle*,
-        const Ksa64ViewerSpan*);
+    using FPollSnapshot = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerSnapshot*);
+    using FPollEvent = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerEvent*);
+    using FOutput = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerOwnedBuffer*);
+    using FSubmitStage = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, const Ksa64ViewerSpan*, uint32);
+    using FSubmit = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, const Ksa64ViewerSpan*);
     using FFreeBuffer = int32(KSA64_VIEWER_CALL*)(Ksa64ViewerOwnedBuffer*);
+    using FPollOperationalV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerOperationalViewV1*);
+    using FProcedureV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerProcedureViewV1*);
+    using FDispositionV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerDispositionV1*);
+    using FPollTimelineV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerTimelineEventV1*);
+    using FPollReleaseSampleV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerReleaseSampleV1*);
+    using FPredictionHeaderV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerPredictionPathHeaderV1*);
+    using FPredictionPointV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32, Ksa64ViewerPredictionPathPointV1*);
+    using FActionProposalV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerActionProposalV1*);
+    using FSubmitActionV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32, uint32);
+    using FActionIdentityV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, uint32);
+    using FPollActionReceiptV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerActionReceiptV1*);
+    using FTransportStatusV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerTransportStatusV1*);
+    using FFinishStatusV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerFinishStatusV1*);
+    using FRequestShutdownV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*);
 
     FGetAbiInfo GetAbiInfo = nullptr;
     FCatalog Catalog = nullptr;
@@ -295,6 +325,23 @@ struct FKsa64BridgeModule::FApi
     FSubmit SubmitCommit = nullptr;
     FSubmit SubmitCancel = nullptr;
     FFreeBuffer FreeBuffer = nullptr;
+
+    FStartV1 StartV1 = nullptr;
+    FPollOperationalV1 PollOperationalV1 = nullptr;
+    FProcedureV1 ProcedureV1 = nullptr;
+    FDispositionV1 DispositionV1 = nullptr;
+    FPollTimelineV1 PollTimelineV1 = nullptr;
+    FPollReleaseSampleV1 PollReleaseSampleV1 = nullptr;
+    FPredictionHeaderV1 PredictionHeaderV1 = nullptr;
+    FPredictionPointV1 PredictionPointV1 = nullptr;
+    FActionProposalV1 ActionProposalV1 = nullptr;
+    FSubmitActionV1 SubmitActionV1 = nullptr;
+    FActionIdentityV1 CommitActionV1 = nullptr;
+    FActionIdentityV1 CancelActionV1 = nullptr;
+    FPollActionReceiptV1 PollActionReceiptV1 = nullptr;
+    FTransportStatusV1 TransportStatusV1 = nullptr;
+    FFinishStatusV1 FinishStatusV1 = nullptr;
+    FRequestShutdownV1 RequestShutdownV1 = nullptr;
 
     bool Bind(void* Dll, FString& OutDiagnostic)
     {
@@ -322,7 +369,41 @@ struct FKsa64BridgeModule::FApi
         KSA64_BIND(SubmitCancel, "ksa64_viewer_submit_cancel");
         KSA64_BIND(FreeBuffer, "ksa64_viewer_free_buffer");
 #undef KSA64_BIND
+#define KSA64_OPTIONAL(Field, Name) LoadOptionalExport(Dll, TEXT(Name), Field)
+        KSA64_OPTIONAL(StartV1, "ksa64_viewer_start_v1");
+        KSA64_OPTIONAL(PollOperationalV1, "ksa64_viewer_poll_operational_v1");
+        KSA64_OPTIONAL(ProcedureV1, "ksa64_viewer_procedure_v1");
+        KSA64_OPTIONAL(DispositionV1, "ksa64_viewer_disposition_v1");
+        KSA64_OPTIONAL(PollTimelineV1, "ksa64_viewer_poll_timeline_v1");
+        KSA64_OPTIONAL(PollReleaseSampleV1, "ksa64_viewer_poll_release_sample_v1");
+        KSA64_OPTIONAL(PredictionHeaderV1, "ksa64_viewer_prediction_path_header_v1");
+        KSA64_OPTIONAL(PredictionPointV1, "ksa64_viewer_prediction_path_point_v1");
+        KSA64_OPTIONAL(ActionProposalV1, "ksa64_viewer_action_proposal_v1");
+        KSA64_OPTIONAL(SubmitActionV1, "ksa64_viewer_submit_action_proposal_v1");
+        KSA64_OPTIONAL(CommitActionV1, "ksa64_viewer_commit_action_v1");
+        KSA64_OPTIONAL(CancelActionV1, "ksa64_viewer_cancel_action_v1");
+        KSA64_OPTIONAL(PollActionReceiptV1, "ksa64_viewer_poll_action_receipt_v1");
+        KSA64_OPTIONAL(TransportStatusV1, "ksa64_viewer_transport_status_v1");
+        KSA64_OPTIONAL(FinishStatusV1, "ksa64_viewer_finish_status_v1");
+        KSA64_OPTIONAL(RequestShutdownV1, "ksa64_viewer_request_shutdown_v1");
+#undef KSA64_OPTIONAL
         return true;
+    }
+
+    bool HasOperationsV1() const
+    {
+        return StartV1 && PollOperationalV1 && ProcedureV1 && DispositionV1
+            && PollTimelineV1 && PollReleaseSampleV1 && PredictionHeaderV1
+            && PredictionPointV1;
+    }
+    bool HasTypedActionsV1() const
+    {
+        return ActionProposalV1 && SubmitActionV1 && CommitActionV1
+            && CancelActionV1 && PollActionReceiptV1;
+    }
+    bool HasAsyncStatusV1() const
+    {
+        return TransportStatusV1 && FinishStatusV1 && RequestShutdownV1;
     }
 };
 
@@ -446,8 +527,10 @@ bool FKsa64BridgeModule::ValidateArtifactManifest(
     {
         return false;
     }
-    if (AbiVersion != KSA64_VIEWER_ABI_VERSION
-        || BuildIdentity != KSA64_VIEWER_BUILD_IDENTITY)
+    const bool bAcceptedBuildIdentity =
+        BuildIdentity == KSA64_VIEWER_BUILD_IDENTITY
+        || BuildIdentity == LegacyPhase12ABuildIdentity;
+    if (AbiVersion != KSA64_VIEWER_ABI_VERSION || !bAcceptedBuildIdentity)
     {
         OutDiagnostic = TEXT("bridge manifest ABI or build identity is incompatible");
         return false;
@@ -591,7 +674,10 @@ bool FKsa64BridgeModule::LoadBridge()
         || Info.command_capacity == 0
         || Info.event_capacity == 0
         || Info.maximum_advance_releases != KSA64_VIEWER_MAX_ADVANCE_RELEASES
-        || (Info.feature_flags & ~1u) != 0
+        || (Info.feature_flags & ~KnownFeatureMask) != 0
+        || ((Info.feature_flags & KSA64_VIEWER_FEATURE_OPERATIONS_V1) != 0 && !Api->HasOperationsV1())
+        || ((Info.feature_flags & KSA64_VIEWER_FEATURE_TYPED_ACTIONS_V1) != 0 && !Api->HasTypedActionsV1())
+        || ((Info.feature_flags & KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1) != 0 && !Api->HasAsyncStatusV1())
         || Info.catalog_count != AcceptedCatalogCount
         || FixedUtf8(Info.source_commit, sizeof(Info.source_commit)) != Validation.SourceCommit.Left(12)
         || FixedUtf8(Info.target_triple, sizeof(Info.target_triple)) != TEXT("x86_64-pc-windows-msvc")
@@ -602,6 +688,7 @@ bool FKsa64BridgeModule::LoadBridge()
         return false;
     }
 
+    FeatureFlags = Info.feature_flags;
     if (!LoadAndCheckCatalog())
     {
         UnloadBridge();
@@ -735,6 +822,288 @@ bool FKsa64BridgeModule::StartGuidedGnssLoss()
     return true;
 }
 
+bool FKsa64BridgeModule::StartGuidedOperationsV1(uint32 ScenarioIdentity)
+{
+    if (Status != EKsa64BridgeStatus::Ready || Session != nullptr)
+    {
+        Diagnostic = TEXT("guided operations require a ready bridge with no open session");
+        return false;
+    }
+    if (!SupportsFeature(KSA64_VIEWER_FEATURE_OPERATIONS_V1)
+        || !Api.IsValid()
+        || Api->StartV1 == nullptr)
+    {
+        Diagnostic = TEXT("typed Phase 12B operations are unavailable in this bridge");
+        return false;
+    }
+
+    Ksa64ViewerStartRequestV1 Request = {};
+    Request.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Request.struct_size = static_cast<uint32>(sizeof(Request));
+    Request.scenario_identity = ScenarioIdentity;
+    Request.role = 2;
+    Request.initial_pace = 2;
+    Request.flags = 1;
+    const int32 Result = Api->StartV1(&Request, &Session);
+    if (Result != KSA64_VIEWER_OK || Session == nullptr)
+    {
+        Session = nullptr;
+        Diagnostic = FString::Printf(TEXT("guided operations start failed with code %d"), Result);
+        return false;
+    }
+    Status = EKsa64BridgeStatus::SessionOpen;
+    Diagnostic = TEXT("full guided GNSS-loss operations session opened");
+    return true;
+}
+
+int32 FKsa64BridgeModule::AdvanceReleases(uint32 MaximumReleases)
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr)
+    {
+        return KSA64_VIEWER_LIFECYCLE;
+    }
+    if (MaximumReleases == 0 || MaximumReleases > KSA64_VIEWER_MAX_ADVANCE_RELEASES)
+    {
+        return KSA64_VIEWER_INVALID_ARGUMENT;
+    }
+    return Api->Advance(Session, MaximumReleases);
+}
+
+int32 FKsa64BridgeModule::PollOperationalV1(Ksa64ViewerOperationalViewV1& OutView) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->PollOperationalV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerOperationalViewV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->PollOperationalV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutView = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::ProcedureV1(Ksa64ViewerProcedureViewV1& OutView) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->ProcedureV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerProcedureViewV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->ProcedureV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutView = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::DispositionV1(Ksa64ViewerDispositionV1& OutView) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->DispositionV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerDispositionV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->DispositionV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutView = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::PollTimelineV1(Ksa64ViewerTimelineEventV1& OutEvent) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->PollTimelineV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerTimelineEventV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->PollTimelineV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutEvent = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::PollReleaseSampleV1(Ksa64ViewerReleaseSampleV1& OutSample) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->PollReleaseSampleV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerReleaseSampleV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->PollReleaseSampleV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutSample = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::PredictionPathHeaderV1(Ksa64ViewerPredictionPathHeaderV1& OutHeader) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->PredictionHeaderV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerPredictionPathHeaderV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->PredictionHeaderV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutHeader = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::PredictionPathPointV1(uint32 PointIndex, Ksa64ViewerPredictionPathPointV1& OutPoint) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->PredictionPointV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerPredictionPathPointV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->PredictionPointV1(Session, PointIndex, &Value);
+    if (Result == KSA64_VIEWER_OK) OutPoint = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::ActionProposalV1(Ksa64ViewerActionProposalV1& OutProposal) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->ActionProposalV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerActionProposalV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->ActionProposalV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutProposal = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::SubmitActionProposalV1(uint32 ProposalIdentity, uint32 CompletedEventMask)
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->SubmitActionV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    return Api->SubmitActionV1(Session, ProposalIdentity, CompletedEventMask);
+}
+
+int32 FKsa64BridgeModule::CommitActionV1(uint32 ProposalIdentity)
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->CommitActionV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    return Api->CommitActionV1(Session, ProposalIdentity);
+}
+
+int32 FKsa64BridgeModule::CancelActionV1(uint32 ProposalIdentity)
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->CancelActionV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    return Api->CancelActionV1(Session, ProposalIdentity);
+}
+
+int32 FKsa64BridgeModule::PollActionReceiptV1(Ksa64ViewerActionReceiptV1& OutReceipt) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->PollActionReceiptV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerActionReceiptV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->PollActionReceiptV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutReceipt = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::TransportStatusV1(Ksa64ViewerTransportStatusV1& OutStatus) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->TransportStatusV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerTransportStatusV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->TransportStatusV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutStatus = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::FinishStatusV1(Ksa64ViewerFinishStatusV1& OutStatus) const
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->FinishStatusV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerFinishStatusV1 Value = {};
+    Value.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Value.struct_size = static_cast<uint32>(sizeof(Value));
+    const int32 Result = Api->FinishStatusV1(Session, &Value);
+    if (Result == KSA64_VIEWER_OK) OutStatus = Value;
+    return Result;
+}
+
+int32 FKsa64BridgeModule::RequestShutdownV1()
+{
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr || !Api->RequestShutdownV1)
+        return KSA64_VIEWER_UNSUPPORTED;
+    return Api->RequestShutdownV1(Session);
+}
+
+bool FKsa64BridgeModule::RequestAsyncClose()
+{
+    if (Session == nullptr || Status != EKsa64BridgeStatus::SessionOpen)
+    {
+        return true;
+    }
+    if (bAsyncClosePending)
+    {
+        return true;
+    }
+
+    Ksa64ViewerTransportStatusV1 Transport = {};
+    if (TransportStatusV1(Transport) == KSA64_VIEWER_OK
+        && (Transport.worker_state == 2 || Transport.worker_state == 3))
+    {
+        CloseSession();
+        return true;
+    }
+    const int32 Result = RequestShutdownV1();
+    if (Result != KSA64_VIEWER_OK && Result != KSA64_VIEWER_QUEUED)
+    {
+        return false;
+    }
+    bAsyncClosePending = true;
+    AsyncCloseTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateRaw(this, &FKsa64BridgeModule::TickAsyncClose));
+    return true;
+}
+
+bool FKsa64BridgeModule::TickAsyncClose(float)
+{
+    if (Session == nullptr || Status != EKsa64BridgeStatus::SessionOpen)
+    {
+        bAsyncClosePending = false;
+        AsyncCloseTickerHandle.Reset();
+        return false;
+    }
+    Ksa64ViewerTransportStatusV1 Transport = {};
+    const int32 Result = TransportStatusV1(Transport);
+    if (Result == KSA64_VIEWER_OK
+        && (Transport.worker_state == 2 || Transport.worker_state == 3))
+    {
+        bAsyncClosePending = false;
+        AsyncCloseTickerHandle.Reset();
+        CloseSession();
+        return false;
+    }
+    if (Result != KSA64_VIEWER_OK
+        && Result != KSA64_VIEWER_NO_DATA
+        && Result != KSA64_VIEWER_UNCHANGED)
+    {
+        UE_LOG(LogKsa64Bridge, Warning, TEXT("async close status poll failed: %d"), Result);
+    }
+    return true;
+}
+
+int32 FKsa64BridgeModule::GetCompletedKsb11(TArray<uint8>& OutBytes) const
+{
+    OutBytes.Reset();
+    if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr)
+        return KSA64_VIEWER_LIFECYCLE;
+    Ksa64ViewerOwnedBuffer Buffer = {};
+    Buffer.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Buffer.struct_size = static_cast<uint32>(sizeof(Buffer));
+    const int32 Result = Api->CompletedKsb11(Session, &Buffer);
+    if (Result != KSA64_VIEWER_OK) return Result;
+    if (Buffer.data == nullptr || Buffer.length > static_cast<uint64>(MAX_int32))
+    {
+        if (Buffer.data != nullptr) Api->FreeBuffer(&Buffer);
+        return KSA64_VIEWER_INTERNAL;
+    }
+    OutBytes.Append(Buffer.data, static_cast<int32>(Buffer.length));
+    return Api->FreeBuffer(&Buffer);
+}
+
 int32 FKsa64BridgeModule::AdvanceOneRelease()
 {
     if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr)
@@ -768,6 +1137,12 @@ int32 FKsa64BridgeModule::PollSnapshot(Ksa64ViewerSnapshot& OutSnapshot) const
 
 void FKsa64BridgeModule::CloseSession()
 {
+    if (AsyncCloseTickerHandle.IsValid())
+    {
+        FTSTicker::GetCoreTicker().RemoveTicker(AsyncCloseTickerHandle);
+        AsyncCloseTickerHandle.Reset();
+    }
+    bAsyncClosePending = false;
     if (Session != nullptr && Api.IsValid() && Api->Destroy != nullptr)
     {
         Api->Destroy(Session);
@@ -781,6 +1156,7 @@ void FKsa64BridgeModule::CloseSession()
 
 void FKsa64BridgeModule::UnloadBridge()
 {
+    FeatureFlags = 0;
     Api.Reset();
     if (DllHandle != nullptr)
     {

@@ -262,8 +262,16 @@ impl KsaG10rReferenceOpsV1 {
                 }
                 true
             }
-            ksa64_interface::phase11::UplinkLoadType::ContingencyBranch
-            | ksa64_interface::phase11::UplinkLoadType::NavigationMode => true,
+            ksa64_interface::phase11::UplinkLoadType::ContingencyBranch => {
+                let Some(plan) = self.plan.as_ref() else {
+                    return false;
+                };
+                plan.branch_count == 0
+                    || plan.branches[..usize::from(plan.branch_count)]
+                        .iter()
+                        .any(|branch| i32::from(branch.branch_id) == load.arguments[0])
+            }
+            ksa64_interface::phase11::UplinkLoadType::NavigationMode => true,
         }
     }
 }

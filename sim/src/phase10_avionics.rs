@@ -15,13 +15,15 @@ use ksa64_core::phase10_vehicle::{GlobalMissionPack, GlobalVehiclePack};
 #[cfg(test)]
 use ksa64_flight::phase10::GlobalFlightMode;
 use ksa64_flight::phase10::{GlobalFlightComputer, GlobalFlightConfig, GlobalFlightEvidence};
+use ksa64_flight::phase11::GlobalKlr10FlightPackage;
 use ksa64_interface::phase10::{
     GlobalAidFrameCell, GlobalCommandCell, GlobalFastSensorCell, GlobalFrameId,
     GlobalTransitionCell, GLOBAL_AID_ATTITUDE, GLOBAL_AID_BAROMETER, GLOBAL_AID_CONTINUITY,
     GLOBAL_AID_DEPLOYMENT_FEEDBACK, GLOBAL_AID_FRAME_SERVICE, GLOBAL_AID_GNSS,
     GLOBAL_FAST_ACTUATOR, GLOBAL_FAST_AIR_DATA, GLOBAL_FAST_ATTITUDE, GLOBAL_FAST_DELTA_ANGLE,
-    GLOBAL_FAST_DELTA_V, GLOBAL_FAST_SUPPLY,
+    GLOBAL_FAST_DELTA_V, GLOBAL_FAST_SUPPLY, KLR10_CONTRACT_ID,
 };
+use ksa64_interface::phase11::FlightAbiId;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GlobalSensorFaults {
@@ -35,6 +37,9 @@ pub struct GlobalSensorFaults {
     pub fast_dropout_length: u8,
     pub gnss_dropout_start: u16,
     pub gnss_dropout_length: u8,
+    /// Optional long-duration dropout window; zero/zero disables it.
+    pub gnss_dropout_from_release: u16,
+    pub gnss_dropout_until_release: u16,
 }
 
 impl GlobalSensorFaults {
@@ -49,6 +54,8 @@ impl GlobalSensorFaults {
         fast_dropout_length: 0,
         gnss_dropout_start: 0,
         gnss_dropout_length: 0,
+        gnss_dropout_from_release: 0,
+        gnss_dropout_until_release: 0,
     };
 }
 
@@ -80,9 +87,79 @@ pub struct GlobalReleaseBundle {
     pub evidence: GlobalFlightEvidence,
 }
 
-pub struct GlobalAvionicsMission<'a> {
+/// Processes one KLR10 release without gaining access to world truth.
+///
+/// The two public adapters below deliberately keep the frozen Phase 10 flight
+/// computer and Phase 11 packages on the same sensor/command boundary.
+pub trait GlobalFlightReleaseProcessor {
+    fn process_release(
+        &mut self,
+        fast: Option<GlobalFastSensorCell>,
+        aid: Option<GlobalAidFrameCell>,
+        transition: Option<GlobalTransitionCell>,
+    ) -> GlobalFlightEvidence;
+}
+
+pub struct Phase10GlobalFlightAdapter {
+    inner: GlobalFlightComputer,
+}
+
+impl Phase10GlobalFlightAdapter {
+    const fn new(inner: GlobalFlightComputer) -> Self {
+        Self { inner }
+    }
+
+    pub const fn flight(&self) -> &GlobalFlightComputer {
+        &self.inner
+    }
+}
+
+impl GlobalFlightReleaseProcessor for Phase10GlobalFlightAdapter {
+    fn process_release(
+        &mut self,
+        fast: Option<GlobalFastSensorCell>,
+        aid: Option<GlobalAidFrameCell>,
+        transition: Option<GlobalTransitionCell>,
+    ) -> GlobalFlightEvidence {
+        self.inner.tick(fast, aid, transition)
+    }
+}
+
+pub struct GlobalKlr10PackageAdapter<P> {
+    inner: P,
+}
+
+impl<P> GlobalKlr10PackageAdapter<P> {
+    const fn new(inner: P) -> Self {
+        Self { inner }
+    }
+
+    pub const fn package(&self) -> &P {
+        &self.inner
+    }
+
+    pub fn package_mut(&mut self) -> &mut P {
+        &mut self.inner
+    }
+}
+
+impl<P: GlobalKlr10FlightPackage> GlobalFlightReleaseProcessor for GlobalKlr10PackageAdapter<P> {
+    fn process_release(
+        &mut self,
+        fast: Option<GlobalFastSensorCell>,
+        aid: Option<GlobalAidFrameCell>,
+        transition: Option<GlobalTransitionCell>,
+    ) -> GlobalFlightEvidence {
+        self.inner.process_release(fast, aid, transition)
+    }
+}
+
+pub type GlobalPackageAvionicsMission<'a, P> =
+    GlobalAvionicsMission<'a, GlobalKlr10PackageAdapter<P>>;
+
+pub struct GlobalAvionicsMission<'a, P: GlobalFlightReleaseProcessor = Phase10GlobalFlightAdapter> {
     world: GlobalWorldMachine<'a>,
-    flight: GlobalFlightComputer,
+    processor: P,
     vehicle: &'a GlobalVehiclePack,
     faults: GlobalSensorFaults,
     seed: u32,
@@ -115,6 +192,80 @@ impl<'a> GlobalAvionicsMission<'a> {
         faults: GlobalSensorFaults,
         seed: u32,
     ) -> Result<Self, GlobalWorldError> {
+        let flight = GlobalFlightComputer::new(flight_config).ok_or(GlobalWorldError::Identity)?;
+        Self::with_processor(
+            earth,
+            transforms,
+            atmosphere,
+            vehicle,
+            mission,
+            flight_config,
+            Phase10GlobalFlightAdapter::new(flight),
+            faults,
+            seed,
+        )
+    }
+
+    pub const fn flight(&self) -> &GlobalFlightComputer {
+        self.processor.flight()
+    }
+}
+
+impl<'a, P: GlobalKlr10FlightPackage> GlobalAvionicsMission<'a, GlobalKlr10PackageAdapter<P>> {
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_package(
+        earth: &'a EarthModelPack,
+        transforms: &'a TransformPack,
+        atmosphere: &'a CompiledAtmospherePack,
+        vehicle: &'a GlobalVehiclePack,
+        mission: GlobalMissionPack,
+        flight_config: GlobalFlightConfig,
+        package: P,
+        faults: GlobalSensorFaults,
+        seed: u32,
+    ) -> Result<Self, GlobalWorldError> {
+        let manifest = package.manifest();
+        if manifest.abi != FlightAbiId::GlobalKlr10V1
+            || manifest.configuration_identity != KLR10_CONTRACT_ID
+            || manifest.vehicle_profile_identity != 5
+        {
+            return Err(GlobalWorldError::Identity);
+        }
+        Self::with_processor(
+            earth,
+            transforms,
+            atmosphere,
+            vehicle,
+            mission,
+            flight_config,
+            GlobalKlr10PackageAdapter::new(package),
+            faults,
+            seed,
+        )
+    }
+
+    pub const fn package(&self) -> &P {
+        self.processor.package()
+    }
+
+    pub fn package_mut(&mut self) -> &mut P {
+        self.processor.package_mut()
+    }
+}
+
+impl<'a, P: GlobalFlightReleaseProcessor> GlobalAvionicsMission<'a, P> {
+    #[allow(clippy::too_many_arguments)]
+    fn with_processor(
+        earth: &'a EarthModelPack,
+        transforms: &'a TransformPack,
+        atmosphere: &'a CompiledAtmospherePack,
+        vehicle: &'a GlobalVehiclePack,
+        mission: GlobalMissionPack,
+        flight_config: GlobalFlightConfig,
+        processor: P,
+        faults: GlobalSensorFaults,
+        seed: u32,
+    ) -> Result<Self, GlobalWorldError> {
         let world = GlobalWorldMachine::new(earth, transforms, atmosphere, vehicle, mission)?;
         let previous_active = world.active_state()?;
         if flight_config.initial_frame != GlobalFrameId::LocalEnuV1
@@ -127,7 +278,6 @@ impl<'a> GlobalAvionicsMission<'a> {
         {
             return Err(GlobalWorldError::Identity);
         }
-        let flight = GlobalFlightComputer::new(flight_config).ok_or(GlobalWorldError::Identity)?;
         let held_command = GlobalCommandCell {
             session: flight_config.session,
             source_epoch: u16::MAX,
@@ -143,7 +293,7 @@ impl<'a> GlobalAvionicsMission<'a> {
         };
         Ok(Self {
             world,
-            flight,
+            processor,
             vehicle,
             faults,
             seed,
@@ -167,10 +317,6 @@ impl<'a> GlobalAvionicsMission<'a> {
 
     pub const fn world(&self) -> &GlobalWorldMachine<'a> {
         &self.world
-    }
-
-    pub const fn flight(&self) -> &GlobalFlightComputer {
-        &self.flight
     }
 
     pub fn release(&mut self) -> Result<GlobalFlightEvidence, GlobalWorldError> {
@@ -205,7 +351,7 @@ impl<'a> GlobalAvionicsMission<'a> {
         if let Some(cell) = fast {
             self.sensor_checksum = hash_fast(self.sensor_checksum, &cell);
         }
-        let evidence = self.flight.tick(fast, aid, transition);
+        let evidence = self.processor.process_release(fast, aid, transition);
         self.command_checksum = evidence.command.command_checksum;
         self.placement_checksum = hash_placement(
             self.placement_checksum,
@@ -270,6 +416,16 @@ impl<'a> GlobalAvionicsMission<'a> {
             return Err(GlobalWorldError::Transition);
         }
         Ok(snapshot)
+    }
+
+    pub fn completed_summary(&self) -> Result<GlobalAvionicsMissionSummary, GlobalWorldError> {
+        if !self.world.is_complete() {
+            return Err(GlobalWorldError::Transition);
+        }
+        self.summary(
+            self.world.snapshot()?,
+            self.last_flight.ok_or(GlobalWorldError::Transition)?,
+        )
     }
 
     pub fn run(mut self) -> Result<GlobalAvionicsMissionSummary, GlobalWorldError> {
@@ -399,12 +555,17 @@ impl<'a> GlobalAvionicsMission<'a> {
     ) -> Result<GlobalAidFrameCell, GlobalWorldError> {
         let cadence_8 = self.epoch & 3 == 0;
         let cadence_1 = self.epoch & 31 == 0;
+        let in_long_gnss_dropout = self.faults.gnss_dropout_until_release
+            > self.faults.gnss_dropout_from_release
+            && self.epoch >= self.faults.gnss_dropout_from_release
+            && self.epoch < self.faults.gnss_dropout_until_release;
         let gnss_available = cadence_1
             && !in_window(
                 self.epoch,
                 self.faults.gnss_dropout_start,
                 self.faults.gnss_dropout_length,
-            );
+            )
+            && !in_long_gnss_dropout;
         let ecef = self.world.ecef_state_public()?;
         let service = self.world.frame_service()?;
         let mut validity = 0u8;
@@ -670,6 +831,7 @@ mod tests {
     use ksa64_core::phase10_contract::{EarthModelPack, TransformPack};
     use ksa64_core::phase10_environment::CompiledAtmospherePack;
     use ksa64_core::phase10_vehicle::{GlobalMissionPack, GlobalVehiclePack};
+    use ksa64_flight::phase11::{ksa_g10r_reference_mission_plan, KsaG10rReferenceOpsV1};
 
     fn fixture() -> (
         EarthModelPack,
@@ -751,5 +913,149 @@ mod tests {
             .unwrap()
         };
         assert_eq!(run(), run());
+    }
+
+    #[test]
+    fn inactive_reference_package_matches_frozen_phase10_releases_exactly() {
+        let (earth, transforms, atmosphere, vehicle, mission) = fixture();
+        let initial = GlobalWorldMachine::new(&earth, &transforms, &atmosphere, &vehicle, mission)
+            .unwrap()
+            .active_state()
+            .unwrap();
+        let config = reference_global_flight_config(10, initial, mission).unwrap();
+        let mut frozen = GlobalAvionicsMission::new(
+            &earth,
+            &transforms,
+            &atmosphere,
+            &vehicle,
+            mission,
+            config,
+            GlobalSensorFaults::NONE,
+            0x4b53_41a0,
+        )
+        .unwrap();
+        let package = KsaG10rReferenceOpsV1::new(config).unwrap();
+        let mut packaged = GlobalPackageAvionicsMission::with_package(
+            &earth,
+            &transforms,
+            &atmosphere,
+            &vehicle,
+            mission,
+            config,
+            package,
+            GlobalSensorFaults::NONE,
+            0x4b53_41a0,
+        )
+        .unwrap();
+
+        for _ in 0..64 {
+            assert_eq!(
+                frozen.release_bundle().unwrap(),
+                packaged.release_bundle().unwrap()
+            );
+            assert_eq!(frozen.world().snapshot(), packaged.world().snapshot());
+            assert_eq!(
+                frozen.advance_to_next_release().unwrap(),
+                packaged.advance_to_next_release().unwrap()
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "full Phase 10 mission compatibility acceptance"]
+    fn inactive_reference_package_matches_frozen_phase10_full_mission_exactly() {
+        let (earth, transforms, atmosphere, vehicle, mission) = fixture();
+        let initial = GlobalWorldMachine::new(&earth, &transforms, &atmosphere, &vehicle, mission)
+            .unwrap()
+            .active_state()
+            .unwrap();
+        let config = reference_global_flight_config(10, initial, mission).unwrap();
+        let mut frozen = GlobalAvionicsMission::new(
+            &earth,
+            &transforms,
+            &atmosphere,
+            &vehicle,
+            mission,
+            config,
+            GlobalSensorFaults::NONE,
+            0x4b53_41a0,
+        )
+        .unwrap();
+        let package = KsaG10rReferenceOpsV1::new(config).unwrap();
+        let mut packaged = GlobalPackageAvionicsMission::with_package(
+            &earth,
+            &transforms,
+            &atmosphere,
+            &vehicle,
+            mission,
+            config,
+            package,
+            GlobalSensorFaults::NONE,
+            0x4b53_41a0,
+        )
+        .unwrap();
+
+        loop {
+            assert_eq!(
+                frozen.release_bundle().unwrap(),
+                packaged.release_bundle().unwrap()
+            );
+            assert_eq!(frozen.world().snapshot(), packaged.world().snapshot());
+            if frozen.world().is_complete() {
+                assert!(packaged.world().is_complete());
+                break;
+            }
+            assert_eq!(
+                frozen.advance_to_next_release().unwrap(),
+                packaged.advance_to_next_release().unwrap()
+            );
+        }
+        assert_eq!(
+            frozen.completed_summary().unwrap(),
+            packaged.completed_summary().unwrap()
+        );
+    }
+
+    #[test]
+    fn initialized_reference_ops_package_processes_world_generated_cells() {
+        let (earth, transforms, atmosphere, vehicle, mission) = fixture();
+        let initial = GlobalWorldMachine::new(&earth, &transforms, &atmosphere, &vehicle, mission)
+            .unwrap()
+            .active_state()
+            .unwrap();
+        let config = reference_global_flight_config(10, initial, mission).unwrap();
+        let mut package = KsaG10rReferenceOpsV1::new(config).unwrap();
+        assert!(package.initialize_mission_plan(ksa_g10r_reference_mission_plan()));
+        let mut runner = GlobalPackageAvionicsMission::with_package(
+            &earth,
+            &transforms,
+            &atmosphere,
+            &vehicle,
+            mission,
+            config,
+            package,
+            GlobalSensorFaults::NONE,
+            0x4b53_41a0,
+        )
+        .unwrap();
+
+        let first = runner.release_bundle().unwrap();
+        let fast = first.fast.expect("the nominal world produces a fast cell");
+        let aid = first.aid.expect("the nominal world produces an aid cell");
+        assert_eq!(fast.session, config.session);
+        assert_eq!(fast.measurement_epoch, 0);
+        assert_eq!(aid.session, config.session);
+        assert_eq!(aid.measurement_epoch, 0);
+        assert_eq!(first.evidence.command.source_epoch, 0);
+        assert!(runner.package().prediction_summary().is_some());
+
+        runner.advance_to_next_release().unwrap();
+        let second = runner.release_bundle().unwrap();
+        assert_eq!(second.fast.unwrap().measurement_epoch, 1);
+        assert_eq!(second.evidence.command.source_epoch, 1);
+        assert_ne!(
+            first.evidence.command.command_checksum,
+            second.evidence.command.command_checksum
+        );
     }
 }

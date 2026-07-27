@@ -428,3 +428,13 @@ session snapshots/events, queue diagnostics, Unreal automation reports, and
 packaging/performance audits are noncanonical host integration metadata. They
 bind and verify a presentation client but cannot replace KSB11, enter simulation
 identity, or acquire physics, avionics, command, or evidence authority.
+
+## Phase 12B presentation metadata
+
+Phase 12B introduces no canonical `K*` format and does not widen or reinterpret KLR10, KTT10, KPH10, KSR10, KUL11, KUA11, KAL11, KDR11, or KSB11.
+
+`FullMissionGnssLossV1`, `OperationalDispositionViewV1`, bridge feature bits, fixed-layout operational/procedure/action/transport/disposition structures, cursored release and timeline views, prediction-path buffers, presentation text, screenshot baselines, and performance reports are noncanonical host presentation metadata.
+
+Existing ABI-v1 symbols and layouts remain byte-for-byte compatible. The Phase 12B bridge advances its build identity to `0x120B0001` and advertises new functions through feature discovery. The original start function continues to own the compressed Phase 11 compatibility session and unchanged KSB11 output.
+
+Unreal receives typed, role-filtered views and Rust-generated proposal identities. It does not parse canonical KSB11 segments, construct KUL11/KUA11 bytes, or derive missing evidence. Multi-axis outcome classifications are views over accepted records; they do not replace owning physical or operational summaries.
