@@ -2,7 +2,7 @@
 
 KSA64 is a deterministic aerospace simulation framework for the Commodore 64. It combines a portable fixed-point physics core, simulated avionics and flight software, strict telemetry contracts, host-side validation, stock-C64 presentation, and optional REU-backed analysis.
 
-> **Project status:** Phases 0–11.5 are complete. Phase 12A is active: it pins the native-Windows Unreal Engine 5.8 toolchain and proves a versioned live bridge to the frozen Rust application facade before any 3-D scene or authoring UI is added. The accepted missions, operations, workbenches, evidence, and C64 targets remain discoverable through one `ksa64` application and deterministic product catalog. The complete portable reference-operations package runs in banked stock-C64 RAM under externally paced VICE, while the independent safehold package remains a flat stock image. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, physical-link acceptance, and the portable C64 world remain parallel priority tracks.
+> **Project status:** Phases 0–12A are complete. Phase 12B is next: it will turn the accepted Unreal bridge into a live, role-filtered GNSS-loss operations presentation without moving simulation authority out of Rust. Phase 12A pinned the native-Windows Unreal Engine 5.8 toolchain, proved a versioned failure-contained bridge to the frozen Rust application facade, and packaged a standalone Development build before adding any 3-D scene or authoring UI. The accepted missions, operations, workbenches, evidence, and C64 targets remain discoverable through one `ksa64` application and deterministic product catalog. Realtime C64 flight, a 6502-specific rewrite, C64 Ultimate acceleration, physical-link acceptance, and the portable C64 world remain parallel priority tracks.
 
 KSA64 asks a deliberately unreasonable question:
 
@@ -143,12 +143,12 @@ The accepted accessible baseline is a host-owned world plus one C64 flight compu
 | 10 — Global Earth flight | Complete: WGS 84/TAI/EOP contracts, ECEF/GCRF dynamics, exact frame transitions, global avionics, controlled suborbital recovery, KSA-5A coast corroboration, deterministic campaigns, Mission Control, and bounded stock-C64 flight/replay. |
 | 11 — Mission operations | Complete: flight-software packages, mission plans, estimate-based prediction, NASA-style atomic commanding, deterministic procedures/roles, exact session replay/debriefs, headless authoring, a flat safehold endpoint, and the banked stock-C64 reference-operations stopgap. |
 | 11.5 — Product consolidation | Complete: one deterministic product catalog, shared Rust application facade, unified `ksa64` CLI, exact compatibility wrappers, safe target/audit dispatch, separate product/project/session domains, and a live deterministic operations-session handoff for Phase 12. |
+| 12A — Unreal feasibility | Complete: pinned native-Windows UE 5.8 toolchain, versioned Rust/C ABI, independent C++ harness, minimal runtime plugin, packaged bridge smoke, contained failure evidence, and optional loopback-only MCP feasibility. |
 
 ## Active and planned phases
 
 | Phase | Intended result |
 |---|---|
-| 12A — Unreal feasibility | Pinned native-Windows UE 5.8 toolchain, versioned live-session bridge, native harness, minimal runtime plugin, packaging smoke, and optional MCP experiment. |
 | 12B — Live operations | Role-filtered guided GNSS-loss presentation, procedures, actions, pacing, and exact KSB11 finalization. |
 | 12C — Global engineering viewer | Complete Phase 10 KSA-G10R replay with ENU/ECEF/GCRF display domains, Earth, exact events, entry, recovery, and packaged performance. |
 | 12D — Mission Foundry | Vehicle and authority-lane mission authoring, avionics binding, evidence maturity, and byte-identical GUI/headless compilation. |
@@ -187,7 +187,7 @@ The legacy Phase 3/4 accuracy-first closed-loop path still projects to 243.7 min
 - [Phase 10](phase10/README.md), [implementation contract](phase10/PLAN.md), [validation](phase10/VALIDATION.md), [completion record](phase10/COMPLETION.md), and [next-phase handoff](phase10/NEXT_PHASE_HANDOFF.md)
 - [Phase 11](phase11/README.md), [implementation contract](phase11/PLAN.md), [completion record](phase11/COMPLETION.md), [banked stock-C64 endpoint](phase11/C64_BANKED_REFERENCE_OPS.md), and [operations handoff](phase11/PHASE12_HANDOFF.md)
 - [Phase 11.5](phase11_5/README.md), [product commands](phase11_5/COMMANDS.md), [target guide](phase11_5/TARGETS.md), [completion record](phase11_5/COMPLETION.md), [pre-Phase 12 hardening](phase11_5/HARDENING.md), and [Mission Foundry API handoff](phase11_5/PHASE12_HANDOFF.md)
-- [Phase 12](phase12/README.md), [12A implementation contract](phase12/PLAN.md), [engine decision](phase12/ENGINE_DECISION.md), [toolchain lock procedure](phase12/TOOLCHAIN.md), [bridge contract](phase12/BRIDGE.md), and [asset policy](phase12/ASSETS.md)
+- [Phase 12](phase12/README.md), [12A implementation contract](phase12/PLAN.md), [completion record](phase12/COMPLETION.md), [completion audit](phase12/complete.ps1), [Phase 12B handoff](phase12/PHASE12B_HANDOFF.md), [engine decision](phase12/ENGINE_DECISION.md), [toolchain lock procedure](phase12/TOOLCHAIN.md), [bridge contract](phase12/BRIDGE.md), and [asset policy](phase12/ASSETS.md)
 
 ### Phase 4 detail
 
@@ -296,6 +296,14 @@ powershell -File phase11_5/complete.ps1
 ```
 
 It composes the frozen Phase 11 boundary with catalog snapshots, application-service tests, quick-start determinism, unified/legacy byte parity, safe stored-target verification, rust-mos packaging, and target cleanup. Add `-RunVice` only to rerun the two finite sequential warp-disabled probes. It never starts a long target mission.
+
+The Phase 12A feasibility audit is:
+
+```powershell
+pwsh -File phase12/complete.ps1
+```
+
+The default path is non-live: it validates the accepted toolchain record, bridge ABI and evidence hashes, catalog identity, exact KSB11 result, checked Unreal automation/package records, source hygiene, formatting, Clippy, and native bridge tests. Explicit switches are required for Unreal automation, packaging, MCP, or any other live external process.
 
 ## Phase 6: software baseline accepted
 

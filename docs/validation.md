@@ -488,3 +488,34 @@ The pre-Phase 12 gate additionally proves:
 - The Phase 11 operations console observes the live session instead of precomputing the completed result.
 
 These tests validate application orchestration, not new flight physics. All prior authoritative checksums and formats remain frozen.
+## Accepted Phase 12A bridge and Unreal feasibility
+
+Phase 12A was accepted at source commit `e98df4921c03` without changing any
+authoritative model, flight implementation, or canonical format. The gate
+includes:
+
+- the complete frozen Phase 0–11.5 audit, formatting, warnings-denied Clippy,
+  and full native workspace tests;
+- native C++ harness coverage for ABI and structure-size rejection, null and
+  malformed inputs, immutable role filtering, lifecycle transitions, buffer
+  ownership, diagnostics, contained panic, and deterministic `QueueFull` parity;
+- exact guided GNSS-loss completion as the unchanged 22,369-byte KSB11 archive
+  with SHA-256
+  `38a3ef2e497b8e24d1cf53a56db85b3d8bea0bdb27586215a02ff75d0ee39dc8`;
+- a 13-entry catalog with SHA-256
+  `b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13`;
+- two passing Unreal automation tests and zero failures;
+- a cooked and packaged Development runtime that hash-validates the
+  commit-qualified bridge, contains no editor-plugin binaries, and exits its
+  standalone smoke test successfully;
+- one loopback-only optional MCP inspection and disposable actor mutation, with
+  the actor removed and no tracked asset retained; and
+- repository hygiene checks proving generated Unreal directories are ignored,
+  Unreal binary assets are LFS-governed, and no generated or non-LFS asset was
+  committed.
+
+The accepted bridge DLL SHA-256 is
+`d1605c4aa9a8b407d8e35ee76d965e404c1e7efcc357d8bd0704b73ade43272d`.
+This evidence qualifies the presentation boundary and failure containment only.
+It adds no simulation authority, renderer, physics, real-vehicle validation, or
+new canonical evidence semantics.

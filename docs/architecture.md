@@ -598,6 +598,15 @@ are built by the existing finalizer and returned unchanged; catalog JSON,
 snapshots, bridge diagnostics, camera state, and performance records remain
 noncanonical host metadata.
 
+The accepted Phase 12A implementation fixes each worker at a bounded 32-command
+queue and 256-event queue. Full queues report deterministic `QueueFull` results
+without advancing the session. The native harness and Unreal plugin load the
+commit-qualified `e98df4921c03` bridge DLL (SHA-256
+`d1605c4aa9a8b407d8e35ee76d965e404c1e7efcc357d8bd0704b73ade43272d`),
+enforce its ABI/layout/hash manifest, and recover the unchanged 22,369-byte
+KSB11 session. The packaged Development runtime stages that same artifact and
+starts without Unreal Editor, MCP, or Python.
+
 Phase 12A keeps development and product layers separate:
 
 ```text

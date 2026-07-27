@@ -416,3 +416,15 @@ mismatch.
 Phase 11.5 introduces no canonical binary format and changes no existing `K*` record.
 
 `ksa64.product-catalog.v1` is deterministic host product metadata describing current experiences, targets, placements, maturity, limitations, and historical provenance. `ksa64.application-outcome.v1` is structured host command output. Neither participates in simulation, flight, campaign, optimizer, or evidence identity, and neither may replace the strict parser owned by an underlying artifact family.
+
+## Phase 12A viewer-bridge metadata
+
+Phase 12A introduces no canonical `K*` format and changes no existing record.
+KSB11 remains the unchanged canonical completed mission-session evidence at the
+application boundary.
+
+The viewer-bridge ABI manifest, deterministic product-catalog JSON, typed live
+session snapshots/events, queue diagnostics, Unreal automation reports, and
+packaging/performance audits are noncanonical host integration metadata. They
+bind and verify a presentation client but cannot replace KSB11, enter simulation
+identity, or acquire physics, avionics, command, or evidence authority.

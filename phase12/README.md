@@ -1,7 +1,7 @@
 # Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: active. The Phase 12A contract and engine decision are accepted;
-implementation and acceptance evidence are pending.
+Status: active. Phase 12A is complete and accepted; Phase 12B is the next
+implementation slice.
 
 Phase 12 adds a native-Windows Unreal presentation and authoring surface above
 the frozen KSA64 Rust application. It does not move simulation authority,
@@ -11,7 +11,7 @@ The work is divided so that each slice proves one coherent boundary:
 
 | Subphase | Result |
 |---|---|
-| 12A | Pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaging smoke test, and optional MCP feasibility |
+| 12A | **Complete:** pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaged smoke test, and optional MCP feasibility |
 | 12B | Live role-filtered GNSS-loss operations, procedures, actions, and exact evidence finalization |
 | 12C | Complete Phase 10 global engineering replay, coordinate/display domains, events, Earth, and packaged performance |
 | 12D | Mission Foundry vehicle/mission authoring and GUI/headless compiler parity |
@@ -19,7 +19,11 @@ The work is divided so that each slice proves one coherent boundary:
 
 ## Phase 12A documents
 
-- [PLAN.md](PLAN.md) — implementation and acceptance contract.
+- [PLAN.md](PLAN.md) — accepted implementation and acceptance contract.
+- [COMPLETION.md](COMPLETION.md) — accepted outcome, measurements, and limitations.
+- [completion-audit.json](completion-audit.json) — machine-readable accepted evidence.
+- [complete.ps1](complete.ps1) — bounded, non-live-by-default completion audit.
+- [PHASE12B_HANDOFF.md](PHASE12B_HANDOFF.md) — frozen boundary and next-slice handoff.
 - [ENGINE_DECISION.md](ENGINE_DECISION.md) — accepted engine, authority, and
   rollout decision, including deliberate changes to the supplied Unreal guide.
 - [TOOLCHAIN.md](TOOLCHAIN.md) — native-Windows setup, verification, and lock

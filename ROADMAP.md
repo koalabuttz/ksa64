@@ -482,10 +482,11 @@ Explicit non-goals remain new physics, avionics, formats, target implementations
 
 ## Phase 12: Unreal feasibility, passive operations, and Mission Foundry
 
-Status: active. Phase 11.5 and its accepted hardening amendment have frozen the
-required product, application, and live-session contracts. The implementation
-contract and engine decision are in `phase12/PLAN.md` and
-`phase12/ENGINE_DECISION.md`.
+Status: active. Phase 12A is complete and accepted; Phase 12B is the next
+implementation slice. Phase 11.5 and its accepted hardening amendment remain
+the frozen product, application, and live-session foundation. Phase 12A
+completion evidence is in `phase12/COMPLETION.md`, with the next boundary in
+`phase12/PHASE12B_HANDOFF.md`.
 
 The hard entry criterion applies to every Phase 12 subphase: a graphical client
 operates a live mission only through `LiveMissionSession`. It may not build
@@ -495,7 +496,7 @@ Rust owns mission state, role filtering, actions, and evidence.
 
 ### Phase 12A: Unreal toolchain and live-bridge feasibility
 
-Status: active; acceptance evidence pending.
+Status: complete and accepted. See `phase12/COMPLETION.md`.
 
 Purpose: prove on native Windows that a pinned Unreal Engine 5.8 Launcher build
 can consume `Ksa64Application` through a versioned, failure-contained C ABI
@@ -508,13 +509,17 @@ loopback-only MCP inspection/mutation experiment. It adds no renderer, scene
 graph, coordinate conversion, visual interpolation, authoring UI, NASA asset,
 new K-format, physics, or alternate simulator.
 
-Exit requires catalog identity, role-data absence, nonblocking session access,
-byte-identical guided GNSS-loss KSB11 finalization, contained bridge failures,
-clean Unreal build/cook/package, and operation with MCP and Python disabled.
+Accepted result: the 13-entry catalog and guided GNSS-loss KSB11 remain exact;
+the versioned Rust/C ABI contains failures and enforces role filtering; the
+independent native harness and Unreal automation pass; and the packaged
+Development build loads the commit-qualified bridge with Editor, MCP, Python,
+and editor-only toolsets disabled. The accepted shell still contains no renderer,
+scene graph, coordinate conversion, visual interpolation, authoring UI, NASA
+asset, new K-format, physics, or alternate simulator.
 
 ### Phase 12B: live GNSS-loss operations presentation
 
-Status: planned after 12A acceptance.
+Status: next; ready to plan from the accepted Phase 12A handoff.
 
 Purpose: add the first bidirectional graphical operations slice over the
 accepted live-session boundary.

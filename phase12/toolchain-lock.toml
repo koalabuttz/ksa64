@@ -1,8 +1,8 @@
 # Noncanonical Phase 12A workstation/toolchain evidence. No credentials.
 schema = "ksa64-phase12-toolchain-lock-v1"
-recorded_utc = "2026-07-27T05:43:41.916Z"
+recorded_utc = "2026-07-27T08:02:38.1475792Z"
 baseline_commit = "8208d53"
-validated_source_commit = "4913e205146333132c7678636669cc3b0a200128"
+validated_source_commit = "e98df4921c03ddbebba6b9f0d2f4d5fe306e48bc"
 remote_url = "https://github.com/koalabuttz/ksa64.git"
 checkout_path = 'C:\dev\KSA64'
 checkout_clean = true
@@ -59,6 +59,12 @@ bind_address = "127.0.0.1"
 port = 8000
 path = "/mcp"
 authentication = "none-loopback-only"
+plugin_version = "1.0"
+toolset_count = 52
+inspected_level = "/Engine/Maps/Entry"
+disposable_actor = "KSA64_Phase12A_MCP_Disposable"
+mutation_removed = true
+tracked_residue = false
 
 [clean_editor_build]
 command = 'Build.bat Ksa64MissionFoundryEditor Win64 Development C:\dev\KSA64\foundry\Ksa64MissionFoundry\Ksa64MissionFoundry.uproject -WaitMutex -NoHotReloadFromIDE'
@@ -67,10 +73,78 @@ duration_seconds = 587.396
 result = "succeeded"
 log_path = 'C:\dev\KSA64\foundry\Ksa64MissionFoundry\Saved\Logs\Phase12A-CleanEditorBuild.log'
 
+[final_editor_build]
+command = 'UnrealBuildTool.dll Ksa64MissionFoundryEditor Win64 Development C:\dev\KSA64\foundry\Ksa64MissionFoundry\Ksa64MissionFoundry.uproject -NoHotReloadFromIDE -NoUBA'
+invocation = "hidden file-redirected process; avoids captured-console child-process deadlock"
+duration_seconds = 99.03
+result = "succeeded"
+compiler_memory_retry = "one generated-code action was automatically retried after the machine reached its commit-memory threshold"
+
 [bridge]
 abi_version = 1
 build_identity = "0x120A0001"
-dll_filename = "ksa64_viewer_bridge-4913e2051463-120a0001.dll"
-dll_sha256 = "0f0377414bd5ba075152287aee4a230ee8f8e879da6829e26ffcbef7adb34123"
+source_commit = "e98df4921c03ddbebba6b9f0d2f4d5fe306e48bc"
+source_tree_clean = true
+dll_filename = "ksa64_viewer_bridge-e98df4921c03-120a0001.dll"
+dll_bytes = 614912
+dll_sha256 = "d1605c4aa9a8b407d8e35ee76d965e404c1e7efcc357d8bd0704b73ade43272d"
+manifest_sha256 = "391e59246a07be5639b2d488249e82bcd9b1b4c1c451a18d56b1d579593de316"
+header_sha256 = "ae863a6ce4535280d6d224687052f716581f849ac17fcb39510779657b2d1c86"
+catalog_count = 13
+catalog_bytes = 21068
 catalog_sha256 = "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13"
-unreal_automation = "2 passed, 0 failed"
+command_queue_capacity = 32
+event_queue_capacity = 256
+max_bounded_advance_releases = 64
+max_caller_span_bytes = 16777216
+ksb11_bytes = 22369
+ksb11_sha256 = "38a3ef2e497b8e24d1cf53a56db85b3d8bea0bdb27586215a02ff75d0ee39dc8"
+
+[bridge.structure_sizes]
+abi_info = 132
+span = 24
+owned_buffer = 32
+event = 24
+snapshot = 184
+
+[harness]
+production_result = "passed"
+panic_probe_result = "passed in separately feature-qualified DLL"
+unknown_role_result = "unsupported with null output handle"
+queue_pressure_result = "33rd command returned QueueFull; accepted commands drained; KSB11 remained exact"
+enqueue_max_microseconds = 0
+poll_samples = 4096
+poll_total_microseconds = 798
+poll_max_microseconds = 0
+
+[unreal_automation]
+result = "2 passed, 0 failed, 0 warnings, 0 not run"
+elapsed_seconds = 30.766
+test_duration_seconds = 0.07434780150651932
+report_bytes = 1484
+report_sha256 = "eeaa21ed3b440b79c54f1f25c631ca971a9c3129f79bfd214a9f8751203131af"
+ddc_mode = "-DDC-ForceMemoryCache for the sandboxed headless test process"
+mcp_python_editor_toolsets_disabled = true
+
+[package]
+powershell = "PowerShell 7"
+additional_cooker_options = "DisablePlugins=ModelContextProtocol,ToolsetRegistry,AllToolsets,PythonScriptPlugin -SkipZenStore"
+source_commit = "e98df4921c03ddbebba6b9f0d2f4d5fe306e48bc"
+file_count = 54
+total_bytes = 1031144201
+game_executable_sha256 = "29e21f606091beafd7d821266f26ecf28c506aaeae8d215784bc851d396ede44"
+bridge_manifest_sha256 = "391e59246a07be5639b2d488249e82bcd9b1b4c1c451a18d56b1d579593de316"
+smoke_exit_code = 0
+smoke_log_sha256 = "3b19648bfe62e7e2f4b2b22e2803c40d960aa7f3516c89841586c4b2d3af2189"
+audit_sha256 = "899cdd3b98acd528727f90b12ed7f2cf25bed2df2832e0420835c91d43232972"
+editor_plugin_binaries_packaged = 0
+
+[disk]
+unreal_install_files = 249068
+unreal_install_bytes = 32192981609
+derived_data_cache_files = 4911
+derived_data_cache_bytes = 477899230
+foundry_binaries_bytes = 801560156
+foundry_intermediate_bytes = 5705263043
+foundry_saved_bytes = 1640682611
+qualified_package_bytes = 1031144201

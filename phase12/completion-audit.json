@@ -1,0 +1,140 @@
+{
+  "schema": "ksa64.phase12a.completion-audit.v1",
+  "status": "pass",
+  "date": "2026-07-27",
+  "compatibility_baseline_commit": "8208d53",
+  "validated_source_commit": "e98df4921c03ddbebba6b9f0d2f4d5fe306e48bc",
+  "toolchain_lock_sha256": "1a50c4d7bed2634cac04596fe62761b523a3376e0c6a029180fbe34b75fb58fa",
+  "compatibility": {
+    "phase_0_through_11_5_audit": "pass",
+    "frozen_artifacts_unchanged": true,
+    "canonical_formats_added": false,
+    "physics_changed": false,
+    "flight_software_changed": false,
+    "source_portability_repairs": {
+      "phase8": "accepted source bytes preserved exactly",
+      "phase10": "accepted source bytes preserved exactly",
+      "accepted_artifact_change": false
+    }
+  },
+  "catalog": {
+    "schema": "ksa64.product-catalog.v1",
+    "count": 13,
+    "bytes": 21068,
+    "sha256": "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13"
+  },
+  "guided_session": {
+    "scenario": "ksa-g10r.operations/gnss-loss",
+    "identity": "0x6d4122a0",
+    "ksb11_bytes": 22369,
+    "ksb11_sha256": "38a3ef2e497b8e24d1cf53a56db85b3d8bea0bdb27586215a02ff75d0ee39dc8",
+    "rust_and_c_abi_bytes_identical": true
+  },
+  "bridge": {
+    "abi_version": 1,
+    "build_identity": "0x120a0001",
+    "dll": "ksa64_viewer_bridge-e98df4921c03-120a0001.dll",
+    "dll_bytes": 614912,
+    "dll_sha256": "d1605c4aa9a8b407d8e35ee76d965e404c1e7efcc357d8bd0704b73ade43272d",
+    "manifest_sha256": "391e59246a07be5639b2d488249e82bcd9b1b4c1c451a18d56b1d579593de316",
+    "header_sha256": "ae863a6ce4535280d6d224687052f716581f849ac17fcb39510779657b2d1c86",
+    "structure_sizes": {
+      "abi_info": 132,
+      "span": 24,
+      "owned_buffer": 32,
+      "event": 24,
+      "snapshot": 184
+    },
+    "bounds": {
+      "command_queue": 32,
+      "event_queue": 256,
+      "max_advance_releases": 64,
+      "max_caller_span_bytes": 16777216
+    },
+    "gates": {
+      "rust": "pass",
+      "cpp_harness": "pass",
+      "contained_panic": "pass",
+      "role_filter": "pass",
+      "ksb11_parity": "pass",
+      "queue_pressure": "pass"
+    },
+    "production_harness_timing": {
+      "enqueue_max_microseconds": 0,
+      "poll_count": 4096,
+      "poll_total_microseconds": 798,
+      "poll_max_microseconds": 0
+    },
+    "panic_build_timing": {
+      "enqueue_max_microseconds": 3,
+      "poll_total_microseconds": 765,
+      "poll_max_microseconds": 0
+    }
+  },
+  "unreal": {
+    "clean_editor_build_seconds": 587.396,
+    "final_incremental_build_seconds": 99.03,
+    "final_build_output_policy": "file-redirected UnrealBuildTool output",
+    "automation": {
+      "passed": 2,
+      "failed": 0,
+      "report_bytes": 1484,
+      "report_sha256": "eeaa21ed3b440b79c54f1f25c631ca971a9c3129f79bfd214a9f8751203131af",
+      "runtime_seconds": 30.766,
+      "test_duration_seconds": 0.0743478,
+      "headless_cache_policy": "memory-cache fallback when normal cache service is sandboxed"
+    },
+    "package": {
+      "schema": "ksa64.phase12a-package-audit.v1",
+      "source_commit": "e98df4921c03ddbebba6b9f0d2f4d5fe306e48bc",
+      "files": 54,
+      "bytes": 1031144201,
+      "game_executable_sha256": "29e21f606091beafd7d821266f26ecf28c506aaeae8d215784bc851d396ede44",
+      "bridge_manifest_sha256": "391e59246a07be5639b2d488249e82bcd9b1b4c1c451a18d56b1d579593de316",
+      "smoke_exit_code": 0,
+      "smoke_log_sha256": "3b19648bfe62e7e2f4b2b22e2803c40d960aa7f3516c89841586c4b2d3af2189",
+      "audit_sha256": "899cdd3b98acd528727f90b12ed7f2cf25bed2df2832e0420835c91d43232972",
+      "editor_plugin_binaries_packaged": 0,
+      "zen_policy": "-SkipZenStore",
+      "powershell_major": 7
+    }
+  },
+  "mcp": {
+    "required": false,
+    "endpoint": "127.0.0.1:8000/mcp",
+    "plugin_version": "1.0",
+    "toolsets": 52,
+    "level": "/Engine/Maps/Entry",
+    "disposable_actor_created_verified_removed": true,
+    "tracked_residue": false,
+    "build_runtime_dependency": false
+  },
+  "source_hygiene": {
+    "tracked_uasset_count": 0,
+    "tracked_umap_count": 0,
+    "lfs_attributes_active": true,
+    "unreal_process_running_at_completion": false,
+    "short_clone_clean": true
+  },
+  "disk": {
+    "unreal_install": {
+      "bytes": 32192981609,
+      "files": 249068
+    },
+    "derived_data_cache": {
+      "bytes": 477899230,
+      "files": 4911
+    },
+    "generated_binaries_bytes": 801560156,
+    "generated_intermediate_bytes": 5705263043,
+    "generated_saved_bytes": 1640682611,
+    "package_bytes": 1031144201
+  },
+  "limitations": [
+    "Phase 12A adds no renderer, scene authority, coordinate conversion, authoring UI, production asset, physics, or canonical evidence format.",
+    "Unreal MCP remains optional supervised editor tooling and is not started by the completion audit.",
+    "The in-process bridge is accepted; the documented sidecar fallback was not required.",
+    "Phase 12B through 12E retain live presentation, global visualization, authoring, assets, effects, and packaged performance work.",
+    "Results are engineering evidence, not launch approval, certification, regulatory evidence, or safety authority."
+  ]
+}

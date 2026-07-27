@@ -1,7 +1,8 @@
 # Phase 12A native Windows toolchain
 
-Status: installation and lock procedure. Populate a repository-local copy of
-`toolchain-lock.example.toml` only after verifying every value.
+Status: installed, verified, and accepted for Phase 12A. The exact sanitized
+record is [toolchain-lock.toml](toolchain-lock.toml); this document remains the
+repeatable installation and upgrade procedure.
 
 The lock is noncanonical environment metadata. It does not change any mission,
 catalog, evidence, physics, or target identity.

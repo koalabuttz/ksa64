@@ -1,6 +1,6 @@
 # Phase 12A: Unreal toolchain and live-bridge feasibility
 
-Status: accepted implementation contract; completion evidence pending.
+Status: complete and accepted. See [COMPLETION.md](COMPLETION.md).
 
 ## Purpose
 

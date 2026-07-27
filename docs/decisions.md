@@ -1435,7 +1435,7 @@ The existing completed-session command becomes a compatibility wrapper over the 
 
 Date: 2026-07-26
 
-Status: accepted.
+Status: accepted; Phase 12A implementation accepted on 2026-07-27.
 
 Use the current Unreal Engine 5.8 Epic Games Launcher build on native Windows
 11 for Phase 12, pinned to its exact installed build, supported Visual Studio
@@ -1466,3 +1466,13 @@ it cannot alone prove ENU/ECEF/GCRF transitions, large-world continuity, entry,
 or recovery. Defer all rendering, coordinates, NASA assets, and authoring UI
 from 12A. Preserve every Phase 0–11.5 artifact, catalog identity, authority
 lane, and K-format.
+
+**Phase 12A implementation note.** The in-process boundary met the accepted
+containment and packaging gates: each handle uses bounded 32-command and
+256-event queues; roles are filtered in Rust; invalid layouts, ownership,
+lifecycle, and a test panic fail without crossing the ABI; and the
+commit-qualified DLL is hash-checked by the native harness and packaged Unreal
+runtime. The exact existing KSB11 session is returned unchanged. The sidecar
+fallback was therefore not required or implemented; it remains available only
+through a future reviewed decision if later editor or runtime evidence reveals a
+containment problem. Unreal MCP also remained optional development tooling.
