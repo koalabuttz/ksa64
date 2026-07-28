@@ -257,7 +257,7 @@ function validateNative(input, sourceCommit) {
     const expected = REQUIRED[index];
     required(entry.mission_time_q16 === expected.release * 2048, expected.label + ": native mission time mismatch");
     required(entry.frame_identity === expected.frame && entry.segment_identity === expected.segment, expected.label + ": native frame/segment mismatch");
-    required((entry.source_mask & 2) !== 0 && (entry.source_mask & ~11) === 0, expected.label + ": native source availability mismatch");
+    required(entry.source_mask === 10, expected.label + ": native sample pose availability mismatch");
     required(Number.isSafeInteger(entry.event_mask) && Number.isSafeInteger(entry.discontinuity_mask) && entry.continuity_identity > 0, expected.label + ": native event/continuity evidence missing");
     if (TRANSITIONS.has(expected.release)) required(entry.discontinuity_mask !== 0, expected.label + ": native transition is not an exact discontinuity");
   });
@@ -294,7 +294,7 @@ function validateUnreal(input, sourceCommit) {
   const captures = value.captures.map((capture, index) => {
     const expected = REQUIRED[index];
     required(capture.release_epoch === expected.release && capture.frame_identity === expected.frame && capture.segment_identity === expected.segment, expected.label + ": Unreal capture frame/segment mismatch");
-    required(capture.source_mask === 11 && capture.transition_markers >= 4, expected.label + ": Unreal source/transition availability mismatch");
+    required(capture.source_mask === 10 && capture.transition_markers >= 4, expected.label + ": Unreal source/transition availability mismatch");
     required(capture.planned_path_points > 0 && capture.onboard_path_points > 0 && capture.observed_path_points > 0, expected.label + ": Unreal path evidence missing");
     required(capture.width === 1920 && capture.height === 1080 && capture.sampled_pixels > 0 && capture.distinct_color_buckets >= 8 && capture.luminance_range >= 24 && capture.non_dark_samples > 0, expected.label + ": Unreal screenshot measurement failed");
     const semantic = readJson(resolveWithinRoot(manifestDirectory, capture.semantic_file, expected.label + " Unreal semantic"),
@@ -303,7 +303,7 @@ function validateUnreal(input, sourceCommit) {
     const state = semantic.value;
     required(state.release_epoch === expected.release && state.replay_selected_release === expected.release, expected.label + ": Unreal selected release mismatch");
     required(state.mission_time_q16 === expected.release * 2048 && state.frame_identity === expected.frame && state.segment_identity === expected.segment, expected.label + ": Unreal semantic frame/time mismatch");
-    required(state.source_mask === 11 && state.acceptance_eligible === true && state.scene_ready === true && state.exact_snap === true, expected.label + ": Unreal semantic acceptance state mismatch");
+    required(state.source_mask === 10 && state.acceptance_eligible === true && state.scene_ready === true && state.exact_snap === true, expected.label + ": Unreal semantic acceptance state mismatch");
     required(state.truth_permitted === true && state.truth_visible === false, expected.label + ": Unreal truth visibility mismatch");
     required(state.overall_disposition === 1 && state.evidence_disposition === 1, expected.label + ": Unreal disposition mismatch");
     required(state.planned_path_points > 0 && state.onboard_path_points > 0 && state.observed_path_points > 0 && state.transition_markers >= 4, expected.label + ": Unreal semantic path evidence missing");

@@ -2603,7 +2603,7 @@ bool UKsa64GlobalViewerSubsystem::ValidateGlobalEvidenceState(
         OutReason = TEXT("global replay is not exact, accepted, scene-ready, and fully indexed");
         return false;
     }
-    if (SemanticState.SourceMask != 0x0bu
+    if (SemanticState.SourceMask != 0x0au
         || !SemanticState.bTruthPermitted
         || SemanticState.bTruthVisible
         || bTruthRequested

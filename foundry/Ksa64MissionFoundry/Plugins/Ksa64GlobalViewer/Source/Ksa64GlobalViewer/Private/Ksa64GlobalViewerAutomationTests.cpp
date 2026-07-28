@@ -476,6 +476,8 @@ bool FKsa64GlobalViewerRealBridgeReplayTest::RunTest(const FString&)
         TestTrue(TEXT("real display accepted"), State.bAcceptanceEligible);
         TestTrue(TEXT("real replay snaps on seek"), State.bExactSnap);
         TestTrue(TEXT("SIM Director truth is permitted"), State.bTruthPermitted);
+        TestEqual(TEXT("nominal sample poses contain onboard and truth only"),
+            State.SourceMask, 0x0Au);
         TestFalse(TEXT("SIM truth starts hidden"), State.bTruthVisible);
         TestTrue(TEXT("real onboard path is present"), State.OnboardPathPoints > 0);
         TestTrue(TEXT("real transition index is present"), State.TransitionMarkers >= 4);
