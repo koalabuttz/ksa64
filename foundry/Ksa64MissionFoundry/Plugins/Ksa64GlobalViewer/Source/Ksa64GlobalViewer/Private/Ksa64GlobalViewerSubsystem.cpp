@@ -353,7 +353,12 @@ bool UKsa64GlobalViewerSubsystem::EnsureScene()
         return true;
     }
     UWorld* World = GetWorld();
-    if (World == nullptr || !World->IsGameWorld())
+    if (World == nullptr
+        || !World->IsGameWorld()
+        || !World->HasBegunPlay()
+        || GEngine == nullptr
+        || GEngine->GameViewport == nullptr
+        || GEngine->GameViewport->GetWorld() != World)
     {
         return false;
     }
