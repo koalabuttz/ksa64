@@ -1,6 +1,6 @@
 # Phase 12B.5 implementation checkpoint
 
-Status: **software implementation and local acceptance complete; full phase acceptance pending external gates**.
+Status: **software implementation, local acceptance, and hosted portable-runtime qualification complete; full phase acceptance pending device and emulator gates**.
 
 Entry commit: `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615`
 
@@ -10,7 +10,7 @@ Date: 2026-07-27
 
 Phase 12B.5 has removed the desktop-heavy host and Win64 bridge from KSA64's portable live-session boundary without changing accepted mission behavior. The portable Rust session, role-filtered presentation protocol, native bridge, loopback and paired transports, compact web product, real browser WebAssembly authority, and bounded Vita client are implemented.
 
-This record does **not** mark the phase fully accepted. The frozen completion contract also requires the hosted four-platform matrix, a physical Lenovo Duet 11 run, Vita3K execution, and physical Vita acceptance. Those gates cannot be replaced by desktop tests and remain explicitly pending below.
+This record does **not** mark the phase fully accepted. The hosted four-platform matrix and WASM worker exactness under the Node harness now pass, but the frozen completion contract also requires a physical Lenovo Duet 11 run, Vita3K execution, and physical Vita acceptance. Those gates cannot be replaced by desktop or hosted tests and remain explicitly pending below.
 
 ## Delivered foundation
 
@@ -58,15 +58,23 @@ Polling cadence, renderer backend, replay polling, and presentation state did no
 
 The accepted Phase 12B manifest contains a historical header-digest value that does not match any recoverable source revision. The frozen manifest, DLL, accepted header, ABI, and mission evidence remain unchanged. The verifier admits the actual accepted header only through an exact tuple binding the manifest filename and SHA, full source commit, frozen DLL and header hashes, ABI/build identity, and catalog hash; every other mismatch still fails closed. See [FROZEN_BRIDGE_HEADER_AUDIT.md](FROZEN_BRIDGE_HEADER_AUDIT.md).
 
+## Hosted portable-runtime qualification evidence
+
+Commit `aae737c03b8d23e171f77d0b0e95b9dbff22746e` passed both hosted workflows:
+
+- Exact cross-platform acceptance run [30326378656](https://github.com/koalabuttz/ksa64/actions/runs/30326378656): Windows x64, Linux x64, Linux ARM64, and macOS ARM64 all reproduced the accepted mission; the WASM worker ABI reproduced it under the Node harness and preserved the frozen Phase 10 identity.
+- Fast portability run [30326378684](https://github.com/koalabuttz/ksa64/actions/runs/30326378684): all seven jobs passed formatting, warnings-denied Clippy, workspace tests, broker security, bridge panic/misuse and full-mission harnesses, web/WASM, Vita host fixtures, qualified packaging, and upload.
+- GitHub Actions artifact digests for the uploaded, source-bound engineering archives are: Windows x64 `sha256:16ad1783171503454d4f60416ec160f4ac76e0539cca03ad724f724bc32e427e`, Linux x64 `sha256:0cc89fb636eda366bb524621076c87e38cf5525b85d73d680e95d0a3ec08634a`, Linux ARM64 `sha256:27f09c517b02df1d30546e146914af1a6ec810b51f80b098f556e32cd076449d`, and macOS ARM64 `sha256:4272a8f78c8131652135d7e3c21eb00cdcedad626cbc6391faa839c464d93902`.
+
 ## Qualification matrix
 
 | Gate | Status |
 |---|---|
 | Local Windows x64 native/session/bridge/PWA/WASM | Pass |
-| GitHub-hosted Windows x64 | Pending post-push workflow |
-| GitHub-hosted Linux x64 | Pending post-push workflow |
-| GitHub-hosted Linux ARM64 | Pending post-push workflow |
-| GitHub-hosted macOS ARM64 | Pending post-push workflow |
+| GitHub-hosted Windows x64 | Pass — exact, fast, and qualified archive at `aae737c` |
+| GitHub-hosted Linux x64 | Pass — exact, fast, and qualified archive at `aae737c` |
+| GitHub-hosted Linux ARM64 | Pass — exact, fast, and qualified archive at `aae737c` |
+| GitHub-hosted macOS ARM64 | Pass — exact, fast, and qualified archive at `aae737c` |
 | Physical 8 GB Lenovo Duet 11: Crostini native | Pending physical run |
 | Physical Duet: hybrid PWA and local WASM | Pending physical run |
 | Physical Duet: WebGPU/WebGL2/2-D/offline/suspension | Pending physical run |
@@ -77,7 +85,7 @@ The accepted Phase 12B manifest contains a historical header-digest value that d
 | Unreal Linux x64/macOS ARM64 package evidence | Conditional; qualified engine hosts unavailable |
 | Unreal Linux ARM64 | Nonblocking feasibility only |
 
-The physical checklists are [DUET_ACCEPTANCE.md](DUET_ACCEPTANCE.md) and [the Vita build evidence](../vita/BUILD_EVIDENCE.md). A worker crash, browser suspension, interrupted replay, or incomplete device run must remain incomplete and can never be promoted to accepted evidence.
+The physical Duet checklist is [DUET_ACCEPTANCE.md](DUET_ACCEPTANCE.md); Vita build status and the still-open Vita3K/physical-device gates are recorded in [the Vita build-evidence record](../vita/BUILD_EVIDENCE.md). A worker crash, browser suspension, interrupted replay, or incomplete device run must remain incomplete and can never be promoted to accepted evidence.
 
 ## Limitations and handoff
 
@@ -87,4 +95,4 @@ The physical checklists are [DUET_ACCEPTANCE.md](DUET_ACCEPTANCE.md) and [the Vi
 - Signing, notarization, installers, app stores, accounts, cloud relay, Internet service, and multi-controller arbitration remain deferred.
 - C64 formats, programs, VICE policies, long-run rules, and authority boundaries are unchanged.
 
-Phase 12C may use this software boundary for continued development, but Phase 12B.5 is not recorded as fully accepted until the pending hosted and physical gates have their source-bound evidence.
+Phase 12C may use this software boundary for continued development, but Phase 12B.5 is not recorded as fully accepted until the pending physical Duet, Vita3K, and physical Vita gates have their source-bound evidence.

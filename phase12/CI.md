@@ -1,6 +1,6 @@
 # Phase 12B.5 continuous integration
 
-Status: implemented; post-push hosted qualification pending.
+Status: implemented and portable-runtime-qualified on the hosted matrix at `aae737c03b8d23e171f77d0b0e95b9dbff22746e`.
 
 The repository pins native and WebAssembly development to Rust 1.93 through
 the root `rust-toolchain.toml`. The custom rust-mos Docker image and pinned
@@ -35,6 +35,10 @@ The WebAssembly acceptance job builds the real Rust Worker authority and reprodu
 the same 2,911,464-byte KSB11 and accepted SHA-256. It is not replaced by a
 TypeScript mock.
 
+## Accepted hosted evidence
+
+Commit `aae737c03b8d23e171f77d0b0e95b9dbff22746e` passed the exact workflow run [30326378656](https://github.com/koalabuttz/ksa64/actions/runs/30326378656) and the fast workflow run [30326378684](https://github.com/koalabuttz/ksa64/actions/runs/30326378684). The exact run passed on all four native architectures, while the WASM worker ABI reproduced the same evidence under the Node harness. The fast run passed all seven jobs and uploaded checksum-qualified Windows x64, Linux x64, Linux ARM64, and macOS ARM64 engineering archives.
+
 ## Engineering archives
 
 The platform matrix builds a checksum-qualified archive with the native script for
@@ -68,4 +72,4 @@ LFS explicitly.
 
 The current hosted-runner labels and architectures are recorded from the official
 [GitHub runner-images matrix](https://github.com/actions/runner-images).
-Private-repository jobs consume the account's Actions allowance.
+Actions billing and allowance follow the repository's current GitHub visibility and account policy.

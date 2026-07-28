@@ -483,9 +483,8 @@ Explicit non-goals remain new physics, avionics, formats, target implementations
 ## Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
 Status: Phase 12A and Phase 12B are complete and accepted. Phase 12B.5
-software implementation and local acceptance are complete from `b9f2c79` under
-`phase12/PHASE12B5_PLAN.md`; full acceptance remains pending hosted
-cross-platform CI and required physical Duet/Vita evidence. Phase 11.5 and its accepted hardening amendment
+software implementation, local acceptance, and hosted portable-runtime qualification are complete under
+`phase12/PHASE12B5_PLAN.md`; full acceptance remains pending the required physical Duet, Vita3K emulator, and physical Vita evidence. Phase 11.5 and its accepted hardening amendment
 remain the frozen product, application, and live-session foundation. Phase 12A
 completion evidence is in `phase12/COMPLETION.md`; Phase 12B acceptance is in
 `phase12/PHASE12B_COMPLETION.md`; and the next boundary is
@@ -538,7 +537,7 @@ Accepted product evidence includes 17/17 Unreal operations tests, a 54-file stan
 
 ### Phase 12B.5: cross-platform runtime and presentation foundation
 
-Status: software implementation and local acceptance complete from entry commit `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615`; full acceptance pending the hosted four-platform matrix, physical Lenovo Duet 11, Vita3K, and physical Vita evidence recorded in `phase12/PHASE12B5_COMPLETION.md`. The earlier handoff remains historical context.
+Status: software implementation and local acceptance are complete from entry commit `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615`; hosted Windows x64, Linux x64, Linux ARM64, and macOS ARM64 qualification plus WASM worker exactness under the Node harness passed at `aae737c03b8d23e171f77d0b0e95b9dbff22746e`; full acceptance remains pending physical Lenovo Duet 11, Vita3K, and physical Vita evidence recorded in `phase12/PHASE12B5_COMPLETION.md`. The earlier handoff remains historical context.
 
 Purpose: make Windows the accepted first platform rather than a permanent
 product boundary before the global viewer and authoring surfaces harden

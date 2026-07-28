@@ -1,6 +1,6 @@
 # Phase 12B.5 implementation contract
 
-Status: implementation complete; full acceptance pending hosted and physical qualification.
+Status: implementation and hosted portable-runtime qualification complete; full acceptance pending device and emulator qualification.
 
 Entry commit: `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615`
 
