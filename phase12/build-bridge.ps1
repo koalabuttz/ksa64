@@ -39,7 +39,7 @@ $headerSource = Join-Path $root "viewer-bridge\ksa64_viewer_bridge.h"
 $catalogPath = Join-Path $root "phase11_5\product-catalog-v1.json"
 $pluginRoot = Join-Path $root "foundry\Ksa64MissionFoundry\Plugins\Ksa64Bridge"
 $binaries = Join-Path $pluginRoot "Binaries\Win64"
-$includeDirectory = Join-Path $pluginRoot "Source\ThirdParty\ViewerBridge\include"
+$includeDirectory = Join-Path $pluginRoot "Source\ThirdParty\ViewerBridgePortable\include"
 
 foreach ($required in @($cargoToml, $headerSource, $catalogPath, $pluginRoot)) {
     if (-not (Test-Path -LiteralPath $required)) {
