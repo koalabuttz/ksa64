@@ -27,6 +27,10 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
     $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 }
 $root = (Resolve-Path -LiteralPath $RepositoryRoot).Path
+$commit = (& git -C $root rev-parse --verify HEAD).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
+    throw "Could not resolve the source commit."
+}
 $project = Join-Path $root "foundry\Ksa64MissionFoundry\Ksa64MissionFoundry.uproject"
 $runUat = Join-Path $UnrealRoot "Engine\Build\BatchFiles\RunUAT.bat"
 $ddc = [IO.Path]::GetFullPath($DerivedDataCache)
@@ -90,14 +94,40 @@ if ($bridgeManifests.Count -ne 1) {
     throw "Expected one packaged bridge manifest; found $($bridgeManifests.Count)."
 }
 $bridgeManifest = Get-Content -LiteralPath $bridgeManifests[0].FullName -Raw | ConvertFrom-Json
-$bridgeDll = Join-Path $bridgeDirectory $bridgeManifest.dll_filename
+if ($bridgeManifest.schema -eq "ksa64.viewer-bridge-manifest.v1") {
+    $bridgeFileName = $bridgeManifest.dll_filename
+    $bridgeExpectedSha256 = $bridgeManifest.dll_sha256
+    $bridgeCatalogIdentity = $bridgeManifest.catalog_sha256
+}
+elseif ($bridgeManifest.schema -eq "ksa64.viewer-bridge-artifact.v2") {
+    $bridgeFileName = $bridgeManifest.library_file
+    $bridgeExpectedSha256 = $bridgeManifest.sha256
+    $bridgeCatalogIdentity = $bridgeManifest.catalog_identity
+    if ($bridgeManifest.target_triple -ne "x86_64-pc-windows-msvc" -or
+        $bridgeManifest.operating_system -ne "windows" -or
+        $bridgeManifest.architecture -ne "x86_64") {
+        throw "Packaged portable bridge manifest does not describe the required Win64 artifact."
+    }
+}
+else {
+    throw "Unsupported packaged bridge manifest schema '$($bridgeManifest.schema)'."
+}
+if ([string]::IsNullOrWhiteSpace($bridgeFileName) -or
+    [IO.Path]::IsPathRooted($bridgeFileName) -or
+    [IO.Path]::GetFileName($bridgeFileName) -ne $bridgeFileName) {
+    throw "Packaged bridge manifest contains an invalid library filename."
+}
+if ($bridgeManifest.source_commit -ne $commit) {
+    throw "Packaged bridge source commit does not match the package source commit."
+}
+$bridgeDll = Join-Path $bridgeDirectory $bridgeFileName
 if (-not (Test-Path -LiteralPath $gameExe -PathType Leaf)) {
     throw "Packaged game executable is missing: $gameExe"
 }
 if (-not (Test-Path -LiteralPath $bridgeDll -PathType Leaf)) {
     throw "Packaged bridge DLL is missing: $bridgeDll"
 }
-if ((Get-Sha256 $bridgeDll) -ne $bridgeManifest.dll_sha256) {
+if ((Get-Sha256 $bridgeDll) -ne $bridgeExpectedSha256) {
     throw "Packaged bridge DLL does not match its qualified manifest."
 }
 
@@ -143,7 +173,6 @@ if ($smokeText -match "LogKsa64Bridge: Error") {
 
 $files = @(Get-ChildItem -LiteralPath $archive -Recurse -File)
 $totalBytes = [int64](($files | Measure-Object -Property Length -Sum).Sum)
-$commit = (& git -C $root rev-parse --verify HEAD).Trim().ToLowerInvariant()
 $record = [ordered]@{
     schema = "ksa64.phase12a-package-audit.v1"
     source_commit = $commit
@@ -160,7 +189,7 @@ $record = [ordered]@{
     bridge_source_commit = $bridgeManifest.source_commit
     bridge_abi_version = $bridgeManifest.abi_version
     bridge_build_identity = $bridgeManifest.build_identity
-    catalog_sha256 = $bridgeManifest.catalog_sha256
+    catalog_sha256 = $bridgeCatalogIdentity
     editor_plugin_binaries_packaged = 0
     smoke_exit_code = $process.ExitCode
     smoke_log = $smokeLog.Substring($archive.Length + 1).Replace('\', '/')
@@ -173,5 +202,5 @@ Write-Host "PHASE 12A PACKAGE AND SMOKE: PASS"
 Write-Host "  archive: $archive"
 Write-Host "  files: $($files.Count)"
 Write-Host "  bytes: $totalBytes"
-Write-Host "  bridge: $($bridgeManifest.dll_filename)"
+Write-Host "  bridge: $bridgeFileName"
 Write-Host "  audit: $auditPath"
