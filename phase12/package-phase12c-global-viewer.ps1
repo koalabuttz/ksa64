@@ -130,9 +130,14 @@ $inventoryRecord = [ordered]@{
 }
 $inventoryRecord | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $inventoryPath -Encoding utf8NoBOM
 $inventorySha256 = Get-Sha256 $inventoryPath
-$inventoryRelativePath = [IO.Path]::GetRelativePath($evidenceDirectory, $inventoryPath).Replace('\', '/')
-$validationInventoryRelativePath = [IO.Path]::GetRelativePath($archive, $inventoryPath).Replace('\', '/')
-$manifestGameRelativePath = [IO.Path]::GetRelativePath($evidenceDirectory, $gameExe).Replace('\', '/')
+$inventoryRelativePath = [IO.Path]::GetRelativePath($archive, $inventoryPath).Replace('\', '/')
+$validationInventoryRelativePath = $inventoryRelativePath
+$manifestGameRelativePath = [IO.Path]::GetRelativePath($archive, $gameExe).Replace('\', '/')
+foreach ($relativeArtifactPath in @($inventoryRelativePath, $manifestGameRelativePath)) {
+    if ([IO.Path]::IsPathRooted($relativeArtifactPath) -or @($relativeArtifactPath.Split('/')) -contains '..') {
+        throw "Packaged evidence paths must be archive-relative and traversal-free: $relativeArtifactPath"
+    }
+}
 
 $arguments = @("-windowed", "-ResX=1920", "-ResY=1080", "-ForceRes", "-RenderOffscreen", "-Benchmark", "-UseFixedTimeStep", "-FPS=60", "-nosound", "-unattended", "-nosplash", "-DisablePlugins=ModelContextProtocol,ToolsetRegistry,AllToolsets,PythonScriptPlugin", "-Ksa64Phase12cGlobalEvidence", "-Ksa64SourceCommit=$commit", "-Ksa64ExecutableRelativePath=$manifestGameRelativePath", "-Ksa64ExecutableBytes=$gameBytes", "-Ksa64ExecutableSha256=$gameSha256", "-Ksa64PackageAuditSha256=$packageAuditSha256", "-Ksa64PackagedDirectoryBytes=$($packagedDirectory.Bytes)", "-Ksa64PackagedDirectoryFiles=$($packagedDirectory.FileCount)", "-Ksa64PackagedDirectoryTreeSha256=$($packagedDirectory.TreeSha256)", "-Ksa64PackagedDirectoryInventoryFile=$inventoryRelativePath", "-Ksa64PackagedDirectoryInventorySha256=$inventorySha256", "-abslog=$logPath")
 $process = Start-Process -FilePath $gameExe -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $gameExe) -WindowStyle Hidden -PassThru
