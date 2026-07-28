@@ -15,50 +15,74 @@ public class Ksa64Bridge : ModuleRules
             "Projects"
         });
 
-        if (Target.Platform != UnrealTargetPlatform.Win64)
+        string PlatformDirectory;
+        string LibraryPattern;
+        if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            throw new BuildException("Ksa64Bridge Phase 12A supports Win64 only.");
+            PlatformDirectory = "Win64";
+            LibraryPattern = "ksa64_viewer_bridge-*.*";
         }
-
-        PublicSystemLibraries.Add("bcrypt.lib");
+        else if (Target.Platform == UnrealTargetPlatform.Linux)
+        {
+            PlatformDirectory = "Linux";
+            LibraryPattern = "libksa64_viewer_bridge-*.*";
+        }
+        else if (Target.Platform == UnrealTargetPlatform.Mac)
+        {
+            PlatformDirectory = "Mac";
+            LibraryPattern = "libksa64_viewer_bridge-*.*";
+        }
+        else
+        {
+            throw new BuildException(
+                "Ksa64Bridge supports only Win64, Linux x64, and macOS ARM64 source lanes. "
+                + "A qualified Unreal host and staged bridge are still required for packaging.");
+        }
 
         string BridgeInclude = Path.Combine(ModuleDirectory, "..", "ThirdParty", "ViewerBridge", "include");
         PublicIncludePaths.Add(Path.GetFullPath(BridgeInclude));
 
-        // A separate, explicit phase12/build-bridge.ps1 invocation stages the
-        // Rust output. UnrealBuildTool never invokes Cargo.
-        string BridgeBinaries = Path.Combine(PluginDirectory, "Binaries", "Win64");
-        if (Directory.Exists(BridgeBinaries))
+        // A separate explicit staging command builds Rust outside UnrealBuildTool.
+        // UnrealBuildTool only stages one already-qualified library/manifest pair.
+        string BridgeBinaries = Path.Combine(PluginDirectory, "Binaries", PlatformDirectory);
+        if (!Directory.Exists(BridgeBinaries))
         {
-            string[] Manifests = Directory.GetFiles(
-                BridgeBinaries,
-                "ksa64_viewer_bridge-*.manifest.json",
-                SearchOption.TopDirectoryOnly);
-            Array.Sort(Manifests, StringComparer.Ordinal);
-
-            if (Manifests.Length > 1)
-            {
-                throw new BuildException(
-                    "Ksa64Bridge found multiple staged manifests. Run phase12/build-bridge.ps1 to produce one qualified artifact.");
-            }
-
-            if (Manifests.Length == 1)
-            {
-                string Manifest = Manifests[0];
-                string Dll = Manifest.Substring(0, Manifest.Length - ".manifest.json".Length) + ".dll";
-                if (!File.Exists(Dll))
-                {
-                    throw new BuildException("Ksa64Bridge staged manifest has no matching DLL: " + Dll);
-                }
-
-                RuntimeDependencies.Add(
-                    "$(PluginDir)/Binaries/Win64/" + Path.GetFileName(Manifest),
-                    StagedFileType.NonUFS);
-                RuntimeDependencies.Add(
-                    "$(PluginDir)/Binaries/Win64/" + Path.GetFileName(Dll),
-                    StagedFileType.NonUFS);
-                PublicDefinitions.Add("KSA64_BRIDGE_ARTIFACT_STAGED=1");
-            }
+            return;
         }
+
+        string[] Manifests = Directory.GetFiles(
+            BridgeBinaries,
+            "*.manifest.json",
+            SearchOption.TopDirectoryOnly);
+        Array.Sort(Manifests, StringComparer.Ordinal);
+        if (Manifests.Length > 1)
+        {
+            throw new BuildException(
+                "Ksa64Bridge found multiple staged manifests. Stage one qualified artifact for this platform.");
+        }
+        if (Manifests.Length == 0)
+        {
+            return;
+        }
+
+        string[] Libraries = Directory.GetFiles(BridgeBinaries, LibraryPattern, SearchOption.TopDirectoryOnly);
+        Libraries = Array.FindAll(Libraries, path =>
+            path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".so", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase));
+        Array.Sort(Libraries, StringComparer.Ordinal);
+        if (Libraries.Length != 1)
+        {
+            throw new BuildException(
+                "Ksa64Bridge staged manifest must have exactly one matching platform library.");
+        }
+
+        RuntimeDependencies.Add(
+            "$(PluginDir)/Binaries/" + PlatformDirectory + "/" + Path.GetFileName(Manifests[0]),
+            StagedFileType.NonUFS);
+        RuntimeDependencies.Add(
+            "$(PluginDir)/Binaries/" + PlatformDirectory + "/" + Path.GetFileName(Libraries[0]),
+            StagedFileType.NonUFS);
+        PublicDefinitions.Add("KSA64_BRIDGE_ARTIFACT_STAGED=1");
     }
 }

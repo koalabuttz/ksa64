@@ -124,8 +124,10 @@ bool FKsa64BridgeManifestTest::RunTest(const FString&)
             ManifestCopy,
             [](FJsonObject& Json)
             {
+                FString Schema;
+                Json.TryGetStringField(TEXT("schema"), Schema);
                 Json.SetStringField(
-                    TEXT("dll_sha256"),
+                    Schema == TEXT("ksa64.viewer-bridge-artifact.v2") ? TEXT("sha256") : TEXT("dll_sha256"),
                     TEXT("0000000000000000000000000000000000000000000000000000000000000000"));
             }));
     Diagnostic.Reset();

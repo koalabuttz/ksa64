@@ -20,6 +20,7 @@ struct FKsa64BridgeValidation
     FString DllSha256;
     FString CatalogSha256;
     FString SourceCommit;
+    FString TargetTriple;
     uint32 AbiVersion = 0;
     uint32 BuildIdentity = 0;
     uint32 CatalogCount = 0;

@@ -1,9 +1,9 @@
 {
   "FileVersion": 3,
   "Version": 1,
-  "VersionName": "12B.1",
+  "VersionName": "12B.5",
   "FriendlyName": "KSA64 Mission Operations",
-  "Description": "Source-controlled, truth-blind Phase 12B Mission Foundry operations presentation.",
+  "Description": "Source-controlled, truth-blind KSA64 Mission Foundry operations presentation.",
   "Category": "KSA64",
   "CreatedBy": "KSA64",
   "CanContainContent": false,
@@ -23,6 +23,8 @@
     }
   ],
   "SupportedTargetPlatforms": [
-    "Win64"
+    "Win64",
+    "Linux",
+    "Mac"
   ]
 }

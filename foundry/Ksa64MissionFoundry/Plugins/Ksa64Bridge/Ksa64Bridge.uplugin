@@ -1,7 +1,7 @@
 {
   "FileVersion": 3,
   "Version": 1,
-  "VersionName": "12A.1",
+  "VersionName": "12B.5",
   "FriendlyName": "KSA64 Viewer Bridge",
   "Description": "Validated, asynchronous consumer of the prebuilt KSA64 Rust viewer bridge.",
   "Category": "KSA64",
@@ -17,6 +17,8 @@
     }
   ],
   "SupportedTargetPlatforms": [
-    "Win64"
+    "Win64",
+    "Linux",
+    "Mac"
   ]
 }

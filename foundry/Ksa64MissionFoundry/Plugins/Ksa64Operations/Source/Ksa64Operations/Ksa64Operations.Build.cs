@@ -26,9 +26,13 @@ public class Ksa64Operations : ModuleRules
             "SlateCore"
         });
 
-        if (Target.Platform != UnrealTargetPlatform.Win64)
+        if (Target.Platform != UnrealTargetPlatform.Win64
+            && Target.Platform != UnrealTargetPlatform.Linux
+            && Target.Platform != UnrealTargetPlatform.Mac)
         {
-            throw new BuildException("Ksa64Operations Phase 12B supports Win64 only.");
+            throw new BuildException(
+                "Ksa64Operations supports only Win64, Linux x64, and macOS ARM64 source lanes. "
+                + "Packaging remains conditional on a qualified Unreal host.");
         }
     }
 }

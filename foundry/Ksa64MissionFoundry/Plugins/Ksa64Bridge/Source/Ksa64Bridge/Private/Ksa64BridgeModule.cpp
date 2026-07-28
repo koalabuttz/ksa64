@@ -1,5 +1,6 @@
 #include "Ksa64BridgeModule.h"
 #include "Ksa64BridgeTypedValidation.h"
+#include "Ksa64BridgeSha256.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
@@ -11,17 +12,14 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
-#include "Windows/AllowWindowsPlatformTypes.h"
-THIRD_PARTY_INCLUDES_START
-#include <bcrypt.h>
-THIRD_PARTY_INCLUDES_END
-#include "Windows/HideWindowsPlatformTypes.h"
+
 
 DEFINE_LOG_CATEGORY_STATIC(LogKsa64Bridge, Log, All);
 
 namespace
 {
-constexpr TCHAR ManifestSchema[] = TEXT("ksa64.viewer-bridge-manifest.v1");
+constexpr TCHAR LegacyManifestSchema[] = TEXT("ksa64.viewer-bridge-manifest.v1");
+constexpr TCHAR PortableManifestSchema[] = TEXT("ksa64.viewer-bridge-artifact.v2");
 constexpr TCHAR CatalogSchema[] = TEXT("ksa64.product-catalog.v1");
 constexpr TCHAR AcceptedCatalogHash[] =
     TEXT("b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13");
@@ -34,6 +32,80 @@ constexpr uint32 KnownFeatureMask =
     | KSA64_VIEWER_FEATURE_ASYNC_STATUS_V1
     | KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1;
 constexpr uint64 GuidedOperationalValidityMask = (1ull << 11) - 1ull;
+FString BridgePlatformDirectory()
+{
+#if PLATFORM_WINDOWS
+    return TEXT("Win64");
+#elif PLATFORM_LINUX
+    return TEXT("Linux");
+#elif PLATFORM_MAC
+    return TEXT("Mac");
+#else
+    return TEXT("Unsupported");
+#endif
+}
+
+FString BridgeTargetTriple()
+{
+#if PLATFORM_WINDOWS
+    return TEXT("x86_64-pc-windows-msvc");
+#elif PLATFORM_LINUX
+    return TEXT("x86_64-unknown-linux-gnu");
+#elif PLATFORM_MAC
+    return TEXT("aarch64-apple-darwin");
+#else
+    return TEXT("unsupported");
+#endif
+}
+
+FString BridgeOperatingSystem()
+{
+#if PLATFORM_WINDOWS
+    return TEXT("windows");
+#elif PLATFORM_LINUX
+    return TEXT("linux");
+#elif PLATFORM_MAC
+    return TEXT("macos");
+#else
+    return TEXT("unsupported");
+#endif
+}
+
+FString BridgeArchitecture()
+{
+#if PLATFORM_MAC
+    return TEXT("aarch64");
+#else
+    return TEXT("x86_64");
+#endif
+}
+
+FString BridgeLibraryPrefix()
+{
+#if PLATFORM_WINDOWS
+    return TEXT("ksa64_viewer_bridge-");
+#else
+    return TEXT("libksa64_viewer_bridge-");
+#endif
+}
+
+FString BridgeLibraryExtension()
+{
+#if PLATFORM_WINDOWS
+    return TEXT(".dll");
+#elif PLATFORM_MAC
+    return TEXT(".dylib");
+#else
+    return TEXT(".so");
+#endif
+}
+
+bool IsSafeLibraryFilename(const FString& Filename)
+{
+    return FPaths::GetCleanFilename(Filename) == Filename
+        && Filename.StartsWith(BridgeLibraryPrefix(), ESearchCase::CaseSensitive)
+        && Filename.EndsWith(BridgeLibraryExtension(), ESearchCase::CaseSensitive);
+}
 
 static_assert(sizeof(Ksa64ViewerAbiInfo) == 132);
 static_assert(sizeof(Ksa64ViewerStartRequestV1) == 48);
@@ -153,86 +225,11 @@ FString FixedUtf8(const uint8* Bytes, SIZE_T Capacity)
 
 bool Sha256Bytes(const TArray<uint8>& Bytes, FString& OutHex, FString& Diagnostic)
 {
-    BCRYPT_ALG_HANDLE Algorithm = nullptr;
-    BCRYPT_HASH_HANDLE Hash = nullptr;
-    DWORD ObjectLength = 0;
-    DWORD HashLength = 0;
-    DWORD Returned = 0;
-
-    NTSTATUS Status = BCryptOpenAlgorithmProvider(
-        &Algorithm,
-        BCRYPT_SHA256_ALGORITHM,
-        nullptr,
-        0);
-    if (Status < 0)
+    OutHex = Ksa64BridgeHash::Sha256Hex(Bytes.GetData(), static_cast<uint64>(Bytes.Num()));
+    if (!IsLowerHex(OutHex, 64))
     {
-        Diagnostic = TEXT("BCryptOpenAlgorithmProvider(SHA-256) failed");
+        Diagnostic = TEXT("portable SHA-256 calculation failed");
         return false;
-    }
-
-    Status = BCryptGetProperty(
-        Algorithm,
-        BCRYPT_OBJECT_LENGTH,
-        reinterpret_cast<PUCHAR>(&ObjectLength),
-        sizeof(ObjectLength),
-        &Returned,
-        0);
-    if (Status >= 0)
-    {
-        Status = BCryptGetProperty(
-            Algorithm,
-            BCRYPT_HASH_LENGTH,
-            reinterpret_cast<PUCHAR>(&HashLength),
-            sizeof(HashLength),
-            &Returned,
-            0);
-    }
-
-    TArray<uint8> HashObject;
-    TArray<uint8> Digest;
-    if (Status >= 0)
-    {
-        HashObject.SetNumUninitialized(static_cast<int32>(ObjectLength));
-        Digest.SetNumUninitialized(static_cast<int32>(HashLength));
-        Status = BCryptCreateHash(
-            Algorithm,
-            &Hash,
-            HashObject.GetData(),
-            ObjectLength,
-            nullptr,
-            0,
-            0);
-    }
-
-    if (Status >= 0 && Bytes.Num() > 0)
-    {
-        Status = BCryptHashData(
-            Hash,
-            const_cast<PUCHAR>(Bytes.GetData()),
-            static_cast<ULONG>(Bytes.Num()),
-            0);
-    }
-    if (Status >= 0)
-    {
-        Status = BCryptFinishHash(Hash, Digest.GetData(), HashLength, 0);
-    }
-
-    if (Hash != nullptr)
-    {
-        BCryptDestroyHash(Hash);
-    }
-    BCryptCloseAlgorithmProvider(Algorithm, 0);
-
-    if (Status < 0 || HashLength != 32)
-    {
-        Diagnostic = TEXT("Windows SHA-256 calculation failed");
-        return false;
-    }
-
-    OutHex.Reset(64);
-    for (uint8 Byte : Digest)
-    {
-        OutHex += FString::Printf(TEXT("%02x"), static_cast<uint32>(Byte));
     }
     return true;
 }
@@ -242,17 +239,16 @@ bool Sha256File(const FString& Path, FString& OutHex, FString& Diagnostic)
     TArray<uint8> Bytes;
     if (!FFileHelper::LoadFileToArray(Bytes, *Path))
     {
-        Diagnostic = FString::Printf(TEXT("could not read bridge DLL: %s"), *Path);
+        Diagnostic = FString::Printf(TEXT("could not read bridge library: %s"), *Path);
         return false;
     }
     if (Bytes.Num() == 0)
     {
-        Diagnostic = TEXT("bridge DLL is empty");
+        Diagnostic = TEXT("bridge library is empty");
         return false;
     }
     return Sha256Bytes(Bytes, OutHex, Diagnostic);
 }
-
 template <typename T>
 bool LoadRequiredExport(void* Dll, const TCHAR* Name, T& Out, FString& Diagnostic)
 {
@@ -463,155 +459,157 @@ bool FKsa64BridgeModule::ValidateArtifactManifest(
 
     const FString FullManifest = FPaths::ConvertRelativePathToFull(ManifestPath);
     TSharedPtr<FJsonObject> Root;
-    if (!ReadJson(FullManifest, Root, OutDiagnostic))
+    if (!ReadJson(FullManifest, Root, OutDiagnostic)) return false;
+
+    FString Schema;
+    if (!Root->TryGetStringField(TEXT("schema"), Schema))
     {
+        OutDiagnostic = TEXT("bridge manifest is missing schema");
         return false;
     }
 
-    FString Schema;
-    FString DllFilename;
-    FString DllHash;
+    FString LibraryFilename;
+    FString LibraryHash;
     FString CatalogHash;
-    FString CatalogIdentity;
     FString SourceCommit;
     FString TargetTriple;
     FString CargoProfile;
-    FString HeaderFilename;
-    FString HeaderHash;
-    bool bSourceTreeClean = false;
-    if (!Root->TryGetStringField(TEXT("schema"), Schema) || Schema != ManifestSchema
-        || !Root->TryGetStringField(TEXT("dll_filename"), DllFilename)
-        || !Root->TryGetStringField(TEXT("dll_sha256"), DllHash)
-        || !Root->TryGetStringField(TEXT("catalog_sha256"), CatalogHash)
-        || !Root->TryGetStringField(TEXT("catalog_schema"), CatalogIdentity)
-        || !Root->TryGetStringField(TEXT("source_commit"), SourceCommit)
-        || !Root->TryGetStringField(TEXT("target_triple"), TargetTriple)
-        || !Root->TryGetStringField(TEXT("cargo_profile"), CargoProfile)
-        || !Root->TryGetStringField(TEXT("header_filename"), HeaderFilename)
-        || !Root->TryGetStringField(TEXT("header_sha256"), HeaderHash)
-        || !Root->TryGetBoolField(TEXT("source_tree_clean"), bSourceTreeClean))
-    {
-        OutDiagnostic = TEXT("manifest is missing a required typed field");
-        return false;
-    }
-
-    if (!bSourceTreeClean)
-    {
-        OutDiagnostic = TEXT("bridge artifact was built from a dirty source tree");
-        return false;
-    }
-    if (TargetTriple != TEXT("x86_64-pc-windows-msvc") || CargoProfile != TEXT("viewer"))
-    {
-        OutDiagnostic = TEXT("bridge artifact target/profile is not the accepted MSVC viewer build");
-        return false;
-    }
-    if (HeaderFilename != TEXT("ksa64_viewer_bridge.h") || !IsLowerHex(HeaderHash, 64))
-    {
-        OutDiagnostic = TEXT("bridge manifest header identity is malformed");
-        return false;
-    }
-    if (!IsLowerHex(SourceCommit, 40)
-        || !IsLowerHex(DllHash, 64)
-        || !IsLowerHex(CatalogHash, 64))
-    {
-        OutDiagnostic = TEXT("manifest contains malformed source or SHA-256 identity");
-        return false;
-    }
-    if (CatalogIdentity != CatalogSchema
-        || CatalogHash != AcceptedCatalogHash)
-    {
-        OutDiagnostic = TEXT("bridge manifest does not bind the accepted product catalog");
-        return false;
-    }
-    if (FPaths::GetCleanFilename(DllFilename) != DllFilename
-        || !DllFilename.EndsWith(TEXT(".dll"), ESearchCase::CaseSensitive))
-    {
-        OutDiagnostic = TEXT("manifest DLL filename is not a safe basename");
-        return false;
-    }
-
     uint32 AbiVersion = 0;
     uint32 BuildIdentity = 0;
-    uint32 CatalogCount = 0;
-    if (!ExactUint32(Root, TEXT("abi_version"), AbiVersion, OutDiagnostic)
-        || !ExactUint32(Root, TEXT("build_identity"), BuildIdentity, OutDiagnostic)
-        || !ExactUint32(Root, TEXT("catalog_count"), CatalogCount, OutDiagnostic))
+    uint32 CatalogCount = AcceptedCatalogCount;
+    bool bLegacy = Schema == LegacyManifestSchema;
+
+    if (bLegacy)
     {
+        FString CatalogIdentity;
+        FString HeaderFilename;
+        FString HeaderHash;
+        bool bSourceTreeClean = false;
+        if (!Root->TryGetStringField(TEXT("dll_filename"), LibraryFilename)
+            || !Root->TryGetStringField(TEXT("dll_sha256"), LibraryHash)
+            || !Root->TryGetStringField(TEXT("catalog_sha256"), CatalogHash)
+            || !Root->TryGetStringField(TEXT("catalog_schema"), CatalogIdentity)
+            || !Root->TryGetStringField(TEXT("source_commit"), SourceCommit)
+            || !Root->TryGetStringField(TEXT("target_triple"), TargetTriple)
+            || !Root->TryGetStringField(TEXT("cargo_profile"), CargoProfile)
+            || !Root->TryGetStringField(TEXT("header_filename"), HeaderFilename)
+            || !Root->TryGetStringField(TEXT("header_sha256"), HeaderHash)
+            || !Root->TryGetBoolField(TEXT("source_tree_clean"), bSourceTreeClean)
+            || !ExactUint32(Root, TEXT("abi_version"), AbiVersion, OutDiagnostic)
+            || !ExactUint32(Root, TEXT("build_identity"), BuildIdentity, OutDiagnostic)
+            || !ExactUint32(Root, TEXT("catalog_count"), CatalogCount, OutDiagnostic))
+        {
+            if (OutDiagnostic.IsEmpty()) OutDiagnostic = TEXT("legacy bridge manifest is missing a required typed field");
+            return false;
+        }
+        if (!bSourceTreeClean || CatalogIdentity != CatalogSchema
+            || HeaderFilename != TEXT("ksa64_viewer_bridge.h")
+            || !IsLowerHex(HeaderHash, 64))
+        {
+            OutDiagnostic = TEXT("legacy bridge manifest identity is malformed or unqualified");
+            return false;
+        }
+    }
+    else if (Schema == PortableManifestSchema)
+    {
+        FString OperatingSystem;
+        FString Architecture;
+        if (!Root->TryGetStringField(TEXT("library_file"), LibraryFilename)
+            || !Root->TryGetStringField(TEXT("sha256"), LibraryHash)
+            || !Root->TryGetStringField(TEXT("catalog_identity"), CatalogHash)
+            || !Root->TryGetStringField(TEXT("source_commit"), SourceCommit)
+            || !Root->TryGetStringField(TEXT("target_triple"), TargetTriple)
+            || !Root->TryGetStringField(TEXT("profile"), CargoProfile)
+            || !Root->TryGetStringField(TEXT("operating_system"), OperatingSystem)
+            || !Root->TryGetStringField(TEXT("architecture"), Architecture)
+            || !ExactUint32(Root, TEXT("abi_version"), AbiVersion, OutDiagnostic)
+            || !ExactUint32(Root, TEXT("build_identity"), BuildIdentity, OutDiagnostic))
+        {
+            if (OutDiagnostic.IsEmpty()) OutDiagnostic = TEXT("portable bridge manifest is missing a required typed field");
+            return false;
+        }
+        if (OperatingSystem != BridgeOperatingSystem() || Architecture != BridgeArchitecture())
+        {
+            OutDiagnostic = TEXT("portable bridge manifest does not match this Unreal platform");
+            return false;
+        }
+    }
+    else
+    {
+        OutDiagnostic = TEXT("bridge manifest schema is unsupported");
         return false;
     }
-    const bool bAcceptedBuildIdentity =
-        BuildIdentity == KSA64_VIEWER_BUILD_IDENTITY
-        || BuildIdentity == LegacyPhase12ABuildIdentity;
-    if (AbiVersion != KSA64_VIEWER_ABI_VERSION || !bAcceptedBuildIdentity)
+
+    if (TargetTriple != BridgeTargetTriple() || CargoProfile != TEXT("viewer"))
     {
-        OutDiagnostic = TEXT("bridge manifest ABI or build identity is incompatible");
+        OutDiagnostic = TEXT("bridge manifest target/profile does not match this Unreal platform");
         return false;
     }
-    if (CatalogCount != AcceptedCatalogCount)
+    const bool bValidSourceCommit = bLegacy
+        ? IsLowerHex(SourceCommit, 40)
+        : (IsLowerHex(SourceCommit, 12) || IsLowerHex(SourceCommit, 40));
+    if (!bValidSourceCommit || !IsLowerHex(LibraryHash, 64) || CatalogHash != AcceptedCatalogHash)
     {
-        OutDiagnostic = TEXT("bridge manifest catalog count is not the accepted 13");
+        OutDiagnostic = TEXT("bridge manifest source, SHA-256, or catalog identity is invalid");
+        return false;
+    }
+    if (!IsSafeLibraryFilename(LibraryFilename))
+    {
+        OutDiagnostic = TEXT("bridge manifest library filename is not a safe platform basename");
+        return false;
+    }
+
+    const bool bAcceptedBuildIdentity = bLegacy
+        ? (BuildIdentity == KSA64_VIEWER_BUILD_IDENTITY || BuildIdentity == LegacyPhase12ABuildIdentity)
+        : BuildIdentity == KSA64_VIEWER_BUILD_IDENTITY;
+    if (AbiVersion != KSA64_VIEWER_ABI_VERSION || !bAcceptedBuildIdentity || CatalogCount != AcceptedCatalogCount)
+    {
+        OutDiagnostic = TEXT("bridge manifest ABI, build, or catalog count is incompatible");
         return false;
     }
 
     const FString ExpectedFilename = FString::Printf(
-        TEXT("ksa64_viewer_bridge-%s-%08x.dll"),
-        *SourceCommit.Left(12),
-        BuildIdentity);
-    if (DllFilename != ExpectedFilename)
+        TEXT("%s%s-%08x%s"), *BridgeLibraryPrefix(), *SourceCommit.Left(12), BuildIdentity, *BridgeLibraryExtension());
+    if (LibraryFilename != ExpectedFilename)
     {
-        OutDiagnostic = TEXT("bridge DLL filename is not commit/build qualified");
+        OutDiagnostic = TEXT("bridge library filename is not commit/build/platform qualified");
         return false;
     }
 
     const TSharedPtr<FJsonObject>* Sizes = nullptr;
     if (!Root->TryGetObjectField(TEXT("structure_sizes"), Sizes)
-        || !Sizes
-        || !Sizes->IsValid()
+        || !Sizes || !Sizes->IsValid()
         || !ExactStructSize(*Sizes, TEXT("abi_info"), sizeof(Ksa64ViewerAbiInfo), OutDiagnostic)
         || !ExactStructSize(*Sizes, TEXT("span"), sizeof(Ksa64ViewerSpan), OutDiagnostic)
-        || !ExactStructSize(
-            *Sizes,
-            TEXT("owned_buffer"),
-            sizeof(Ksa64ViewerOwnedBuffer),
-            OutDiagnostic)
+        || !ExactStructSize(*Sizes, TEXT("owned_buffer"), sizeof(Ksa64ViewerOwnedBuffer), OutDiagnostic)
         || !ExactStructSize(*Sizes, TEXT("event"), sizeof(Ksa64ViewerEvent), OutDiagnostic)
-        || !ExactStructSize(
-            *Sizes,
-            TEXT("snapshot"),
-            sizeof(Ksa64ViewerSnapshot),
-            OutDiagnostic))
+        || !ExactStructSize(*Sizes, TEXT("snapshot"), sizeof(Ksa64ViewerSnapshot), OutDiagnostic))
     {
-        if (OutDiagnostic.IsEmpty())
-        {
-            OutDiagnostic = TEXT("manifest structure_sizes object is missing");
-        }
+        if (OutDiagnostic.IsEmpty()) OutDiagnostic = TEXT("bridge manifest structure_sizes object is missing");
         return false;
     }
 
-    const FString DllPath = FPaths::Combine(FPaths::GetPath(FullManifest), DllFilename);
+    const FString LibraryPath = FPaths::Combine(FPaths::GetPath(FullManifest), LibraryFilename);
     FString ActualHash;
-    if (!Sha256File(DllPath, ActualHash, OutDiagnostic))
+    if (!Sha256File(LibraryPath, ActualHash, OutDiagnostic)) return false;
+    if (ActualHash != LibraryHash)
     {
-        return false;
-    }
-    if (ActualHash != DllHash)
-    {
-        OutDiagnostic = TEXT("bridge DLL SHA-256 does not match its manifest");
+        OutDiagnostic = TEXT("bridge library SHA-256 does not match its manifest");
         return false;
     }
 
     OutValidation.ManifestPath = FullManifest;
-    OutValidation.DllPath = DllPath;
+    OutValidation.DllPath = LibraryPath; // Legacy field name retained for ABI/source compatibility.
     OutValidation.DllSha256 = ActualHash;
     OutValidation.CatalogSha256 = CatalogHash;
     OutValidation.SourceCommit = SourceCommit;
+    OutValidation.TargetTriple = TargetTriple;
     OutValidation.AbiVersion = AbiVersion;
     OutValidation.BuildIdentity = BuildIdentity;
     OutValidation.CatalogCount = CatalogCount;
     OutValidation.bSourceTreeClean = true;
     return true;
 }
-
 bool FKsa64BridgeModule::LoadBridge()
 {
     const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("Ksa64Bridge"));
@@ -621,11 +619,11 @@ bool FKsa64BridgeModule::LoadBridge()
         return false;
     }
 
-    const FString Binaries = FPaths::Combine(Plugin->GetBaseDir(), TEXT("Binaries"), TEXT("Win64"));
+    const FString Binaries = FPaths::Combine(Plugin->GetBaseDir(), TEXT("Binaries"), BridgePlatformDirectory());
     TArray<FString> Manifests;
     IFileManager::Get().FindFiles(
         Manifests,
-        *FPaths::Combine(Binaries, TEXT("ksa64_viewer_bridge-*.manifest.json")),
+        *FPaths::Combine(Binaries, TEXT("*.manifest.json")),
         true,
         false);
     Manifests.Sort();
@@ -651,7 +649,7 @@ bool FKsa64BridgeModule::LoadBridge()
     DllHandle = FPlatformProcess::GetDllHandle(*Validation.DllPath);
     if (DllHandle == nullptr)
     {
-        SetFault(TEXT("validated KSA64 bridge DLL could not be loaded"));
+        SetFault(TEXT("validated KSA64 bridge library could not be loaded"));
         return false;
     }
 
@@ -693,7 +691,7 @@ bool FKsa64BridgeModule::LoadBridge()
         || ((Info.feature_flags & KSA64_VIEWER_FEATURE_TRAJECTORY_SOURCES_V1) != 0 && !Api->HasTrajectorySourcesV1())
         || Info.catalog_count != AcceptedCatalogCount
         || FixedUtf8(Info.source_commit, sizeof(Info.source_commit)) != Validation.SourceCommit.Left(12)
-        || FixedUtf8(Info.target_triple, sizeof(Info.target_triple)) != TEXT("x86_64-pc-windows-msvc")
+        || FixedUtf8(Info.target_triple, sizeof(Info.target_triple)) != Validation.TargetTriple
         || HexBytes(Info.catalog_sha256, sizeof(Info.catalog_sha256)) != Validation.CatalogSha256)
     {
         SetFault(TEXT("loaded KSA64 bridge failed ABI/layout/identity negotiation"));
