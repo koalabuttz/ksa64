@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:wasm && npm run build:identity && tsc -b && vite build && node scripts/write-precache-manifest.mjs && node scripts/verify-precache.mjs",
+    "build": "npm run build:wasm && npm run build:identity && tsc -b && vite build && node scripts/write-precache-manifest.mjs && node scripts/verify-precache.mjs && node scripts/write-phase12c-dist-identity.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -7,9 +7,17 @@ import {
 export type RendererPreference = "auto" | "webgl2" | "2d";
 export type RendererBackend = "webgpu" | "webgl2" | "2d";
 
+export interface GlobalRendererOriginProbe {
+  readonly releaseEpoch: number;
+  readonly camera: GlobalSceneSnapshot["camera"];
+  readonly originKm: F64x3;
+  readonly points: readonly { readonly identity: string; readonly absoluteKm: F64x3 }[];
+}
+
 export interface GlobalMissionRenderer {
   readonly backend: RendererBackend;
   update(snapshot: GlobalSceneSnapshot): void;
+  originProbe(): GlobalRendererOriginProbe | undefined;
   dispose(): void;
 }
 
@@ -148,7 +156,7 @@ async function makeBabylonRenderer(
   backend: "webgpu" | "webgl2",
   initial: GlobalSceneSnapshot,
   options: GlobalMissionRendererOptions,
-): Promise<{ update(snapshot: GlobalSceneSnapshot): void; dispose(): void }> {
+): Promise<{ update(snapshot: GlobalSceneSnapshot): void; originProbe(): GlobalRendererOriginProbe; dispose(): void }> {
   // Babylon's tree-shaken material and line builders do not register shader programs
   // by themselves. Register the exact backend's stock shaders before creating any
   // material so a packaged Vite build cannot mistake HTML fallbacks for shader code.
@@ -365,7 +373,9 @@ async function makeBabylonRenderer(
     }
   };
 
+  let latestSnapshot = initial;
   const update = (snapshot: GlobalSceneSnapshot): void => {
+    latestSnapshot = snapshot;
     const earthPosition = vector([0, 0, 0], snapshot.originKm);
     const localDomain = snapshot.frame === "local-enu";
     earth.setEnabled(!localDomain);
@@ -475,6 +485,36 @@ async function makeBabylonRenderer(
     configureCamera(snapshot);
   };
 
+  const originProbe = (): GlobalRendererOriginProbe => {
+    const origin = latestSnapshot.originKm;
+    const points: { identity: string; absoluteKm: F64x3 }[] = [];
+    const reconstruct = (x: number, y: number, z: number): F64x3 => [
+      x * EQUATORIAL_RADIUS_KM + origin[0],
+      -z * EQUATORIAL_RADIUS_KM + origin[1],
+      y * EQUATORIAL_RADIUS_KM + origin[2],
+    ];
+    const addPosition = (identity: string, position: { readonly x: number; readonly y: number; readonly z: number }) => {
+      points.push({ identity, absoluteKm: reconstruct(position.x, position.y, position.z) });
+    };
+    if (earth.isEnabled()) addPosition("earth", earth.position);
+    for (const [identity, marker] of [...anchorMeshes].sort(([left], [right]) => left.localeCompare(right))) {
+      if (marker.isEnabled()) addPosition(`anchor:${identity}`, marker.position);
+    }
+    for (const [identity, marker] of [...sourceMeshes].sort(([left], [right]) => left.localeCompare(right))) {
+      if (marker.isEnabled()) addPosition(`source:${identity}`, marker.position);
+    }
+    for (const [identity, line] of [...pathMeshes].sort(([left], [right]) => left.localeCompare(right))) {
+      if (!line.isEnabled()) continue;
+      const positions = line.getVerticesData("position");
+      if (positions === null || positions.length < 6) continue;
+      const last = positions.length - 3;
+      points.push({ identity: `path:${identity}:first`, absoluteKm: reconstruct(
+        Number(positions[0]) + line.position.x, Number(positions[1]) + line.position.y, Number(positions[2]) + line.position.z) });
+      points.push({ identity: `path:${identity}:last`, absoluteKm: reconstruct(
+        Number(positions[last]) + line.position.x, Number(positions[last + 1]) + line.position.y, Number(positions[last + 2]) + line.position.z) });
+    }
+    return { releaseEpoch: latestSnapshot.releaseEpoch, camera: latestSnapshot.camera, originKm: origin, points };
+  };
   const resize = () => engine.resize();
   window.addEventListener("resize", resize);
   update(initial);
@@ -509,6 +549,7 @@ async function makeBabylonRenderer(
   engine.runRenderLoop(() => scene.render());
   return {
     update,
+    originProbe,
     dispose() {
       canvas.removeEventListener("pointerdown", manualCameraHandler);
       window.removeEventListener("resize", resize);
@@ -536,6 +577,7 @@ export async function startGlobalMissionRenderer(
     return {
       backend: "2d",
       update(next) { snapshot = next; paint(); },
+      originProbe() { return undefined; },
       dispose() {
         window.removeEventListener("resize", resize);
         container.replaceChildren();
@@ -574,6 +616,7 @@ export async function startGlobalMissionRenderer(
             renderer.update(snapshot);
           }
         },
+        originProbe() { return disposed ? undefined : renderer.originProbe(); },
         dispose() {
           canvas.removeEventListener("webglcontextlost", contextLost);
           if (!disposed) renderer.dispose();

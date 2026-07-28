@@ -13,9 +13,20 @@ interface BuildIdentity {
   readonly file_count: number;
 }
 
+interface DistributionIdentity {
+  readonly schema: "ksa64.phase12c.web-distribution-identity.v1";
+  readonly measurement: "production web/dist payload excluding its identity record";
+  readonly path: "web/dist";
+  readonly excluded: readonly ["phase12c-dist-identity.json"];
+  readonly bytes: number;
+  readonly file_count: number;
+  readonly tree_sha256: string;
+}
+
 interface SemanticRecord {
   readonly schema: string;
   readonly releaseEpoch: number;
+  readonly camera: string;
   readonly frame: string;
   readonly segment: string;
   readonly truthLabelVisible: boolean;
@@ -77,6 +88,40 @@ function semantic(): SemanticRecord | undefined {
   if (raw === undefined) return undefined;
   const value = JSON.parse(raw) as SemanticRecord;
   return value.schema === "ksa64.global-scene-semantic.v1" ? value : undefined;
+}
+
+function rendererOriginKm(): readonly [number, number, number] | undefined {
+  const raw = viewer()?.dataset.renderOriginKm;
+  if (raw === undefined) return undefined;
+  const value = JSON.parse(raw) as unknown;
+  return Array.isArray(value) && value.length === 3 && value.every((axis) => Number.isFinite(axis))
+    ? value as [number, number, number]
+    : undefined;
+}
+
+interface RendererOriginProbe {
+  readonly releaseEpoch: number;
+  readonly camera: string;
+  readonly originKm: readonly [number, number, number];
+  readonly points: readonly { readonly identity: string; readonly absoluteKm: readonly [number, number, number] }[];
+}
+
+function rendererOriginProbe(): RendererOriginProbe | undefined {
+  const raw = viewer()?.dataset.renderOriginProbe;
+  if (raw === undefined) return undefined;
+  const value = JSON.parse(raw) as RendererOriginProbe;
+  return Number.isSafeInteger(value.releaseEpoch) && typeof value.camera === "string" && value.camera.length > 0 &&
+    Array.isArray(value.originKm) && value.originKm.length === 3 &&
+    Array.isArray(value.points) && value.points.length >= 8 &&
+    value.points.every((point) => typeof point.identity === "string" && point.identity.length > 0 &&
+      Array.isArray(point.absoluteKm) && point.absoluteKm.length === 3 && point.absoluteKm.every(Number.isFinite))
+    ? value
+    : undefined;
+}
+
+function originIndependentSemantic(value: SemanticRecord): Record<string, unknown> {
+  const { camera: _camera, ...absoluteSemantic } = value as SemanticRecord & { readonly camera?: string };
+  return absoluteSemantic;
 }
 
 function activeBackend(): RendererBackend | undefined {
@@ -165,6 +210,20 @@ async function buildIdentity(): Promise<BuildIdentity> {
   if (value.schema !== "ksa64.phase12c.web-source-identity.v1" ||
       !/^[0-9a-f]{64}$/u.test(value.tree_sha256) || value.file_count < 1) {
     throw new Error("Phase 12C web build identity is invalid");
+  }
+  return value;
+}
+
+async function distributionIdentity(): Promise<DistributionIdentity> {
+  const response = await fetch("/phase12c-dist-identity.json", { cache: "no-store" });
+  if (!response.ok) throw new Error("Phase 12C production distribution identity is unavailable");
+  const value = await response.json() as DistributionIdentity;
+  if (value.schema !== "ksa64.phase12c.web-distribution-identity.v1" ||
+      value.measurement !== "production web/dist payload excluding its identity record" ||
+      value.path !== "web/dist" || value.excluded?.length !== 1 ||
+      value.excluded[0] !== "phase12c-dist-identity.json" || !Number.isSafeInteger(value.bytes) || value.bytes <= 0 ||
+      !Number.isSafeInteger(value.file_count) || value.file_count <= 1 || !/^[0-9a-f]{64}$/u.test(value.tree_sha256)) {
+    throw new Error("Phase 12C production distribution identity is invalid");
   }
   return value;
 }
@@ -290,6 +349,60 @@ async function rolePolicy() {
   };
 }
 
+async function captureOriginContinuity(releaseEpoch: number) {
+  await selectBackend("webgl2");
+  setRelease(releaseEpoch);
+  await waitForSemanticRelease(releaseEpoch);
+  setSelect("Global path detail", "1");
+  setSelect("Global camera", "earth-fixed");
+  const before = await waitFor(() => {
+    const state = semantic(); const origin = rendererOriginKm(); const probe = rendererOriginProbe();
+    return state?.camera === "earth-fixed" && state.releaseEpoch === releaseEpoch && origin !== undefined &&
+      probe?.camera === "earth-fixed" && probe.releaseEpoch === releaseEpoch && canonical(probe.originKm) === canonical(origin)
+      ? { semantic: state, origin, probe } : undefined;
+  }, 5_000, "Earth-centred origin probe");
+  setSelect("Global camera", "chase");
+  const after = await waitFor(() => {
+    const state = semantic(); const origin = rendererOriginKm(); const probe = rendererOriginProbe();
+    return state?.camera === "chase" && state.releaseEpoch === releaseEpoch && origin !== undefined &&
+      probe?.camera === "chase" && probe.releaseEpoch === releaseEpoch && canonical(probe.originKm) === canonical(origin)
+      ? { semantic: state, origin, probe } : undefined;
+  }, 5_000, "target-relative origin probe");
+  const beforeHash = await sha256(originIndependentSemantic(before.semantic));
+  const afterHash = await sha256(originIndependentSemantic(after.semantic));
+  const changed = before.origin.some((axis, index) => axis !== after.origin[index]);
+  const afterByIdentity = new Map(after.probe.points.map((point) => [point.identity, point.absoluteKm]));
+  let maximumDeltaKm = 0;
+  for (const point of before.probe.points) {
+    const comparison = afterByIdentity.get(point.identity);
+    if (comparison === undefined) throw new Error("renderer-origin probe lost " + point.identity);
+    const delta = Math.hypot(...point.absoluteKm.map((axis, index) => axis - comparison[index]!));
+    maximumDeltaKm = Math.max(maximumDeltaKm, delta);
+  }
+  const renderedContinuity = before.probe.points.length === after.probe.points.length && maximumDeltaKm <= 0.001;
+  const renderedHash = await sha256(before.probe.points);
+  setSelect("Global camera", "director");
+  setSelect("Global path detail", "auto");
+  await waitForSemanticRelease(releaseEpoch);
+  if (!changed || beforeHash !== afterHash || !renderedContinuity) {
+    throw new Error("renderer-origin change altered semantic or reconstructed rendered positions");
+  }
+  return {
+    release_epoch: releaseEpoch,
+    backend: "webgl2",
+    change_count: 1,
+    before_origin_km: before.origin,
+    after_origin_km: after.origin,
+    absolute_semantic_sha256: beforeHash,
+    semantic_unchanged: true,
+    rendered_sample_count: before.probe.points.length,
+    rendered_absolute_sha256: renderedHash,
+    max_reconstructed_delta_km: Number(maximumDeltaKm.toFixed(9)),
+    rendered_continuity: true,
+    semantic_continuity: true,
+  };
+}
+
 async function runNominal(options: { readonly fpsMilliseconds?: number } = {}) {
   await waitFor(() => {
     const element = viewer();
@@ -300,6 +413,7 @@ async function runNominal(options: { readonly fpsMilliseconds?: number } = {}) {
   setSelect("Global display motion", "exact");
   const duration = Math.max(500, Math.min(options.fpsMilliseconds ?? 1_500, 10_000));
   const build = await buildIdentity();
+  const distribution = await distributionIdentity();
   const role = await rolePolicy();
   const commonRelease = 8_124;
   const auto = await captureBackend("auto", duration, commonRelease);
@@ -322,6 +436,7 @@ async function runNominal(options: { readonly fpsMilliseconds?: number } = {}) {
   const afterSemantic = semantic();
   if (afterSemantic === undefined) throw new Error("semantic scene vanished during context-loss fallback");
   const afterHash = await sha256(afterSemantic);
+  const rendererOrigin = await captureOriginContinuity(commonRelease);
 
   const milestones = [];
   for (const releaseEpoch of REQUIRED_RELEASES) {
@@ -343,12 +458,14 @@ async function runNominal(options: { readonly fpsMilliseconds?: number } = {}) {
     schema: SCHEMA,
     experience: "nominal-global",
     build_identity: build,
+    distribution_identity: distribution,
     environment: {
       user_agent: navigator.userAgent,
       platform: navigator.platform,
       navigator_gpu_present: "gpu" in navigator,
       device_pixel_ratio: window.devicePixelRatio,
       viewport: { width: window.innerWidth, height: window.innerHeight },
+      production_build: import.meta.env.PROD,
     },
     backends: { auto, webgl2, two_d: twoD },
     context_loss: {
@@ -357,6 +474,7 @@ async function runNominal(options: { readonly fpsMilliseconds?: number } = {}) {
       before_semantic_sha256: beforeHash,
       after_semantic_sha256: afterHash,
     },
+    renderer_origin: rendererOrigin,
     milestones,
     role,
     invariance: {
@@ -495,6 +613,7 @@ async function runGuided() {
   await waitFor(() => viewer()?.dataset.quality === "global-display-v1" && semantic() !== undefined
     ? true : undefined, 120_000, "guided GlobalDisplayV1 scene");
   const build = await buildIdentity();
+  const distribution = await distributionIdentity();
   await performAcceptedGuidedTranscript();
   setSelect("Global display motion", "exact");
 
@@ -537,6 +656,8 @@ async function runGuided() {
     schema: ROLE_SCHEMA,
     experience: "gnss-loss",
     build_identity: build,
+    distribution_identity: distribution,
+    environment: { production_build: import.meta.env.PROD },
     role,
     accepted_action_count: state.action_count,
     accepted_action_receipts: acceptedActions,
@@ -565,6 +686,73 @@ async function captureRolePolicy() {
   };
 }
 
+function installEvidenceControls(api: Phase12cBrowserEvidenceApi): void {
+  const query = new URLSearchParams(window.location.search);
+  if (query.get("evidence-controls") !== "1" || document.getElementById("phase12c-evidence-controls") !== null) return;
+  const experience = query.get("experience");
+  const root = document.createElement("section");
+  root.id = "phase12c-evidence-controls";
+  root.setAttribute("aria-label", "Phase 12C evidence controls");
+  root.style.cssText = "position:fixed;z-index:10000;right:1rem;bottom:1rem;width:min(42rem,calc(100vw - 2rem));max-height:45vh;overflow:auto;padding:.75rem;background:#07131fee;color:#e8f4ff;border:1px solid #65b7d9;font:14px/1.4 monospace";
+  const title = document.createElement("strong");
+  title.textContent = "Phase 12C evidence controls";
+  const status = document.createElement("div");
+  status.id = "phase12c-evidence-status";
+  status.setAttribute("role", "status");
+  status.textContent = "Ready";
+  const output = document.createElement("textarea");
+  output.id = "phase12c-evidence-output";
+  output.readOnly = true;
+  output.rows = 8;
+  output.setAttribute("aria-label", "Canonical Phase 12C evidence JSON");
+  output.style.cssText = "box-sizing:border-box;width:100%;margin-top:.5rem;background:#02070c;color:#dff6ff";
+  const buttons = document.createElement("div");
+  buttons.style.cssText = "display:flex;gap:.5rem;margin:.5rem 0";
+  const controlButtons: { readonly kind: "nominal" | "guided"; readonly button: HTMLButtonElement }[] = [];
+  let running = false;
+  const isCompatible = (kind: "nominal" | "guided") =>
+    experience === (kind === "nominal" ? "nominal-global" : "gnss-loss");
+  const updateButtons = () => {
+    for (const entry of controlButtons) entry.button.disabled = running || !isCompatible(entry.kind);
+  };
+  const run = async (kind: "nominal" | "guided") => {
+    if (running || !isCompatible(kind)) return;
+    running = true;
+    updateButtons();
+    status.dataset.state = "running";
+    status.textContent = "Running " + kind + " evidence…";
+    output.value = "";
+    output.textContent = "";
+    try {
+      const value = kind === "nominal" ? await api.runNominal() : await api.runGuided();
+      const encoded = canonical(value);
+      if (encoded.length > 4 * 1024 * 1024) throw new Error("canonical evidence exceeds the 4 MiB DOM-control bound");
+      output.value = encoded;
+      output.textContent = encoded;
+      status.dataset.state = "complete";
+      status.textContent = "Complete · " + encoded.length.toLocaleString() + " UTF-16 code units";
+    } catch (error) {
+      status.dataset.state = "failed";
+      status.textContent = error instanceof Error ? "Failed · " + error.message : "Failed · unknown evidence error";
+    } finally {
+      running = false;
+      updateButtons();
+    }
+  };
+  for (const kind of ["nominal", "guided"] as const) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = kind === "nominal" ? "Run nominal" : "Run guided";
+    button.title = isCompatible(kind) ? "" : "Open the " + kind + " evidence experience to run this capture";
+    button.addEventListener("click", () => { void run(kind); });
+    controlButtons.push({ kind, button });
+    buttons.append(button);
+  }
+  updateButtons();
+  root.append(title, status, buttons, output);
+  document.body.append(root);
+}
+
 export function installPhase12cBrowserEvidenceHarness(): void {
   if (window.__KSA64_PHASE12C_EVIDENCE__ !== undefined) return;
   window.__KSA64_PHASE12C_EVIDENCE__ = {
@@ -585,4 +773,5 @@ export function installPhase12cBrowserEvidenceHarness(): void {
       canvas: canvasRecord(),
     }),
   };
+  installEvidenceControls(window.__KSA64_PHASE12C_EVIDENCE__!);
 }

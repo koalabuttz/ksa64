@@ -174,6 +174,26 @@ void UKsa64GlobalViewerSubsystem::Initialize(FSubsystemCollectionBase& Collectio
             FCommandLine::Get(),
             TEXT("Ksa64PackageAuditSha256="),
             GlobalEvidencePackageAuditSha256);
+        FParse::Value(
+            FCommandLine::Get(),
+            TEXT("Ksa64PackagedDirectoryBytes="),
+            GlobalEvidencePackagedDirectoryBytes);
+        FParse::Value(
+            FCommandLine::Get(),
+            TEXT("Ksa64PackagedDirectoryFiles="),
+            GlobalEvidencePackagedDirectoryFiles);
+        FParse::Value(
+            FCommandLine::Get(),
+            TEXT("Ksa64PackagedDirectoryTreeSha256="),
+            GlobalEvidencePackagedDirectoryTreeSha256);
+        FParse::Value(
+            FCommandLine::Get(),
+            TEXT("Ksa64PackagedDirectoryInventoryFile="),
+            GlobalEvidencePackagedDirectoryInventoryFile);
+        FParse::Value(
+            FCommandLine::Get(),
+            TEXT("Ksa64PackagedDirectoryInventorySha256="),
+            GlobalEvidencePackagedDirectoryInventorySha256);
         GlobalEvidenceDirectory = FPaths::Combine(
             FPaths::ProjectSavedDir(),
             TEXT("KSA64"),
@@ -1291,6 +1311,10 @@ void UKsa64GlobalViewerSubsystem::RefreshSemanticState(
 void UKsa64GlobalViewerSubsystem::UpdateDisplayOrigin(
     const FKsa64GlobalSceneSample& Sample)
 {
+    const int64 PreviousOrigin[3] = {
+        SemanticState.DisplayOriginQ12Km[0],
+        SemanticState.DisplayOriginQ12Km[1],
+        SemanticState.DisplayOriginQ12Km[2]};
     const bool bEarthCentred =
         SemanticState.ResolvedCamera == EKsa64GlobalCameraMode::EarthFixed
         || SemanticState.ResolvedCamera == EKsa64GlobalCameraMode::EarthInertial
@@ -1316,7 +1340,173 @@ void UKsa64GlobalViewerSubsystem::UpdateDisplayOrigin(
                 ? 0
                 : Ksa64GlobalViewerPolicy::QuantizeOriginQ12(Position[Axis]);
     }
+    if (bGlobalEvidenceMode
+        && (PreviousOrigin[0] != SemanticState.DisplayOriginQ12Km[0]
+            || PreviousOrigin[1] != SemanticState.DisplayOriginQ12Km[1]
+            || PreviousOrigin[2] != SemanticState.DisplayOriginQ12Km[2]))
+    {
+        ++GlobalEvidenceOriginChanges;
+    }
     ApplyOriginToStaticDomain();
+}
+
+uint64 UKsa64GlobalViewerSubsystem::ComputeOriginInvariant() const
+{
+    uint64 Hash = 1469598103934665603ull;
+    const auto Mix = [&Hash](uint64 Value)
+    {
+        for (uint32 Shift = 0; Shift < 64; Shift += 8)
+        {
+            Hash ^= (Value >> Shift) & 0xffull;
+            Hash *= 1099511628211ull;
+        }
+    };
+    Mix(CurrentSample.ReleaseEpoch);
+    Mix(CurrentSample.MissionTimeQ16);
+    Mix(CurrentSample.FrameIdentity);
+    Mix(CurrentSample.SegmentIdentity);
+    Mix(CurrentSample.EventMask);
+    Mix(CurrentSample.DiscontinuityMask);
+    Mix(CurrentSample.ContinuityIdentity);
+    for (const int32 Value : CurrentSample.PositionQ12Km) Mix(static_cast<uint32>(Value));
+    for (const int32 Value : CurrentSample.GroundPositionQ12Km) Mix(static_cast<uint32>(Value));
+    for (const int32 Value : CurrentSample.AttitudeQ30) Mix(static_cast<uint32>(Value));
+    Mix(SemanticState.SourceMask);
+    Mix(SemanticState.PlannedPathPoints);
+    Mix(SemanticState.OnboardPathPoints);
+    Mix(SemanticState.GroundPathPoints);
+    Mix(SemanticState.ObservedPathPoints);
+    Mix(SemanticState.TransitionMarkers);
+    Mix(CurrentGlobalProduct.Sequence);
+    Mix(CurrentGlobalProduct.ContinuityIdentity);
+    for (const FKsa64GlobalSourcePoseProduct& Source : CurrentGlobalProduct.Sources)
+    {
+        Mix(Source.Source);
+        Mix(Source.ActiveFrame);
+        Mix(Source.ValidityMask);
+        Mix(Source.ModelIdentity);
+        Mix(Source.EstimateIdentity);
+        Mix(Source.Checksum);
+        for (const int32 Value : Source.Active.PositionQ12Km) Mix(static_cast<uint32>(Value));
+        for (const int32 Value : Source.Ecef.PositionQ12Km) Mix(static_cast<uint32>(Value));
+        for (const int32 Value : Source.Gcrf.PositionQ12Km) Mix(static_cast<uint32>(Value));
+    }
+    for (const TArray<FKsa64GlobalPathPointProduct>& Path : GlobalPaths)
+    {
+        Mix(Path.Num());
+        for (const FKsa64GlobalPathPointProduct& Point : Path)
+        {
+            Mix(Point.ReleaseEpoch);
+            Mix(Point.MissionTimeQ16);
+            Mix(Point.Segment);
+            Mix(Point.EventMask);
+            Mix(Point.AnchorIdentity);
+            for (const int32 Value : Point.PositionQ12Km) Mix(static_cast<uint32>(Value));
+        }
+    }
+    return Hash;
+}
+
+void UKsa64GlobalViewerSubsystem::CollectRenderedAbsolutePoints(
+    TArray<FVector3d>& OutPoints) const
+{
+    const int64 Zero[3] = {0, 0, 0};
+    const FVector3d AbsoluteOrigin =
+        Ksa64GlobalViewerPolicy::Ksa64RightHandedToUnrealCentimetres(
+            SemanticState.DisplayOriginQ12Km,
+            Zero);
+    const auto AppendComponent = [&OutPoints, &AbsoluteOrigin](
+        const auto& Component)
+    {
+        if (Component.IsValid() && Component->IsVisible())
+        {
+            OutPoints.Add(FVector3d(Component->GetComponentLocation()) + AbsoluteOrigin);
+        }
+    };
+    AppendComponent(EarthMesh);
+    AppendComponent(LocatorMesh);
+    AppendComponent(GroundLocatorMesh);
+    AppendComponent(TruthLocatorMesh);
+    const auto AppendLines = [&OutPoints, &AbsoluteOrigin](
+        const TWeakObjectPtr<UKsa64GlobalLineComponent>& Lines,
+        int32 MaximumSamples)
+    {
+        if (!Lines.IsValid() || !Lines->IsVisible())
+        {
+            return;
+        }
+        TArray<FVector3d> Samples;
+        Lines->AppendWorldSamplePoints(Samples, MaximumSamples);
+        for (const FVector3d& Sample : Samples)
+        {
+            OutPoints.Add(Sample + AbsoluteOrigin);
+        }
+    };
+    AppendLines(PlannedPathLines, 16);
+    AppendLines(OnboardPathLines, 16);
+    AppendLines(GroundPathLines, 16);
+    AppendLines(ObservedPathLines, 16);
+    AppendLines(TransitionMarkerLines, 32);
+}
+
+bool UKsa64GlobalViewerSubsystem::ValidateGlobalEvidenceOriginContinuity()
+{
+    const EKsa64GlobalCameraMode Requested = SemanticState.RequestedCamera;
+    const EKsa64GlobalCameraMode Resolved = SemanticState.ResolvedCamera;
+    const bool bSuspended = SemanticState.bAutoDirectorSuspended;
+    const uint64 BeforeInvariant = ComputeOriginInvariant();
+
+    SemanticState.ResolvedCamera = EKsa64GlobalCameraMode::EarthFixed;
+    UpdateDisplayOrigin(CurrentSample);
+    UpdateVehicle(CurrentSample);
+    UpdatePaths(CurrentSample.FrameIdentity);
+    const int64 EarthOrigin[3] = {
+        SemanticState.DisplayOriginQ12Km[0],
+        SemanticState.DisplayOriginQ12Km[1],
+        SemanticState.DisplayOriginQ12Km[2]};
+    TArray<FVector3d> EarthPoints;
+    CollectRenderedAbsolutePoints(EarthPoints);
+
+    SemanticState.ResolvedCamera = EKsa64GlobalCameraMode::VehicleChase;
+    UpdateDisplayOrigin(CurrentSample);
+    UpdateVehicle(CurrentSample);
+    UpdatePaths(CurrentSample.FrameIdentity);
+    const bool bChanged = EarthOrigin[0] != SemanticState.DisplayOriginQ12Km[0]
+        || EarthOrigin[1] != SemanticState.DisplayOriginQ12Km[1]
+        || EarthOrigin[2] != SemanticState.DisplayOriginQ12Km[2];
+    TArray<FVector3d> ChasePoints;
+    CollectRenderedAbsolutePoints(ChasePoints);
+
+    const bool bSemanticUnchanged = BeforeInvariant == ComputeOriginInvariant();
+    double MaximumDeltaCm = 0.0;
+    bool bRenderedContinuous = EarthPoints.Num() >= 8
+        && EarthPoints.Num() == ChasePoints.Num();
+    if (bRenderedContinuous)
+    {
+        for (int32 Index = 0; Index < EarthPoints.Num(); ++Index)
+        {
+            MaximumDeltaCm = FMath::Max(
+                MaximumDeltaCm,
+                FVector3d::Distance(EarthPoints[Index], ChasePoints[Index]));
+        }
+        bRenderedContinuous = MaximumDeltaCm <= 100.0;
+    }
+
+    ++GlobalEvidenceOriginContinuityChecks;
+    GlobalEvidenceOriginRenderedSamples = EarthPoints.Num();
+    GlobalEvidenceOriginMaximumDeltaCm = MaximumDeltaCm;
+    bGlobalEvidenceOriginSemanticUnchanged &= bSemanticUnchanged;
+    bGlobalEvidenceOriginRenderedContinuity &= bRenderedContinuous;
+    bGlobalEvidenceOriginContinuityValid &=
+        bChanged && bSemanticUnchanged && bRenderedContinuous;
+
+    SemanticState.RequestedCamera = Requested;
+    SemanticState.ResolvedCamera = Resolved;
+    SemanticState.bAutoDirectorSuspended = bSuspended;
+    UpdateDisplayOrigin(CurrentSample);
+    UpdateVehicle(CurrentSample);
+    UpdatePaths(CurrentSample.FrameIdentity);
+    return bChanged && bSemanticUnchanged && bRenderedContinuous;
 }
 
 void UKsa64GlobalViewerSubsystem::ApplyOriginToStaticDomain()
@@ -1966,6 +2156,12 @@ bool UKsa64GlobalViewerSubsystem::PrepareGlobalEvidence()
         || !FPaths::IsRelative(GlobalEvidenceExecutableRelativePath)
         || GlobalEvidenceExecutableRelativePath.Contains(TEXT(".."))
         || GlobalEvidenceExecutableBytes == 0
+        || GlobalEvidencePackagedDirectoryBytes <= GlobalEvidenceExecutableBytes
+        || GlobalEvidencePackagedDirectoryFiles < 2
+        || !IsQualifiedHexIdentity(GlobalEvidencePackagedDirectoryTreeSha256, 64)
+        || GlobalEvidencePackagedDirectoryInventoryFile.IsEmpty()
+        || FPaths::IsRelative(GlobalEvidencePackagedDirectoryInventoryFile) == false
+        || !IsQualifiedHexIdentity(GlobalEvidencePackagedDirectoryInventorySha256, 64)
         || !IsQualifiedHexIdentity(GlobalEvidenceExecutableSha256, 64)
         || !IsQualifiedHexIdentity(GlobalEvidencePackageAuditSha256, 64))
     {
@@ -2113,6 +2309,14 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceSemanticAndRequestScreensho
             Reason))
     {
         FailGlobalEvidence(Reason);
+        return false;
+    }
+
+    if (Milestone.ReleaseEpoch == 8'124
+        && GlobalEvidenceOriginContinuityChecks == 0
+        && !ValidateGlobalEvidenceOriginContinuity())
+    {
+        FailGlobalEvidence(TEXT("renderer-origin change altered absolute semantic state"));
         return false;
     }
 
@@ -2418,6 +2622,19 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceManifest(
         static_cast<int64>(GlobalEvidenceExecutableBytes));
     Writer->WriteValue(TEXT("sha256"), GlobalEvidenceExecutableSha256.ToLower());
     Writer->WriteObjectEnd();
+    Writer->WriteObjectStart(TEXT("executable"));
+    Writer->WriteValue(TEXT("path"), GlobalEvidenceExecutableRelativePath.Replace(TEXT("\\"), TEXT("/")));
+    Writer->WriteValue(TEXT("bytes"), static_cast<int64>(GlobalEvidenceExecutableBytes));
+    Writer->WriteValue(TEXT("sha256"), GlobalEvidenceExecutableSha256.ToLower());
+    Writer->WriteObjectEnd();
+    Writer->WriteObjectStart(TEXT("packaged_directory"));
+    Writer->WriteValue(TEXT("measurement"), TEXT("immutable packaged application payload excluding Saved"));
+    Writer->WriteValue(TEXT("bytes"), static_cast<int64>(GlobalEvidencePackagedDirectoryBytes));
+    Writer->WriteValue(TEXT("file_count"), GlobalEvidencePackagedDirectoryFiles);
+    Writer->WriteValue(TEXT("tree_sha256"), GlobalEvidencePackagedDirectoryTreeSha256.ToLower());
+    Writer->WriteValue(TEXT("inventory_file"), GlobalEvidencePackagedDirectoryInventoryFile);
+    Writer->WriteValue(TEXT("inventory_sha256"), GlobalEvidencePackagedDirectoryInventorySha256.ToLower());
+    Writer->WriteObjectEnd();
     Writer->WriteObjectStart(TEXT("package_binding"));
     Writer->WriteValue(TEXT("package_audit_sha256"), GlobalEvidencePackageAuditSha256.ToLower());
     Writer->WriteValue(TEXT("binding_method"), TEXT("source-qualified-launcher-verification"));
@@ -2512,8 +2729,20 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceManifest(
         Writer->WriteValue(TEXT("gnss_reacquired"), false);
         Writer->WriteObjectEnd();
     }
+    Writer->WriteObjectStart(TEXT("renderer_origin"));
+    Writer->WriteValue(TEXT("change_count"), GlobalEvidenceOriginChanges);
+    Writer->WriteValue(TEXT("continuity_checks"), GlobalEvidenceOriginContinuityChecks);
+    Writer->WriteValue(TEXT("semantic_unchanged"), bGlobalEvidenceOriginSemanticUnchanged);
+    Writer->WriteValue(TEXT("rendered_sample_count"), GlobalEvidenceOriginRenderedSamples);
+    Writer->WriteValue(TEXT("max_reconstructed_delta_cm"), GlobalEvidenceOriginMaximumDeltaCm);
+    Writer->WriteValue(TEXT("rendered_continuity"), bGlobalEvidenceOriginRenderedContinuity);
+    Writer->WriteValue(TEXT("semantic_continuity"), bGlobalEvidenceOriginContinuityValid);
+    Writer->WriteObjectEnd();
     const bool bPerformancePassed =
-        GlobalEvidenceServiceNanoseconds.Num() == GlobalEvidenceMeasuredFrameCount
+        GlobalEvidenceOriginChanges > 0
+        && GlobalEvidenceOriginContinuityChecks == 1
+        && bGlobalEvidenceOriginContinuityValid
+        && GlobalEvidenceServiceNanoseconds.Num() == GlobalEvidenceMeasuredFrameCount
         && GlobalEvidenceMeasuredFrames == GlobalEvidenceMeasuredFrameCount
         && GlobalEvidencePerformanceEndRelease
             == GlobalEvidencePerformanceStartRelease

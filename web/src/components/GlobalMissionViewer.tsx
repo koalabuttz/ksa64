@@ -14,6 +14,7 @@ import { buildGlobalSceneSemanticSnapshot, buildGlobalSceneSnapshot, shouldSnapE
 import {
   startGlobalMissionRenderer,
   type GlobalMissionRenderer,
+  type GlobalRendererOriginProbe,
   type RendererBackend,
   type RendererPreference,
 } from "../render/globalMissionScene";
@@ -102,6 +103,7 @@ export function GlobalMissionViewer({
   const [interpolationAlpha, setInterpolationAlpha] = useState(1);
   const [motionMode, setMotionMode] = useState<GlobalDisplayMotionMode>("smooth");
   const [pathDetail, setPathDetail] = useState<GlobalDisplayPathDetail>("auto");
+  const [originProbe, setOriginProbe] = useState<GlobalRendererOriginProbe | undefined>(undefined);
 
   useEffect(() => {
     if (!replay || playing || selectedRelease >= latestRelease) setSelectedRelease(latestRelease);
@@ -153,11 +155,13 @@ export function GlobalMissionViewer({
       }
       renderer.current = value;
       setBackend(value.backend);
+      setOriginProbe(value.originProbe());
     });
     return () => {
       active = false;
       renderer.current?.dispose();
       renderer.current = undefined;
+      setOriginProbe(undefined);
     };
     // The renderer owns mutable scene state; snapshots update through update().
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,6 +169,7 @@ export function GlobalMissionViewer({
 
   useEffect(() => {
     renderer.current?.update(sceneSnapshot);
+    setOriginProbe(renderer.current?.originProbe());
   }, [sceneSnapshot]);
 
   useEffect(() => {
@@ -244,6 +249,8 @@ export function GlobalMissionViewer({
       data-semantic-release={sceneSnapshot.releaseEpoch}
       data-semantic-frame={sceneSnapshot.frame}
       data-semantic-camera={sceneSnapshot.camera}
+      data-render-origin-km={JSON.stringify(sceneSnapshot.originKm)}
+      data-render-origin-probe={originProbe === undefined ? undefined : JSON.stringify(originProbe)}
       data-quality={sceneSnapshot.quality}
       data-semantic-scene={JSON.stringify(semanticSnapshot)}
     >

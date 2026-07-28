@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalJson, computePhase12cWebSourceIdentity } from "./phase12c-source-identity.mjs";
@@ -41,6 +41,39 @@ function portablePath(path) {
     : path;
 }
 
+function directoryRecord(directory, excluded = new Set()) {
+  const root = resolve(directory);
+  const files = [];
+  const collect = (current) => {
+    const entries = readdirSync(current, { withFileTypes: true })
+      .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+    for (const entry of entries) {
+      const absolute = resolve(current, entry.name);
+      if (entry.isDirectory()) collect(absolute);
+      else if (entry.isFile()) files.push(absolute);
+    }
+  };
+  collect(root);
+  files.sort((left, right) => {
+    const leftPath = relative(root, left).split(sep).join("/");
+    const rightPath = relative(root, right).split(sep).join("/");
+    return leftPath < rightPath ? -1 : leftPath > rightPath ? 1 : 0;
+  });
+  const aggregate = createHash("sha256");
+  let bytes = 0;
+  let fileCount = 0;
+  for (const absolute of files) {
+    const portable = relative(root, absolute).split(sep).join("/");
+    if (excluded.has(portable)) continue;
+    const content = readFileSync(absolute);
+    bytes += content.byteLength;
+    fileCount += 1;
+    aggregate.update(portable + "\0" + content.byteLength + "\0");
+    aggregate.update(content);
+  }
+  return { path: portablePath(root), bytes, file_count: fileCount, tree_sha256: aggregate.digest("hex") };
+}
+
 function screenshotRecord(specification) {
   const separator = specification.indexOf("=");
   requireValue(separator > 0, "--screenshot must use label=path");
@@ -65,6 +98,8 @@ requireValue(nominal.value.schema === "ksa64.phase12c.browser-producer.v1", "nom
 requireValue(guided.value.schema === "ksa64.phase12c.browser-role-producer.v1", "guided producer schema mismatch");
 requireValue(nominal.value.experience === "nominal-global", "nominal producer experience mismatch");
 requireValue(guided.value.experience === "gnss-loss", "guided producer experience mismatch");
+requireValue(nominal.value.environment?.production_build === true && guided.value.environment?.production_build === true,
+  "browser evidence must be captured from the production Vite build");
 
 const built = nominal.value.build_identity;
 requireValue(canonicalJson(built) === canonicalJson(guided.value.build_identity),
@@ -80,6 +115,18 @@ requireValue(built.dirty === false && current.dirty === false,
 const authorityWasm = built.files?.find((entry) => entry.path === "web/public/wasm/ksa64-session.wasm");
 requireValue(authorityWasm !== undefined && authorityWasm.bytes > 0 && /^[0-9a-f]{64}$/.test(authorityWasm.sha256),
   "rendered build identity does not bind public/wasm/ksa64-session.wasm");
+const distributionIdentityPath = resolve(repositoryRoot, "web/dist/phase12c-dist-identity.json");
+const distributionIdentity = JSON.parse(readFileSync(distributionIdentityPath, "utf8"));
+const productionDist = directoryRecord(resolve(repositoryRoot, "web/dist"), new Set(["phase12c-dist-identity.json"]));
+requireValue(distributionIdentity.schema === "ksa64.phase12c.web-distribution-identity.v1" &&
+  distributionIdentity.measurement === "production web/dist payload excluding its identity record" &&
+  distributionIdentity.path === "web/dist" && canonicalJson(distributionIdentity.excluded) === canonicalJson(["phase12c-dist-identity.json"]) &&
+  distributionIdentity.bytes === productionDist.bytes && distributionIdentity.file_count === productionDist.file_count &&
+  distributionIdentity.tree_sha256 === productionDist.tree_sha256 && productionDist.bytes > authorityWasm.bytes &&
+  productionDist.file_count > 1, "web production distribution identity does not match the captured dist tree");
+requireValue(canonicalJson(nominal.value.distribution_identity) === canonicalJson(distributionIdentity) &&
+  canonicalJson(guided.value.distribution_identity) === canonicalJson(distributionIdentity),
+  "raw browser producers were not served from the captured production distribution");
 
 const requiredMilestones = [29, 1920, 3579, 8124, 12669, 15255, 15257, 20929, 22014];
 requireValue(canonicalJson(nominal.value.milestones.map((entry) => entry.release_epoch)) ===
@@ -110,6 +157,18 @@ requireValue(nominal.value.context_loss.before_backend === "webgl2" &&
   nominal.value.context_loss.after_backend === "2d", "WebGL context loss did not visibly fall back to 2-D");
 requireValue(nominal.value.context_loss.before_semantic_sha256 ===
   nominal.value.context_loss.after_semantic_sha256, "context loss changed the semantic scene");
+requireValue(nominal.value.renderer_origin?.change_count === 1 &&
+  nominal.value.renderer_origin.semantic_unchanged === true &&
+  nominal.value.renderer_origin.rendered_continuity === true &&
+  nominal.value.renderer_origin.semantic_continuity === true &&
+  nominal.value.renderer_origin.rendered_sample_count >= 8 &&
+  nominal.value.renderer_origin.max_reconstructed_delta_km >= 0 &&
+  nominal.value.renderer_origin.max_reconstructed_delta_km <= 0.001 &&
+  /^[0-9a-f]{64}$/.test(nominal.value.renderer_origin.absolute_semantic_sha256) &&
+  /^[0-9a-f]{64}$/.test(nominal.value.renderer_origin.rendered_absolute_sha256) &&
+  canonicalJson(nominal.value.renderer_origin.before_origin_km) !==
+    canonicalJson(nominal.value.renderer_origin.after_origin_km),
+  "renderer-origin semantic/rendered continuity evidence is absent or invalid");
 requireValue(nominal.value.invariance.semantic_sha256.every((value) =>
   value === nominal.value.invariance.semantic_sha256[0]), "renderer selection changed the semantic scene");
 requireValue(nominal.value.invariance.authority_sha256.every((value) =>
@@ -179,6 +238,7 @@ const manifest = {
     guided_raw: { path: portablePath(resolve(guidedPath)), bytes: guided.bytes.byteLength, sha256: sha256(guided.bytes) },
     screenshots: screenshotRecords,
   },
+  production_dist: distributionIdentity,
   source: {
     commit: built.commit,
     dirty: built.dirty,
@@ -203,6 +263,7 @@ const manifest = {
     },
   },
   context_loss: nominal.value.context_loss,
+  renderer_origin: nominal.value.renderer_origin,
   semantic_milestones: nominal.value.milestones,
   role_filtering: { sim_director: nominal.value.role, guided_operator: guided.value.role },
   operational_milestones: guided.value.operational_milestones,

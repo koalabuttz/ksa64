@@ -170,6 +170,9 @@ private:
         const FKsa64GlobalSceneSample& Sample,
         const UKsa64LiveMissionSubsystem& Operations);
     void UpdateDisplayOrigin(const FKsa64GlobalSceneSample& Sample);
+    uint64 ComputeOriginInvariant() const;
+    void CollectRenderedAbsolutePoints(TArray<FVector3d>& OutPoints) const;
+    bool ValidateGlobalEvidenceOriginContinuity();
     void UpdateScene(const FKsa64GlobalSceneSample& Sample);
     void UpdateEarthAndLocalDomain(uint32 FrameIdentity);
     void UpdateVehicle(const FKsa64GlobalSceneSample& Sample);
@@ -291,6 +294,18 @@ private:
     FString GlobalEvidenceExecutableRelativePath;
     uint64 GlobalEvidenceExecutableBytes = 0;
     FString GlobalEvidenceExecutableSha256;
+    uint64 GlobalEvidencePackagedDirectoryBytes = 0;
+    uint32 GlobalEvidencePackagedDirectoryFiles = 0;
+    FString GlobalEvidencePackagedDirectoryTreeSha256;
+    FString GlobalEvidencePackagedDirectoryInventoryFile;
+    FString GlobalEvidencePackagedDirectoryInventorySha256;
+    uint32 GlobalEvidenceOriginChanges = 0;
+    uint32 GlobalEvidenceOriginContinuityChecks = 0;
+    uint32 GlobalEvidenceOriginRenderedSamples = 0;
+    double GlobalEvidenceOriginMaximumDeltaCm = 0.0;
+    bool bGlobalEvidenceOriginSemanticUnchanged = true;
+    bool bGlobalEvidenceOriginRenderedContinuity = true;
+    bool bGlobalEvidenceOriginContinuityValid = true;
     FString GlobalEvidencePackageAuditSha256;
     FString GlobalEvidenceFailureReason;
     FString GlobalEvidenceDirectory;

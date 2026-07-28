@@ -204,13 +204,29 @@ function Assert-BrowserEvidence([string]$Path) {
         throw "-RunBrowserEvidence requires -BrowserEvidenceManifest"
     }
     $resolved = (Resolve-Path -LiteralPath $Path).Path
+    $head = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+    Check
     $record = Get-Content -LiteralPath $resolved -Raw | ConvertFrom-Json
     if (
+        $record.source.commit -ne $head -or
         $record.schema -ne "ksa64.phase12c.browser-evidence.v1" -or
         -not $record.pass -or
         $record.source.dirty -or
         $record.source.commit -notmatch '^[0-9a-f]{40}$' -or
         $record.source.tree_sha256 -notmatch '^[0-9a-f]{64}$' -or
+        $record.production_dist.schema -ne "ksa64.phase12c.web-distribution-identity.v1" -or
+        $record.production_dist.measurement -ne "production web/dist payload excluding its identity record" -or
+        @($record.production_dist.excluded).Count -ne 1 -or
+        $record.production_dist.excluded[0] -ne "phase12c-dist-identity.json" -or
+        [int64]$record.production_dist.bytes -le 0 -or
+        [int]$record.production_dist.file_count -le 1 -or
+        $record.production_dist.tree_sha256 -notmatch '^[0-9a-f]{64}$' -or
+        $record.renderer_origin.change_count -ne 1 -or
+        [int]$record.renderer_origin.rendered_sample_count -lt 8 -or
+        [double]$record.renderer_origin.max_reconstructed_delta_km -lt 0.0 -or
+        [double]$record.renderer_origin.max_reconstructed_delta_km -gt 0.001 -or
+        -not $record.renderer_origin.rendered_continuity -or
+        -not $record.renderer_origin.semantic_continuity -or
         @($record.semantic_milestones).Count -ne 9 -or
         $record.backends.webgpu.status -ne "rendered" -or
         $record.backends.webgl2.status -ne "rendered" -or
@@ -234,7 +250,20 @@ function Assert-RuntimeEvidence([string]$Path, [string]$ExpectedSourceCommit) {
         $record.inputs.native.sha256 -notmatch '^[0-9a-f]{64}$' -or
         $record.inputs.unreal.sha256 -notmatch '^[0-9a-f]{64}$' -or
         $record.inputs.unreal.package.sha256 -notmatch '^[0-9a-f]{64}$' -or
+        $record.inputs.unreal.executable.sha256 -notmatch '^[0-9a-f]{64}$' -or
+        [int64]$record.inputs.unreal.packaged_directory.bytes -le [int64]$record.inputs.unreal.executable.bytes -or
+        [int]$record.inputs.unreal.packaged_directory.file_count -le 1 -or
+        $record.inputs.unreal.packaged_directory.tree_sha256 -notmatch '^[0-9a-f]{64}$' -or
+        $record.inputs.unreal.packaged_directory.inventory.sha256 -notmatch '^[0-9a-f]{64}$' -or
         $record.inputs.browser.sha256 -notmatch '^[0-9a-f]{64}$' -or
+        [int64]$record.inputs.browser.production_dist.bytes -le 0 -or
+        [int64]$record.storage.nominal_replay_display.nominal_replay_bytes -le 0 -or
+        [int64]$record.storage.nominal_replay_display.exact_active_window_path.serialized_bytes -le 0 -or
+        -not $record.renderer_origins.semantic_continuity -or
+        [int]$record.renderer_origins.unreal.rendered_sample_count -lt 8 -or
+        -not $record.renderer_origins.unreal.rendered_continuity -or
+        [int]$record.renderer_origins.browser.rendered_sample_count -lt 8 -or
+        -not $record.renderer_origins.browser.rendered_continuity -or
         @($actualReleases).Count -ne 9 -or
         (Compare-Object $expectedReleases $actualReleases -SyncWindow 0).Count -ne 0 -or
         $record.catalog_sha256 -ne $catalogSha256 -or
@@ -407,10 +436,21 @@ try {
     if ($RunPackage) {
         Gate "explicit Unreal package and packaged bridge smoke" {
             Assert-NoUnrealProcess
-            & phase12/package.ps1 -RepositoryRoot $projectRoot `
+            & phase12/package-phase12c-global-viewer.ps1 -RepositoryRoot $projectRoot `
                 -UnrealRoot $UnrealRoot `
                 -DerivedDataCache $DerivedDataCache `
                 -ArchiveDirectory $PackageArchive
+            Check
+            $packagedEvidence = Join-Path $PackageArchive "Windows\Ksa64MissionFoundry\Saved\KSA64\GlobalViewerEvidence\phase12c-global-viewer-evidence.json"
+            if (-not (Test-Path -LiteralPath $packagedEvidence -PathType Leaf)) {
+                throw "specialized Phase 12C package did not produce its bound Unreal evidence manifest"
+            }
+            if ([string]::IsNullOrWhiteSpace($script:UnrealEvidenceManifest)) {
+                $script:UnrealEvidenceManifest = $packagedEvidence
+            }
+            elseif ([IO.Path]::GetFullPath($script:UnrealEvidenceManifest) -ne [IO.Path]::GetFullPath($packagedEvidence)) {
+                throw "-UnrealEvidenceManifest must name the evidence produced under -PackageArchive when -RunPackage is selected"
+            }
             Assert-NoUnrealProcess
         }
     }

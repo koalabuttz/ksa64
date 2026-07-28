@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -56,7 +56,63 @@ function artifact(path) {
   required(bytes.byteLength > 0, "artifact is empty: " + absolute);
   return { path: absolute.replaceAll("\\", "/"), bytes: bytes.byteLength, sha256: sha256(bytes) };
 }
+function directoryArtifact(path, excluded = new Set()) {
+  const root = resolve(path); const files = [];
+  const collect = (current) => {
+    for (const entry of readdirSync(current, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name, "en"))) {
+      const absolute = resolve(current, entry.name);
+      if (entry.isDirectory()) collect(absolute); else if (entry.isFile()) files.push(absolute);
+    }
+  };
+  collect(root); files.sort((left, right) => {
+    const leftPath = relative(root, left).split(sep).join("/"); const rightPath = relative(root, right).split(sep).join("/");
+    return leftPath < rightPath ? -1 : leftPath > rightPath ? 1 : 0;
+  });
+  const aggregate = createHash("sha256"); let bytes = 0; let fileCount = 0;
+  for (const absolute of files) {
+    const portable = relative(root, absolute).split(sep).join("/"); if (excluded.has(portable)) continue;
+    const content = readFileSync(absolute); bytes += content.byteLength; fileCount += 1;
+    aggregate.update(portable + "\0" + content.byteLength + "\0"); aggregate.update(content);
+  }
+  return { path: root.replaceAll("\\", "/"), bytes, file_count: fileCount, tree_sha256: aggregate.digest("hex") };
+}
 function resolveArtifact(owner, value) { return isAbsolute(value) ? resolve(value) : resolve(dirname(owner), value); }
+function verifyPackageInventory(owner, record, sourceCommit) {
+  required(record?.measurement === "immutable packaged application payload excluding Saved" &&
+    Number.isSafeInteger(record.bytes) && record.bytes > 0 &&
+    Number.isSafeInteger(record.file_count) && record.file_count > 1 &&
+    /^[0-9a-f]{64}$/.test(record.tree_sha256) && typeof record.inventory_file === "string" &&
+    /^[0-9a-f]{64}$/.test(record.inventory_sha256), "Unreal packaged-directory inventory record is malformed");
+  const inventoryPath = resolveArtifact(owner, record.inventory_file);
+  const inventoryArtifact = artifact(inventoryPath);
+  required(inventoryArtifact.sha256 === record.inventory_sha256, "Unreal packaged-directory inventory hash mismatch");
+  const inventory = readJson(inventoryPath, "ksa64.phase12c.packaged-directory-inventory.v1").value;
+  required(inventory.source_commit === sourceCommit && inventory.measurement === record.measurement &&
+    inventory.root === "Windows/Ksa64MissionFoundry" && !isAbsolute(inventory.root) &&
+    !inventory.root.split("/").includes("..") && inventory.root.includes("\\") === false &&
+    canonical(inventory.excluded) === canonical(["Saved"]) &&
+    inventory.bytes === record.bytes && inventory.file_count === record.file_count &&
+    inventory.tree_sha256 === record.tree_sha256 && Array.isArray(inventory.files) && inventory.files.length === record.file_count,
+  "Unreal packaged-directory inventory metadata mismatch");
+  const root = resolve(dirname(inventoryPath), ...inventory.root.split("/"));
+  const aggregate = createHash("sha256"); const seen = new Set(); let bytes = 0; let previous = "";
+  for (const entry of inventory.files) {
+    required(typeof entry.path === "string" && entry.path.length > 0 && !isAbsolute(entry.path) &&
+      !entry.path.split("/").includes("..") && entry.path.includes("\\") === false &&
+      !entry.path.startsWith("Saved/") && entry.path !== "Saved" &&
+      Number.isSafeInteger(entry.bytes) && entry.bytes >= 0 && /^[0-9a-f]{64}$/.test(entry.sha256) &&
+      !seen.has(entry.path) && (previous === "" || previous < entry.path),
+    "Unreal packaged-directory inventory file record is malformed or noncanonical");
+    seen.add(entry.path); previous = entry.path;
+    const absolute = resolve(root, ...entry.path.split("/")); const content = readFileSync(absolute);
+    required(content.byteLength === entry.bytes && sha256(content) === entry.sha256,
+      "Unreal packaged file mismatch: " + entry.path);
+    bytes += entry.bytes; aggregate.update(entry.path + "\0" + entry.bytes + "\0" + entry.sha256 + "\n");
+  }
+  required(bytes === record.bytes && aggregate.digest("hex") === record.tree_sha256,
+    "Unreal packaged-directory tree accounting mismatch");
+  return { ...record, inventory: inventoryArtifact, root: inventory.root, excluded: inventory.excluded };
+}
 function verifyArtifactRecord(owner, record, label) {
   required(record && typeof record.path === "string" && Number.isSafeInteger(record.bytes) && /^[0-9a-f]{64}$/.test(record.sha256), label + " record is malformed");
   const actual = artifact(resolveArtifact(owner, record.path));
@@ -90,6 +146,26 @@ function validateNative(input, sourceCommit) {
   required(replay.director_source_mask === 11 && replay.guided_source_mask === 3, "native role source masks mismatch");
   required(replay.terminal_disposition === 1, "native terminal disposition is not nominal success");
   required(/^[0-9a-f]{64}$/.test(replay.semantic_sha256), "native semantic hash missing");
+  const storage = value.display_storage;
+  required(storage?.measurement === "serialized GlobalDisplayV1 payload bytes", "native display-storage measurement is missing");
+  const storageParts = [storage.definition_bytes, storage.sample_bytes, storage.transition_bytes, storage.replay_index_bytes, storage.path_bytes];
+  required(storageParts.every((bytes) => Number.isSafeInteger(bytes) && bytes > 0) &&
+    storage.nominal_replay_bytes === storageParts.reduce((sum, bytes) => sum + bytes, 0),
+  "native nominal replay display-storage accounting is inconsistent");
+  const exactStorage = storage.exact_path_storage;
+  required(Number.isSafeInteger(exactStorage?.chunk_count) && exactStorage.chunk_count > 0 &&
+    Number.isSafeInteger(exactStorage.point_count) && exactStorage.point_count > 0 &&
+    Number.isSafeInteger(exactStorage.serialized_bytes) && exactStorage.serialized_bytes > 0,
+  "native exact path-storage accounting is absent or invalid");
+  const exactPath = storage.exact_active_window_path;
+  required(exactPath?.chunk_count === 1 &&
+    Number.isSafeInteger(exactPath.point_count) && exactPath.point_count > 0 && exactPath.point_count <= 4096 &&
+    Number.isSafeInteger(exactPath.serialized_bytes) && exactPath.serialized_bytes > 0 &&
+    exactPath.serialized_bytes <= exactStorage.serialized_bytes,
+  "native exact active-window path accounting is absent or invalid");
+  required(Number.isSafeInteger(replay.successful_path_requests) && replay.successful_path_requests >= 9 &&
+    Number.isSafeInteger(replay.successful_path_chunk_fetches) && replay.successful_path_chunk_fetches >= replay.successful_path_requests,
+  "native path request/chunk accounting is absent or invalid");
   exactMilestones(value.milestones);
   value.milestones.forEach((entry, index) => {
     const expected = REQUIRED[index];
@@ -102,7 +178,7 @@ function validateNative(input, sourceCommit) {
   const timing = value.timing;
   required(timing.availability_samples > 0 && timing.range_samples === 86 && timing.path_samples > 0, "native timing sample counts are not measured");
   required(timing.availability_p99_ns >= 0 && timing.range_p99_ns >= 0 && timing.availability_p99_ns < 1_000_000 && timing.range_p99_ns < 1_000_000, "native bridge polling exceeds 1 ms p99");
-  return { dll, manifest, semanticSha256: replay.semantic_sha256, milestones: value.milestones, timing };
+  return { dll, manifest, semanticSha256: replay.semantic_sha256, milestones: value.milestones, timing, storage };
 }
 function validateUnreal(input, sourceCommit) {
   const value = input.value;
@@ -113,7 +189,13 @@ function validateUnreal(input, sourceCommit) {
   required(value.accepted_exact === true && value.nominal_truth_permitted === true && value.nominal_truth_visible === false && value.guided_truth_permitted === false && value.guided_truth_visible === false, "Unreal exact/truth policy mismatch");
   required(value.nominal_terminal_release_epoch === 22014 && value.nominal_terminal_disposition === 1, "Unreal nominal terminal state mismatch");
   required(value.guided_terminal_release_epoch === 21591 && value.guided_terminal_disposition === 2, "Unreal guided terminal state mismatch");
-  const packagedArtifact = verifyArtifactRecord(input.absolute, value.package, "Unreal packaged executable");
+  const packagedArtifact = verifyArtifactRecord(input.absolute, value.package, "Unreal legacy packaged-executable record");
+  const executableArtifact = verifyArtifactRecord(input.absolute, value.executable, "Unreal packaged executable");
+  required(executableArtifact.path === packagedArtifact.path && executableArtifact.bytes === packagedArtifact.bytes && executableArtifact.sha256 === packagedArtifact.sha256,
+    "Unreal legacy package record does not match the explicit executable record");
+  const packagedDirectory = verifyPackageInventory(input.absolute, value.packaged_directory, sourceCommit);
+  required(packagedDirectory.bytes > executableArtifact.bytes,
+    "Unreal complete packaged-directory measurement is absent or invalid");
   const renderer = value.renderer;
   required(renderer?.d3d12 === true && /D3D12/i.test(renderer.rhi_name) && renderer.width === 1920 && renderer.height === 1080, "Unreal did not render through D3D12 at 1920x1080");
   required(renderer.packaged_runtime === true && renderer.editor_required === false && renderer.mcp_required === false && renderer.python_required === false, "Unreal evidence is not packaged-runtime independent");
@@ -136,15 +218,32 @@ function validateUnreal(input, sourceCommit) {
     required(state.planned_path_points > 0 && state.onboard_path_points > 0 && state.observed_path_points > 0 && state.transition_markers >= 4, expected.label + ": Unreal semantic path evidence missing");
     return { expected, capture, semantic, screenshot };
   });
+  const rendererOrigin = value.renderer_origin;
+  required(Number.isSafeInteger(rendererOrigin?.change_count) && rendererOrigin.change_count > 0 &&
+    rendererOrigin.continuity_checks === 1 && rendererOrigin.semantic_unchanged === true &&
+    Number.isSafeInteger(rendererOrigin.rendered_sample_count) && rendererOrigin.rendered_sample_count >= 8 &&
+    Number(rendererOrigin.max_reconstructed_delta_cm) >= 0 && Number(rendererOrigin.max_reconstructed_delta_cm) <= 100 &&
+    rendererOrigin.rendered_continuity === true && rendererOrigin.semantic_continuity === true,
+    "Unreal renderer-origin semantic/rendered continuity evidence is absent or invalid");
   const performance = value.performance;
   required(performance?.pass === true && performance.measured_frames >= 600 && performance.percentile_method === "nearest-rank", "Unreal measured performance record missing");
   required(performance.p99_ns >= 0 && performance.p99_ns < 1_000_000 && performance.max_ns >= 0 && performance.max_ns < 2_000_000, "Unreal display publication exceeds limit");
-  return { renderer, captures, performance, packagedArtifact };
+  return { renderer, captures, performance, packagedArtifact, executableArtifact, packagedDirectory, rendererOrigin };
 }
 function validateBrowser(input, sourceCommit) {
   const value = input.value;
   required(value.pass === true, "browser producer did not pass");
   required(value.source?.commit === sourceCommit && value.source.dirty === false && /^[0-9a-f]{64}$/.test(value.source.tree_sha256) && value.source.file_count > 0, "browser source identity mismatch or dirty");
+  const productionDistRecord = value.production_dist;
+  required(productionDistRecord?.schema === "ksa64.phase12c.web-distribution-identity.v1" &&
+    productionDistRecord.measurement === "production web/dist payload excluding its identity record" &&
+    canonical(productionDistRecord.excluded) === canonical(["phase12c-dist-identity.json"]) &&
+    productionDistRecord?.path === "web/dist" && Number.isSafeInteger(productionDistRecord.bytes) && productionDistRecord.bytes > 0 &&
+    Number.isSafeInteger(productionDistRecord.file_count) && productionDistRecord.file_count > 1 && /^[0-9a-f]{64}$/.test(productionDistRecord.tree_sha256),
+    "browser production distribution record is missing");
+  const productionDist = directoryArtifact(resolve(REPOSITORY_ROOT, productionDistRecord.path), new Set(productionDistRecord.excluded));
+  required(productionDist.bytes === productionDistRecord.bytes && productionDist.file_count === productionDistRecord.file_count &&
+    productionDist.tree_sha256 === productionDistRecord.tree_sha256, "browser production distribution accounting mismatch");
   const authorityWasm = value.source?.authority_wasm;
   required(authorityWasm?.path === "web/public/wasm/ksa64-session.wasm", "browser authority WASM identity missing");
   const wasmArtifact = artifact(resolve(REPOSITORY_ROOT, authorityWasm.path));
@@ -159,13 +258,28 @@ function validateBrowser(input, sourceCommit) {
   required(nominal.value.experience === "nominal-global" && guided.value.experience === "gnss-loss", "browser producer experiences mismatch");
   for (const producer of [nominal.value, guided.value]) {
     required(producer.build_identity?.commit === sourceCommit && producer.build_identity?.dirty === false && producer.build_identity?.tree_sha256 === value.source.tree_sha256, "browser raw producer build identity mismatch");
+    required(canonical(producer.distribution_identity) === canonical(productionDistRecord),
+      "browser raw producer was not served from the captured production distribution");
   }
+  required(nominal.value.environment?.production_build === true && guided.value.environment?.production_build === true,
+    "browser evidence was not captured from the production Vite build");
   for (const key of ["webgpu", "webgl2", "two_d"]) {
     required(value.backends?.[key]?.status === "rendered", "browser " + key + " lane was not actually rendered");
     required(Number(value.backends[key].frames_per_second) > 0, "browser " + key + " has no measured frame rate");
   }
   required(Number(value.backends.webgpu.frames_per_second) >= 30 && Number(value.backends.webgl2.frames_per_second) >= 30, "Babylon WebGPU/WebGL2 fell below 30 fps");
   required(value.context_loss?.before_backend === "webgl2" && value.context_loss?.after_backend === "2d" && value.context_loss.before_semantic_sha256 === value.context_loss.after_semantic_sha256, "browser context-loss semantic fallback failed");
+  required(canonical(value.renderer_origin) === canonical(nominal.value.renderer_origin),
+    "browser summary renderer-origin evidence differs from its bound raw producer");
+  const rendererOrigin = nominal.value.renderer_origin;
+  required(rendererOrigin?.change_count === 1 && rendererOrigin.semantic_unchanged === true &&
+    rendererOrigin.rendered_continuity === true && rendererOrigin.semantic_continuity === true &&
+    Number.isSafeInteger(rendererOrigin.rendered_sample_count) && rendererOrigin.rendered_sample_count >= 8 &&
+    Number(rendererOrigin.max_reconstructed_delta_km) >= 0 && Number(rendererOrigin.max_reconstructed_delta_km) <= 0.001 &&
+    /^[0-9a-f]{64}$/.test(rendererOrigin.absolute_semantic_sha256) &&
+    /^[0-9a-f]{64}$/.test(rendererOrigin.rendered_absolute_sha256) &&
+    canonical(rendererOrigin.before_origin_km) !== canonical(rendererOrigin.after_origin_km),
+    "browser renderer-origin semantic/rendered continuity evidence is absent or invalid");
   required(value.role_filtering?.sim_director?.truth_default_hidden === true && value.role_filtering?.sim_director?.truth_opt_in_labeled === true, "browser SIM Director truth policy failed");
   required(value.role_filtering?.guided_operator?.truth_control_absent === true && value.role_filtering?.guided_operator?.truth_source_absent === true, "browser Guided Operator received truth controls/data");
   exactMilestones(value.semantic_milestones);
@@ -190,7 +304,7 @@ function validateBrowser(input, sourceCommit) {
     required(record.authority_sha256 === sha256(Buffer.from(canonical(authority))), expected.label + ": browser embedded authority hash mismatch");
     return { expected, record, visibleMask };
   });
-  return { authorityWasm: wasmArtifact, nominalRaw, guidedRaw, guidedValue: guided.value, screenshots: screenshotArtifacts, milestones, backends: value.backends, contextLoss: value.context_loss };
+  return { authorityWasm: wasmArtifact, productionDist, nominalRaw, guidedRaw, guidedValue: guided.value, screenshots: screenshotArtifacts, milestones, backends: value.backends, contextLoss: value.context_loss, rendererOrigin };
 }
 function optionalOperationalParity(unreal, browser) {
   const unrealEvents = unreal.value.operational_milestones;
@@ -253,13 +367,23 @@ function main() {
     producer: { kind: "strict-source-bound-parity-comparator", script: artifact(SCRIPT_PATH), source_commit: sourceCommit },
     inputs: {
       native: { ...artifact(nativeInput.absolute), bridge_dll: native.dll, bridge_manifest: native.manifest },
-      unreal: { ...artifact(unrealInput.absolute), package: unreal.packagedArtifact },
-      browser: { ...artifact(browserInput.absolute), authority_wasm: browser.authorityWasm, nominal_raw: browser.nominalRaw, guided_raw: browser.guidedRaw, screenshots: browser.screenshots },
+      unreal: { ...artifact(unrealInput.absolute), executable: unreal.executableArtifact, packaged_directory: unreal.packagedDirectory, package: unreal.packagedArtifact },
+      browser: { ...artifact(browserInput.absolute), authority_wasm: browser.authorityWasm, production_dist: browser.productionDist, nominal_raw: browser.nominalRaw, guided_raw: browser.guidedRaw, screenshots: browser.screenshots },
     },
     catalog_sha256: CATALOG_SHA256,
     nominal: { releases: 22015, first_release: 0, last_release: 22014, transition_count: 4, terminal_disposition: 1,
       source_availability: { sim_director: 11, guided_operator: 3 }, milestones },
     operational_milestones: operational,
+    storage: {
+      nominal_replay_display: native.storage,
+      unreal: { executable_bytes: unreal.executableArtifact.bytes, packaged_directory_bytes: unreal.packagedDirectory.bytes, packaged_directory_files: unreal.packagedDirectory.file_count },
+      web: { production_dist_bytes: browser.productionDist.bytes, production_dist_files: browser.productionDist.file_count, production_dist_sha256: browser.productionDist.tree_sha256 },
+    },
+    renderer_origins: {
+      unreal: unreal.rendererOrigin,
+      browser: browser.rendererOrigin,
+      semantic_continuity: unreal.rendererOrigin.semantic_continuity === true && browser.rendererOrigin.semantic_continuity === true,
+    },
     performance: {
       unreal: { resolution: "1920x1080", frames_per_second: Number(unreal.renderer.frames_per_second), display_publication_p99_ns: unreal.performance.p99_ns, display_publication_max_ns: unreal.performance.max_ns },
       bridge: { availability_p99_ns: native.timing.availability_p99_ns, range_p99_ns: native.timing.range_p99_ns },

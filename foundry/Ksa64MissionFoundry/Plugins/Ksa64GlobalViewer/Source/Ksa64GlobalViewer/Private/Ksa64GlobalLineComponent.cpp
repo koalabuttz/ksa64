@@ -106,6 +106,27 @@ void UKsa64GlobalLineComponent::ResetSegments()
     MarkRenderStateDirty();
 }
 
+void UKsa64GlobalLineComponent::AppendWorldSamplePoints(
+    TArray<FVector3d>& OutPoints,
+    int32 MaximumSamples) const
+{
+    if (SegmentPoints.IsEmpty() || MaximumSamples <= 0)
+    {
+        return;
+    }
+    const int32 Samples = FMath::Min(MaximumSamples, SegmentPoints.Num());
+    const FTransform Transform = GetComponentTransform();
+    for (int32 Sample = 0; Sample < Samples; ++Sample)
+    {
+        const int32 Index = Samples == 1
+            ? 0
+            : static_cast<int32>(
+                static_cast<int64>(Sample) * (SegmentPoints.Num() - 1)
+                / (Samples - 1));
+        OutPoints.Add(FVector3d(Transform.TransformPosition(FVector(SegmentPoints[Index]))));
+    }
+}
+
 FPrimitiveSceneProxy* UKsa64GlobalLineComponent::CreateSceneProxy()
 {
     return SegmentPoints.Num() >= 2

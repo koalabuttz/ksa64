@@ -20,6 +20,7 @@ public:
         float InThickness = 1.0f);
     void ResetSegments();
     int32 GetSegmentCount() const { return SegmentPoints.Num() / 2; }
+    void AppendWorldSamplePoints(TArray<FVector3d>& OutPoints, int32 MaximumSamples) const;
 
     virtual FPrimitiveSceneProxy* CreateSceneProxy() override;
     virtual FBoxSphereBounds CalcBounds(const FTransform& LocalToWorld) const override;

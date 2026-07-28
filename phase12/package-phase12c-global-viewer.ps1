@@ -18,6 +18,41 @@ function Get-Sha256([string]$Path) {
     finally { $algorithm.Dispose(); $stream.Dispose() }
 }
 
+function Get-DirectoryInventory([string]$Root, [string[]]$ExcludedPrefixes = @()) {
+    $rootPath = [IO.Path]::GetFullPath($Root).TrimEnd('\')
+    $relativePaths = [System.Collections.Generic.List[string]]::new()
+    foreach ($file in Get-ChildItem -LiteralPath $rootPath -Recurse -File -ErrorAction Stop) {
+        $relative = $file.FullName.Substring($rootPath.Length + 1).Replace('\', '/')
+        $excluded = $false
+        foreach ($prefix in $ExcludedPrefixes) {
+            if ($relative -eq $prefix -or $relative.StartsWith($prefix + '/', [StringComparison]::Ordinal)) {
+                $excluded = $true
+                break
+            }
+        }
+        if (-not $excluded) { $relativePaths.Add($relative) }
+    }
+    $relativePaths.Sort([StringComparer]::Ordinal)
+    $records = @()
+    $builder = [System.Text.StringBuilder]::new()
+    $totalBytes = [int64]0
+    foreach ($relative in $relativePaths) {
+        $absolute = Join-Path $rootPath $relative.Replace('/', '\')
+        $hash = Get-Sha256 $absolute
+        $length = [int64](Get-Item -LiteralPath $absolute -ErrorAction Stop).Length
+        $totalBytes += $length
+        $records += [ordered]@{ path = $relative; bytes = $length; sha256 = $hash }
+        [void]$builder.Append($relative).Append([char]0).Append($length).Append([char]0).Append($hash).Append([char]10)
+    }
+    $algorithm = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $algorithm.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($builder.ToString()))
+        $treeSha256 = ([System.BitConverter]::ToString($digest)).Replace('-', '').ToLowerInvariant()
+    }
+    finally { $algorithm.Dispose() }
+    return [pscustomobject]@{ Files = $records; FileCount = $relativePaths.Count; Bytes = $totalBytes; TreeSha256 = $treeSha256 }
+}
+
 function Get-PngDimensions([string]$Path) {
     $bytes = [System.IO.File]::ReadAllBytes($Path)
     if ($bytes.Length -lt 24 -or $bytes[0] -ne 0x89 -or $bytes[1] -ne 0x50 -or $bytes[2] -ne 0x4e -or $bytes[3] -ne 0x47 -or $bytes[12] -ne 0x49 -or $bytes[13] -ne 0x48 -or $bytes[14] -ne 0x44 -or $bytes[15] -ne 0x52) {
@@ -74,13 +109,32 @@ $gameRelativePath = $gameExe.Substring($archive.Length + 1).Replace('\', '/')
 $packageAuditSha256 = Get-Sha256 $packageAuditPath
 
 $evidenceDirectory = Join-Path $gameRoot "Saved\KSA64\GlobalViewerEvidence"
-$manifestGameRelativePath = [IO.Path]::GetRelativePath($evidenceDirectory, $gameExe).Replace('\', '/')
+New-Item -ItemType Directory -Path $evidenceDirectory -Force | Out-Null
+$inventoryPath = Join-Path $archive "phase12c-packaged-directory-inventory.json"
 $runtimeManifestPath = Join-Path $evidenceDirectory "phase12c-global-viewer-evidence.json"
 $validationPath = Join-Path $archive "phase12c-global-viewer-evidence-validation.json"
 $logPath = Join-Path $archive "packaged-phase12c-global-viewer-evidence.log"
-foreach ($path in @($runtimeManifestPath, $validationPath, $logPath)) { if (Test-Path -LiteralPath $path) { throw "Phase 12C global-viewer evidence requires fresh fixed outputs; found $path" } }
+foreach ($path in @($inventoryPath, $runtimeManifestPath, $validationPath, $logPath)) { if (Test-Path -LiteralPath $path) { throw "Phase 12C global-viewer evidence requires fresh fixed outputs; found $path" } }
+$packagedDirectory = Get-DirectoryInventory $gameRoot @("Saved")
+if ($packagedDirectory.FileCount -lt 2 -or $packagedDirectory.Bytes -le $gameBytes) { throw "Packaged directory accounting is incomplete." }
+$inventoryRecord = [ordered]@{
+    schema = "ksa64.phase12c.packaged-directory-inventory.v1"
+    source_commit = $commit
+    measurement = "immutable packaged application payload excluding Saved"
+    root = $gameRoot.Substring($archive.Length + 1).Replace('\', '/')
+    excluded = @("Saved")
+    bytes = $packagedDirectory.Bytes
+    file_count = $packagedDirectory.FileCount
+    tree_sha256 = $packagedDirectory.TreeSha256
+    files = $packagedDirectory.Files
+}
+$inventoryRecord | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $inventoryPath -Encoding utf8NoBOM
+$inventorySha256 = Get-Sha256 $inventoryPath
+$inventoryRelativePath = [IO.Path]::GetRelativePath($evidenceDirectory, $inventoryPath).Replace('\', '/')
+$validationInventoryRelativePath = [IO.Path]::GetRelativePath($archive, $inventoryPath).Replace('\', '/')
+$manifestGameRelativePath = [IO.Path]::GetRelativePath($evidenceDirectory, $gameExe).Replace('\', '/')
 
-$arguments = @("-windowed", "-ResX=1920", "-ResY=1080", "-ForceRes", "-RenderOffscreen", "-Benchmark", "-UseFixedTimeStep", "-FPS=60", "-nosound", "-unattended", "-nosplash", "-DisablePlugins=ModelContextProtocol,ToolsetRegistry,AllToolsets,PythonScriptPlugin", "-Ksa64Phase12cGlobalEvidence", "-Ksa64SourceCommit=$commit", "-Ksa64ExecutableRelativePath=$manifestGameRelativePath", "-Ksa64ExecutableBytes=$gameBytes", "-Ksa64ExecutableSha256=$gameSha256", "-Ksa64PackageAuditSha256=$packageAuditSha256", "-abslog=$logPath")
+$arguments = @("-windowed", "-ResX=1920", "-ResY=1080", "-ForceRes", "-RenderOffscreen", "-Benchmark", "-UseFixedTimeStep", "-FPS=60", "-nosound", "-unattended", "-nosplash", "-DisablePlugins=ModelContextProtocol,ToolsetRegistry,AllToolsets,PythonScriptPlugin", "-Ksa64Phase12cGlobalEvidence", "-Ksa64SourceCommit=$commit", "-Ksa64ExecutableRelativePath=$manifestGameRelativePath", "-Ksa64ExecutableBytes=$gameBytes", "-Ksa64ExecutableSha256=$gameSha256", "-Ksa64PackageAuditSha256=$packageAuditSha256", "-Ksa64PackagedDirectoryBytes=$($packagedDirectory.Bytes)", "-Ksa64PackagedDirectoryFiles=$($packagedDirectory.FileCount)", "-Ksa64PackagedDirectoryTreeSha256=$($packagedDirectory.TreeSha256)", "-Ksa64PackagedDirectoryInventoryFile=$inventoryRelativePath", "-Ksa64PackagedDirectoryInventorySha256=$inventorySha256", "-abslog=$logPath")
 $process = Start-Process -FilePath $gameExe -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $gameExe) -WindowStyle Hidden -PassThru
 # Intentionally unbounded: duration alone is not evidence that this run failed.
 $process.WaitForExit()
@@ -131,6 +185,15 @@ if ($manifest.schema -ne "ksa64.phase12c.unreal-global-evidence.v1" -or
     $manifest.package.path -ne $manifestGameRelativePath -or
     [int64]$manifest.package.bytes -ne $gameBytes -or
     $manifest.package.sha256 -ne $gameSha256 -or
+    $manifest.executable.path -ne $manifestGameRelativePath -or
+    [int64]$manifest.executable.bytes -ne $gameBytes -or
+    $manifest.executable.sha256 -ne $gameSha256 -or
+    $manifest.packaged_directory.measurement -ne "immutable packaged application payload excluding Saved" -or
+    [int64]$manifest.packaged_directory.bytes -ne $packagedDirectory.Bytes -or
+    [int]$manifest.packaged_directory.file_count -ne $packagedDirectory.FileCount -or
+    $manifest.packaged_directory.tree_sha256 -ne $packagedDirectory.TreeSha256 -or
+    $manifest.packaged_directory.inventory_file -ne $inventoryRelativePath -or
+    $manifest.packaged_directory.inventory_sha256 -ne $inventorySha256 -or
     $manifest.package_binding.package_audit_sha256 -ne $packageAuditSha256 -or
     $manifest.frozen_reference.releases -ne 22015 -or
     $manifest.frozen_reference.elapsed_seconds -ne "687.9375" -or
@@ -155,6 +218,14 @@ if ($manifest.schema -ne "ksa64.phase12c.unreal-global-evidence.v1" -or
     $manifest.guided_completed_evidence.sha256 -ne "7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4" -or
     -not $manifest.guided_completed_evidence.observation_complete -or
     $manifest.guided_completed_evidence.gnss_reacquired -or
+    $manifest.renderer_origin.change_count -le 0 -or
+    $manifest.renderer_origin.continuity_checks -ne 1 -or
+    -not $manifest.renderer_origin.semantic_unchanged -or
+    [int]$manifest.renderer_origin.rendered_sample_count -lt 8 -or
+    [double]$manifest.renderer_origin.max_reconstructed_delta_cm -lt 0.0 -or
+    [double]$manifest.renderer_origin.max_reconstructed_delta_cm -gt 100.0 -or
+    -not $manifest.renderer_origin.rendered_continuity -or
+    -not $manifest.renderer_origin.semantic_continuity -or
     -not $manifest.performance.pass -or
     $manifest.performance.warmup_frames -ne 120 -or
     $manifest.performance.measured_frames -ne 600 -or
@@ -259,6 +330,8 @@ $validation = [ordered]@{
     pass = $true
     source_commit = $commit
     packaged_without_editor_mcp_or_python = $true
+    executable = [ordered]@{ path = $gameRelativePath; bytes = $gameBytes; sha256 = $gameSha256 }
+    packaged_directory = [ordered]@{ measurement = "immutable packaged application payload excluding Saved"; bytes = $packagedDirectory.Bytes; file_count = $packagedDirectory.FileCount; tree_sha256 = $packagedDirectory.TreeSha256; inventory_file = $validationInventoryRelativePath; inventory_sha256 = $inventorySha256 }
     package = [ordered]@{ path = $gameRelativePath; bytes = $gameBytes; sha256 = $gameSha256 }
     package_audit = [ordered]@{ path = $packageAuditPath.Substring($archive.Length + 1).Replace('\', '/'); sha256 = $packageAuditSha256 }
     bridge = [ordered]@{ source_commit = $bridgeManifest.source_commit; manifest_path = $bridgeManifests[0].FullName.Substring($archive.Length + 1).Replace('\', '/'); manifest_sha256 = Get-Sha256 $bridgeManifests[0].FullName; library_path = $bridgeFile.Substring($archive.Length + 1).Replace('\', '/'); library_sha256 = Get-Sha256 $bridgeFile }
@@ -266,6 +339,7 @@ $validation = [ordered]@{
     captures = $validatedCaptures
     operational_milestones = $validatedOperationalMilestones
     guided_completed_evidence = [ordered]@{ actions = 4; bytes = 2911464; sha256 = $manifest.guided_completed_evidence.sha256; observation_complete = [bool]$manifest.guided_completed_evidence.observation_complete }
+    renderer_origin = [ordered]@{ change_count = [int]$manifest.renderer_origin.change_count; continuity_checks = [int]$manifest.renderer_origin.continuity_checks; semantic_unchanged = [bool]$manifest.renderer_origin.semantic_unchanged; rendered_sample_count = [int]$manifest.renderer_origin.rendered_sample_count; max_reconstructed_delta_cm = [double]$manifest.renderer_origin.max_reconstructed_delta_cm; rendered_continuity = [bool]$manifest.renderer_origin.rendered_continuity; semantic_continuity = [bool]$manifest.renderer_origin.semantic_continuity }
     performance = [ordered]@{ resolution = "1920x1080"; refresh_hz = 60; frames_per_second = [double]$manifest.renderer.frames_per_second; scope = $manifest.performance.scope; frames = [int]$manifest.performance.measured_frames; start_release = [int]$manifest.performance.start_release; end_release = [int]$manifest.performance.end_release; p99_ns = [int64]$manifest.performance.p99_ns; max_ns = [int64]$manifest.performance.max_ns }
     log = [ordered]@{ path = $logPath.Substring($archive.Length + 1).Replace('\', '/'); sha256 = Get-Sha256 $logPath }
     exit_code = $process.ExitCode

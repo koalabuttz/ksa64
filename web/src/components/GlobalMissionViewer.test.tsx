@@ -42,7 +42,7 @@ function lastOptions(): GlobalMissionRendererOptions {
 
 beforeEach(() => {
   rendererMock.start.mockReset();
-  rendererMock.start.mockResolvedValue({ backend: "webgl2", update: vi.fn(), dispose: vi.fn() });
+  rendererMock.start.mockResolvedValue({ backend: "webgl2", update: vi.fn(), originProbe: vi.fn(() => undefined), dispose: vi.fn() });
 });
 
 describe("global mission viewer", () => {
