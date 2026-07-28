@@ -57,8 +57,10 @@ TArray<uint8> DefinitionVector()
     PushI32(Bytes, 313'300'000);
     PushU32(Bytes, 0x4c41554e);
     PushI32(Bytes, 133'564'245); PushI32(Bytes, -377'184'448); PushI32(Bytes, 12);
+    PushI32(Bytes, 2'629'000); PushI32(Bytes, -22'109'000); PushI32(Bytes, 11'894'000);
     PushU32(Bytes, 0x52454356);
     PushI32(Bytes, 130'000'000); PushI32(Bytes, -360'000'000); PushI32(Bytes, 4);
+    PushI32(Bytes, 3'257'000); PushI32(Bytes, -22'166'000); PushI32(Bytes, 11'507'000);
     PushU32(Bytes, 0x07); PushU8(Bytes, 0x07); PushU8(Bytes, 0); PushU16(Bytes, 0x00ff);
     FinishPayload(Bytes);
     return Bytes;
@@ -379,7 +381,7 @@ bool FKsa64GlobalViewerRealBridgeReplayTest::RunTest(const FString&)
     const FMilestone Milestones[] = {
         {29, 2, 2}, {1'920, 2, 2}, {3'579, 3, 3},
         {8'124, 3, 3}, {12'669, 2, 4}, {15'255, 1, 5},
-        {20'929, 1, 5}, {22'014, 1, 5},
+        {15'257, 1, 5}, {20'929, 1, 5}, {22'014, 1, 5},
     };
     for (const FMilestone& Milestone : Milestones)
     {

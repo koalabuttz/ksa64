@@ -169,6 +169,8 @@ function Invoke-UnrealAutomation {
         "-NullRHI",
         "-NoSplash",
         "-NoSound",
+        "-NoIniChanges",
+        "-NoAutoUpdate",
         "-DDC-ForceMemoryCache",
         "-DisablePlugins=ModelContextProtocol,ToolsetRegistry,AllToolsets,PythonScriptPlugin",
         ("-ExecCmds=" + $q + "Automation RunTests KSA64.Phase12C; Quit" + $q),
@@ -187,7 +189,7 @@ function Invoke-UnrealAutomation {
     }
     $result = Get-Content -LiteralPath $index -Raw | ConvertFrom-Json
     if (
-        [int]$result.succeeded -lt 7 -or
+        [int]$result.succeeded -lt 9 -or
         [int]$result.failed -ne 0 -or
         [int]$result.notRun -ne 0 -or
         [int]$result.inProcess -ne 0
@@ -300,6 +302,7 @@ if (($RunUnrealAutomation -or $RunPackage) -and -not $RunUnrealBuild) {
 }
 
 New-Item -ItemType Directory -Path $auditRoot | Out-Null
+$auditSucceeded = $false
 Push-Location $projectRoot
 try {
     Gate "frozen Phase 12B.5 entry evidence" {
@@ -449,6 +452,7 @@ try {
         Write-Host "Phase completion is NOT claimed by this invocation."
         Write-Host "Completion additionally requires all non-skip defaults plus explicit Unreal build, automation, package, rendered-browser, and runtime/parity evidence."
     }
+    $auditSucceeded = $true
 }
 finally {
     Pop-Location
@@ -456,7 +460,12 @@ finally {
     if (-not $resolved.StartsWith($projectRoot + [IO.Path]::DirectorySeparatorChar)) {
         throw "unsafe Phase 12C audit cleanup target"
     }
-    if (Test-Path -LiteralPath $resolved) {
-        Remove-Item -LiteralPath $resolved -Recurse -Force
+    if ($auditSucceeded) {
+        if (Test-Path -LiteralPath $resolved) {
+            Remove-Item -LiteralPath $resolved -Recurse -Force
+        }
+    }
+    else {
+        Write-Warning "Phase 12C audit failed; diagnostic evidence retained at $resolved"
     }
 }

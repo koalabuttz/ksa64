@@ -20,6 +20,7 @@
 #include "ImageUtils.h"
 #include "HAL/PlatformFileManager.h"
 #include "HAL/PlatformMisc.h"
+#include "HAL/PlatformProcess.h"
 #include "Framework/Application/SlateApplication.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/PlatformTime.h"
@@ -3065,6 +3066,23 @@ bool UKsa64GlobalViewerSubsystem::OpenNominalReleaseForAutomation(
         ResetGlobalDisplayState();
         SemanticState.ExperienceMode = EKsa64GlobalExperienceMode::NominalReplay;
         SemanticState.RoleLabel = TEXT("SIM DIRECTOR · READ ONLY");
+        constexpr double ReadyTimeoutSeconds = 180.0;
+        const double DeadlineSeconds =
+            FPlatformTime::Seconds() + ReadyTimeoutSeconds;
+        for (;;)
+        {
+            Ksa64GlobalDisplayAvailabilityV1 Availability = {};
+            const EKsa64OperationsAdapterResult AvailabilityResult =
+                Operations.GetGlobalDisplayAvailability(Availability);
+            if (AvailabilityResult == EKsa64OperationsAdapterResult::Ok) break;
+            if (AvailabilityResult != EKsa64OperationsAdapterResult::NoData
+                && AvailabilityResult != EKsa64OperationsAdapterResult::Unchanged)
+            {
+                return false;
+            }
+            if (FPlatformTime::Seconds() >= DeadlineSeconds) return false;
+            FPlatformProcess::SleepNoStats(0.01f);
+        }
         if (!InitializeGlobalDisplay(Operations)) return false;
     }
     SeekReplayRelease(ReleaseEpoch);
