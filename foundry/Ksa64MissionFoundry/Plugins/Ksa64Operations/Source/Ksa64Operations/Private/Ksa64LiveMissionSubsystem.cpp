@@ -204,6 +204,18 @@ bool UKsa64LiveMissionSubsystem::StartGuidedOperations()
     return true;
 }
 
+void UKsa64LiveMissionSubsystem::SetDashboardVisible(bool bVisible)
+{
+    bDashboardRequestedVisible = bVisible;
+    if (Dashboard.IsValid())
+    {
+        Dashboard->SetVisibility(
+            bDashboardRequestedVisible
+                ? EVisibility::Visible
+                : EVisibility::Collapsed);
+    }
+}
+
 void UKsa64LiveMissionSubsystem::PausePresentation()
 {
     SetPace(EKsa64OperationsPace::Paused);
@@ -798,8 +810,17 @@ void UKsa64LiveMissionSubsystem::InstallDashboardIfPossible()
         return;
     }
     Dashboard = SNew(SKsa64OperationsDashboard).Subsystem(this);
+    Dashboard->SetVisibility(
+        bDashboardRequestedVisible
+            ? EVisibility::Visible
+            : EVisibility::Collapsed);
     GEngine->GameViewport->AddViewportWidgetContent(Dashboard.ToSharedRef(), 100);
-    FSlateApplication::Get().SetKeyboardFocus(Dashboard, EFocusCause::SetDirectly);
+    if (bDashboardRequestedVisible)
+    {
+        FSlateApplication::Get().SetKeyboardFocus(
+            Dashboard,
+            EFocusCause::SetDirectly);
+    }
     bDashboardInstalled = true;
 }
 

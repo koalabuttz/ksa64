@@ -1,0 +1,30 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "12C",
+  "FriendlyName": "KSA64 Global Mission Viewer",
+  "Description": "Passive renderer-neutral global mission presentation for KSA64 Mission Foundry.",
+  "Category": "KSA64",
+  "CreatedBy": "KSA64",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "Ksa64GlobalViewer",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "Ksa64Operations",
+      "Enabled": true
+    }
+  ],
+  "SupportedTargetPlatforms": [
+    "Win64",
+    "Linux",
+    "Mac"
+  ]
+}

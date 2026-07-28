@@ -20,6 +20,10 @@
       "Enabled": true
     },
     {
+      "Name": "Ksa64GlobalViewer",
+      "Enabled": true
+    },
+    {
       "Name": "ModelContextProtocol",
       "Enabled": true,
       "TargetAllowList": [

@@ -43,6 +43,8 @@ public:
     void CancelAction();
     bool RequestShutdown();
     bool SaveCompletedEvidence();
+    void SetDashboardVisible(bool bVisible);
+    bool IsDashboardVisible() const { return bDashboardRequestedVisible; }
 
     const FKsa64OperationsViewModel& GetViewModel() const { return ViewModel; }
     const TArray<FKsa64OperationsReleasePoint>& GetReleaseHistory() const { return ReleaseHistory; }
@@ -121,6 +123,7 @@ private:
     uint32 LastObservedRelease = 0;
     uint64 LastObservedCommandSequence = 0;
     bool bDashboardInstalled = false;
+    bool bDashboardRequestedVisible = true;
     bool bEvidenceSaved = false;
     bool bAcceptanceMode = false;
     bool bAcceptanceVerified = false;
