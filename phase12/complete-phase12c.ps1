@@ -463,6 +463,14 @@ try {
         }
     }
 
+    if ($RunUnrealBuild -or $RunPackage) {
+        Gate "explicit clean portable Win64 bridge staging" {
+            & phase12/stage-bridge-portable.ps1 -Platform Win64 -RepositoryRoot $projectRoot
+            Check
+            & phase12/stage-bridge-portable.ps1 -Platform Win64 -RepositoryRoot $projectRoot -VerifyOnly
+        }
+    }
+
     if ($RunUnrealBuild) {
         Gate "explicit Unreal Editor-target build" {
             [Environment]::SetEnvironmentVariable(
