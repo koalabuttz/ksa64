@@ -619,6 +619,20 @@ async function runGuided() {
 
   const state = guidedActionState();
   if (state === undefined) throw new Error("guided action evidence state is unavailable");
+  const terminalAuthorityState = authorityState();
+  const expectedTerminalAxes = [
+    ["Objective", "Primary achieved", "success"],
+    ["Vehicle", "Nominal", "success"],
+    ["Procedure", "Completed", "success"],
+    ["Operator", "Timely reference", "success"],
+    ["Avionics", "Degraded operational", "warning"],
+    ["Evidence", "Complete", "success"],
+  ];
+  if (terminalAuthorityState.overall !== "Degraded success" ||
+      canonical(terminalAuthorityState.axes.map(({ label, value, state: axisState }) => [label, value, axisState])) !==
+        canonical(expectedTerminalAxes)) {
+    throw new Error("guided terminal disposition does not match the accepted degraded-success result");
+  }
   const acceptedActions = state.receipts.filter((receipt) =>
     receipt.accepted && (receipt.operation === 2 || receipt.operation === 3));
   const expectedActions = [
@@ -669,7 +683,7 @@ async function runGuided() {
       note: "The accepted scenario intentionally keeps GNSS unavailable; no reacquisition is fabricated.",
     },
     operational_milestones: milestones,
-    terminal_authority_state: authorityState(),
+    terminal_authority_state: terminalAuthorityState,
   };
 }
 

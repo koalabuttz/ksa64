@@ -133,6 +133,71 @@ bool FKsa64GlobalViewerCoordinateBasisTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64GlobalViewerPathProductTest,
+    "KSA64.Phase12C.Paths.ChecksumFlagsAndAppearance",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64GlobalViewerPathProductTest::RunTest(const FString&)
+{
+    TArray<FKsa64GlobalPathPointProduct> Points;
+    FKsa64GlobalPathPointProduct First;
+    First.ReleaseEpoch = 1;
+    First.MissionTimeQ16 = 2;
+    First.Segment = 3;
+    First.EventMask = 4;
+    First.AnchorIdentity = 5;
+    First.PositionQ12Km[0] = 6;
+    First.PositionQ12Km[1] = -7;
+    First.PositionQ12Km[2] = 8;
+    Points.Add(First);
+    FKsa64GlobalPathPointProduct Second;
+    Second.ReleaseEpoch = 9;
+    Second.MissionTimeQ16 = 10;
+    Second.Segment = 11;
+    Second.EventMask = 12;
+    Second.AnchorIdentity = 13;
+    Second.PositionQ12Km[0] = 14;
+    Second.PositionQ12Km[1] = 15;
+    Second.PositionQ12Km[2] = -16;
+    Points.Add(Second);
+    TestEqual(
+        TEXT("FNV checksum covers the browser path-point domain"),
+        Ksa64GlobalViewerPolicy::HashPathPoints(Points, 0, Points.Num()),
+        0x201aac9bu);
+
+    const FLinearColor Normal(0.14f, 0.83f, 0.95f, 0.9f);
+    const FLinearColor Terminal = Ksa64GlobalViewerPolicy::PathColorForFlags(
+        Normal, Ksa64GlobalPathFlags::Terminal);
+    TestTrue(TEXT("terminal-only path retains normal color"), Terminal.Equals(Normal));
+    const FLinearColor Incomplete = Ksa64GlobalViewerPolicy::PathColorForFlags(
+        Normal, Ksa64GlobalPathFlags::Incomplete);
+    TestTrue(TEXT("incomplete path is visibly dimmed"),
+        FMath::IsNearlyEqual(Incomplete.A, 0.48f));
+    const FLinearColor Stale = Ksa64GlobalViewerPolicy::PathColorForFlags(
+        Normal, Ksa64GlobalPathFlags::Stale | Ksa64GlobalPathFlags::Terminal);
+    TestTrue(TEXT("stale state remains visible on a terminal path"),
+        FMath::IsNearlyEqual(Stale.A, 0.28f));
+    const FLinearColor Resync = Ksa64GlobalViewerPolicy::PathColorForFlags(
+        Normal,
+        Ksa64GlobalPathFlags::ResyncRequired
+            | Ksa64GlobalPathFlags::Stale
+            | Ksa64GlobalPathFlags::Incomplete
+            | Ksa64GlobalPathFlags::Terminal);
+    TestTrue(TEXT("resync-required has highest visual precedence"),
+        FMath::IsNearlyEqual(Resync.A, 0.18f));
+
+    FKsa64GlobalSemanticState State;
+    FKsa64GlobalVisiblePathSemantic Path;
+    Path.Identity = 1;
+    Path.Source = 2;
+    Path.Flags = Ksa64GlobalPathFlags::Stale | Ksa64GlobalPathFlags::Terminal;
+    State.VisiblePaths.Add(Path);
+    TestTrue(TEXT("raw path flags serialize deterministically"),
+        State.ToDeterministicJson().Contains(TEXT("\"flags\":5")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64GlobalViewerSnapPolicyTest,
     "KSA64.Phase12C.Temporal.ExactSnapBoundaries",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -205,13 +270,17 @@ bool FKsa64GlobalViewerDirectorTest::RunTest(const FString&)
         Ksa64GlobalViewerPolicy::ResolveAutomaticCamera(1, 5, 15'255),
         EKsa64GlobalCameraMode::RecoveryLocalEnu);
     TestEqual(
-        TEXT("ECEF ascent uses Earth-fixed camera"),
-        Ksa64GlobalViewerPolicy::ResolveAutomaticCamera(2, 2, 2'000),
+        TEXT("powered ECEF ascent uses chase camera"),
+        Ksa64GlobalViewerPolicy::ResolveAutomaticCamera(2, 2, 1'919),
+        EKsa64GlobalCameraMode::VehicleChase);
+    TestEqual(
+        TEXT("burnout opens the Earth-fixed camera"),
+        Ksa64GlobalViewerPolicy::ResolveAutomaticCamera(2, 2, 1'920),
         EKsa64GlobalCameraMode::EarthFixed);
     TestEqual(
-        TEXT("ECEF entry uses chase camera"),
+        TEXT("ECEF entry remains Earth-fixed"),
         Ksa64GlobalViewerPolicy::ResolveAutomaticCamera(2, 4, 13'000),
-        EKsa64GlobalCameraMode::VehicleChase);
+        EKsa64GlobalCameraMode::EarthFixed);
     TestEqual(
         TEXT("GCRF coast uses inertial camera"),
         Ksa64GlobalViewerPolicy::ResolveAutomaticCamera(3, 3, 8'124),
@@ -240,9 +309,9 @@ bool FKsa64GlobalViewerImportantReleaseSemanticTest::RunTest(const FString&)
         EKsa64GlobalCameraMode Camera;
     };
     const FBookmark Bookmarks[] = {
-        {29, 2, 2, EKsa64GlobalCameraMode::EarthFixed},
+        {29, 2, 2, EKsa64GlobalCameraMode::VehicleChase},
         {3'579, 3, 3, EKsa64GlobalCameraMode::EarthInertial},
-        {12'669, 2, 4, EKsa64GlobalCameraMode::VehicleChase},
+        {12'669, 2, 4, EKsa64GlobalCameraMode::EarthFixed},
         {15'255, 1, 5, EKsa64GlobalCameraMode::RecoveryLocalEnu},
     };
     uint64 Continuity = 100;
@@ -272,6 +341,12 @@ bool FKsa64GlobalViewerImportantReleaseSemanticTest::RunTest(const FString&)
             Json.Contains(FString::Printf(TEXT("\"release_epoch\":%u"), Bookmark.Release)));
         TestTrue(TEXT("snapshot records exact product status"),
             Json.Contains(TEXT("\"acceptance_eligible\":true")));
+        TestTrue(TEXT("continuity identity is a JSON number"),
+            Json.Contains(FString::Printf(
+                TEXT("\"continuity_identity\":%llu"),
+                static_cast<unsigned long long>(Sample.ContinuityIdentity))));
+        TestFalse(TEXT("continuity identity is never a quoted decimal"),
+            Json.Contains(TEXT("\"continuity_identity\":\"")));
     }
 
     Viewer->SetGlobalAvailabilityForAutomation(false, false, 0x03);
@@ -404,10 +479,222 @@ bool FKsa64GlobalViewerRealBridgeReplayTest::RunTest(const FString&)
         TestFalse(TEXT("SIM truth starts hidden"), State.bTruthVisible);
         TestTrue(TEXT("real onboard path is present"), State.OnboardPathPoints > 0);
         TestTrue(TEXT("real transition index is present"), State.TransitionMarkers >= 4);
+        TestTrue(TEXT("onboard pose is visible"),
+            (State.VisibleSourceMask & 0x02u) != 0);
+        TestEqual(TEXT("hidden truth pose is absent"),
+            State.VisibleSourceMask & 0x08u, 0u);
+        uint32 ReconstructedVisibleMask = 0;
+        for (const FKsa64GlobalVisibleSourceSemantic& Source : State.VisibleSources)
+        {
+            ReconstructedVisibleMask |= 1u << (Source.Source - 1u);
+            TestTrue(TEXT("visible source identity is public"), Source.Source <= 3);
+            TestTrue(TEXT("visible source model identity is retained"),
+                Source.ModelIdentity != 0);
+        }
+        TestEqual(TEXT("visible source array matches its mask"),
+            ReconstructedVisibleMask, State.VisibleSourceMask);
+        TestTrue(TEXT("planned and onboard path products are visible"),
+            State.VisiblePaths.Num() >= 2);
+        bool bPlannedPath = false;
+        bool bOnboardPath = false;
+        TSet<uint32> LocalAnchors;
+        for (const FKsa64GlobalVisiblePathSemantic& Path : State.VisiblePaths)
+        {
+            bPlannedPath |= Path.Source == 1;
+            bOnboardPath |= Path.Source == 2;
+            TestTrue(TEXT("hidden truth path is absent"), Path.Source != 4);
+            TestTrue(TEXT("visible path identity is retained"), Path.Identity != 0);
+            TestTrue(TEXT("visible path model identity is retained"),
+                Path.ModelIdentity != 0);
+            TestTrue(TEXT("visible path continuity is retained"),
+                Path.ContinuityIdentity != 0);
+            TestEqual(TEXT("visible path flags stay in their raw contract"),
+                static_cast<uint16>(Path.Flags & ~Ksa64GlobalPathFlags::Mask),
+                static_cast<uint16>(0));
+            TestTrue(TEXT("visible path points are retained"), Path.PointCount > 0);
+            TestTrue(TEXT("visible path checksum matches browser FNV domain"),
+                Path.PointChecksum != 0);
+            if (Milestone.Frame == 1) LocalAnchors.Add(Path.AnchorIdentity);
+        }
+        TestTrue(TEXT("planned path semantic is present"), bPlannedPath);
+        TestTrue(TEXT("onboard path semantic is present"), bOnboardPath);
+        if (Milestone.Frame == 1)
+        {
+            TestTrue(TEXT("local ENU paths retain launch and recovery strips"),
+                LocalAnchors.Num() >= 2);
+        }
+        const FString SemanticJson = Viewer->ExportSemanticStateJson();
+        TestTrue(TEXT("semantic JSON exports visible sources"),
+            SemanticJson.Contains(TEXT("\"visible_sources\":[")));
+        TestTrue(TEXT("semantic JSON exports visible paths"),
+            SemanticJson.Contains(TEXT("\"visible_paths\":[")));
+        TestTrue(TEXT("semantic JSON exports raw path flags"),
+            SemanticJson.Contains(TEXT("\"flags\":")));
     }
     const FKsa64GlobalSemanticState& Terminal = Viewer->GetSemanticState();
     TestEqual(TEXT("real terminal disposition"), Terminal.OverallDisposition, 1u);
     TestEqual(TEXT("real terminal label"), Terminal.DispositionLabel, TEXT("NOMINAL SUCCESS"));
+    Operations->CloseForAutomation();
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64GlobalViewerCompletedGuidedPathTest,
+    "KSA64.Phase12C.Integration.CompletedGuidedMilestonePaths",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64GlobalViewerCompletedGuidedPathTest::RunTest(const FString&)
+{
+    TStrongObjectPtr<UGameInstance> GameInstance(
+        NewObject<UGameInstance>(GetTransientPackage()));
+    TStrongObjectPtr<UKsa64LiveMissionSubsystem> Operations(
+        NewObject<UKsa64LiveMissionSubsystem>(GameInstance.Get()));
+    TStrongObjectPtr<UKsa64GlobalViewerSubsystem> Viewer(
+        NewObject<UKsa64GlobalViewerSubsystem>(GameInstance.Get()));
+    if (!Operations->InitializeForAutomation()
+        || !Operations->StartGuidedOperations()
+        || !Operations->SetCompletedGlobalDisplayRetention(true))
+    {
+        AddError(FString::Printf(
+            TEXT("guided bridge unavailable: %s"),
+            *Operations->GetViewModel().LastDiagnostic));
+        Operations->CloseForAutomation();
+        return false;
+    }
+
+    const auto ApplyActionPair = [this, &Operations](
+        uint32 StageRelease,
+        uint32 CommitRelease)
+    {
+        if (!Operations->AdvanceToReleaseForAutomation(StageRelease, 60.0))
+        {
+            AddError(FString::Printf(
+                TEXT("guided stage release %u was not reached"),
+                StageRelease));
+            return false;
+        }
+        Operations->ReviewAction();
+        Operations->StageAction();
+        if (!Operations->WaitForActionReceiptForAutomation(1, 30.0))
+        {
+            AddError(FString::Printf(
+                TEXT("guided stage receipt failed at %u"),
+                StageRelease));
+            return false;
+        }
+        if (!Operations->AdvanceToReleaseForAutomation(CommitRelease, 60.0))
+        {
+            AddError(FString::Printf(
+                TEXT("guided commit release %u was not reached"),
+                CommitRelease));
+            return false;
+        }
+        Operations->CommitAction();
+        if (!Operations->WaitForActionReceiptForAutomation(2, 30.0))
+        {
+            AddError(FString::Printf(
+                TEXT("guided commit receipt failed at %u"),
+                CommitRelease));
+            return false;
+        }
+        return true;
+    };
+
+    if (!ApplyActionPair(6'080, 6'240)
+        || !ApplyActionPair(6'560, 6'720)
+        || !Operations->AdvanceToReleaseForAutomation(21'591, 120.0)
+        || !Operations->WaitForCompletionForAutomation(60.0))
+    {
+        AddError(FString::Printf(
+            TEXT("guided terminal evidence failed: release=%u diagnostic=%s"),
+            Operations->GetViewModel().ReleaseEpoch,
+            *Operations->GetViewModel().LastDiagnostic));
+        Operations->CloseForAutomation();
+        return false;
+    }
+    TestEqual(TEXT("guided accepted action count"),
+        Operations->GetViewModel().ActionCount, 4u);
+
+    const uint32 Milestones[] = {
+        5'760, 5'824, 6'080, 6'240, 6'560, 6'720,
+    };
+    TMap<uint8, uint32> TerminalPathChecksums;
+    TMap<uint8, uint32> TerminalPathPointCounts;
+    for (const uint32 ReleaseEpoch : Milestones)
+    {
+        if (!Viewer->OpenCompletedGuidedReleaseForAutomation(
+                *Operations, ReleaseEpoch))
+        {
+            AddError(FString::Printf(
+                TEXT("completed guided recapture failed at release %u: %s; supports=%u operations=%s"),
+                ReleaseEpoch,
+                *Viewer->GetSemanticState().StatusLabel,
+                Operations->SupportsGlobalDisplayV1() ? 1u : 0u,
+                *Operations->GetViewModel().LastDiagnostic));
+            Operations->CloseForAutomation();
+            return false;
+        }
+        const FKsa64GlobalSemanticState& State = Viewer->GetSemanticState();
+        TestEqual(TEXT("guided selected release remains exact"),
+            State.ReplaySelectedRelease, ReleaseEpoch);
+        TestEqual(TEXT("guided recapture frame"), State.FrameIdentity, 3u);
+        TestEqual(TEXT("guided recapture segment"), State.SegmentIdentity, 3u);
+        TestEqual(TEXT("guided sample source mask"), State.SourceMask, 0x06u);
+        TestEqual(TEXT("guided visible pose mask"), State.VisibleSourceMask, 0x06u);
+        TestFalse(TEXT("guided truth remains structurally absent"),
+            State.bTruthPermitted || State.bTruthVisible);
+        TestTrue(TEXT("guided terminal products remain accepted"),
+            State.bAcceptanceEligible);
+
+        bool bPlanned = false;
+        bool bOnboard = false;
+        bool bGround = false;
+        for (const FKsa64GlobalVisiblePathSemantic& Path : State.VisiblePaths)
+        {
+            bPlanned |= Path.Source == 1;
+            bOnboard |= Path.Source == 2;
+            bGround |= Path.Source == 3;
+            TestTrue(TEXT("completed guided path is terminal"),
+                (Path.Flags & Ksa64GlobalPathFlags::Terminal) != 0);
+            TestEqual(TEXT("completed guided path is not incomplete"),
+                static_cast<uint16>(Path.Flags
+                    & Ksa64GlobalPathFlags::Incomplete),
+                static_cast<uint16>(0));
+            TestEqual(TEXT("completed guided path needs no resync"),
+                static_cast<uint16>(Path.Flags
+                    & Ksa64GlobalPathFlags::ResyncRequired),
+                static_cast<uint16>(0));
+            TestTrue(TEXT("completed guided path contains whole-mission points"),
+                Path.PointCount > 100);
+            TestTrue(TEXT("completed guided path checksum is exact"),
+                Path.PointChecksum != 0);
+            if (!TerminalPathChecksums.Contains(Path.Source))
+            {
+                TerminalPathChecksums.Add(Path.Source, Path.PointChecksum);
+                TerminalPathPointCounts.Add(Path.Source, Path.PointCount);
+            }
+            else
+            {
+                TestEqual(TEXT("terminal path checksum is seek-invariant"),
+                    Path.PointChecksum, TerminalPathChecksums[Path.Source]);
+                TestEqual(TEXT("terminal path extent is seek-invariant"),
+                    Path.PointCount, TerminalPathPointCounts[Path.Source]);
+            }
+        }
+        TestTrue(TEXT("completed guided planned path is present"), bPlanned);
+        TestTrue(TEXT("completed guided onboard path is present"), bOnboard);
+        TestTrue(TEXT("completed guided ground path is present"), bGround);
+    }
+    TestEqual(TEXT("guided terminal public paths were retained"),
+        TerminalPathChecksums.Num(), 3);
+    TestEqual(TEXT("historical recapture preserves terminal release authority"),
+        Operations->GetViewModel().ReleaseEpoch, 21'591u);
+    TestEqual(TEXT("historical recapture preserves terminal disposition authority"),
+        Operations->GetViewModel().OverallDisposition, 2u);
+    TestEqual(TEXT("retained guided authority remains completed"),
+        Operations->GetViewModel().Lifecycle, 5u);
+    TestTrue(TEXT("guided terminal display lease releases cleanly"),
+        Operations->SetCompletedGlobalDisplayRetention(false));
     Operations->CloseForAutomation();
     return true;
 }

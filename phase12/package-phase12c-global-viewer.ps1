@@ -276,7 +276,7 @@ for ($index = 0; $index -lt $expectedOperationalMilestones.Count; ++$index) {
         $record.selected_release_epoch -ne $expected.release -or
         $record.frame_identity -ne 3 -or
         $record.segment_identity -ne 3 -or
-        $record.source_mask -ne 3 -or
+        $record.source_mask -ne 6 -or
         $record.truth_permitted -or
         $record.truth_visible -or
         $record.gnss_state -ne $expected.gnss -or
@@ -293,7 +293,7 @@ for ($index = 0; $index -lt $expectedOperationalMilestones.Count; ++$index) {
         $semantic.release_epoch -ne $expected.release -or
         $semantic.frame_identity -ne 3 -or
         $semantic.segment_identity -ne 3 -or
-        $semantic.source_mask -ne 3 -or
+        $semantic.source_mask -ne 6 -or
         $semantic.truth_permitted -or
         $semantic.truth_visible -or
         $semantic.gnss_state -ne $expected.gnss -or
@@ -308,7 +308,7 @@ for ($index = 0; $index -lt $expectedOperationalMilestones.Count; ++$index) {
         $viewerSemantic.release_epoch -ne $expected.release -or
         $viewerSemantic.frame_identity -ne 3 -or
         $viewerSemantic.segment_identity -ne 3 -or
-        $viewerSemantic.source_mask -ne 3 -or
+        $viewerSemantic.source_mask -ne 6 -or
         $viewerSemantic.truth_permitted -or
         $viewerSemantic.truth_visible -or
         -not $viewerSemantic.scene_ready -or

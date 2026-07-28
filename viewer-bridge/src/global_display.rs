@@ -11,10 +11,7 @@ use ksa64_presentation::{
     encode_global_display_definition_payload, encode_global_display_path_payload,
     encode_global_display_samples_payload, encode_global_display_transition_payload,
     encode_global_replay_index_payload, GlobalDisplayFrameId, GlobalDisplayPathChunkV1,
-    GlobalDisplayPathLod, GlobalDisplayPathPointV1, GlobalDisplaySegment, GlobalDisplaySourceId,
-    PresentationRole, GLOBAL_DISCONTINUITY_TERMINAL, GLOBAL_DISPLAY_MODEL_ID,
-    GLOBAL_PATH_FLAG_INCOMPLETE, GLOBAL_PATH_FLAG_STALE, GLOBAL_PATH_FLAG_TERMINAL,
-    GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION, GLOBAL_POSE_VALID_RECOVERY_ENU_POSITION,
+    GlobalDisplayPathLod, GlobalDisplaySourceId, PresentationRole,
 };
 use std::mem::size_of;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -683,137 +680,36 @@ fn path_from_samples(
     } else {
         &state.global_all_samples
     };
-    if source == GlobalDisplaySourceId::Planned && lod == GlobalDisplayPathLod::Exact {
-        return None;
-    }
     let definition = state.global_definition?;
-    let mut points = Vec::new();
-    for (sample_index, sample) in samples.iter().enumerate() {
-        let pinned = sample.event_mask != 0 || sample.discontinuity_mask != 0;
-        let retain = if source == GlobalDisplaySourceId::Planned {
-            lod == GlobalDisplayPathLod::OneSecond || sample_index.is_multiple_of(4) || pinned
-        } else {
-            sample.release_epoch.is_multiple_of(lod.cadence_releases()) || pinned
-        };
-        if !retain {
-            continue;
-        }
-        let Some(pose) = sample.sources.iter().find(|pose| pose.source == source) else {
-            continue;
-        };
-        let position = match frame {
-            GlobalDisplayFrameId::LocalEnu
-                if sample.segment == GlobalDisplaySegment::LocalRecovery =>
-            {
-                if pose.validity_mask & GLOBAL_POSE_VALID_RECOVERY_ENU_POSITION == 0 {
-                    continue;
-                }
-                pose.recovery_enu.position_q12_km
-            }
-            GlobalDisplayFrameId::LocalEnu => {
-                if pose.validity_mask & GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION == 0 {
-                    continue;
-                }
-                pose.launch_enu.position_q12_km
-            }
-            GlobalDisplayFrameId::EarthFixedEcef => pose.ecef.position_q12_km,
-            GlobalDisplayFrameId::EarthInertialGcrf => pose.gcrf.position_q12_km,
-        };
-        points.push(GlobalDisplayPathPointV1 {
-            release_epoch: sample.release_epoch,
-            mission_time_q16: sample.mission_time_q16,
-            segment: sample.segment,
-            event_mask: sample.event_mask,
-            anchor_identity: if frame != GlobalDisplayFrameId::LocalEnu {
-                0
-            } else if sample.segment == GlobalDisplaySegment::LocalRecovery {
-                definition.recovery_anchor.identity
-            } else {
-                definition.launch_anchor.identity
-            },
-            position_q12_km: position,
-        });
-    }
-    if points.is_empty() {
-        return None;
-    }
-    let chunk_count =
-        u16::try_from(points.len().div_ceil(KSA64_GLOBAL_DISPLAY_PATH_POINT_LIMIT)).ok()?;
-    if chunk_index >= chunk_count {
-        return None;
-    }
-    let start = usize::from(chunk_index) * KSA64_GLOBAL_DISPLAY_PATH_POINT_LIMIT;
-    let end = (start + KSA64_GLOBAL_DISPLAY_PATH_POINT_LIMIT).min(points.len());
-    let last = samples.last()?;
-    let latest_source_pose = last.sources.iter().find(|pose| pose.source == source);
-    let source_pose = samples
-        .iter()
-        .rev()
-        .find_map(|sample| sample.sources.iter().find(|pose| pose.source == source));
-    let terminal = source == GlobalDisplaySourceId::Planned
-        || last.discontinuity_mask & GLOBAL_DISCONTINUITY_TERMINAL != 0;
-    let stale = latest_source_pose.is_none()
-        || latest_source_pose.is_some_and(|pose| pose.age_releases > 32);
-    let incomplete = !terminal
-        || latest_source_pose.is_none()
-        || points.first().is_some_and(|point| {
-            point.release_epoch
-                > samples
-                    .first()
-                    .map_or(point.release_epoch, |sample| sample.release_epoch)
-        });
-    let mut flags = 0;
-    if stale {
-        flags |= GLOBAL_PATH_FLAG_STALE;
-    }
-    if incomplete {
-        flags |= GLOBAL_PATH_FLAG_INCOMPLETE;
-    }
-    if terminal {
-        flags |= GLOBAL_PATH_FLAG_TERMINAL;
-    }
-    let path_identity = hash_words(&[
+    let replay_entries = state
+        .global_replay_index
+        .as_ref()
+        .map_or(&[][..], |index| index.entries.as_slice());
+    ksa64_session::global_display::build_global_display_path_chunk(
+        state.global_role?,
         definition.display_identity,
-        source as u32,
-        frame as u32,
-        lod as u32,
-    ]);
-    Some(GlobalDisplayPathChunkV1 {
-        path_identity,
+        definition.launch_anchor.identity,
+        definition.recovery_anchor.identity,
+        samples,
+        replay_entries,
         source,
-        display_frame: frame,
+        frame,
         lod,
-        flags,
-        model_identity: source_pose.map_or(GLOBAL_DISPLAY_MODEL_ID ^ source as u32, |pose| {
-            pose.model_identity
-        }),
-        estimate_identity: source_pose.map_or(0, |pose| pose.estimate_identity),
-        source_checksum: source_pose.map_or(0, |pose| pose.checksum),
-        continuity_identity: path_identity,
         chunk_index,
-        chunk_count,
-        points: points[start..end].to_vec(),
-    })
-}
-
-fn hash_words(words: &[u32]) -> u32 {
-    let mut hash = 0x811c_9dc5_u32;
-    for word in words {
-        for byte in word.to_le_bytes() {
-            hash ^= u32::from(byte);
-            hash = hash.wrapping_mul(0x0100_0193);
-        }
-    }
-    hash.max(1)
+        &[],
+    )
+    .ok()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ksa64_interface::phase11::OperationalRole;
     use ksa64_presentation::{
         decode_global_display_path_payload, decode_global_display_samples_payload,
         decode_global_replay_index_payload,
     };
+    use ksa64_session::phase12b_live::FullMissionSession;
     use std::ptr;
     use std::slice;
     use std::time::{Duration, Instant};
@@ -987,6 +883,52 @@ mod tests {
                 decode_global_replay_index_payload(&take_buffer(output)).expect("replay index");
             assert_eq!(replay.first_release, 0);
             assert_eq!(replay.last_release, 0);
+
+            let mut advanced = advanced;
+            for expected_release in 2..=33 {
+                assert_eq!(
+                    crate::ksa64_viewer_advance(guided, 1),
+                    ResultCode::Queued as i32
+                );
+                advanced = wait_after(guided, advanced.command_sequence);
+                assert_eq!(advanced.release_epoch, expected_release);
+            }
+
+            let mut direct = FullMissionSession::new(OperationalRole::GuidedOperator)
+                .expect("direct guided session");
+            direct.prepare().expect("prepare direct guided session");
+            for _ in 0..33 {
+                direct
+                    .advance_one_release()
+                    .expect("advance direct guided session");
+            }
+            let direct_path = direct
+                .global_display_path_chunk(
+                    GlobalDisplaySourceId::OnboardEstimate,
+                    GlobalDisplayFrameId::EarthFixedEcef,
+                    GlobalDisplayPathLod::OneSecond,
+                    0,
+                )
+                .expect("direct guided path");
+            let onboard_request = GlobalDisplayPathRequestV1 {
+                source: GlobalDisplaySourceId::OnboardEstimate as u32,
+                display_frame: GlobalDisplayFrameId::EarthFixedEcef as u32,
+                lod: GlobalDisplayPathLod::OneSecond as u32,
+                ..GlobalDisplayPathRequestV1::default()
+            };
+            output = empty_buffer();
+            assert_eq!(path(guided, &onboard_request, &mut output), 0);
+            let bridge_path = decode_global_display_path_payload(
+                &take_buffer(output),
+                PresentationRole::GuidedOperator,
+            )
+            .expect("bridge guided path");
+            assert_eq!(bridge_path, direct_path);
+            assert!(
+                bridge_path.points.len() < 33,
+                "routine release notifications must not pin every bridge path sample"
+            );
+
             assert_eq!(crate::ksa64_viewer_destroy(guided), 0);
 
             let director = start_full(PresentationRole::SimDirector as u32);
@@ -1008,6 +950,283 @@ mod tests {
                 .iter()
                 .any(|pose| pose.source == GlobalDisplaySourceId::SimTruth));
             assert_eq!(crate::ksa64_viewer_destroy(director), 0);
+        }
+    }
+    #[test]
+    #[ignore = "full accepted Phase 10 nominal re-execution"]
+    fn nominal_direct_and_bridge_path_products_match() {
+        let role = PresentationRole::SimDirector;
+        let replay = ksa64_session::global_display::build_nominal_global_display_replay()
+            .expect("nominal display replay");
+        let state = Shared {
+            global_role: Some(role),
+            global_definition: Some(replay.definition(role)),
+            global_all_samples: replay.samples_after(0, role),
+            global_planned_samples: replay.planned_samples().to_vec(),
+            global_replay_index: Some(replay.replay_index()),
+            ..Shared::default()
+        };
+        let replay_entries = &state
+            .global_replay_index
+            .as_ref()
+            .expect("nominal replay index")
+            .entries;
+        let mut planned_counts = Vec::new();
+        for lod in [
+            GlobalDisplayPathLod::OneSecond,
+            GlobalDisplayPathLod::FourSecond,
+        ] {
+            let first = replay
+                .path_chunk(
+                    role,
+                    GlobalDisplaySourceId::Planned,
+                    GlobalDisplayFrameId::EarthFixedEcef,
+                    lod,
+                    0,
+                )
+                .expect("planned cadence path");
+            let mut points = first.points.clone();
+            for chunk_index in 1..first.chunk_count {
+                points.extend(
+                    replay
+                        .path_chunk(
+                            role,
+                            GlobalDisplaySourceId::Planned,
+                            GlobalDisplayFrameId::EarthFixedEcef,
+                            lod,
+                            chunk_index,
+                        )
+                        .expect("planned cadence path chunk")
+                        .points,
+                );
+            }
+            for point in &points {
+                let source_sample = state
+                    .global_planned_samples
+                    .iter()
+                    .find(|sample| sample.release_epoch == point.release_epoch)
+                    .expect("planned point source sample");
+                let semantically_pinned = source_sample.event_mask != 0
+                    || source_sample.discontinuity_mask != 0
+                    || replay_entries
+                        .iter()
+                        .any(|entry| entry.release_epoch == point.release_epoch);
+                let first_planned = point.release_epoch
+                    == state
+                        .global_planned_samples
+                        .first()
+                        .expect("first planned sample")
+                        .release_epoch;
+                assert!(
+                    first_planned
+                        || source_sample
+                            .sequence
+                            .is_multiple_of(u64::from(lod.cadence_releases()))
+                        || semantically_pinned,
+                    "unpinned planned release {} (sequence {}) violated {:?} cadence",
+                    point.release_epoch,
+                    source_sample.sequence,
+                    lod
+                );
+            }
+            for transition in [29_u32, 3_579, 12_669, 15_255] {
+                assert!(
+                    points.iter().any(|point| point.release_epoch == transition),
+                    "transition {transition} must remain pinned in {:?}",
+                    lod
+                );
+            }
+            let regular_times: Vec<u32> = points
+                .iter()
+                .filter_map(|point| {
+                    let sample = state
+                        .global_planned_samples
+                        .iter()
+                        .find(|sample| sample.release_epoch == point.release_epoch)?;
+                    sample
+                        .sequence
+                        .is_multiple_of(u64::from(lod.cadence_releases()))
+                        .then_some(point.mission_time_q16)
+                })
+                .collect();
+            let expected_spacing = lod.cadence_releases().saturating_mul(2_048);
+            assert!(regular_times
+                .windows(2)
+                .all(|window| window[1] - window[0] == expected_spacing));
+            planned_counts.push(points.len());
+        }
+        assert_eq!(planned_counts, vec![697, 181]);
+        for (source, lod) in [
+            (
+                GlobalDisplaySourceId::Planned,
+                GlobalDisplayPathLod::OneSecond,
+            ),
+            (
+                GlobalDisplaySourceId::OnboardEstimate,
+                GlobalDisplayPathLod::FourSecond,
+            ),
+            (GlobalDisplaySourceId::SimTruth, GlobalDisplayPathLod::Exact),
+        ] {
+            let first = replay
+                .path_chunk(role, source, GlobalDisplayFrameId::EarthFixedEcef, lod, 0)
+                .expect("direct nominal path");
+            for chunk_index in 0..first.chunk_count {
+                let direct = replay
+                    .path_chunk(
+                        role,
+                        source,
+                        GlobalDisplayFrameId::EarthFixedEcef,
+                        lod,
+                        chunk_index,
+                    )
+                    .expect("direct nominal path chunk");
+                let bridge = path_from_samples(
+                    &state,
+                    source,
+                    GlobalDisplayFrameId::EarthFixedEcef,
+                    lod,
+                    chunk_index,
+                )
+                .expect("bridge nominal path chunk");
+                assert_eq!(bridge, direct);
+            }
+        }
+    }
+    #[test]
+    #[ignore = "full accepted Phase 12B guided mission"]
+    fn completed_guided_direct_and_bridge_path_products_match() {
+        use ksa64_presentation::GlobalDisplayReplayEntryKind;
+        use ksa64_session::phase11_live::{
+            MissionOperatorAction, MissionSessionLifecycle, MissionSessionPace,
+        };
+        use ksa64_session::phase12b_live::{
+            BRANCH_COMMIT_RELEASE, BRANCH_STAGE_RELEASE, UPDATE_COMMIT_RELEASE,
+            UPDATE_STAGE_RELEASE,
+        };
+
+        let mut direct = FullMissionSession::new(OperationalRole::GuidedOperator)
+            .expect("direct completed guided session");
+        direct.prepare().expect("prepare completed guided session");
+        direct
+            .set_pace(MissionSessionPace::Fast)
+            .expect("set fast pace");
+        while direct.snapshot().lifecycle != MissionSessionLifecycle::Completed {
+            match direct.snapshot().release_epoch {
+                UPDATE_STAGE_RELEASE | BRANCH_STAGE_RELEASE => {
+                    let load = direct.recommended_load().expect("recommended staged load");
+                    direct
+                        .submit_operator_action(MissionOperatorAction::Stage {
+                            load,
+                            completed_event_mask: 0,
+                        })
+                        .expect("stage guided load");
+                }
+                UPDATE_COMMIT_RELEASE | BRANCH_COMMIT_RELEASE => {
+                    let commit = direct
+                        .commit_request_for_staged()
+                        .expect("guided commit request");
+                    direct
+                        .submit_operator_action(MissionOperatorAction::Commit(commit))
+                        .expect("commit guided load");
+                }
+                _ => {}
+            }
+            direct
+                .advance_one_release()
+                .expect("advance completed guided session");
+        }
+
+        let replay_index = direct.global_display_replay_index();
+        let action_releases: Vec<u32> = replay_index
+            .entries
+            .iter()
+            .filter(|entry| entry.kind == GlobalDisplayReplayEntryKind::ProcedureAction)
+            .map(|entry| entry.release_epoch)
+            .collect();
+        assert_eq!(
+            action_releases,
+            vec![
+                UPDATE_STAGE_RELEASE,
+                UPDATE_COMMIT_RELEASE,
+                BRANCH_STAGE_RELEASE,
+                BRANCH_COMMIT_RELEASE,
+            ]
+        );
+
+        let state = Shared {
+            global_role: Some(PresentationRole::GuidedOperator),
+            global_definition: Some(direct.global_display_definition()),
+            global_all_samples: direct.global_display_samples_after(0),
+            global_planned_samples: direct.global_display_planned_samples().to_vec(),
+            global_replay_index: Some(replay_index),
+            ..Shared::default()
+        };
+        for (source, lod) in [
+            (
+                GlobalDisplaySourceId::OnboardEstimate,
+                GlobalDisplayPathLod::OneSecond,
+            ),
+            (
+                GlobalDisplaySourceId::GroundEstimate,
+                GlobalDisplayPathLod::FourSecond,
+            ),
+            (
+                GlobalDisplaySourceId::OnboardEstimate,
+                GlobalDisplayPathLod::Exact,
+            ),
+        ] {
+            let first = direct
+                .global_display_path_chunk(source, GlobalDisplayFrameId::EarthFixedEcef, lod, 0)
+                .expect("direct completed guided path");
+            for chunk_index in 0..first.chunk_count {
+                let expected = direct
+                    .global_display_path_chunk(
+                        source,
+                        GlobalDisplayFrameId::EarthFixedEcef,
+                        lod,
+                        chunk_index,
+                    )
+                    .expect("direct completed guided path chunk");
+                let actual = path_from_samples(
+                    &state,
+                    source,
+                    GlobalDisplayFrameId::EarthFixedEcef,
+                    lod,
+                    chunk_index,
+                )
+                .expect("bridge completed guided path chunk");
+                assert_eq!(actual, expected);
+            }
+        }
+        let first_onboard_chunk = direct
+            .global_display_path_chunk(
+                GlobalDisplaySourceId::OnboardEstimate,
+                GlobalDisplayFrameId::EarthFixedEcef,
+                GlobalDisplayPathLod::OneSecond,
+                0,
+            )
+            .expect("completed onboard one-second path");
+        let mut onboard_points = first_onboard_chunk.points.clone();
+        for chunk_index in 1..first_onboard_chunk.chunk_count {
+            onboard_points.extend(
+                direct
+                    .global_display_path_chunk(
+                        GlobalDisplaySourceId::OnboardEstimate,
+                        GlobalDisplayFrameId::EarthFixedEcef,
+                        GlobalDisplayPathLod::OneSecond,
+                        chunk_index,
+                    )
+                    .expect("completed onboard one-second path chunk")
+                    .points,
+            );
+        }
+        for release in action_releases {
+            assert!(
+                onboard_points
+                    .iter()
+                    .any(|point| point.release_epoch == release),
+                "accepted action release {release} must remain pinned"
+            );
         }
     }
 }

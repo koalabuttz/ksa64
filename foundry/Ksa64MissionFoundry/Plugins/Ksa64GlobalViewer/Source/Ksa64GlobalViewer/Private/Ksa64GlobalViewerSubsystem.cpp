@@ -136,6 +136,17 @@ FVector3d EarthPoint(
     const double Z = SemiMinorCentimetres * FMath::Sin(LatitudeRadians);
     return FVector3d(X, Y, Z);
 }
+uint32 GlobalPathLodSeconds(uint8 Lod)
+{
+    switch (Lod)
+    {
+    case 1: return 0;
+    case 2: return 1;
+    case 3: return 4;
+    default: return MAX_uint32;
+    }
+}
+
 }
 
 void UKsa64GlobalViewerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -262,6 +273,7 @@ void UKsa64GlobalViewerSubsystem::ResetGlobalDisplayState()
 {
     bGlobalDefinitionValid = false;
     bGlobalAcceptedExact = false;
+    bGlobalPathProductsValid = true;
     PermittedGlobalSourceMask = 0;
     GlobalPathDisplayFrame = 0;
     LastGlobalPathRefreshRelease = 0;
@@ -269,7 +281,11 @@ void UKsa64GlobalViewerSubsystem::ResetGlobalDisplayState()
     CurrentGlobalProduct = {};
     GlobalReplayIndex = {};
     GlobalTransitions.Reset();
-    for (TArray<FKsa64GlobalPathPointProduct>& Path : GlobalPaths) Path.Reset();
+    for (int32 Index = 0; Index < 4; ++Index)
+    {
+        GlobalPaths[Index].Reset();
+        GlobalPathStates[Index] = {};
+    }
     PreviousSample = {};
     CurrentSample = {};
     bHasPreviousSample = false;
@@ -288,6 +304,9 @@ void UKsa64GlobalViewerSubsystem::ResetGlobalDisplayState()
     SemanticState.ReplaySelectedRelease = 0;
     SemanticState.ReplayBookmarkCount = 0;
     SemanticState.SourceMask = 0;
+    SemanticState.VisibleSourceMask = 0;
+    SemanticState.VisibleSources.Reset();
+    SemanticState.VisiblePaths.Reset();
     SemanticState.ObservedPathPoints = 0;
     SemanticState.PlannedPathPoints = 0;
     SemanticState.OnboardPathPoints = 0;
@@ -402,6 +421,11 @@ bool UKsa64GlobalViewerSubsystem::EnsureScene()
         TEXT("VehicleLocator"),
         TEXT("/Engine/BasicShapes/Sphere.Sphere"),
         FLinearColor(1.0f, 0.62f, 0.12f, 1.0f));
+    PlannedLocatorMesh = CreateMeshComponent(
+        *SceneActor,
+        TEXT("PlannedReferenceLocator"),
+        TEXT("/Engine/BasicShapes/Cone.Cone"),
+        FLinearColor(0.90f, 0.92f, 0.95f, 0.58f));
     GroundLocatorMesh = CreateMeshComponent(
         *SceneActor,
         TEXT("GroundEstimateLocator"),
@@ -515,6 +539,11 @@ bool UKsa64GlobalViewerSubsystem::EnsureScene()
             EarthSemiMinorCentimetres * 1.012 / 50.0));
     }
     if (LocatorMesh.IsValid()) LocatorMesh->SetRelativeScale3D(FVector(0.08));
+    if (PlannedLocatorMesh.IsValid())
+    {
+        PlannedLocatorMesh->SetRelativeScale3D(FVector(0.07));
+        PlannedLocatorMesh->SetVisibility(false);
+    }
     if (GroundLocatorMesh.IsValid())
     {
         GroundLocatorMesh->SetRelativeScale3D(FVector(0.07));
@@ -541,6 +570,7 @@ void UKsa64GlobalViewerSubsystem::DestroyScene()
     }
     if (SceneRootActor.IsValid()) SceneRootActor->Destroy();
     ViewerCamera.Reset();
+    PlannedLocatorMesh.Reset();
     GroundLocatorMesh.Reset();
     TruthLocatorMesh.Reset();
     SceneRootActor.Reset();
@@ -1084,23 +1114,7 @@ void UKsa64GlobalViewerSubsystem::ApplyGlobalSample(
 void UKsa64GlobalViewerSubsystem::RefreshGlobalPaths(
     UKsa64LiveMissionSubsystem& Operations)
 {
-    uint32 RequestedFrame = CurrentGlobalProduct.ActiveFrame;
-    switch (SemanticState.ResolvedCamera)
-    {
-    case EKsa64GlobalCameraMode::LaunchLocalEnu:
-    case EKsa64GlobalCameraMode::RecoveryLocalEnu:
-        RequestedFrame = 1;
-        break;
-    case EKsa64GlobalCameraMode::EarthFixed:
-        RequestedFrame = 2;
-        break;
-    case EKsa64GlobalCameraMode::EarthInertial:
-    case EKsa64GlobalCameraMode::FreeOrbit:
-        RequestedFrame = 3;
-        break;
-    default:
-        break;
-    }
+    const uint32 RequestedFrame = ResolveDisplayFrame();
     uint32 RequestedLod = 2;
     switch (SemanticState.ResolvedCamera)
     {
@@ -1108,7 +1122,10 @@ void UKsa64GlobalViewerSubsystem::RefreshGlobalPaths(
     case EKsa64GlobalCameraMode::RecoveryLocalEnu:
     case EKsa64GlobalCameraMode::VehicleChase:
     case EKsa64GlobalCameraMode::TrueScaleInspection:
-        RequestedLod = 1;
+        // Planned/reference products intentionally begin at one-second LOD.
+        // Use the finest LOD shared by every visible source so Unreal and
+        // Babylon compare the same Rust-published path products.
+        RequestedLod = 2;
         break;
     case EKsa64GlobalCameraMode::EarthFixed:
     case EKsa64GlobalCameraMode::EarthInertial:
@@ -1118,19 +1135,32 @@ void UKsa64GlobalViewerSubsystem::RefreshGlobalPaths(
     default:
         break;
     }
+    GlobalPathDisplayFrame = static_cast<uint8>(RequestedFrame);
     for (uint32 Source = 1; Source <= 4; ++Source)
     {
-        const uint32 SourceBit = 1u << (Source - 1u);
+        const int32 StateIndex = static_cast<int32>(Source - 1u);
+        const uint32 SourceBit = 1u << StateIndex;
         if ((PermittedGlobalSourceMask & SourceBit) == 0)
         {
-            GlobalPaths[Source - 1].Reset();
+            GlobalPaths[StateIndex].Reset();
+            GlobalPathStates[StateIndex] = {};
             continue;
         }
+
         TArray<FKsa64GlobalPathPointProduct> Candidate;
+        FKsa64GlobalFetchedPathState CandidateState;
         uint32 ChunkIndex = 0;
         uint32 ChunkCount = 1;
-        while (ChunkIndex < ChunkCount && ChunkIndex < 64)
+        bool bFailed = false;
+        FString FailureReason;
+        while (ChunkIndex < ChunkCount)
         {
+            if (ChunkIndex >= 64)
+            {
+                bFailed = true;
+                FailureReason = TEXT("chunk count exceeds the bounded fetch");
+                break;
+            }
             Ksa64GlobalDisplayPathRequestV1 Request = {};
             Request.api_version = KSA64_GLOBAL_DISPLAY_API_VERSION;
             Request.struct_size = sizeof(Request);
@@ -1141,10 +1171,19 @@ void UKsa64GlobalViewerSubsystem::RefreshGlobalPaths(
             TArray<uint8> Payload;
             const EKsa64OperationsAdapterResult Result =
                 Operations.GetGlobalPathChunk(Request, Payload);
-            if (Result == EKsa64OperationsAdapterResult::NoData) break;
+            if (Result == EKsa64OperationsAdapterResult::NoData
+                || Result == EKsa64OperationsAdapterResult::Unchanged)
+            {
+                bFailed = true;
+                FailureReason = ChunkIndex == 0
+                    ? TEXT("path product is unavailable")
+                    : TEXT("path product ended before its declared chunk count");
+                break;
+            }
             if (Result != EKsa64OperationsAdapterResult::Ok)
             {
-                Candidate.Reset();
+                bFailed = true;
+                FailureReason = TEXT("path transport failed");
                 break;
             }
             FKsa64GlobalPathChunkProduct Chunk;
@@ -1154,22 +1193,74 @@ void UKsa64GlobalViewerSubsystem::RefreshGlobalPaths(
                 || Chunk.Source != Source
                 || Chunk.DisplayFrame != RequestedFrame
                 || Chunk.Lod != RequestedLod
-                || Chunk.ChunkIndex != ChunkIndex)
+                || Chunk.ChunkIndex != ChunkIndex
+                || Chunk.ChunkCount > 64)
             {
-                Candidate.Reset();
-                SemanticState.StatusLabel = FString::Printf(
-                    TEXT("GLOBAL PATH REJECTED · %s"), *Error);
-                SemanticState.bAcceptanceEligible = false;
+                bFailed = true;
+                FailureReason = Error.IsEmpty()
+                    ? TEXT("path request identity mismatch")
+                    : Error;
                 break;
             }
-            ChunkCount = Chunk.ChunkCount;
+            if (ChunkIndex == 0)
+            {
+                ChunkCount = Chunk.ChunkCount;
+                CandidateState.bValid = true;
+                CandidateState.PathIdentity = Chunk.PathIdentity;
+                CandidateState.Source = Chunk.Source;
+                CandidateState.DisplayFrame = Chunk.DisplayFrame;
+                CandidateState.Lod = Chunk.Lod;
+                CandidateState.Flags = Chunk.Flags;
+                CandidateState.ChunkCount = Chunk.ChunkCount;
+                CandidateState.ModelIdentity = Chunk.ModelIdentity;
+                CandidateState.EstimateIdentity = Chunk.EstimateIdentity;
+                CandidateState.SourceChecksum = Chunk.SourceChecksum;
+                CandidateState.ContinuityIdentity = Chunk.ContinuityIdentity;
+            }
+            else if (Chunk.ChunkCount != CandidateState.ChunkCount
+                || Chunk.PathIdentity != CandidateState.PathIdentity
+                || Chunk.Source != CandidateState.Source
+                || Chunk.DisplayFrame != CandidateState.DisplayFrame
+                || Chunk.Lod != CandidateState.Lod
+                || Chunk.Flags != CandidateState.Flags
+                || Chunk.ModelIdentity != CandidateState.ModelIdentity
+                || Chunk.EstimateIdentity != CandidateState.EstimateIdentity
+                || Chunk.SourceChecksum != CandidateState.SourceChecksum
+                || Chunk.ContinuityIdentity != CandidateState.ContinuityIdentity)
+            {
+                bFailed = true;
+                FailureReason = TEXT("path metadata changed between chunks");
+                break;
+            }
+            if (!Candidate.IsEmpty()
+                && (Chunk.Points[0].ReleaseEpoch <= Candidate.Last().ReleaseEpoch
+                    || Chunk.Points[0].MissionTimeQ16 <= Candidate.Last().MissionTimeQ16))
+            {
+                bFailed = true;
+                FailureReason = TEXT("path point order changed between chunks");
+                break;
+            }
             Candidate.Append(Chunk.Points);
             ++ChunkIndex;
         }
-        if (!Candidate.IsEmpty()) GlobalPaths[Source - 1] = MoveTemp(Candidate);
+        if (bFailed || ChunkIndex != ChunkCount || Candidate.IsEmpty())
+        {
+            GlobalPaths[StateIndex].Reset();
+            GlobalPathStates[StateIndex] = {};
+            SemanticState.StatusLabel = FString::Printf(
+                TEXT("GLOBAL PATH REJECTED · source %u · %s"),
+                Source,
+                FailureReason.IsEmpty() ? TEXT("incomplete product") : *FailureReason);
+            bGlobalPathProductsValid = false;
+            SemanticState.bAcceptanceEligible = false;
+            continue;
+        }
+        GlobalPaths[StateIndex] = MoveTemp(Candidate);
+        GlobalPathStates[StateIndex] = CandidateState;
     }
-    GlobalPathDisplayFrame = static_cast<uint8>(RequestedFrame);
     LastGlobalPathRefreshRelease = CurrentSample.ReleaseEpoch;
+    RefreshVisibleSemanticProducts();
+    UpdatePaths(CurrentSample.FrameIdentity);
 }
 
 void UKsa64GlobalViewerSubsystem::ApplyAcceptedEarthDefinition()
@@ -1210,20 +1301,218 @@ const FKsa64GlobalResolvedPoseProduct*
 UKsa64GlobalViewerSubsystem::ResolvePoseForCamera(
     const FKsa64GlobalSourcePoseProduct& Source) const
 {
+    return ResolvePoseForDisplayFrame(Source, ResolveDisplayFrame());
+}
+
+uint8 UKsa64GlobalViewerSubsystem::ResolveDisplayFrame() const
+{
     switch (SemanticState.ResolvedCamera)
     {
     case EKsa64GlobalCameraMode::LaunchLocalEnu:
-        return (Source.ValidityMask & (1u << 10)) != 0 ? &Source.LaunchEnu : nullptr;
     case EKsa64GlobalCameraMode::RecoveryLocalEnu:
-        return (Source.ValidityMask & (1u << 13)) != 0 ? &Source.RecoveryEnu : nullptr;
+        return 1;
     case EKsa64GlobalCameraMode::EarthFixed:
-        return (Source.ValidityMask & (1u << 4)) != 0 ? &Source.Ecef : nullptr;
+        return 2;
     case EKsa64GlobalCameraMode::EarthInertial:
     case EKsa64GlobalCameraMode::FreeOrbit:
-        return (Source.ValidityMask & (1u << 7)) != 0 ? &Source.Gcrf : nullptr;
+        return 3;
     default:
-        return (Source.ValidityMask & (1u << 0)) != 0 ? &Source.Active : nullptr;
+        return CurrentGlobalProduct.ActiveFrame != 0
+            ? CurrentGlobalProduct.ActiveFrame
+            : static_cast<uint8>(CurrentSample.FrameIdentity);
     }
+}
+
+const FKsa64GlobalResolvedPoseProduct*
+UKsa64GlobalViewerSubsystem::ResolvePoseForDisplayFrame(
+    const FKsa64GlobalSourcePoseProduct& Source,
+    uint8 DisplayFrame) const
+{
+    const bool bActivePositionAvailable = Source.ActiveFrame == DisplayFrame
+        && (Source.ValidityMask & (1u << 0)) != 0;
+    switch (DisplayFrame)
+    {
+    case 1:
+        if (CurrentGlobalProduct.Segment == 5
+            || SemanticState.ResolvedCamera == EKsa64GlobalCameraMode::RecoveryLocalEnu)
+        {
+            if ((Source.ValidityMask & (1u << 13)) != 0)
+                return &Source.RecoveryEnu;
+            return bActivePositionAvailable ? &Source.Active : nullptr;
+        }
+        if ((Source.ValidityMask & (1u << 10)) != 0) return &Source.LaunchEnu;
+        return bActivePositionAvailable ? &Source.Active : nullptr;
+    case 2:
+        if ((Source.ValidityMask & (1u << 4)) != 0) return &Source.Ecef;
+        return bActivePositionAvailable ? &Source.Active : nullptr;
+    case 3:
+        if ((Source.ValidityMask & (1u << 7)) != 0) return &Source.Gcrf;
+        return bActivePositionAvailable ? &Source.Active : nullptr;
+    default:
+        return nullptr;
+    }
+}
+
+const int32* UKsa64GlobalViewerSubsystem::ResolveAttitudeForDisplayFrame(
+    const FKsa64GlobalSourcePoseProduct& Source,
+    uint8 DisplayFrame) const
+{
+    uint32 ResolvedBit = 0;
+    const int32* Resolved = nullptr;
+    switch (DisplayFrame)
+    {
+    case 1:
+        if (CurrentGlobalProduct.Segment == 5
+            || SemanticState.ResolvedCamera == EKsa64GlobalCameraMode::RecoveryLocalEnu)
+        {
+            ResolvedBit = 1u << 15;
+            Resolved = Source.RecoveryEnu.AttitudeQ30;
+        }
+        else
+        {
+            ResolvedBit = 1u << 12;
+            Resolved = Source.LaunchEnu.AttitudeQ30;
+        }
+        break;
+    case 2:
+        ResolvedBit = 1u << 6;
+        Resolved = Source.Ecef.AttitudeQ30;
+        break;
+    case 3:
+        ResolvedBit = 1u << 9;
+        Resolved = Source.Gcrf.AttitudeQ30;
+        break;
+    default:
+        return nullptr;
+    }
+    if ((Source.ValidityMask & ResolvedBit) != 0) return Resolved;
+    return Source.ActiveFrame == DisplayFrame
+        && (Source.ValidityMask & (1u << 2)) != 0
+            ? Source.Active.AttitudeQ30
+            : nullptr;
+}
+
+bool UKsa64GlobalViewerSubsystem::IsGlobalSourceVisible(uint8 Source) const
+{
+    if (Source < 1 || Source > 4
+        || (PermittedGlobalSourceMask & (1u << (Source - 1u))) == 0)
+    {
+        return false;
+    }
+    return Source != 4 || SemanticState.bTruthVisible;
+}
+
+void UKsa64GlobalViewerSubsystem::RefreshVisibleSemanticProducts()
+{
+    SemanticState.VisibleSourceMask = 0;
+    SemanticState.VisibleSources.Reset();
+    SemanticState.VisiblePaths.Reset();
+    if (!bGlobalDefinitionValid) return;
+
+    const uint8 DisplayFrame = ResolveDisplayFrame();
+    for (uint8 SourceIdentity = 1; SourceIdentity <= 4; ++SourceIdentity)
+    {
+        if (!IsGlobalSourceVisible(SourceIdentity)) continue;
+        const FKsa64GlobalSourcePoseProduct* Source =
+            FindGlobalSource(SourceIdentity);
+        const FKsa64GlobalResolvedPoseProduct* Pose = Source != nullptr
+            ? ResolvePoseForDisplayFrame(*Source, DisplayFrame)
+            : nullptr;
+        if (Source == nullptr || Pose == nullptr) continue;
+
+        FKsa64GlobalVisibleSourceSemantic Visible;
+        Visible.Source = SourceIdentity;
+        Visible.ModelIdentity = Source->ModelIdentity;
+        Visible.EstimateIdentity = Source->EstimateIdentity;
+        Visible.SourceChecksum = Source->Checksum;
+        Visible.AgeReleases = Source->AgeReleases;
+        for (int32 Axis = 0; Axis < 3; ++Axis)
+        {
+            Visible.PositionQ12Km[Axis] = Pose->PositionQ12Km[Axis];
+        }
+        const int32* Attitude =
+            ResolveAttitudeForDisplayFrame(*Source, DisplayFrame);
+        Visible.bAttitudeValid = Attitude != nullptr;
+        if (Attitude != nullptr)
+        {
+            for (int32 Component = 0; Component < 4; ++Component)
+            {
+                Visible.AttitudeQ30[Component] = Attitude[Component];
+            }
+        }
+        SemanticState.VisibleSourceMask |= 1u << (SourceIdentity - 1u);
+        SemanticState.VisibleSources.Add(Visible);
+    }
+
+    for (uint8 SourceIdentity = 1; SourceIdentity <= 4; ++SourceIdentity)
+    {
+        if (!IsGlobalSourceVisible(SourceIdentity)) continue;
+        const int32 StateIndex = SourceIdentity - 1;
+        const FKsa64GlobalFetchedPathState& State = GlobalPathStates[StateIndex];
+        const TArray<FKsa64GlobalPathPointProduct>& Points =
+            GlobalPaths[StateIndex];
+        if (!State.bValid
+            || State.Source != SourceIdentity
+            || State.DisplayFrame != DisplayFrame
+            || Points.IsEmpty())
+        {
+            continue;
+        }
+
+        int32 StripStart = 0;
+        uint32 StripIndex = 0;
+        while (StripStart < Points.Num())
+        {
+            const uint32 AnchorIdentity = DisplayFrame == 1
+                ? Points[StripStart].AnchorIdentity
+                : 0;
+            int32 StripEnd = StripStart + 1;
+            while (StripEnd < Points.Num()
+                && (DisplayFrame != 1
+                    || Points[StripEnd].AnchorIdentity == AnchorIdentity))
+            {
+                ++StripEnd;
+            }
+            FKsa64GlobalVisiblePathSemantic Visible;
+            Visible.Identity = State.PathIdentity;
+            Visible.Source = SourceIdentity;
+            Visible.ModelIdentity = State.ModelIdentity;
+            Visible.EstimateIdentity = State.EstimateIdentity;
+            Visible.SourceChecksum = State.SourceChecksum;
+            Visible.ContinuityIdentity = State.ContinuityIdentity;
+            Visible.Flags = State.Flags;
+            Visible.AnchorIdentity = AnchorIdentity;
+            Visible.StripIndex = StripIndex++;
+            Visible.LodSeconds = GlobalPathLodSeconds(State.Lod);
+            Visible.PointCount = StripEnd - StripStart;
+            Visible.PointChecksum = Ksa64GlobalViewerPolicy::HashPathPoints(
+                Points, StripStart, StripEnd - StripStart);
+            SemanticState.VisiblePaths.Add(Visible);
+            StripStart = StripEnd;
+        }
+    }
+    SemanticState.VisiblePaths.Sort([](
+        const FKsa64GlobalVisiblePathSemantic& Left,
+        const FKsa64GlobalVisiblePathSemantic& Right)
+    {
+        if (Left.Identity != Right.Identity) return Left.Identity < Right.Identity;
+        if (Left.Source != Right.Source)
+        {
+            const auto LexicalRank = [](uint8 Source)
+            {
+                switch (Source)
+                {
+                case 3: return 0; // ground
+                case 2: return 1; // onboard
+                case 1: return 2; // planned
+                case 4: return 3; // truth
+                default: return 4;
+                }
+            };
+            return LexicalRank(Left.Source) < LexicalRank(Right.Source);
+        }
+        return Left.StripIndex < Right.StripIndex;
+    });
 }
 
 void UKsa64GlobalViewerSubsystem::ApplyReplayDisposition()
@@ -1252,7 +1541,7 @@ void UKsa64GlobalViewerSubsystem::RefreshSemanticState(
         ? EKsa64GlobalDisplayAvailability::GlobalDisplayV1
         : EKsa64GlobalDisplayAvailability::ActiveFrameFallback;
     SemanticState.bAcceptanceEligible =
-        bGlobalDefinitionValid && bGlobalAcceptedExact;
+        bGlobalDefinitionValid && bGlobalAcceptedExact && bGlobalPathProductsValid;
     SemanticState.ReleaseEpoch = Sample.ReleaseEpoch;
     SemanticState.MissionTimeQ16 = Sample.MissionTimeQ16;
     SemanticState.FrameIdentity = Sample.FrameIdentity;
@@ -1269,6 +1558,14 @@ void UKsa64GlobalViewerSubsystem::RefreshSemanticState(
     if (Operations.IsGlobalReplayMode()) ApplyReplayDisposition();
     SemanticState.FrameLabel =
         Ksa64GlobalViewerPolicy::FrameLabel(Sample.FrameIdentity);
+    SemanticState.ResolvedCamera =
+        SemanticState.RequestedCamera == EKsa64GlobalCameraMode::AutomaticDirector
+        && !SemanticState.bAutoDirectorSuspended
+            ? Ksa64GlobalViewerPolicy::ResolveAutomaticCamera(
+                Sample.FrameIdentity,
+                Sample.SegmentIdentity,
+                Sample.ReleaseEpoch)
+            : SemanticState.RequestedCamera;
     if (bGlobalDefinitionValid)
     {
         SemanticState.SourceMask = 0;
@@ -1303,14 +1600,7 @@ void UKsa64GlobalViewerSubsystem::RefreshSemanticState(
         }
         SemanticState.TransitionMarkers = Transitions;
     }
-    SemanticState.ResolvedCamera =
-        SemanticState.RequestedCamera == EKsa64GlobalCameraMode::AutomaticDirector
-        && !SemanticState.bAutoDirectorSuspended
-            ? Ksa64GlobalViewerPolicy::ResolveAutomaticCamera(
-                Sample.FrameIdentity,
-                Sample.SegmentIdentity,
-                Sample.ReleaseEpoch)
-            : SemanticState.RequestedCamera;
+    RefreshVisibleSemanticProducts();
 }
 
 void UKsa64GlobalViewerSubsystem::UpdateDisplayOrigin(
@@ -1396,6 +1686,39 @@ uint64 UKsa64GlobalViewerSubsystem::ComputeOriginInvariant() const
         for (const int32 Value : Source.Ecef.PositionQ12Km) Mix(static_cast<uint32>(Value));
         for (const int32 Value : Source.Gcrf.PositionQ12Km) Mix(static_cast<uint32>(Value));
     }
+    Mix(SemanticState.VisibleSourceMask);
+    for (const FKsa64GlobalVisibleSourceSemantic& Source :
+         SemanticState.VisibleSources)
+    {
+        Mix(Source.Source);
+        Mix(Source.ModelIdentity);
+        Mix(Source.EstimateIdentity);
+        Mix(Source.SourceChecksum);
+        Mix(Source.AgeReleases);
+        for (const int32 Value : Source.PositionQ12Km)
+            Mix(static_cast<uint32>(Value));
+        Mix(Source.bAttitudeValid ? 1u : 0u);
+        if (Source.bAttitudeValid)
+        {
+            for (const int32 Value : Source.AttitudeQ30)
+                Mix(static_cast<uint32>(Value));
+        }
+    }
+    for (const FKsa64GlobalVisiblePathSemantic& Path : SemanticState.VisiblePaths)
+    {
+        Mix(Path.Identity);
+        Mix(Path.Source);
+        Mix(Path.ModelIdentity);
+        Mix(Path.EstimateIdentity);
+        Mix(Path.SourceChecksum);
+        Mix(Path.ContinuityIdentity);
+        Mix(Path.Flags);
+        Mix(Path.AnchorIdentity);
+        Mix(Path.StripIndex);
+        Mix(Path.LodSeconds);
+        Mix(Path.PointCount);
+        Mix(Path.PointChecksum);
+    }
     for (const TArray<FKsa64GlobalPathPointProduct>& Path : GlobalPaths)
     {
         Mix(Path.Num());
@@ -1430,6 +1753,7 @@ void UKsa64GlobalViewerSubsystem::CollectRenderedAbsolutePoints(
     };
     AppendComponent(EarthMesh);
     AppendComponent(LocatorMesh);
+    AppendComponent(PlannedLocatorMesh);
     AppendComponent(GroundLocatorMesh);
     AppendComponent(TruthLocatorMesh);
     const auto AppendLines = [&OutPoints, &AbsoluteOrigin](
@@ -1567,13 +1891,17 @@ void UKsa64GlobalViewerSubsystem::UpdateVehicle(
         if (Source == nullptr) Source = FindGlobalSource(1);
         const FKsa64GlobalResolvedPoseProduct* Pose =
             Source != nullptr ? ResolvePoseForCamera(*Source) : nullptr;
+        const int32* ResolvedAttitude = Source != nullptr
+            ? ResolveAttitudeForDisplayFrame(*Source, ResolveDisplayFrame())
+            : nullptr;
         bPositionValid = Pose != nullptr;
         if (Pose != nullptr)
         {
             Position = Pose->PositionQ12Km;
-            Attitude = Pose->AttitudeQ30;
-            bAttitudeValid = Attitude[0] != 0 || Attitude[1] != 0
-                || Attitude[2] != 0 || Attitude[3] != 0;
+            Attitude = ResolvedAttitude != nullptr
+                ? ResolvedAttitude
+                : Pose->AttitudeQ30;
+            bAttitudeValid = ResolvedAttitude != nullptr;
         }
     }
     SemanticState.bAttitudeAvailable = bAttitudeValid;
@@ -1582,6 +1910,7 @@ void UKsa64GlobalViewerSubsystem::UpdateVehicle(
         if (VehicleBodyMesh.IsValid())
             VehicleBodyMesh->GetOwner()->SetActorHiddenInGame(true);
         if (LocatorMesh.IsValid()) LocatorMesh->SetVisibility(false);
+        if (PlannedLocatorMesh.IsValid()) PlannedLocatorMesh->SetVisibility(false);
         if (GroundLocatorMesh.IsValid()) GroundLocatorMesh->SetVisibility(false);
         if (TruthLocatorMesh.IsValid()) TruthLocatorMesh->SetVisibility(false);
         return;
@@ -1626,6 +1955,7 @@ void UKsa64GlobalViewerSubsystem::UpdateVehicle(
                     SemanticState.DisplayOriginQ12Km));
         }
     };
+    UpdateGhost(PlannedLocatorMesh, 1, true);
     UpdateGhost(GroundLocatorMesh, 3, true);
     UpdateGhost(TruthLocatorMesh, 4, SemanticState.bTruthVisible);
 }
@@ -1665,27 +1995,35 @@ void UKsa64GlobalViewerSubsystem::UpdatePaths(uint32 ActiveFrame)
             }
             return Segments;
         };
+        const auto PathColor = [this](
+            int32 StateIndex,
+            const FLinearColor& Normal)
+        {
+            return Ksa64GlobalViewerPolicy::PathColorForFlags(
+                Normal,
+                GlobalPathStates[StateIndex].Flags);
+        };
         if (ObservedPathLines.IsValid())
         {
             ObservedPathLines->SetSegments(
                 SemanticState.bTruthVisible
                     ? ConvertGlobal(GlobalPaths[3])
                     : TArray<FVector3d>{},
-                FLinearColor(0.31f, 0.93f, 0.57f, 1.0f),
+                PathColor(3, FLinearColor(0.31f, 0.93f, 0.57f, 1.0f)),
                 2.5f);
         }
         if (PlannedPathLines.IsValid())
             PlannedPathLines->SetSegments(
                 ConvertGlobal(GlobalPaths[0], true),
-                FLinearColor(0.90f, 0.92f, 0.95f, 0.75f), 1.0f);
+                PathColor(0, FLinearColor(0.90f, 0.92f, 0.95f, 0.75f)), 1.0f);
         if (OnboardPathLines.IsValid())
             OnboardPathLines->SetSegments(
                 ConvertGlobal(GlobalPaths[1]),
-                FLinearColor(0.14f, 0.83f, 0.95f, 0.9f), 1.75f);
+                PathColor(1, FLinearColor(0.14f, 0.83f, 0.95f, 0.9f)), 1.75f);
         if (GroundPathLines.IsValid())
             GroundPathLines->SetSegments(
                 ConvertGlobal(GlobalPaths[2]),
-                FLinearColor(1.0f, 0.66f, 0.18f, 0.9f), 1.75f);
+                PathColor(2, FLinearColor(1.0f, 0.66f, 0.18f, 0.9f)), 1.75f);
         if (TransitionMarkerLines.IsValid())
         {
             TArray<FVector3d> Markers;
@@ -1896,6 +2234,8 @@ void UKsa64GlobalViewerSubsystem::UpdateCamera(
     const double Distance = FMath::Max(1'000.0, (LastCameraLocation - Target).Length());
     const double LocatorScale = FMath::Clamp(Distance * 0.00003, 0.08, 50'000.0);
     if (LocatorMesh.IsValid()) LocatorMesh->SetRelativeScale3D(FVector(LocatorScale));
+    if (PlannedLocatorMesh.IsValid())
+        PlannedLocatorMesh->SetRelativeScale3D(FVector(LocatorScale * 0.76));
     if (GroundLocatorMesh.IsValid()) GroundLocatorMesh->SetRelativeScale3D(FVector(LocatorScale * 0.80));
     if (TruthLocatorMesh.IsValid()) TruthLocatorMesh->SetRelativeScale3D(FVector(LocatorScale * 0.84));
 }
@@ -2421,7 +2761,7 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
     if (SemanticState.ReleaseEpoch != View.ReleaseEpoch
         || SemanticState.FrameIdentity != 3
         || SemanticState.SegmentIdentity != 3
-        || SemanticState.SourceMask != 0x03u
+        || SemanticState.SourceMask != 0x06u
         || SemanticState.bTruthPermitted
         || SemanticState.bTruthVisible
         || !SemanticState.bAcceptanceEligible
@@ -2473,6 +2813,174 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
             *Label,
             View.ReleaseEpoch));
 
+    // Preserve the exact live operations metadata now, but defer the renderer
+    // semantic product until the accepted session is complete. Rust then owns
+    // the same terminal path history used by browser replay, so both renderers
+    // compare identical full-path products at this historical release.
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (PlatformFile.FileExists(*Record.SemanticPath))
+    {
+        FailGlobalEvidence(TEXT("guided semantic output path is not fresh"));
+        return false;
+    }
+    GlobalEvidenceGuidedRecords.Add(MoveTemp(Record));
+    return true;
+}
+
+bool UKsa64GlobalViewerSubsystem::LoadCompletedGuidedGlobalRelease(
+    UKsa64LiveMissionSubsystem& Operations,
+    uint32 ReleaseEpoch)
+{
+    const auto Reject = [this, ReleaseEpoch](const FString& Reason)
+    {
+        SemanticState.StatusLabel = FString::Printf(
+            TEXT("GUIDED TERMINAL RECAPTURE REJECTED · release %u · %s"),
+            ReleaseEpoch,
+            *Reason);
+        UE_LOG(LogKsa64GlobalViewer, Error, TEXT("%s"), *SemanticState.StatusLabel);
+        return false;
+    };
+    if (Operations.IsGlobalReplayMode())
+        return Reject(TEXT("operations unexpectedly owns nominal replay"));
+    if (!bGlobalDefinitionValid)
+        return Reject(TEXT("global definition is unavailable"));
+
+    Ksa64GlobalDisplayAvailabilityV1 Availability = {};
+    const EKsa64OperationsAdapterResult AvailabilityResult =
+        Operations.GetGlobalDisplayAvailability(Availability);
+    if (AvailabilityResult != EKsa64OperationsAdapterResult::Ok
+        || Availability.role != 2u
+        || Availability.display_identity != GlobalDefinition.DisplayIdentity
+        || (Availability.flags
+            & KSA64_GLOBAL_DISPLAY_AVAILABILITY_ACCEPTED_EXACT) == 0
+        || Availability.oldest_sample_release > ReleaseEpoch
+        || Availability.newest_sample_release < ReleaseEpoch)
+    {
+        return Reject(FString::Printf(
+            TEXT("availability=%u role=%u display=%08X/%08X flags=%08X range=%u-%u"),
+            static_cast<uint32>(AvailabilityResult),
+            Availability.role,
+            Availability.display_identity,
+            GlobalDefinition.DisplayIdentity,
+            Availability.flags,
+            Availability.oldest_sample_release,
+            Availability.newest_sample_release));
+    }
+    ReplayOldestRelease = Availability.oldest_sample_release;
+    ReplayNewestRelease = Availability.newest_sample_release;
+    ReplaySelectedRelease = ReleaseEpoch;
+    ReplayLastReadRelease = MAX_uint32;
+    ReplayReleaseAccumulator = 0.0;
+    bReplaySeekSnapPending = true;
+    SemanticState.ReplayOldestRelease = ReplayOldestRelease;
+    SemanticState.ReplayNewestRelease = ReplayNewestRelease;
+    SemanticState.ReplaySelectedRelease = ReplaySelectedRelease;
+
+    Ksa64GlobalDisplaySampleRangeRequestV1 Request = {};
+    Request.api_version = KSA64_GLOBAL_DISPLAY_API_VERSION;
+    Request.struct_size = sizeof(Request);
+    Request.start_release = ReleaseEpoch;
+    Request.max_count = 1;
+    TArray<uint8> Payload;
+    const EKsa64OperationsAdapterResult RangeResult =
+        Operations.GetGlobalDisplaySampleRange(Request, Payload);
+    if (RangeResult != EKsa64OperationsAdapterResult::Ok)
+    {
+        bReplaySeekSnapPending = false;
+        return Reject(FString::Printf(
+            TEXT("sample range result=%u bytes=%d"),
+            static_cast<uint32>(RangeResult),
+            Payload.Num()));
+    }
+    TArray<FKsa64GlobalDisplaySampleProduct> Samples;
+    FString Error;
+    if (!FKsa64GlobalDisplayCodec::DecodeSamples(
+            Payload, PermittedGlobalSourceMask, Samples, Error)
+        || Samples.Num() != 1
+        || Samples[0].ReleaseEpoch != ReleaseEpoch)
+    {
+        bReplaySeekSnapPending = false;
+        return Reject(FString::Printf(
+            TEXT("sample decode=%s count=%d observed=%u"),
+            Error.IsEmpty() ? TEXT("release mismatch") : *Error,
+            Samples.Num(),
+            Samples.IsEmpty() ? MAX_uint32 : Samples[0].ReleaseEpoch));
+    }
+
+    ApplyGlobalSample(Samples[0], Operations, 0.0f);
+    ReplayLastReadRelease = ReleaseEpoch;
+    bReplaySeekSnapPending = false;
+    RefreshGlobalPaths(Operations);
+    RefreshSemanticState(CurrentSample, Operations);
+    const bool bAccepted = SemanticState.ReleaseEpoch == ReleaseEpoch
+        && SemanticState.ReplaySelectedRelease == ReleaseEpoch
+        && SemanticState.FrameIdentity == 3
+        && SemanticState.SegmentIdentity == 3
+        && SemanticState.SourceMask == 0x06u
+        && !SemanticState.bTruthPermitted
+        && !SemanticState.bTruthVisible
+        && SemanticState.bAcceptanceEligible;
+    if (!bAccepted)
+    {
+        return Reject(FString::Printf(
+            TEXT("semantic=%u/%u frame=%u segment=%u sources=%08X truth=%u/%u eligible=%u paths=%d"),
+            SemanticState.ReleaseEpoch,
+            SemanticState.ReplaySelectedRelease,
+            SemanticState.FrameIdentity,
+            SemanticState.SegmentIdentity,
+            SemanticState.SourceMask,
+            SemanticState.bTruthPermitted ? 1u : 0u,
+            SemanticState.bTruthVisible ? 1u : 0u,
+            SemanticState.bAcceptanceEligible ? 1u : 0u,
+            SemanticState.VisiblePaths.Num()));
+    }
+    return true;
+}
+
+bool UKsa64GlobalViewerSubsystem::WriteCompletedGuidedSemanticRecord(
+    UKsa64LiveMissionSubsystem& Operations,
+    const FKsa64GlobalGuidedEvidenceRecord& Record)
+{
+    if (!LoadCompletedGuidedGlobalRelease(Operations, Record.ReleaseEpoch))
+    {
+        FailGlobalEvidence(FString::Printf(
+            TEXT("completed guided display recapture failed at release %u"),
+            Record.ReleaseEpoch));
+        return false;
+    }
+
+    bool bPlannedPath = false;
+    bool bOnboardPath = false;
+    bool bGroundPath = false;
+    for (const FKsa64GlobalVisiblePathSemantic& Path : SemanticState.VisiblePaths)
+    {
+        bPlannedPath |= Path.Source == 1;
+        bOnboardPath |= Path.Source == 2;
+        bGroundPath |= Path.Source == 3;
+        if (Path.Source == 4
+            || (Path.Flags & Ksa64GlobalPathFlags::Terminal) == 0
+            || (Path.Flags & Ksa64GlobalPathFlags::Incomplete) != 0
+            || Path.PointCount == 0
+            || Path.PointChecksum == 0)
+        {
+            FailGlobalEvidence(FString::Printf(
+                TEXT("guided terminal path product failed at release %u source=%u flags=%u points=%u checksum=%u"),
+                Record.ReleaseEpoch,
+                Path.Source,
+                Path.Flags,
+                Path.PointCount,
+                Path.PointChecksum));
+            return false;
+        }
+    }
+    if (!bPlannedPath || !bOnboardPath || !bGroundPath)
+    {
+        FailGlobalEvidence(FString::Printf(
+            TEXT("guided terminal path sources were incomplete at release %u"),
+            Record.ReleaseEpoch));
+        return false;
+    }
+
     FString Output;
     const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
         TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Output);
@@ -2501,10 +3009,11 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
     Writer->WriteValue(TEXT("viewer_semantic_json"), ExportSemanticStateJson());
     Writer->WriteObjectEnd();
     Writer->Close();
+
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     if (PlatformFile.FileExists(*Record.SemanticPath))
     {
-        FailGlobalEvidence(TEXT("guided semantic output path is not fresh"));
+        FailGlobalEvidence(TEXT("guided semantic recapture output path is not fresh"));
         return false;
     }
     const FString TemporaryPath = Record.SemanticPath + TEXT(".tmp");
@@ -2519,7 +3028,6 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
         FailGlobalEvidence(TEXT("guided semantic snapshot atomic write failed"));
         return false;
     }
-    GlobalEvidenceGuidedRecords.Add(MoveTemp(Record));
     return true;
 }
 
@@ -2595,6 +3103,26 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceManifest(
 {
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     if (!PlatformFile.CreateDirectoryTree(*GlobalEvidenceDirectory)) return false;
+    const UKsa64LiveMissionSubsystem* Operations = GetOperations();
+    const FKsa64OperationsViewModel* GuidedTerminal = Operations != nullptr
+        ? &Operations->GetViewModel()
+        : nullptr;
+    if (bPassed
+        && (GuidedTerminal == nullptr
+            || GuidedTerminal->ReleaseEpoch != 21'591
+            || GuidedTerminal->Lifecycle != 5
+            || GuidedTerminal->WorkerState != 2
+            || GuidedTerminal->FinalizationState != 2
+            || GuidedTerminal->OverallDisposition != 2))
+    {
+        return false;
+    }
+    const uint32 GuidedTerminalRelease = GuidedTerminal != nullptr
+        ? GuidedTerminal->ReleaseEpoch
+        : SemanticState.ReleaseEpoch;
+    const uint32 GuidedTerminalDisposition = GuidedTerminal != nullptr
+        ? GuidedTerminal->OverallDisposition
+        : SemanticState.OverallDisposition;
     FString Output;
     const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
         TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Output);
@@ -2616,10 +3144,10 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceManifest(
     Writer->WriteValue(TEXT("nominal_terminal_disposition"), 1);
     Writer->WriteValue(
         TEXT("guided_terminal_release_epoch"),
-        SemanticState.ReleaseEpoch);
+        GuidedTerminalRelease);
     Writer->WriteValue(
         TEXT("guided_terminal_disposition"),
-        SemanticState.OverallDisposition);
+        GuidedTerminalDisposition);
     Writer->WriteObjectStart(TEXT("package"));
     Writer->WriteValue(TEXT("path"), GlobalEvidenceExecutableRelativePath.Replace(TEXT("\\"), TEXT("/")));
     Writer->WriteValue(
@@ -2723,7 +3251,7 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceManifest(
         Writer->WriteObjectEnd();
     }
     Writer->WriteArrayEnd();
-    if (const UKsa64LiveMissionSubsystem* Operations = GetOperations())
+    if (Operations != nullptr)
     {
         const FKsa64OperationsViewModel& View = Operations->GetViewModel();
         Writer->WriteObjectStart(TEXT("guided_completed_evidence"));
@@ -3074,6 +3602,11 @@ void UKsa64GlobalViewerSubsystem::TickGlobalEvidence(float DeltaSeconds)
                 FailGlobalEvidence(TEXT("guided GNSS-loss operations evidence could not start"));
                 return;
             }
+            if (!Operations->SetCompletedGlobalDisplayRetention(true))
+            {
+                FailGlobalEvidence(TEXT("guided terminal display retention could not be enabled"));
+                return;
+            }
             Operations->PausePresentation();
             SetLayout(EKsa64GlobalViewerLayout::HybridMissionDirector);
             ResumeAutomaticDirector();
@@ -3201,7 +3734,12 @@ void UKsa64GlobalViewerSubsystem::TickGlobalEvidence(float DeltaSeconds)
             FailGlobalEvidence(TEXT("guided completion crossed the accepted terminal release"));
             return;
         }
-        if (GuidedView.bSessionOpen) return;
+        if (GuidedView.Lifecycle != 5
+            || GuidedView.WorkerState != 2
+            || GuidedView.FinalizationState != 2)
+        {
+            return;
+        }
         if (!GuidedView.bObservationComplete
             || GlobalEvidenceGuidedRecords.Num()
                 != UE_ARRAY_COUNT(GlobalGuidedEvidenceMilestones)
@@ -3212,7 +3750,7 @@ void UKsa64GlobalViewerSubsystem::TickGlobalEvidence(float DeltaSeconds)
                 ESearchCase::IgnoreCase)
             || SemanticState.bTruthPermitted
             || SemanticState.bTruthVisible
-            || SemanticState.SourceMask != 0x03u
+            || SemanticState.SourceMask != 0x06u
             || SemanticState.OverallDisposition != 2
             || SemanticState.EvidenceDisposition != 1)
         {
@@ -3227,9 +3765,43 @@ void UKsa64GlobalViewerSubsystem::TickGlobalEvidence(float DeltaSeconds)
                 SemanticState.EvidenceDisposition));
             return;
         }
+        GlobalEvidenceGuidedRecaptureIndex = 0;
+        GlobalEvidencePhase = 11;
+        break;
+    }
+    case 11:
+    {
+        // The accepted mission is now sealed. Re-open one exact historical
+        // sample per tick against Rust's terminal history and publish its full,
+        // event-preserving paths while retaining the metadata captured live.
+        if (GlobalEvidenceGuidedRecaptureIndex
+            < static_cast<uint32>(GlobalEvidenceGuidedRecords.Num()))
+        {
+            const FKsa64GlobalGuidedEvidenceRecord& Record =
+                GlobalEvidenceGuidedRecords[GlobalEvidenceGuidedRecaptureIndex];
+            if (!WriteCompletedGuidedSemanticRecord(*Operations, Record))
+            {
+                return;
+            }
+            UE_LOG(
+                LogKsa64GlobalViewer,
+                Display,
+                TEXT("KSA64_PHASE12C_GUIDED_RECAPTURE_PASS label=%s release=%u paths=%d"),
+                *Record.Label,
+                Record.ReleaseEpoch,
+                SemanticState.VisiblePaths.Num());
+            ++GlobalEvidenceGuidedRecaptureIndex;
+            break;
+        }
         if (!WriteGlobalEvidenceManifest(true))
         {
             FailGlobalEvidence(TEXT("global-viewer manifest atomic write failed"));
+            return;
+        }
+        const FKsa64OperationsViewModel GuidedView = Operations->GetViewModel();
+        if (!Operations->SetCompletedGlobalDisplayRetention(false))
+        {
+            FailGlobalEvidence(TEXT("guided terminal display retention could not be released"));
             return;
         }
         bGlobalEvidenceExitRequested = true;
@@ -3324,6 +3896,22 @@ bool UKsa64GlobalViewerSubsystem::OpenNominalReleaseForAutomation(
     RefreshSemanticState(CurrentSample, Operations);
     return CurrentSample.ReleaseEpoch == ReleaseEpoch
         && SemanticState.bAcceptanceEligible;
+}
+
+bool UKsa64GlobalViewerSubsystem::OpenCompletedGuidedReleaseForAutomation(
+    UKsa64LiveMissionSubsystem& Operations,
+    uint32 ReleaseEpoch)
+{
+    if (Operations.IsGlobalReplayMode()) return false;
+    if (!bGlobalDefinitionValid)
+    {
+        ResetGlobalDisplayState();
+        SemanticState.ExperienceMode =
+            EKsa64GlobalExperienceMode::GuidedOperations;
+        SemanticState.RoleLabel = TEXT("GUIDED OPERATOR · TRUTH FILTERED");
+        if (!InitializeGlobalDisplay(Operations)) return false;
+    }
+    return LoadCompletedGuidedGlobalRelease(Operations, ReleaseEpoch);
 }
 
 void UKsa64GlobalViewerSubsystem::ApplyReplayIndexForAutomation(

@@ -164,6 +164,7 @@ void UKsa64LiveMissionSubsystem::Deinitialize()
 bool UKsa64LiveMissionSubsystem::StartGuidedOperations()
 {
     bGlobalReplayMode = false;
+    bRetainCompletedGlobalDisplaySession = false;
     if (!Bridge.IsValid() || !Bridge->IsReady())
     {
         ViewModel.LastDiagnostic = Bridge.IsValid()
@@ -207,6 +208,7 @@ bool UKsa64LiveMissionSubsystem::StartGuidedOperations()
 
 bool UKsa64LiveMissionSubsystem::StartNominalGlobalReplay()
 {
+    bRetainCompletedGlobalDisplaySession = false;
     if (!Bridge.IsValid() || !Bridge->IsReady())
     {
         ViewModel.LastDiagnostic = Bridge.IsValid()
@@ -494,6 +496,21 @@ bool UKsa64LiveMissionSubsystem::RequestShutdown()
         return true;
     }
     return false;
+}
+
+bool UKsa64LiveMissionSubsystem::SetCompletedGlobalDisplayRetention(bool bRetain)
+{
+    if (bRetain
+        && (!Bridge.IsValid() || !Bridge->SupportsGlobalDisplayV1()))
+    {
+        return false;
+    }
+    bRetainCompletedGlobalDisplaySession = bRetain;
+    if (!bRetain && ViewModel.bSessionOpen)
+    {
+        ObserveCompletionAndShutdown();
+    }
+    return true;
 }
 
 bool UKsa64LiveMissionSubsystem::SaveCompletedEvidence()
@@ -2097,7 +2114,9 @@ void UKsa64LiveMissionSubsystem::ObserveCompletionAndShutdown()
     const bool bSafeToClose = bWorkerTerminal
         && (bTerminal || ViewModel.bShutdownRequested)
         && (ViewModel.FinalizationState != 2 || bEvidenceSaved);
-    if (bSafeToClose && Bridge.IsValid())
+    if (bSafeToClose
+        && !bRetainCompletedGlobalDisplaySession
+        && Bridge.IsValid())
     {
         Bridge->Close();
         ViewModel.bSessionOpen = false;

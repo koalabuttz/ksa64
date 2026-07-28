@@ -60,8 +60,9 @@ vi.mock("@babylonjs/core/ShadersWGSL/color.fragment", () => ({}));
 
 function snapshot(releaseEpoch: number): GlobalSceneSnapshot {
   return { releaseEpoch, missionTimeQ16: releaseEpoch * 2048, frame: "ecef", segment: "ecef-ascent",
-    camera: "earth-fixed", originKm: [0, 0, 0], anchors: [], sources: [{ source: "onboard", positionKm: [6378.2, 0, 0],
-      modelIdentity: 1, ageReleases: 0, locatorRequired: true }], paths: [], truthLabelVisible: false,
+    camera: "earth-fixed", eventMask: 0, discontinuityMask: 0, continuityIdentity: 1,
+    originKm: [0, 0, 0], anchors: [], sources: [{ source: "onboard", positionKm: [6378.2, 0, 0],
+      modelIdentity: 1, sourceEstimateIdentity: 2, sourceChecksum: 3, ageReleases: 0, locatorRequired: true }], paths: [], truthLabelVisible: false,
     exactSnapRequired: false, interpolated: false, quality: "global-display-v1" };
 }
 

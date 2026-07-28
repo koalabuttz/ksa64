@@ -1,6 +1,6 @@
 # Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: Phase 12A and Phase 12B are complete and accepted. Phase 12B.5 software implementation and local acceptance are complete from entry commit `b9f2c79`; hosted portable-runtime qualification is complete; full acceptance remains pending the required physical Duet, Vita3K emulator, and physical Vita gates. Phase 12C implementation is under completion audit from entry commit `eb666cb`; no Phase 12C completion or renderer-performance claim has been made yet.
+Status: Phase 12A and Phase 12B are complete and accepted. Phase 12B.5 software implementation and local acceptance are complete from entry commit `b9f2c79`; hosted portable-runtime qualification is complete; full acceptance remains pending the required physical Duet, Vita3K emulator, and physical Vita gates. Phase 12C implementation is hardened and under completion audit from entry commit `eb666cb`; its strict v2 parity-evidence pipeline now compares complete source/path/event/continuity products through one normalized shared view mode, but no Phase 12C completion or renderer-performance claim has been made yet.
 
 Phase 12 began with an accepted native-Windows Unreal presentation and now
 expands through portable Rust authority, desktop Unreal, web/PWA, SDL2/Vita,
@@ -15,7 +15,7 @@ The work is divided so that each slice proves one coherent boundary:
 | 12A | **Complete:** pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaged smoke test, and optional MCP feasibility |
 | 12B | **Complete:** accepted 674.71875-second GNSS-loss mission, human-scale operations, multi-axis outcomes, packaged 2-D command desk, 17/17 automation, exact evidence, and bounded presentation-service timing |
 | 12B.5 | **Software- and hosted-portable-runtime-qualified; device acceptance pending:** portable session/KPS1 authority, bridge/platform packaging, secure loopback and paired LAN, compact React/Babylon PWA, exact Rust/WASM authority, and Vita/SDL2; device and emulator gates remain open |
-| 12C | **Implementation under completion audit:** renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2; packaged renderer parity and runtime metrics remain pending |
+| 12C | **Implementation hardened; completion audit in progress:** renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2; packaged source-bound parity evidence and final runtime metrics remain pending |
 | 12C.5 | Portable web/PWA, Vita/SDL2, Android, and iOS operations clients |
 | 12D | Mission Foundry vehicle/mission authoring and GUI/headless compiler parity |
 | 12E | Production visual assets, NASA-derived reference material, effects, quality tiers, and visual performance |
@@ -45,6 +45,9 @@ The work is divided so that each slice proves one coherent boundary:
   explicit pending renderer/runtime evidence, and acceptance thresholds.
 - [PHASE12C5_HANDOFF.md](PHASE12C5_HANDOFF.md) — draft portable-operations
   productization boundary that activates only after Phase 12C acceptance.
+- [PHASE12D_HANDOFF.md](PHASE12D_HANDOFF.md) — draft Mission Foundry
+  authoring boundary that consumes accepted display/session contracts without
+  becoming a second simulator.
 - [complete-phase12b.ps1](complete-phase12b.ps1) — composed Phase 12A, Rust, C++ harness, and explicit optional Unreal audit.
 - [complete-phase12c.ps1](complete-phase12c.ps1) — deterministic
   portable/contracts/replay audit with explicit, fail-closed Unreal, browser,
@@ -131,7 +134,10 @@ The default completion audit proves the frozen inputs, portable contracts,
 exact nominal and GNSS replays, bridge, broker, WebAssembly, and web build. It
 does not claim product completion without explicit Unreal build/automation,
 packaging, real rendered-browser, cross-renderer semantic, and runtime
-performance evidence. See
+performance evidence. The joined audit record uses
+`ksa64.phase12c.cross-renderer-evidence.v2`. UE Launcher modules use
+`RayTracingMode=Inline` only to match the precompiled Renderer ABI; runtime ray
+tracing remains disabled with `r.RayTracing=False`. See
 [the draft completion ledger](PHASE12C_COMPLETION.md).
 
 ## Strict renderer-parity evidence

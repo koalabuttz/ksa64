@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  directorCameraForSample,
-  displayDomainForSample,
   findSampleAtOrBefore,
   type GlobalDisplayCameraV1,
   type GlobalDisplayDomainV1,
@@ -147,6 +145,7 @@ export function GlobalMissionViewer({
         if (!active) return;
         setDirectorEnabled(false);
         setCamera("free");
+        setDomain("gcrf");
       },
     }).then((value) => {
       if (!active) {
@@ -231,10 +230,32 @@ export function GlobalMissionViewer({
   const selectCamera = (value: GlobalDisplayCameraV1) => {
     setCamera(value);
     setDirectorEnabled(value === "director");
+    switch (value) {
+      case "director":
+      case "chase":
+      case "inspection": setDomain("auto"); break;
+      case "launch":
+      case "recovery": setDomain("local-enu"); break;
+      case "earth-fixed": setDomain("ecef"); break;
+      case "inertial":
+      case "free": setDomain("gcrf"); break;
+    }
   };
 
-  const actualDomain = displayDomainForSample(domain, sample);
-  const actualCamera = directorEnabled ? directorCameraForSample(sample) : camera;
+  const selectDisplayFrame = (value: GlobalDisplayDomainV1) => {
+    setDomain(value);
+    if (value === "auto") {
+      setCamera("director");
+      setDirectorEnabled(true);
+    } else {
+      setDirectorEnabled(false);
+      setCamera(value === "ecef" ? "earth-fixed" : value === "gcrf" ? "inertial"
+        : sample?.segment === "local-recovery" ? "recovery" : "launch");
+    }
+  };
+
+  const actualDomain = sceneSnapshot.frame;
+  const actualCamera = sceneSnapshot.camera;
   const truthAvailable = model.definition.availableSources.includes("truth");
   const onboard = sceneSnapshot.sources.find((value) => value.source === "onboard");
   const insetAttitudeDegrees = projectedBodyAxisDegrees(onboard?.bodyQuaternion);
@@ -315,7 +336,7 @@ export function GlobalMissionViewer({
           <option value="2d">2-D only</option>
         </select></label>
         <label>Display frame<select aria-label="Global display frame" value={domain}
-          onChange={(event) => setDomain(event.target.value as GlobalDisplayDomainV1)}>
+          onChange={(event) => selectDisplayFrame(event.target.value as GlobalDisplayDomainV1)}>
           {(["auto", "local-enu", "ecef", "gcrf"] as const).map((value) =>
             <option value={value} key={value}>{frameLabel(value)}</option>)}
         </select></label>

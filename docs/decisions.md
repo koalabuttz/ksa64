@@ -1659,3 +1659,67 @@ Require explicit packaged Unreal, rendered WebGPU/WebGL2/2-D, cross-renderer
 semantic, and runtime-performance evidence before Phase 12C is complete. Source
 implementation or unit tests alone may produce only a portable/contracts audit
 pass.
+
+
+## D-120: Match the Unreal Launcher renderer ABI without enabling runtime ray tracing
+
+Date: 2026-07-28
+
+Status: implemented; packaged acceptance evidence pending.
+
+The UE 5.8 Launcher build ships a precompiled Renderer whose scene-proxy
+virtual layout includes declarations guarded by `RHI_RAYTRACING`. A packaged
+Phase 12C investigation showed that compiling the project custom line proxy
+with `RHI_RAYTRACING=0` produced a different vtable layout and caused the
+precompiled renderer to dispatch through an invalid slot. This was a binary ABI
+mismatch, not a mission, scene-lifecycle, or GPU-capability failure.
+
+Compile the Windows project modules with `RayTracingMode=Inline` so their
+headers and shared PCH match the Launcher Renderer ABI. Retain
+`r.RayTracing=False`, hardware ray tracing disabled, and all Phase 12C
+procedural visuals on their non-ray-traced path. Add a project compile guard so
+the custom proxy cannot silently be built with the incompatible layout. This
+setting creates no ray-tracing product requirement and does not authorize
+Lumen, hardware ray tracing, or renderer-owned physics.
+
+Construct the procedural global scene only after an active game world has begun
+play. Packaged evidence must come from that packaged process and bind the clean
+source commit, staged bridge, semantic captures, screenshots, runtime data, and
+package inventory. Editor compilation or a source screenshot alone cannot
+satisfy the packaged-runtime gate.
+
+
+## D-121: Compare complete semantic products and normalize renderer view modes
+
+Date: 2026-07-28
+
+Status: implemented; final measured renderer evidence pending.
+
+Do not accept point count, geometry-only hashes, screenshots, or aggregate pass
+booleans as cross-renderer parity. Preserve each visible source's model,
+estimate, checksum, age, position, and available attitude. Preserve each path's
+source/model/estimate identities, source checksum, continuity identity, raw
+stale/incomplete/terminal/resynchronization flags, anchor, strip, LOD, point
+count, and exact point checksum.
+
+Use one Rust path builder for the in-process/WASM and native-bridge products.
+Pin sample events and discontinuities plus the semantic replay bookmarks for
+transitions, declared mission events, procedure actions, faults, and terminal
+state. Explicitly exclude routine release notifications so downsampled products
+cannot accidentally retain every 32-Hz sample.
+
+Define that checksum byte-explicitly as FNV-1a over each ordered path point's
+release epoch, Q16 mission time, segment identity, event mask, anchor identity,
+and signed Q12 X/Y/Z words. This binds the path's temporal, event, anchor, and
+geometric semantics rather than only its rendered shape.
+
+Require exact visible-source, visible-path, event-mask, discontinuity-mask, and
+continuity-identity parity at all nine nominal milestones and all six Guided
+Operator milestones: GNSS outage onset, outage qualification, and the four
+accepted action releases. Non-director evidence must remain truth-free.
+
+Treat camera plus display frame as one supported view mode. Launch/recovery use
+the applicable local ENU anchor, Earth-fixed uses ECEF, inertial/free-orbit use
+GCRF, and chase/inspection use the authoritative sample frame. Automatic
+direction resolves through the same mapping. Unreal and Babylon may not expose
+or compare arbitrary mismatched camera/frame combinations.

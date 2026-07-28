@@ -6,7 +6,6 @@ constexpr int32 PayloadHeaderLength = 12;
 constexpr int32 MaximumPayloadLength = 256 * 1024;
 constexpr uint32 PoseValidityMask = (1u << 16) - 1u;
 constexpr uint32 DiscontinuityMask = (1u << 9) - 1u;
-constexpr uint16 PathFlagMask = (1u << 4) - 1u;
 
 class FReader final
 {
@@ -349,7 +348,7 @@ bool FKsa64GlobalDisplayCodec::DecodePath(
     if (!Reader.IsValid() || Out.PathIdentity == 0 || SourceBit == 0
         || (PermittedSourceMask & SourceBit) == 0
         || !ValidFrame(Out.DisplayFrame) || Out.Lod < 1 || Out.Lod > 3
-        || (Out.Flags & ~PathFlagMask) != 0
+        || (Out.Flags & ~Ksa64GlobalPathFlags::Mask) != 0
         || Out.ChunkCount == 0 || Out.ChunkIndex >= Out.ChunkCount
         || PointCount == 0 || PointCount > 4096
         || Out.ModelIdentity == 0 || Out.ContinuityIdentity == 0)

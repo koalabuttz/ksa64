@@ -292,8 +292,11 @@ async function makeBabylonRenderer(
 
   const earthAxes = [
     ["ecef-x", new Vector3(0, 0, 0), new Vector3(1.25, 0, 0), new Color3(0.82, 0.28, 0.25)],
-    ["ecef-y", new Vector3(0, 0, 0), new Vector3(0, 1.25, 0), new Color3(0.34, 0.78, 0.50)],
-    ["ecef-z", new Vector3(0, 0, 0), new Vector3(0, 0, 1.25), new Color3(0.31, 0.55, 0.92)],
+    // Apply the same [KSA X, KSA Z, -KSA Y] right-handed basis used
+    // for every vehicle and path point. These are engineering axes, not
+    // renderer-owned frame transforms.
+    ["ecef-y", new Vector3(0, 0, 0), new Vector3(0, 0, -1.25), new Color3(0.34, 0.78, 0.50)],
+    ["ecef-z", new Vector3(0, 0, 0), new Vector3(0, 1.25, 0), new Color3(0.31, 0.55, 0.92)],
   ].map(([name, start, finish, color]) => {
     const line = CreateLines(String(name), { points: [start as InstanceType<typeof Vector3>, finish as InstanceType<typeof Vector3>] }, scene);
     line.color = color as InstanceType<typeof Color3>;
@@ -313,6 +316,18 @@ async function makeBabylonRenderer(
     eastWest.alpha = step === 0 ? 0.55 : 0.20; northSouth.alpha = step === 0 ? 0.55 : 0.20;
     localGridMeshes.push(eastWest, northSouth);
   }
+  const localAxes = [
+    ["local-east", new Vector3(0.012, 0, 0), new Color3(0.82, 0.28, 0.25)],
+    ["local-north", new Vector3(0, 0, -0.012), new Color3(0.34, 0.78, 0.50)],
+    ["local-up", new Vector3(0, 0.012, 0), new Color3(0.31, 0.55, 0.92)],
+  ].map(([name, finish, color]) => {
+    const line = CreateLines(String(name), {
+      points: [Vector3.Zero(), finish as InstanceType<typeof Vector3>],
+    }, scene);
+    line.color = color as InstanceType<typeof Color3>;
+    line.alpha = 0.72;
+    return line;
+  });
   const anchorMeshes = new Map<string, ReturnType<typeof CreateSphere>>();
 
   const sourceMeshes = new Map<string, ReturnType<typeof CreateSphere>>();
@@ -387,6 +402,7 @@ async function makeBabylonRenderer(
       grid.position.copyFrom(earthPosition);
     }
     for (const axis of earthAxes) { axis.setEnabled(!localDomain); axis.position.copyFrom(earthPosition); }
+    for (const axis of localAxes) { axis.setEnabled(localDomain); axis.position.copyFrom(earthPosition); }
     for (const grid of localGridMeshes) { grid.setEnabled(localDomain); grid.position.copyFrom(earthPosition); }
     const activeAnchors = new Set<string>();
     for (const anchor of snapshot.anchors) {
@@ -479,7 +495,7 @@ async function makeBabylonRenderer(
       line.setEnabled(true);
       const [red, green, blue] = hexToRgb(SOURCE_COLOR[path.source]);
       line.color = new Color3(red, green, blue);
-      line.alpha = path.stale ? 0.28 : path.incomplete ? 0.48 : path.source === "planned" ? 0.55 : 0.88;
+      line.alpha = path.resyncRequired ? 0.18 : path.stale ? 0.28 : path.incomplete ? 0.48 : path.source === "planned" ? 0.55 : 0.88;
     }
     for (const [identity, line] of pathMeshes) if (!activePaths.has(identity)) line.setEnabled(false);
     configureCamera(snapshot);

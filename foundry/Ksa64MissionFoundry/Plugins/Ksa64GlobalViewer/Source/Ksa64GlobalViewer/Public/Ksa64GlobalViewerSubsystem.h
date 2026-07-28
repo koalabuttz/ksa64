@@ -35,6 +35,21 @@ struct FKsa64GlobalEvidenceCapture
     int32 NonDarkSamples = 0;
 };
 
+struct FKsa64GlobalFetchedPathState
+{
+    bool bValid = false;
+    uint32 PathIdentity = 0;
+    uint8 Source = 0;
+    uint8 DisplayFrame = 0;
+    uint8 Lod = 0;
+    uint16 Flags = 0;
+    uint16 ChunkCount = 0;
+    uint32 ModelIdentity = 0;
+    uint32 EstimateIdentity = 0;
+    uint32 SourceChecksum = 0;
+    uint32 ContinuityIdentity = 0;
+};
+
 struct FKsa64GlobalGuidedEvidenceRecord
 {
     FString Label;
@@ -133,6 +148,9 @@ public:
     bool OpenNominalReleaseForAutomation(
         UKsa64LiveMissionSubsystem& Operations,
         uint32 ReleaseEpoch);
+    bool OpenCompletedGuidedReleaseForAutomation(
+        UKsa64LiveMissionSubsystem& Operations,
+        uint32 ReleaseEpoch);
     void SetGlobalAvailabilityForAutomation(
         bool bDefinitionValid,
         bool bAcceptedExact,
@@ -165,6 +183,15 @@ private:
     const FKsa64GlobalSourcePoseProduct* FindGlobalSource(uint8 Source) const;
     const FKsa64GlobalResolvedPoseProduct* ResolvePoseForCamera(
         const FKsa64GlobalSourcePoseProduct& Source) const;
+    uint8 ResolveDisplayFrame() const;
+    const FKsa64GlobalResolvedPoseProduct* ResolvePoseForDisplayFrame(
+        const FKsa64GlobalSourcePoseProduct& Source,
+        uint8 DisplayFrame) const;
+    const int32* ResolveAttitudeForDisplayFrame(
+        const FKsa64GlobalSourcePoseProduct& Source,
+        uint8 DisplayFrame) const;
+    bool IsGlobalSourceVisible(uint8 Source) const;
+    void RefreshVisibleSemanticProducts();
     void ApplyReplayDisposition();
     void RefreshSemanticState(
         const FKsa64GlobalSceneSample& Sample,
@@ -196,6 +223,12 @@ private:
         const FString& Label,
         uint32 ExpectedGnssState,
         uint32 ExpectedReceiptState);
+    bool LoadCompletedGuidedGlobalRelease(
+        UKsa64LiveMissionSubsystem& Operations,
+        uint32 ReleaseEpoch);
+    bool WriteCompletedGuidedSemanticRecord(
+        UKsa64LiveMissionSubsystem& Operations,
+        const FKsa64GlobalGuidedEvidenceRecord& Record);
     void OnGlobalEvidenceScreenshotProcessed();
     bool ValidateGlobalEvidenceScreenshot(FKsa64GlobalEvidenceCapture& Capture);
     bool WriteGlobalEvidenceManifest(
@@ -222,6 +255,7 @@ private:
     TWeakObjectPtr<UStaticMeshComponent> VehicleBodyMesh;
     TWeakObjectPtr<UStaticMeshComponent> VehicleNoseMesh;
     TWeakObjectPtr<UStaticMeshComponent> LocatorMesh;
+    TWeakObjectPtr<UStaticMeshComponent> PlannedLocatorMesh;
     TWeakObjectPtr<UStaticMeshComponent> GroundLocatorMesh;
     TWeakObjectPtr<UStaticMeshComponent> TruthLocatorMesh;
     TWeakObjectPtr<UKsa64GlobalLineComponent> EarthGridLines;
@@ -244,6 +278,7 @@ private:
     FKsa64GlobalReplayIndexProduct GlobalReplayIndex;
     TArray<FKsa64GlobalTransitionProduct> GlobalTransitions;
     TArray<FKsa64GlobalPathPointProduct> GlobalPaths[4];
+    FKsa64GlobalFetchedPathState GlobalPathStates[4];
     uint32 PermittedGlobalSourceMask = 0;
     uint8 GlobalPathDisplayFrame = 0;
     uint32 LastGlobalPathRefreshRelease = 0;
@@ -260,6 +295,7 @@ private:
     bool bHasPreviousSample = false;
     bool bGlobalDefinitionValid = false;
     bool bGlobalAcceptedExact = false;
+    bool bGlobalPathProductsValid = true;
     bool bOverlayInstalled = false;
     bool bSceneAttempted = false;
     bool bOperationsDeskVisible = false;
@@ -274,6 +310,7 @@ private:
     uint8 GlobalEvidencePhase = 0;
     uint32 GlobalEvidenceMilestoneIndex = 0;
     uint32 GlobalEvidenceGuidedIndex = 0;
+    uint32 GlobalEvidenceGuidedRecaptureIndex = 0;
     uint32 GlobalEvidenceAcceptedActions = 0;
     uint64 GlobalEvidenceReceiptSequenceBeforeAction = 0;
     uint32 GlobalEvidenceExpectedProposalIdentity = 0;

@@ -53,6 +53,59 @@ FQuat Ksa64BodyToFrameQuaternionToUnreal(const int32 QuaternionQ30[4])
         static_cast<double>(QuaternionQ30[0]) * Scale).GetNormalized();
 }
 
+uint32 HashPathPoints(
+    const TArray<FKsa64GlobalPathPointProduct>& Points,
+    int32 StartIndex,
+    int32 PointCount)
+{
+    uint32 Hash = 0x811c9dc5u;
+    const auto Mix = [&Hash](uint32 Value)
+    {
+        for (uint32 Shift = 0; Shift < 32; Shift += 8)
+        {
+            Hash ^= (Value >> Shift) & 0xffu;
+            Hash *= 0x01000193u;
+        }
+    };
+    const int32 SafeStart = FMath::Clamp(StartIndex, 0, Points.Num());
+    const int32 SafeCount = FMath::Clamp(PointCount, 0, Points.Num() - SafeStart);
+    const int32 EndIndex = SafeStart + SafeCount;
+    for (int32 Index = SafeStart; Index < EndIndex; ++Index)
+    {
+        const FKsa64GlobalPathPointProduct& Point = Points[Index];
+        Mix(Point.ReleaseEpoch);
+        Mix(Point.MissionTimeQ16);
+        Mix(Point.Segment);
+        Mix(Point.EventMask);
+        Mix(Point.AnchorIdentity);
+        for (const int32 Axis : Point.PositionQ12Km)
+        {
+            Mix(static_cast<uint32>(Axis));
+        }
+    }
+    return Hash;
+}
+
+FLinearColor PathColorForFlags(const FLinearColor& Normal, uint16 Flags)
+{
+    FLinearColor Result = Normal;
+    // Terminal is a completion property, not a degradation. Resync, stale,
+    // and incomplete states use Babylon's deterministic severity precedence.
+    if ((Flags & Ksa64GlobalPathFlags::ResyncRequired) != 0)
+    {
+        Result.A = FMath::Min(Result.A, 0.18f);
+    }
+    else if ((Flags & Ksa64GlobalPathFlags::Stale) != 0)
+    {
+        Result.A = FMath::Min(Result.A, 0.28f);
+    }
+    else if ((Flags & Ksa64GlobalPathFlags::Incomplete) != 0)
+    {
+        Result.A = FMath::Min(Result.A, 0.48f);
+    }
+    return Result;
+}
+
 bool ShouldSnap(
     const FKsa64GlobalSceneSample& Previous,
     const FKsa64GlobalSceneSample& Current)
@@ -81,9 +134,10 @@ EKsa64GlobalCameraMode ResolveAutomaticCamera(
     }
     if (FrameIdentity == 2)
     {
-        // The frame remains authoritative. Segment is only a presentation hint
-        // for a closer entry view when the typed GlobalDisplayV1 stream exists.
-        return SegmentIdentity == 4
+        // Match the browser director: follow powered ECEF ascent closely,
+        // then open to an Earth-fixed engineering view at burnout. Entry
+        // remains Earth-fixed so neither renderer invents a source change.
+        return SegmentIdentity == 2 && ReleaseEpoch < 1'920
             ? EKsa64GlobalCameraMode::VehicleChase
             : EKsa64GlobalCameraMode::EarthFixed;
     }

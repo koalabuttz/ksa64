@@ -11,6 +11,7 @@ import {
   buildGlobalSceneSemanticSnapshot,
   buildGlobalSceneSnapshot,
   compatibleForInterpolation,
+  displayFrameForCamera,
   interpolateQuaternion,
   ksaToBabylon,
   shouldSnapExactly,
@@ -53,7 +54,8 @@ function definition(sources: GlobalDisplayDefinitionV1["availableSources"]): Glo
 
 function model(sources: GlobalDisplayDefinitionV1["availableSources"], samples: readonly GlobalDisplaySampleV1[]): GlobalDisplayModelV1 {
   return { definition: definition(sources), samples,
-    paths: sources.map((source, index) => ({ pathIdentity: index + 1, modelIdentity: 20 + index, source,
+    paths: sources.map((source, index) => ({ pathIdentity: index + 1, modelIdentity: 20 + index, sourceEstimateIdentity: 30 + index,
+      sourceChecksum: 40 + index, continuityIdentity: 50 + index, flags: 0, source,
       frame: "ecef" as const, lodSeconds: 1 as const, chunkSequence: 1, validityMask: 1n,
       stale: false, incomplete: false, terminal: false,
       points: [{ releaseEpoch: 100, missionTimeQ16: 204_800, segment: "ecef-ascent" as const, eventMask: 0n, anchorIdentity: 0, positionQ12Km: [26_124_849 + index, 0, 0] }] })),
@@ -76,6 +78,7 @@ describe("global semantic scene model", () => {
     expect(compatibleForInterpolation(previous, { ...next, eventMask: 1n }, "onboard")).toBe(false);
     expect(shouldSnapExactly(previous, { ...next, authoritativeFrame: "gcrf" })).toBe(true);
     expect(shouldSnapExactly(previous, { ...next, discontinuityMask: 1n })).toBe(true);
+    expect(shouldSnapExactly(previous, { ...next, releaseEpoch: previous.releaseEpoch + 65 })).toBe(true);
 
     const start = sample({ poses: [pose("onboard", [0, 0, 0])] });
     const finish = sample({ sequence: 2n, releaseEpoch: 101, poses: [pose("onboard", [4096, 8192, 0])] });
@@ -84,10 +87,18 @@ describe("global semantic scene model", () => {
     expect(smoothed.sources[0]?.positionKm).toEqual([0.5, 1, 0]);
     expect(smoothed.interpolated).toBe(true);
     expect(interpolateQuaternion([1, 0, 0, 0], [-1, 0, 0, 0], 0.5)).toEqual([1, 0, 0, 0]);
+
+    const noAttitudeStart = sample({ poses: [{ ...pose("onboard", [0, 0, 0]), bodyToEcefQ30: undefined }] });
+    const noAttitudeFinish = sample({ sequence: 2n, releaseEpoch: 101,
+      poses: [{ ...pose("onboard", [4096, 0, 0]), bodyToEcefQ30: undefined }] });
+    const exactWithoutAttitude = buildGlobalSceneSnapshot(model(["onboard"], [noAttitudeStart, noAttitudeFinish]),
+      noAttitudeFinish, controls({ visibleSources: new Set(["onboard"]), interpolationAlpha: 0.5 }), noAttitudeStart);
+    expect(exactWithoutAttitude.sources[0]?.positionKm).toEqual([1, 0, 0]);
+    expect(exactWithoutAttitude.interpolated).toBe(false);
   });
 
   it("rebases only renderer coordinates and preserves a right-handed Babylon mapping", () => {
-    const value = sample();
+    const value = sample({ eventMask: 3n, discontinuityMask: 5n });
     const chase = buildGlobalSceneSnapshot(model(["onboard"], [value]), value,
       controls({ visibleSources: new Set(["onboard"]) }));
     const globe = buildGlobalSceneSnapshot(model(["onboard"], [value]), value,
@@ -99,6 +110,43 @@ describe("global semantic scene model", () => {
     const semantic = buildGlobalSceneSemanticSnapshot(chase);
     expect(buildGlobalSceneSemanticSnapshot({ ...chase, originKm: [123, 456, 789] })).toEqual(semantic);
     expect(semantic.sources[0]?.positionQ12Km).toEqual([26_124_849, 0, 0]);
+    expect(semantic).toMatchObject({
+      eventMask: 3,
+      discontinuityMask: 5,
+      continuityIdentity: 42,
+      visibleSourceMask: 2,
+      sources: [{ source: "onboard", modelIdentity: 7, sourceEstimateIdentity: 8, sourceChecksum: 9 }],
+      paths: [{ identity: 1, source: "onboard", modelIdentity: 20, sourceEstimateIdentity: 30,
+        sourceChecksum: 40, continuityIdentity: 50, flags: 0 }],
+    });
+  });
+
+  it("normalizes manual camera and frame combinations like Unreal", () => {
+    const value = sample({ poses: [{ ...pose("onboard", [26_124_849, 0, 0]),
+      launchEnuPositionQ12Km: [4_096, 0, 0], recoveryEnuPositionQ12Km: [8_192, 0, 0] }] });
+    const recovery = buildGlobalSceneSnapshot(model(["onboard"], [value]), value,
+      controls({ camera: "recovery", domain: "ecef", visibleSources: new Set(["onboard"]) }));
+    expect(displayFrameForCamera("recovery", value)).toBe("local-enu");
+    expect(recovery.frame).toBe("local-enu");
+    expect(recovery.sources[0]?.positionKm).toEqual([2, 0, 0]);
+    expect(displayFrameForCamera("earth-fixed", value)).toBe("ecef");
+    expect(displayFrameForCamera("inertial", value)).toBe("gcrf");
+  });
+
+  it("does not substitute another frame when an exact Rust-resolved pose is absent", () => {
+    const ecefOnly = sample({ authoritativeFrame: "ecef", segment: "local-launch",
+      poses: [pose("onboard", [26_124_849, 0, 0])] });
+    const local = buildGlobalSceneSnapshot(model(["onboard"], [ecefOnly]), ecefOnly,
+      controls({ camera: "launch", visibleSources: new Set(["onboard"]) }));
+    expect(local.frame).toBe("local-enu");
+    expect(local.sources).toEqual([]);
+
+    const launchOnly = sample({ authoritativeFrame: "ecef", segment: "local-launch",
+      poses: [{ ...pose("onboard", [26_124_849, 0, 0]), launchEnuPositionQ12Km: [4_096, 0, 0] }] });
+    const recovery = buildGlobalSceneSnapshot(model(["onboard"], [launchOnly]), launchOnly,
+      controls({ camera: "recovery", visibleSources: new Set(["onboard"]) }));
+    expect(recovery.frame).toBe("local-enu");
+    expect(recovery.sources).toEqual([]);
   });
 
   it("selects deterministic path detail without changing authoritative samples", () => {
@@ -109,15 +157,24 @@ describe("global semantic scene model", () => {
       { ...path, pathIdentity: 102, lodSeconds: 1 as const },
       { ...path, pathIdentity: 103, lodSeconds: 4 as const },
     ] };
-    const exact = buildGlobalSceneSnapshot(withLods, base.samples[0],
+    const sharedDetail = buildGlobalSceneSnapshot(withLods, base.samples[0],
       controls({ camera: "chase", visibleSources: new Set(["onboard"]), pathDetail: "auto" }));
     const overview = buildGlobalSceneSnapshot(withLods, base.samples[0],
       controls({ camera: "earth-fixed", visibleSources: new Set(["onboard"]), pathDetail: "auto" }));
     const oneSecond = buildGlobalSceneSnapshot(withLods, base.samples[0],
       controls({ visibleSources: new Set(["onboard"]), pathDetail: 1 }));
-    expect(exact.paths.map((value) => value.lodSeconds)).toEqual([0]);
+    expect(sharedDetail.paths.map((value) => value.lodSeconds)).toEqual([1]);
     expect(overview.paths.map((value) => value.lodSeconds)).toEqual([4]);
     expect(oneSecond.paths.map((value) => value.lodSeconds)).toEqual([1]);
+  });
+
+  it("preserves and presents raw path resynchronization state", () => {
+    const base = model(["onboard"], [sample()]);
+    const flagged: GlobalDisplayModelV1 = { ...base, paths: [{ ...base.paths[0]!, flags: 1 << 3 }] };
+    const scene = buildGlobalSceneSnapshot(flagged, flagged.samples[0],
+      controls({ visibleSources: new Set(["onboard"]), pathDetail: 1 }));
+    expect(scene.paths[0]?.resyncRequired).toBe(true);
+    expect(buildGlobalSceneSemanticSnapshot(scene).paths[0]?.flags).toBe(1 << 3);
   });
 
   it("splits launch and recovery ENU trail strips at the Rust anchor identity", () => {
@@ -138,6 +195,7 @@ describe("global semantic scene model", () => {
     expect(scene.paths).toHaveLength(2);
     expect(scene.paths.map((path) => [path.anchorIdentity, path.pointsKm.length])).toEqual([[5, 2], [6, 2]]);
     expect(buildGlobalSceneSemanticSnapshot(scene).paths.map((path) => path.anchorIdentity)).toEqual([5, 6]);
+    expect(buildGlobalSceneSemanticSnapshot(scene).paths.map((path) => path.pointChecksum)).not.toEqual([0, 0]);
   });
 
   it("renders truth poses and paths only for a director-derived model when explicitly enabled", () => {
@@ -186,6 +244,9 @@ describe("global semantic scene model", () => {
     expect(exact.definition.missionEpochTaiSeconds).toBe(19_723n * 86_400n + 37n);
     expect(exact.samples[0]?.missionTimeQ16).toBe(2048);
     expect(exact.samples[0]?.poses[0]?.ecefPositionQ12Km).toEqual([111, 222, 333]);
+    expect(exact.samples[0]?.poses[0]?.ecefVelocityQ24KmS).toBeUndefined();
+    expect(exact.samples[0]?.poses[0]?.bodyToEcefQ30).toBeUndefined();
+    expect(exact.samples[0]?.poses[0]?.bodyAngularRateQ24RadS).toBeUndefined();
 
     const legacy = buildLegacySchematicDisplay({ samples: [], paths: new Map(), timeline: [], truthAllowed: false });
     expect(legacy.definition.quality).toBe("legacy-schematic");

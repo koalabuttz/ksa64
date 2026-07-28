@@ -582,6 +582,13 @@ Portable validation covers:
 - exact 22,015-release nominal replay and 21,591-release GNSS-loss replay;
 - identical normalized display records between live and verified replay;
 - transition/event-preserving exact, one-second, and four-second paths;
+- one shared in-process/WASM/native path builder, with routine release ticks
+  excluded from the pin set and every semantic replay bookmark retained;
+- path checksum vectors that bind release, Q16 time, segment, event mask,
+  anchor, and signed Q12 XYZ rather than geometry alone;
+- preservation and presentation of raw stale, incomplete, terminal, and
+  resynchronization-required path flags;
+- normalization of camera and display frame into one supported shared view mode;
 - snap behavior across frames, segments, deployment, invalidity, replacement,
   seek, gaps, and terminal events; and
 - action, procedure, disposition, checksum, and KSB11 invariance under display
@@ -602,10 +609,19 @@ Renderer acceptance additionally requires:
 - `KSA64.Phase12C` Unreal automation with no failed, skipped, or in-process
   tests;
 - a packaged Win64/D3D12 viewer that needs no Editor, MCP, or Python;
+- construction only after an active packaged game world begins play;
+- Launcher Renderer ABI alignment through compile-time `RayTracingMode=Inline`
+  while runtime `r.RayTracing=False` remains enforced;
 - semantic snapshots at all frame transitions, burnout, apogee, deployment,
   landing, actions, and faults;
-- identical Unreal and Babylon source availability, release, frame, paths,
-  events, and dispositions at those snapshots;
+- exact source pose, path product, event mask, discontinuity mask, and continuity
+  identity parity at all nine nominal milestones;
+- the same exact parity at six Guided Operator milestones: GNSS outage onset
+  at release 5,760, outage qualification at 5,824, and accepted actions at
+  6,080, 6,240, 6,560, and 6,720;
+- identical raw path flags, temporal/event-aware point checksums, normalized
+  view modes, source availability, release, frame, and dispositions at those
+  snapshots;
 - real WebGPU, forced-WebGL2, context-loss fallback, and complete 2-D lanes;
 - no truth fields in non-director products and persistent truth labelling when
   enabled for a director;
@@ -618,5 +634,8 @@ Renderer acceptance additionally requires:
 the nonvisual gates run. It reports a completion PASS only when every default
 gate and explicit Unreal build, automation, package, rendered-browser,
 cross-renderer parity, and runtime-evidence input passes. Skipped gates remain
-pending. Current measurements and their pending status are recorded in
+pending. The strict joined record must use
+`ksa64.phase12c.cross-renderer-evidence.v2`, be regenerated from the raw
+producer artifacts, and match the submitted record byte for byte. Current
+measurements and their pending status are recorded in
 `phase12/PHASE12C_COMPLETION.md`.

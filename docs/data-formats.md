@@ -477,6 +477,25 @@ The typed family comprises `GlobalDisplayDefinitionV1`,
 identities, not canonical record internals. Role filtering removes SIM-truth
 source poses and paths before encoding for an unauthorized role.
 
+Path retention uses one shared Rust builder for in-process/WASM and native
+bridge clients. It pins sample events and discontinuities plus semantic replay
+bookmarks for transitions, declared mission events, procedure actions, faults,
+and terminal state. Routine release notifications are not pins.
+
+A semantic path record preserves its source/model/estimate identities, source
+checksum, continuity identity, anchor, strip, LOD, point count, and unmodified
+path flags. Bits 0 through 3 mean stale, incomplete, terminal, and
+resynchronization required. Its point checksum starts at FNV-1a offset
+`0x811c9dc5`, uses prime `0x01000193`, and processes each point in order as
+eight little-endian 32-bit words: release epoch, Q16 mission time, segment
+identity, event mask, anchor identity, and signed Q12 X, Y, and Z. This checksum
+intentionally binds temporal and event meaning as well as geometry.
+
+Semantic snapshots record the normalized supported view mode. Camera and
+display frame are not independent evidence fields: launch/recovery map to the
+corresponding local ENU view, Earth-fixed maps to ECEF, inertial/free-orbit map
+to GCRF, and chase/inspection map to the authoritative sample frame.
+
 Native ABI-v1 remains unchanged. `ksa64_viewer_global_display_api_v1` returns
 an optional, versioned, size-tagged function table for definition, exact sample
 ranges, paths, replay indices, and nominal replay startup. Callers must validate
@@ -486,7 +505,19 @@ not corrupt.
 
 Browser and Unreal semantic snapshots, screenshots, path-memory reports,
 origin-change logs, backend/fallback results, and runtime measurements are
-noncanonical validation metadata. The draft schemas
-`ksa64.phase12c.browser-evidence.v1` and
-`ksa64.phase12c.runtime-evidence.v1` are completion-audit inputs only; no
-pending or partial record may masquerade as accepted evidence.
+noncanonical validation metadata. The implemented producer and audit schemas
+are:
+
+- `ksa64.phase12c.global-display-harness.v1` for the native C++ consumer;
+- `ksa64.phase12c.unreal-global-evidence.v1` for packaged Unreal evidence;
+- `ksa64.phase12c.browser-evidence.v1` for rendered-browser evidence;
+- `ksa64.phase12c.web-source-identity.v1` and
+  `ksa64.phase12c.web-distribution-identity.v1` for source and production-build
+  binding;
+- `ksa64.global-scene-semantic.v1` for renderer-neutral semantic snapshots; and
+- `ksa64.phase12c.cross-renderer-evidence.v2` for the strict joined result.
+
+These records are completion-audit inputs only. The v2 cross-renderer record
+is generated from and SHA-256-binds the raw native, packaged-Unreal, browser,
+semantic, screenshot, bridge, and distribution artifacts. No pending, partial,
+or hand-edited record may masquerade as accepted evidence.

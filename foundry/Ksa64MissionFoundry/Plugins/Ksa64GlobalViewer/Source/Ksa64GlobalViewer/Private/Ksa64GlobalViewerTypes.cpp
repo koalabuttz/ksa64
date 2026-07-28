@@ -26,8 +26,52 @@ FString FKsa64GlobalSemanticState::ToDeterministicJson() const
     Writer->WriteValue(TEXT("discontinuity_mask"), DiscontinuityMask);
     Writer->WriteValue(
         TEXT("continuity_identity"),
-        FString::Printf(TEXT("%llu"), static_cast<unsigned long long>(ContinuityIdentity)));
+        static_cast<int64>(ContinuityIdentity));
     Writer->WriteValue(TEXT("source_mask"), SourceMask);
+    Writer->WriteValue(TEXT("visible_source_mask"), VisibleSourceMask);
+    Writer->WriteArrayStart(TEXT("visible_sources"));
+    for (const FKsa64GlobalVisibleSourceSemantic& Source : VisibleSources)
+    {
+        Writer->WriteObjectStart();
+        Writer->WriteValue(TEXT("source"), Source.Source);
+        Writer->WriteValue(TEXT("model_identity"), Source.ModelIdentity);
+        Writer->WriteValue(TEXT("estimate_identity"), Source.EstimateIdentity);
+        Writer->WriteValue(TEXT("source_checksum"), Source.SourceChecksum);
+        Writer->WriteValue(TEXT("age_releases"), Source.AgeReleases);
+        Writer->WriteArrayStart(TEXT("position_q12_km"));
+        for (const int32 Axis : Source.PositionQ12Km) Writer->WriteValue(Axis);
+        Writer->WriteArrayEnd();
+        if (Source.bAttitudeValid)
+        {
+            Writer->WriteArrayStart(TEXT("attitude_q30"));
+            for (const int32 Component : Source.AttitudeQ30)
+            {
+                Writer->WriteValue(Component);
+            }
+            Writer->WriteArrayEnd();
+        }
+        Writer->WriteObjectEnd();
+    }
+    Writer->WriteArrayEnd();
+    Writer->WriteArrayStart(TEXT("visible_paths"));
+    for (const FKsa64GlobalVisiblePathSemantic& Path : VisiblePaths)
+    {
+        Writer->WriteObjectStart();
+        Writer->WriteValue(TEXT("identity"), Path.Identity);
+        Writer->WriteValue(TEXT("source"), Path.Source);
+        Writer->WriteValue(TEXT("model_identity"), Path.ModelIdentity);
+        Writer->WriteValue(TEXT("estimate_identity"), Path.EstimateIdentity);
+        Writer->WriteValue(TEXT("source_checksum"), Path.SourceChecksum);
+        Writer->WriteValue(TEXT("continuity_identity"), Path.ContinuityIdentity);
+        Writer->WriteValue(TEXT("flags"), Path.Flags);
+        Writer->WriteValue(TEXT("anchor_identity"), Path.AnchorIdentity);
+        Writer->WriteValue(TEXT("strip_index"), Path.StripIndex);
+        Writer->WriteValue(TEXT("lod_seconds"), Path.LodSeconds);
+        Writer->WriteValue(TEXT("point_count"), Path.PointCount);
+        Writer->WriteValue(TEXT("point_checksum"), Path.PointChecksum);
+        Writer->WriteObjectEnd();
+    }
+    Writer->WriteArrayEnd();
     Writer->WriteValue(TEXT("observed_path_points"), ObservedPathPoints);
     Writer->WriteValue(TEXT("planned_path_points"), PlannedPathPoints);
     Writer->WriteValue(TEXT("onboard_path_points"), OnboardPathPoints);

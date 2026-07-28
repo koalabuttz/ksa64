@@ -1,13 +1,14 @@
 import {
   Q12_KILOMETRES,
   directorCameraForSample,
-  displayDomainForSample,
   sourcePose,
   type GlobalDisplayCameraV1,
   type GlobalDisplayDomainV1,
   type GlobalDisplayFrameV1,
   type GlobalDisplayModelV1,
+  type GlobalDisplayPathPointV1,
   type GlobalDisplaySampleV1,
+  type GlobalDisplaySegmentV1,
   type GlobalDisplaySourcePoseV1,
   type GlobalDisplaySourceV1,
   type I32x3,
@@ -37,6 +38,8 @@ export interface GlobalSceneSourceState {
   readonly positionKm: F64x3;
   readonly bodyQuaternion?: F64x4;
   readonly modelIdentity: number;
+  readonly sourceEstimateIdentity: number;
+  readonly sourceChecksum: number;
   readonly ageReleases: number;
   readonly locatorRequired: boolean;
 }
@@ -49,18 +52,27 @@ export interface GlobalSceneAnchorState {
 export interface GlobalScenePathState {
   readonly identity: number;
   readonly source: GlobalDisplaySourceV1;
+  readonly modelIdentity: number;
+  readonly sourceEstimateIdentity: number;
+  readonly sourceChecksum: number;
+  readonly continuityIdentity: number;
+  readonly flags: number;
   readonly anchorIdentity: number;
   readonly stripIndex: number;
   readonly pointsKm: readonly F64x3[];
   readonly dashed: boolean;
   readonly stale: boolean;
   readonly incomplete: boolean;
+  readonly resyncRequired: boolean;
   readonly lodSeconds: 0 | 1 | 4;
+  readonly pointChecksum: number;
 }
 
 export interface GlobalSceneSemanticSourceV1 {
   readonly source: GlobalDisplaySourceV1;
   readonly modelIdentity: number;
+  readonly sourceEstimateIdentity: number;
+  readonly sourceChecksum: number;
   readonly ageReleases: number;
   readonly positionQ12Km: I32x3;
   readonly bodyQuaternionQ30?: I32x4;
@@ -69,6 +81,11 @@ export interface GlobalSceneSemanticSourceV1 {
 export interface GlobalSceneSemanticPathV1 {
   readonly identity: number;
   readonly source: GlobalDisplaySourceV1;
+  readonly modelIdentity: number;
+  readonly sourceEstimateIdentity: number;
+  readonly sourceChecksum: number;
+  readonly continuityIdentity: number;
+  readonly flags: number;
   readonly anchorIdentity: number;
   readonly stripIndex: number;
   readonly lodSeconds: 0 | 1 | 4;
@@ -84,6 +101,10 @@ export interface GlobalSceneSemanticSnapshotV1 {
   readonly frame: GlobalDisplayFrameV1;
   readonly segment: string;
   readonly camera: GlobalDisplayCameraV1;
+  readonly eventMask: number;
+  readonly discontinuityMask: number;
+  readonly continuityIdentity: number;
+  readonly visibleSourceMask: number;
   readonly exactSnapRequired: boolean;
   readonly truthLabelVisible: boolean;
   readonly anchors: readonly { readonly kind: "launch" | "recovery"; readonly positionQ12Km: I32x3 }[];
@@ -97,6 +118,9 @@ export interface GlobalSceneSnapshot {
   readonly frame: GlobalDisplayFrameV1;
   readonly segment: string;
   readonly camera: GlobalDisplayCameraV1;
+  readonly eventMask: number;
+  readonly discontinuityMask: number;
+  readonly continuityIdentity: number;
   readonly originKm: F64x3;
   readonly anchors: readonly GlobalSceneAnchorState[];
   readonly sources: readonly GlobalSceneSourceState[];
@@ -111,17 +135,38 @@ function rawToKm(raw: I32x3): F64x3 {
   return [raw[0] / Q12_KILOMETRES, raw[1] / Q12_KILOMETRES, raw[2] / Q12_KILOMETRES];
 }
 
+export function displayFrameForCamera(
+  camera: GlobalDisplayCameraV1,
+  sample: GlobalDisplaySampleV1 | undefined,
+): GlobalDisplayFrameV1 {
+  switch (camera) {
+    case "launch":
+    case "recovery": return "local-enu";
+    case "earth-fixed": return "ecef";
+    case "inertial":
+    case "free": return "gcrf";
+    case "director": return displayFrameForCamera(directorCameraForSample(sample), sample);
+    case "chase":
+    case "inspection": return sample?.authoritativeFrame ?? "ecef";
+  }
+}
+
+function localRecoveryForCamera(camera: GlobalDisplayCameraV1, segment: string): boolean {
+  return camera === "recovery" || (camera !== "launch" && segment === "local-recovery");
+}
+
 function positionForDomain(
   pose: GlobalDisplaySourcePoseV1,
   domain: GlobalDisplayFrameV1,
   segment: string,
+  camera: GlobalDisplayCameraV1,
 ): I32x3 | undefined {
   switch (domain) {
     case "ecef": return pose.ecefPositionQ12Km;
     case "gcrf": return pose.gcrfPositionQ12Km;
-    case "local-enu": return segment === "local-recovery"
-      ? pose.recoveryEnuPositionQ12Km ?? pose.launchEnuPositionQ12Km
-      : pose.launchEnuPositionQ12Km ?? pose.recoveryEnuPositionQ12Km;
+    case "local-enu": return localRecoveryForCamera(camera, segment)
+      ? pose.recoveryEnuPositionQ12Km
+      : pose.launchEnuPositionQ12Km;
   }
 }
 
@@ -129,12 +174,13 @@ function attitudeForDomain(
   pose: GlobalDisplaySourcePoseV1,
   domain: GlobalDisplayFrameV1,
   segment: string,
+  camera: GlobalDisplayCameraV1,
 ): F64x4 | undefined {
   const raw = domain === "gcrf" ? pose.bodyToGcrfQ30
     : domain === "ecef" ? pose.bodyToEcefQ30
-      : segment === "local-recovery"
-        ? pose.bodyToRecoveryEnuQ30 ?? pose.bodyToLaunchEnuQ30
-        : pose.bodyToLaunchEnuQ30 ?? pose.bodyToRecoveryEnuQ30;
+      : localRecoveryForCamera(camera, segment)
+        ? pose.bodyToRecoveryEnuQ30
+        : pose.bodyToLaunchEnuQ30;
   if (raw === undefined) return undefined;
   const scale = 1 << 30;
   return [raw[0] / scale, raw[1] / scale, raw[2] / scale, raw[3] / scale];
@@ -212,6 +258,8 @@ export function compatibleForInterpolation(
   source: GlobalDisplaySourceV1,
 ): boolean {
   if (previous === undefined || next === undefined ||
+      next.releaseEpoch <= previous.releaseEpoch ||
+      next.releaseEpoch - previous.releaseEpoch > 64 ||
       previous.authoritativeFrame !== next.authoritativeFrame ||
       previous.segment !== next.segment ||
       previous.continuityIdentity !== next.continuityIdentity ||
@@ -233,6 +281,7 @@ export function shouldSnapExactly(
 ): boolean {
   if (previous === undefined || next === undefined) return true;
   return next.releaseEpoch <= previous.releaseEpoch ||
+    next.releaseEpoch - previous.releaseEpoch > 64 ||
     previous.authoritativeFrame !== next.authoritativeFrame ||
     previous.segment !== next.segment ||
     previous.continuityIdentity !== next.continuityIdentity ||
@@ -247,12 +296,14 @@ export function buildGlobalSceneSnapshot(
   controls: GlobalSceneControls,
   previous?: GlobalDisplaySampleV1,
 ): GlobalSceneSnapshot {
-  const domain = model.definition.quality === "global-display-v1"
-    ? displayDomainForSample(controls.domain, sample)
-    : "ecef";
   const camera = controls.directorEnabled || controls.camera === "director"
     ? directorCameraForSample(sample)
     : controls.camera;
+  // Camera and display frame form one supported view mode in both renderers.
+  // The UI normalizes explicit frame choices to their matching camera.
+  const domain = model.definition.quality === "global-display-v1"
+    ? displayFrameForCamera(camera, sample)
+    : "ecef";
   const allowedSources = model.definition.availableSources;
   const exactSnapRequired = shouldSnapExactly(previous, sample);
   const requestedAlpha = Math.max(0, Math.min(1, controls.interpolationAlpha ?? 1));
@@ -262,25 +313,34 @@ export function buildGlobalSceneSnapshot(
     effectiveSources.add("truth");
   }
   const sourceStates: GlobalSceneSourceState[] = [];
+  let didInterpolate = false;
   for (const source of effectiveSources) {
     if (!allowedSources.includes(source) || (source === "truth" && !controls.truthVisible)) continue;
     const value = sourcePose(sample, source);
     if (value === undefined) continue;
-    const raw = positionForDomain(value, domain, sample?.segment ?? "awaiting") ??
-      value.ecefPositionQ12Km ??
-      value.gcrfPositionQ12Km;
+    const resolved = positionForDomain(value, domain, sample?.segment ?? "awaiting", camera);
+    const raw = model.definition.quality === "global-display-v1"
+      ? resolved
+      : resolved ?? value.ecefPositionQ12Km ?? value.gcrfPositionQ12Km;
     if (raw === undefined) continue;
     let positionKm = rawToKm(raw);
-    let bodyQuaternion = attitudeForDomain(value, domain, sample?.segment ?? "awaiting");
+    let bodyQuaternion = attitudeForDomain(value, domain, sample?.segment ?? "awaiting", camera);
     if (interpolationAlpha < 1 && compatibleForInterpolation(previous, sample, source)) {
       const prior = sourcePose(previous, source);
-      const priorRaw = prior === undefined ? undefined : positionForDomain(prior, domain, previous?.segment ?? "awaiting") ??
-        prior.ecefPositionQ12Km ?? prior.gcrfPositionQ12Km;
+      const priorResolved = prior === undefined
+        ? undefined
+        : positionForDomain(prior, domain, previous?.segment ?? "awaiting", camera);
+      const priorRaw = model.definition.quality === "global-display-v1"
+        ? priorResolved
+        : priorResolved ?? prior?.ecefPositionQ12Km ?? prior?.gcrfPositionQ12Km;
       if (prior !== undefined && priorRaw !== undefined) {
-        positionKm = interpolatePosition(rawToKm(priorRaw), positionKm, interpolationAlpha);
-        const priorQuaternion = attitudeForDomain(prior, domain, previous?.segment ?? "awaiting");
+        const priorQuaternion = attitudeForDomain(prior, domain, previous?.segment ?? "awaiting", camera);
+        // GlobalDisplayV1 permits smooth physical presentation only when both
+        // position and attitude are genuinely available in the selected frame.
         if (priorQuaternion !== undefined && bodyQuaternion !== undefined) {
+          positionKm = interpolatePosition(rawToKm(priorRaw), positionKm, interpolationAlpha);
           bodyQuaternion = interpolateQuaternion(priorQuaternion, bodyQuaternion, interpolationAlpha);
+          didInterpolate = true;
         }
       }
     }
@@ -289,6 +349,8 @@ export function buildGlobalSceneSnapshot(
       positionKm,
       bodyQuaternion,
       modelIdentity: value.modelIdentity,
+      sourceEstimateIdentity: value.sourceEstimateIdentity,
+      sourceChecksum: value.sourceChecksum,
       ageReleases: value.ageReleases,
       locatorRequired: positionMagnitude(positionKm) > 1000,
     });
@@ -302,7 +364,7 @@ export function buildGlobalSceneSnapshot(
     (chunk.source !== "truth" || controls.truthVisible) &&
     chunk.frame === domain);
   const preferredDetail = controls.pathDetail === "auto"
-    ? (["launch", "chase", "recovery", "inspection"].includes(camera) ? 0 : 4)
+    ? (["launch", "chase", "recovery", "inspection"].includes(camera) ? 1 : 4)
     : controls.pathDetail;
   const selectedPaths = new Map<string, GlobalDisplayModelV1["paths"][number]>();
   for (const chunk of eligiblePaths) {
@@ -330,13 +392,20 @@ export function buildGlobalSceneSnapshot(
       return strips.map((strip, stripIndex) => ({
         identity: chunk.pathIdentity,
         source: chunk.source,
+        modelIdentity: chunk.modelIdentity,
+        sourceEstimateIdentity: chunk.sourceEstimateIdentity,
+        sourceChecksum: chunk.sourceChecksum,
+        continuityIdentity: chunk.continuityIdentity,
+        flags: chunk.flags,
         anchorIdentity: strip.anchorIdentity,
         stripIndex,
         pointsKm: strip.points.map((point) => rawToKm(point.positionQ12Km)),
         dashed: chunk.source === "planned",
         stale: chunk.stale,
         incomplete: chunk.incomplete,
+        resyncRequired: (chunk.flags & (1 << 3)) !== 0,
         lodSeconds: chunk.lodSeconds,
+        pointChecksum: hashPathPoints(strip.points),
       }));
     });
   const anchors: GlobalSceneAnchorState[] = [];
@@ -355,13 +424,16 @@ export function buildGlobalSceneSnapshot(
     frame: domain,
     segment: sample?.segment ?? "awaiting",
     camera,
+    eventMask: Number(sample?.eventMask ?? 0n),
+    discontinuityMask: Number(sample?.discontinuityMask ?? 0n),
+    continuityIdentity: sample?.continuityIdentity ?? 0,
     originKm: displayOrigin(camera, primary?.positionKm),
     anchors,
     sources: sourceStates,
     paths,
     truthLabelVisible: controls.truthVisible && sourceStates.some((value) => value.source === "truth"),
     exactSnapRequired,
-    interpolated: interpolationAlpha < 1,
+    interpolated: didInterpolate,
     quality: model.definition.quality,
   };
 }
@@ -370,7 +442,17 @@ function semanticI32(value: number): number {
   return Math.max(-0x8000_0000, Math.min(0x7fff_ffff, Math.round(value)));
 }
 
-function hashPath(path: GlobalScenePathState): number {
+function segmentIdentity(segment: GlobalDisplaySegmentV1): number {
+  switch (segment) {
+    case "local-launch": return 1;
+    case "ecef-ascent": return 2;
+    case "eci-coast": return 3;
+    case "ecef-entry": return 4;
+    case "local-recovery": return 5;
+  }
+}
+
+function hashPathPoints(points: readonly GlobalDisplayPathPointV1[]): number {
   let hash = 0x811c9dc5;
   const mix = (value: number): void => {
     const raw = value >>> 0;
@@ -379,10 +461,15 @@ function hashPath(path: GlobalScenePathState): number {
       hash = Math.imul(hash, 0x01000193) >>> 0;
     }
   };
-  for (const point of path.pointsKm) {
-    mix(semanticI32(point[0] * Q12_KILOMETRES));
-    mix(semanticI32(point[1] * Q12_KILOMETRES));
-    mix(semanticI32(point[2] * Q12_KILOMETRES));
+  for (const point of points) {
+    mix(point.releaseEpoch);
+    mix(point.missionTimeQ16);
+    mix(segmentIdentity(point.segment));
+    mix(Number(point.eventMask));
+    mix(point.anchorIdentity);
+    mix(point.positionQ12Km[0]);
+    mix(point.positionQ12Km[1]);
+    mix(point.positionQ12Km[2]);
   }
   return hash >>> 0;
 }
@@ -398,6 +485,10 @@ export function buildGlobalSceneSemanticSnapshot(snapshot: GlobalSceneSnapshot):
     frame: snapshot.frame,
     segment: snapshot.segment,
     camera: snapshot.camera,
+    eventMask: snapshot.eventMask,
+    discontinuityMask: snapshot.discontinuityMask,
+    continuityIdentity: snapshot.continuityIdentity,
+    visibleSourceMask: snapshot.sources.reduce((mask, source) => mask | (1 << (sourceOrder[source.source] - 1)), 0),
     exactSnapRequired: snapshot.exactSnapRequired,
     truthLabelVisible: snapshot.truthLabelVisible,
     anchors: snapshot.anchors.map((anchor) => ({
@@ -409,6 +500,8 @@ export function buildGlobalSceneSemanticSnapshot(snapshot: GlobalSceneSnapshot):
       .map((source) => ({
         source: source.source,
         modelIdentity: source.modelIdentity,
+        sourceEstimateIdentity: source.sourceEstimateIdentity,
+        sourceChecksum: source.sourceChecksum,
         ageReleases: source.ageReleases,
         positionQ12Km: source.positionKm.map((value) => semanticI32(value * Q12_KILOMETRES)) as unknown as I32x3,
         bodyQuaternionQ30: source.bodyQuaternion?.map((value) => semanticI32(value * (1 << 30))) as I32x4 | undefined,
@@ -418,11 +511,16 @@ export function buildGlobalSceneSemanticSnapshot(snapshot: GlobalSceneSnapshot):
       .map((path) => ({
         identity: path.identity,
         source: path.source,
+        modelIdentity: path.modelIdentity,
+        sourceEstimateIdentity: path.sourceEstimateIdentity,
+        sourceChecksum: path.sourceChecksum,
+        continuityIdentity: path.continuityIdentity,
+        flags: path.flags,
         anchorIdentity: path.anchorIdentity,
         stripIndex: path.stripIndex,
         lodSeconds: path.lodSeconds,
         pointCount: path.pointsKm.length,
-        pointChecksum: hashPath(path),
+        pointChecksum: path.pointChecksum,
       })),
   };
 }

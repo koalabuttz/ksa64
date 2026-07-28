@@ -578,10 +578,12 @@ execution remain measured follow-ons rather than assumptions.
 
 ### Phase 12C: complete global engineering viewer
 
-Status: implementation is under completion audit from commit `eb666cb`. The
-accepted implementation contract is `phase12/PHASE12C_PLAN.md`; the fail-closed
-nominal-lineage decision is `phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`; and
-`phase12/PHASE12C_COMPLETION.md` is a draft ledger, not an acceptance claim.
+Status: implementation is hardened and under completion audit from entry commit
+`eb666cb`. The accepted implementation contract is
+`phase12/PHASE12C_PLAN.md`; the fail-closed nominal-lineage decision is
+`phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`; and
+`phase12/PHASE12C_COMPLETION.md` remains a draft ledger until its source-bound
+packaged, browser, parity, and measured-runtime gates pass.
 
 The remaining physical Duet, Vita3K, and physical Vita Phase 12B.5
 qualifications are an independent follow-up workstream. They no longer gate
@@ -602,8 +604,9 @@ effects, and rendering are passive.
 The full desktop Unreal renderer targets Windows/D3D12, Linux/Vulkan, and
 macOS/Metal. A separate Babylon.js renderer explicitly attempts WebGPU and
 falls back to WebGL2 while consuming the same typed display samples and
-exact-event fixtures; it is the preferred native-feeling Chromebook 3-D path. Unreal, web, and later SDL2 clients share
-contracts and evidence, not one renderer implementation. Low, medium, and high
+exact-event fixtures; it is the preferred native-feeling Chromebook 3-D path.
+Unreal, web, and later SDL2 clients share contracts and evidence, not one
+renderer implementation. Low, medium, and high
 presentation budgets begin here, and no high-end Unreal feature may become an
 authority or base-tier requirement.
 
@@ -614,8 +617,15 @@ compatibility, and the production web build. It cannot certify the phase. A
 completion PASS also requires explicit Unreal build and automation, a packaged
 Win64/D3D12 smoke, real rendered WebGPU/WebGL2/2-D evidence, cross-renderer
 semantic parity, and source-bound runtime metrics meeting the 1080p60/30-fps
-and 1-ms publication/polling budgets. Skipped or unavailable visual gates stay
-pending rather than becoming inferred passes.
+and 1-ms publication/polling budgets. Parity covers all nine nominal and six
+guided action/fault milestones, complete source/path products, event and
+discontinuity masks, continuity identity, raw path-state flags, and one
+normalized camera/display-frame view mode. Path checksums bind release, time,
+segment, event, anchor, and XYZ. The joined record schema is
+`ksa64.phase12c.cross-renderer-evidence.v2`. UE Launcher project modules compile
+with `RayTracingMode=Inline` solely to match the precompiled Renderer ABI while
+`r.RayTracing=False` keeps runtime ray tracing disabled. Skipped or unavailable
+visual gates stay pending rather than becoming inferred passes.
 
 The nominal viewer preserves the frozen KTT10/KPH10/KSR10 bytes as the planned
 reference while using the current checked-in portable re-execution for
@@ -626,7 +636,10 @@ canonical mission or permission for future drift.
 
 The Phase 12C.5 handoff is drafted in `phase12/PHASE12C5_HANDOFF.md` but does
 not activate until the Phase 12C completion ledger records every required
-renderer, parity, and runtime gate.
+renderer, parity, and runtime gate. The separate Phase 12D authoring boundary
+is drafted in `phase12/PHASE12D_HANDOFF.md`; it consumes accepted session and
+display services and does not depend on carried Duet/Vita product
+qualification.
 
 ### Phase 12C.5: portable operations clients
 
@@ -659,7 +672,10 @@ thermal, memory, and exact-evidence gates pass.
 
 ### Phase 12D: Mission Foundry authoring and compiler parity
 
-Status: planned after the viewer and portable-client boundaries are accepted.
+Status: planned after the Phase 12C viewer/session/application boundaries are
+accepted. The carried Duet, Vita3K, and physical Vita qualification remains a
+separate Phase 12C.5 product workstream and does not block desktop authoring
+architecture, compiler parity, or evidence.
 
 Purpose: provide a KSP/Juno-inspired host authoring experience while keeping
 compiled packs, authority lanes, provenance, and evidence maturity distinct.

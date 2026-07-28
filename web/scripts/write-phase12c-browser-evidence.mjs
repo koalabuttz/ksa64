@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalJson, computePhase12cWebSourceIdentity } from "./phase12c-source-identity.mjs";
 
@@ -74,13 +74,22 @@ function directoryRecord(directory, excluded = new Set()) {
   return { path: portablePath(root), bytes, file_count: fileCount, tree_sha256: aggregate.digest("hex") };
 }
 
-function screenshotRecord(specification) {
+function artifactRelativePath(root, path, label) {
+  const portable = relative(root, path).split(sep).join("/");
+  const parts = portable.split("/");
+  requireValue(portable.length > 0 && !isAbsolute(portable) && !portable.includes("\\") &&
+    !portable.includes(":") && parts.every((part) => part.length > 0 && part !== "." && part !== ".."),
+  label + " must be inside the evidence manifest directory");
+  return portable;
+}
+
+function screenshotRecord(specification, evidenceRoot) {
   const separator = specification.indexOf("=");
   requireValue(separator > 0, "--screenshot must use label=path");
   const label = specification.slice(0, separator);
   const path = resolve(specification.slice(separator + 1));
   const bytes = readFileSync(path);
-  return { label, path: portablePath(path), bytes: bytes.byteLength, sha256: sha256(bytes) };
+  return { label, path: artifactRelativePath(evidenceRoot, path, "browser screenshot"), bytes: bytes.byteLength, sha256: sha256(bytes) };
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -89,6 +98,8 @@ const { values, screenshots } = argumentsOf(process.argv.slice(2));
 const nominalPath = values.get("--nominal");
 const guidedPath = values.get("--guided");
 const outputPath = values.get("--output");
+const resolvedOutput = outputPath === undefined ? undefined : resolve(outputPath);
+const evidenceRoot = resolvedOutput === undefined ? undefined : dirname(resolvedOutput);
 requireValue(nominalPath !== undefined && guidedPath !== undefined && outputPath !== undefined,
   "usage: node scripts/write-phase12c-browser-evidence.mjs --nominal RAW.json --guided RAW.json --output MANIFEST.json [--screenshot label=path]");
 
@@ -218,8 +229,20 @@ requireValue(guided.value.fault_policy?.persistent_gnss_outage === true &&
   guided.value.fault_policy.qualified_release === 5_824 &&
   guided.value.fault_policy.reacquisition_event === null,
 "guided persistent-GNSS-loss policy mismatch");
+const expectedGuidedTerminalAxes = [
+  ["Objective", "Primary achieved", "success"],
+  ["Vehicle", "Nominal", "success"],
+  ["Procedure", "Completed", "success"],
+  ["Operator", "Timely reference", "success"],
+  ["Avionics", "Degraded operational", "warning"],
+  ["Evidence", "Complete", "success"],
+];
+requireValue(guided.value.terminal_authority_state?.overall === "Degraded success" &&
+  canonicalJson(guided.value.terminal_authority_state.axes?.map(({ label, value, state }) => [label, value, state])) ===
+    canonicalJson(expectedGuidedTerminalAxes),
+"guided terminal degraded-success disposition mismatch");
 
-const screenshotRecords = screenshots.map(screenshotRecord);
+const screenshotRecords = screenshots.map((specification) => screenshotRecord(specification, evidenceRoot));
 requireValue(screenshotRecords.length >= 3 && new Set(screenshotRecords.map((record) => record.label)).size === screenshotRecords.length,
   "browser completion evidence requires at least three uniquely labelled rendered screenshots");
 const webgpu = nominal.value.backends.auto.actual === "webgpu"
@@ -234,8 +257,8 @@ const manifest = {
   schema: "ksa64.phase12c.browser-evidence.v1",
   producer: {
     kind: "rendered-browser-phase12c-harness",
-    nominal_raw: { path: portablePath(resolve(nominalPath)), bytes: nominal.bytes.byteLength, sha256: sha256(nominal.bytes) },
-    guided_raw: { path: portablePath(resolve(guidedPath)), bytes: guided.bytes.byteLength, sha256: sha256(guided.bytes) },
+    nominal_raw: { path: artifactRelativePath(evidenceRoot, resolve(nominalPath), "browser nominal raw"), bytes: nominal.bytes.byteLength, sha256: sha256(nominal.bytes) },
+    guided_raw: { path: artifactRelativePath(evidenceRoot, resolve(guidedPath), "browser guided raw"), bytes: guided.bytes.byteLength, sha256: sha256(guided.bytes) },
     screenshots: screenshotRecords,
   },
   production_dist: distributionIdentity,
@@ -272,10 +295,10 @@ const manifest = {
     accepted_action_receipts: guided.value.accepted_action_receipts,
   },
   guided_fault_policy: guided.value.fault_policy,
+  guided_terminal_authority_state: guided.value.terminal_authority_state,
   evidence_invariance: nominal.value.invariance,
   pass: true,
 };
-const resolvedOutput = resolve(outputPath);
-mkdirSync(dirname(resolvedOutput), { recursive: true });
+mkdirSync(evidenceRoot, { recursive: true });
 writeFileSync(resolvedOutput, `${canonicalJson(manifest)}\n`, "utf8");
 console.log(`wrote ${resolvedOutput}`);

@@ -811,6 +811,22 @@ receives exactly the legacy Phase 12B.5 stream. Native clients discover the
 same products through a separately size-tagged `GlobalDisplayApiV1` function
 table; no accepted ABI-v1 symbol or layout changes.
 
+### Packaged Unreal lifecycle and binary compatibility
+
+The `Ksa64GlobalViewer` plugin consumes the already loaded operations bridge;
+it never opens a second Rust authority. It defers procedural scene creation
+until the packaged game has an active world that has begun play, and it emits
+source-bound evidence from that packaged process. Editor worlds, transient
+startup worlds, and screenshots taken without a validated bridge cannot satisfy
+the runtime gate.
+
+UE 5.8 Launcher Renderer binaries are precompiled with the ray-tracing virtual
+declarations present in scene-proxy layouts. The project therefore uses
+`RayTracingMode=Inline` as a compile-time ABI alignment setting and guards its
+custom line proxy against `RHI_RAYTRACING=0` on Windows. Runtime ray tracing
+remains disabled through `r.RayTracing=False`; Phase 12C does not require
+ray-tracing hardware or use ray tracing as a renderer feature.
+
 ### Exact time, continuity, and replay
 
 Every 32-Hz release can produce an exact display sample. Smoothing uses only
@@ -822,11 +838,29 @@ terminal events, and every other declared discontinuity. One-sample display
 latency is presentation state and never feeds back into authority.
 
 Rust builds the exact release index and event-preserving exact, one-second, and
-four-second path levels. Live sessions can pause, step, and change pace but
-never rewind. Verified replay may seek, step, jump to named events, and change
-playback speed without changing the accepted evidence. Reconnect gaps are
-reported explicitly and require bounded resynchronization rather than hidden
-interpolation.
+four-second path levels. The shared Rust path builder pins every sample event
+and discontinuity plus every semantic `GlobalReplayIndexV1` bookmark: frame
+transitions, declared mission events, procedure actions, faults, and the terminal
+state. Routine per-release notifications are explicitly not pins, so one- and
+four-second products remain bounded instead of silently becoming 32-Hz history.
+The in-process/WASM and native-bridge paths use that same builder.
+
+Each renderer carries the path product's original source/model/estimate
+identities, source checksum, continuity identity, and raw
+stale, incomplete, terminal, and resynchronization-required flags. Presentation
+shows stale, incomplete, and resynchronization-required history as degraded or
+interrupted and terminal as a completion property rather than an implicit
+failure. It may not reconstruct, clear, or infer any of those flags.
+
+The semantic point checksum applies the same byte-explicit FNV-1a operation to
+each point's release epoch, Q16 mission time, segment identity, event mask,
+anchor identity, and signed Q12 X/Y/Z coordinates. A geometry-only hash is not
+parity evidence.
+
+Live sessions can pause, step, and change pace but never rewind. Verified replay
+may seek, step, jump to named events, and change playback speed without changing
+the accepted evidence. Reconnect gaps are reported explicitly and require
+bounded resynchronization rather than hidden interpolation.
 
 ### Large-world presentation
 
@@ -843,6 +877,14 @@ locator and a separate true-scale local inset provide visibility at planetary
 scale; silent vehicle magnification is forbidden. SIM truth is structurally
 absent from non-director products and starts hidden with a persistent label in
 a director session.
+
+Camera and display frame form one supported view mode rather than independent
+free-form controls. Launch and recovery cameras select their corresponding
+local ENU anchor, Earth-fixed selects ECEF, inertial and free-orbit select GCRF,
+and chase/inspection select the sample's authoritative frame. Automatic
+direction first resolves a camera and then applies the same mapping. Unreal and
+Babylon normalize through this common policy; an arbitrary mismatched
+camera/frame tuple is never a semantic state or parity input.
 
 The frozen nominal reference path and the current exact nominal re-execution
 are separately identified lineages. Their narrow compatibility audit is

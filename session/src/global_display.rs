@@ -102,6 +102,145 @@ impl From<GlobalWorldError> for GlobalDisplayPublishError {
     }
 }
 
+/// Builds one renderer-neutral path chunk from normalized display samples.
+///
+/// This is shared by the in-process session publisher and the native viewer
+/// bridge so transport placement cannot change path retention, flags, lineage,
+/// or chunking. `replay_entries` and `pinned_releases` must contain only
+/// semantically meaningful bookmarks; routine release notifications are not
+/// path pins.
+#[allow(clippy::too_many_arguments)]
+pub fn build_global_display_path_chunk(
+    role: PresentationRole,
+    display_identity: u32,
+    launch_anchor_identity: u32,
+    recovery_anchor_identity: u32,
+    path_samples: &[GlobalDisplaySampleV1],
+    replay_entries: &[GlobalDisplayReplayEntryV1],
+    source: GlobalDisplaySourceId,
+    display_frame: GlobalDisplayFrameId,
+    lod: GlobalDisplayPathLod,
+    chunk_index: u16,
+    pinned_releases: &[u32],
+) -> Result<GlobalDisplayPathChunkV1, GlobalDisplayPublishError> {
+    if source == GlobalDisplaySourceId::SimTruth && !role.permits_private_truth() {
+        return Err(GlobalDisplayPublishError::Path);
+    }
+    if source == GlobalDisplaySourceId::Planned && lod == GlobalDisplayPathLod::Exact {
+        return Err(GlobalDisplayPublishError::Path);
+    }
+    let mut points = Vec::new();
+    for (sample_index, sample) in path_samples.iter().enumerate() {
+        let pinned = sample.event_mask != 0
+            || sample.discontinuity_mask != 0
+            || pinned_releases.contains(&sample.release_epoch)
+            || replay_entries
+                .iter()
+                .any(|entry| entry.release_epoch == sample.release_epoch);
+        // Frozen planned telemetry is already a sparse stream whose one-based
+        // sequence is the accepted release step. Live samples are exact and
+        // use their zero-based release epoch. Preserve the first planned point
+        // explicitly, then apply the same 32/128-release interval contract.
+        let on_cadence = if source == GlobalDisplaySourceId::Planned {
+            sample_index == 0
+                || sample
+                    .sequence
+                    .is_multiple_of(u64::from(lod.cadence_releases()))
+        } else {
+            sample.release_epoch.is_multiple_of(lod.cadence_releases())
+        };
+        let retain = on_cadence || pinned;
+        if !retain {
+            continue;
+        }
+        let Some(pose) = sample.sources.iter().find(|pose| pose.source == source) else {
+            continue;
+        };
+        let Some(position) = resolved_position(pose, display_frame, sample.segment) else {
+            continue;
+        };
+        points.push(GlobalDisplayPathPointV1 {
+            release_epoch: sample.release_epoch,
+            mission_time_q16: sample.mission_time_q16,
+            segment: sample.segment,
+            event_mask: sample.event_mask,
+            anchor_identity: path_anchor_identity(
+                display_frame,
+                sample.segment,
+                launch_anchor_identity,
+                recovery_anchor_identity,
+            ),
+            position_q12_km: position,
+        });
+    }
+    if points.is_empty() {
+        return Err(GlobalDisplayPublishError::Path);
+    }
+    let chunks = points.len().div_ceil(GLOBAL_DISPLAY_PATH_POINT_LIMIT);
+    let chunk_count = u16::try_from(chunks).map_err(|_| GlobalDisplayPublishError::Path)?;
+    if chunk_index >= chunk_count {
+        return Err(GlobalDisplayPublishError::Path);
+    }
+    let start = usize::from(chunk_index) * GLOBAL_DISPLAY_PATH_POINT_LIMIT;
+    let end = (start + GLOBAL_DISPLAY_PATH_POINT_LIMIT).min(points.len());
+    let sample = path_samples.last().ok_or(GlobalDisplayPublishError::Path)?;
+    let latest_lineage_pose = sample.sources.iter().find(|pose| pose.source == source);
+    let lineage_pose = path_samples
+        .iter()
+        .rev()
+        .find_map(|sample| sample.sources.iter().find(|pose| pose.source == source));
+    let terminal = source == GlobalDisplaySourceId::Planned
+        || sample.discontinuity_mask & GLOBAL_DISCONTINUITY_TERMINAL != 0;
+    let stale = latest_lineage_pose.is_none()
+        || latest_lineage_pose.is_some_and(|pose| pose.age_releases > 32);
+    let incomplete = !terminal
+        || latest_lineage_pose.is_none()
+        || points.first().is_some_and(|point| {
+            point.release_epoch
+                > path_samples
+                    .first()
+                    .map_or(point.release_epoch, |sample| sample.release_epoch)
+        });
+    let resync_required = path_samples
+        .iter()
+        .any(|sample| sample.discontinuity_mask & GLOBAL_DISCONTINUITY_HISTORY_GAP != 0);
+    let mut flags = 0;
+    if stale {
+        flags |= GLOBAL_PATH_FLAG_STALE;
+    }
+    if incomplete {
+        flags |= GLOBAL_PATH_FLAG_INCOMPLETE;
+    }
+    if terminal {
+        flags |= GLOBAL_PATH_FLAG_TERMINAL;
+    }
+    if resync_required {
+        flags |= GLOBAL_PATH_FLAG_RESYNC_REQUIRED;
+    }
+    let path_identity = hash_words(&[
+        display_identity,
+        source as u32,
+        display_frame as u32,
+        lod as u32,
+    ]);
+    Ok(GlobalDisplayPathChunkV1 {
+        path_identity,
+        source,
+        display_frame,
+        lod,
+        flags,
+        model_identity: lineage_pose.map_or(GLOBAL_DISPLAY_MODEL_ID ^ source as u32, |pose| {
+            pose.model_identity
+        }),
+        estimate_identity: lineage_pose.map_or(0, |pose| pose.estimate_identity),
+        source_checksum: lineage_pose.map_or(0, |pose| pose.checksum),
+        continuity_identity: path_identity,
+        chunk_index,
+        chunk_count,
+        points: points[start..end].to_vec(),
+    })
+}
+
 /// Presentation-only state retained by the authority but excluded from every
 /// canonical K record and checksum chain.
 pub struct GlobalDisplayPublisher {
@@ -505,120 +644,24 @@ impl GlobalDisplayPublisher {
         chunk_index: u16,
         pinned_releases: &[u32],
     ) -> Result<GlobalDisplayPathChunkV1, GlobalDisplayPublishError> {
-        if source == GlobalDisplaySourceId::SimTruth && !role.permits_private_truth() {
-            return Err(GlobalDisplayPublishError::Path);
-        }
         let path_samples = if source == GlobalDisplaySourceId::Planned {
             &self.planned_samples
         } else {
             &self.samples
         };
-        if source == GlobalDisplaySourceId::Planned && lod == GlobalDisplayPathLod::Exact {
-            return Err(GlobalDisplayPublishError::Path);
-        }
-        let mut points = Vec::new();
-        for (sample_index, sample) in path_samples.iter().enumerate() {
-            let pinned = sample.event_mask != 0
-                || sample.discontinuity_mask != 0
-                || pinned_releases.contains(&sample.release_epoch)
-                || self
-                    .replay_entries
-                    .iter()
-                    .any(|entry| entry.release_epoch == sample.release_epoch);
-            let retain = if source == GlobalDisplaySourceId::Planned {
-                lod == GlobalDisplayPathLod::OneSecond || sample_index.is_multiple_of(4) || pinned
-            } else {
-                sample.release_epoch.is_multiple_of(lod.cadence_releases()) || pinned
-            };
-            if !retain {
-                continue;
-            }
-            let Some(pose) = sample.sources.iter().find(|pose| pose.source == source) else {
-                continue;
-            };
-            let Some(position) = resolved_position(pose, display_frame, sample.segment) else {
-                continue;
-            };
-            points.push(GlobalDisplayPathPointV1 {
-                release_epoch: sample.release_epoch,
-                mission_time_q16: sample.mission_time_q16,
-                segment: sample.segment,
-                event_mask: sample.event_mask,
-                anchor_identity: path_anchor_identity(
-                    display_frame,
-                    sample.segment,
-                    self.launch_anchor.identity,
-                    self.recovery_anchor.identity,
-                ),
-                position_q12_km: position,
-            });
-        }
-        if points.is_empty() {
-            return Err(GlobalDisplayPublishError::Path);
-        }
-        let chunks = points.len().div_ceil(GLOBAL_DISPLAY_PATH_POINT_LIMIT);
-        let chunk_count = u16::try_from(chunks).map_err(|_| GlobalDisplayPublishError::Path)?;
-        if chunk_index >= chunk_count {
-            return Err(GlobalDisplayPublishError::Path);
-        }
-        let start = usize::from(chunk_index) * GLOBAL_DISPLAY_PATH_POINT_LIMIT;
-        let end = (start + GLOBAL_DISPLAY_PATH_POINT_LIMIT).min(points.len());
-        let sample = path_samples.last().ok_or(GlobalDisplayPublishError::Path)?;
-        let latest_lineage_pose = sample.sources.iter().find(|pose| pose.source == source);
-        let lineage_pose = path_samples
-            .iter()
-            .rev()
-            .find_map(|sample| sample.sources.iter().find(|pose| pose.source == source));
-        let terminal = source == GlobalDisplaySourceId::Planned
-            || sample.discontinuity_mask & GLOBAL_DISCONTINUITY_TERMINAL != 0;
-        let stale = latest_lineage_pose.is_none()
-            || latest_lineage_pose.is_some_and(|pose| pose.age_releases > 32);
-        let incomplete = !terminal
-            || latest_lineage_pose.is_none()
-            || points.first().is_some_and(|point| {
-                point.release_epoch
-                    > path_samples
-                        .first()
-                        .map_or(point.release_epoch, |sample| sample.release_epoch)
-            });
-        let resync_required = path_samples
-            .iter()
-            .any(|sample| sample.discontinuity_mask & GLOBAL_DISCONTINUITY_HISTORY_GAP != 0);
-        let mut flags = 0;
-        if stale {
-            flags |= GLOBAL_PATH_FLAG_STALE;
-        }
-        if incomplete {
-            flags |= GLOBAL_PATH_FLAG_INCOMPLETE;
-        }
-        if terminal {
-            flags |= GLOBAL_PATH_FLAG_TERMINAL;
-        }
-        if resync_required {
-            flags |= GLOBAL_PATH_FLAG_RESYNC_REQUIRED;
-        }
-        let path_identity = hash_words(&[
+        build_global_display_path_chunk(
+            role,
             self.definition.display_identity,
-            source as u32,
-            display_frame as u32,
-            lod as u32,
-        ]);
-        Ok(GlobalDisplayPathChunkV1 {
-            path_identity,
+            self.launch_anchor.identity,
+            self.recovery_anchor.identity,
+            path_samples,
+            &self.replay_entries,
             source,
             display_frame,
             lod,
-            flags,
-            model_identity: lineage_pose.map_or(GLOBAL_DISPLAY_MODEL_ID ^ source as u32, |pose| {
-                pose.model_identity
-            }),
-            estimate_identity: lineage_pose.map_or(0, |pose| pose.estimate_identity),
-            source_checksum: lineage_pose.map_or(0, |pose| pose.checksum),
-            continuity_identity: path_identity,
             chunk_index,
-            chunk_count,
-            points: points[start..end].to_vec(),
-        })
+            pinned_releases,
+        )
     }
 
     fn push_transition(

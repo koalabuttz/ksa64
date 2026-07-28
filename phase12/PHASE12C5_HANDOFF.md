@@ -16,8 +16,13 @@ Every item is pending until the Phase 12C completion record is accepted:
 - exact 21,591-release guided GNSS-loss display replay;
 - unchanged 13-entry catalog, Phase 10 artifacts, and KSB11;
 - accepted additive KPS1 capability and optional C function table;
-- cross-renderer semantic equality at all declared events and transitions;
-- packaged Win64/D3D12 procedural viewer;
+- cross-renderer equality at all nine nominal and six guided action/fault
+  milestones, including complete source/path products, event and discontinuity
+  masks, continuity identity, temporal/event-aware path checksums, raw path-state
+  flags, and the normalized shared view mode, recorded by
+  `ksa64.phase12c.cross-renderer-evidence.v2`;
+- packaged Win64/D3D12 procedural viewer whose runtime evidence binds the
+  source commit, bridge, semantic captures, screenshots, and package inventory;
 - exercised Babylon WebGPU, forced-WebGL2, context-loss, and 2-D fallback;
 - truth-isolation, exact-snap, seek, reconnect, and render-invariance evidence;
 - recorded package, memory, path, publication, polling, and frame-rate metrics;
@@ -30,6 +35,8 @@ Every item is pending until the Phase 12C completion record is accepted:
 - browser-LAN certificate and pairing user experience;
 - physical Lenovo Duet qualification and measured Chromebook tiers;
 - Vita3K and physical Vita completion of the carried Phase 12B.5 workstream;
+  these qualifications were deliberately decoupled from Phase 12C renderer
+  completion but are product gates for claims about those devices;
 - refined SDL2/Vita status, replay, procedures, and high-level actions;
 - Android ARM64 presentation packaging;
 - iOS/iPadOS presentation packaging once the Mac/Xcode/signing lane is pinned;
@@ -64,4 +71,6 @@ browser shell may never infer that missed wall time was simulated.
 
 Renderer backend, screen size, touch/controller input, accessibility mode,
 quality tier, local origin, path LOD, polling cadence, and connection placement
-remain outside mission and evidence identity.
+remain outside mission and evidence identity. `RayTracingMode=Inline` is an
+Unreal Launcher compile-time ABI accommodation only; runtime ray tracing is
+disabled and cannot become a portable-client or hardware requirement.

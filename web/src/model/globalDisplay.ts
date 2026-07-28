@@ -1,5 +1,7 @@
 import {
   GLOBAL_PATH_FLAG_INCOMPLETE, GLOBAL_PATH_FLAG_STALE, GLOBAL_PATH_FLAG_TERMINAL,
+  GLOBAL_POSE_VALID_ACTIVE_ATTITUDE, GLOBAL_POSE_VALID_ACTIVE_POSITION,
+  GLOBAL_POSE_VALID_ACTIVE_VELOCITY, GLOBAL_POSE_VALID_ANGULAR_RATE,
   GLOBAL_POSE_VALID_ECEF_ATTITUDE, GLOBAL_POSE_VALID_ECEF_POSITION, GLOBAL_POSE_VALID_ECEF_VELOCITY,
   GLOBAL_POSE_VALID_GCRF_ATTITUDE, GLOBAL_POSE_VALID_GCRF_POSITION, GLOBAL_POSE_VALID_GCRF_VELOCITY,
   GLOBAL_POSE_VALID_LAUNCH_ENU_ATTITUDE, GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION,
@@ -124,6 +126,10 @@ export interface GlobalDisplayPathPointV1 {
 export interface GlobalDisplayPathChunkV1 {
   readonly pathIdentity: number;
   readonly modelIdentity: number;
+  readonly sourceEstimateIdentity: number;
+  readonly sourceChecksum: number;
+  readonly continuityIdentity: number;
+  readonly flags: number;
   readonly source: GlobalDisplaySourceV1;
   readonly frame: GlobalDisplayFrameV1;
   readonly lodSeconds: 0 | 1 | 4;
@@ -370,6 +376,10 @@ function operationalPath(
   return {
     pathIdentity: path?.pathIdentity ?? identity,
     modelIdentity: path?.modelIdentity ?? identity,
+    sourceEstimateIdentity: path?.sourceEstimateIdentity ?? identity,
+    sourceChecksum: path?.sourceEstimateChecksum ?? 0,
+    continuityIdentity: 1,
+    flags: path?.terminalReason === 1 ? GLOBAL_PATH_FLAG_TERMINAL : 0,
     source,
     frame: "ecef",
     lodSeconds: 1,
@@ -387,6 +397,10 @@ function plannedPath(): GlobalDisplayPathChunkV1 {
   return {
     pathIdentity: PLANNED_MODEL_IDENTITY,
     modelIdentity: PLANNED_MODEL_IDENTITY,
+    sourceEstimateIdentity: PLANNED_MODEL_IDENTITY,
+    sourceChecksum: 0,
+    continuityIdentity: 1,
+    flags: GLOBAL_PATH_FLAG_TERMINAL,
     source: "planned",
     frame: "ecef",
     lodSeconds: 4,
@@ -549,25 +563,31 @@ function valid(mask: number, bit: number): boolean { return (mask & bit) !== 0; 
 function wirePose(value: WireGlobalDisplaySourcePoseV1, segment: GlobalDisplaySegmentV1): GlobalDisplaySourcePoseV1 {
   const activeFrame = wireFrame(value.activeFrame);
   const localIsRecovery = segment === "local-recovery";
-  const ecefPosition = valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_POSITION) ? value.ecef.positionQ12Km : activeFrame === "ecef" ? value.active.positionQ12Km : undefined;
-  const ecefVelocity = valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_VELOCITY) ? value.ecef.velocityQ24KmS : activeFrame === "ecef" ? value.active.velocityQ24KmS : undefined;
-  const gcrfPosition = valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_POSITION) ? value.gcrf.positionQ12Km : activeFrame === "gcrf" ? value.active.positionQ12Km : undefined;
-  const gcrfVelocity = valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_VELOCITY) ? value.gcrf.velocityQ24KmS : activeFrame === "gcrf" ? value.active.velocityQ24KmS : undefined;
+  const activePositionValid = valid(value.validityMask, GLOBAL_POSE_VALID_ACTIVE_POSITION);
+  const activeVelocityValid = valid(value.validityMask, GLOBAL_POSE_VALID_ACTIVE_VELOCITY);
+  const ecefPosition = valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_POSITION) ? value.ecef.positionQ12Km
+    : activeFrame === "ecef" && activePositionValid ? value.active.positionQ12Km : undefined;
+  const ecefVelocity = valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_VELOCITY) ? value.ecef.velocityQ24KmS
+    : activeFrame === "ecef" && activeVelocityValid ? value.active.velocityQ24KmS : undefined;
+  const gcrfPosition = valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_POSITION) ? value.gcrf.positionQ12Km
+    : activeFrame === "gcrf" && activePositionValid ? value.active.positionQ12Km : undefined;
+  const gcrfVelocity = valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_VELOCITY) ? value.gcrf.velocityQ24KmS
+    : activeFrame === "gcrf" && activeVelocityValid ? value.active.velocityQ24KmS : undefined;
   const launchActive = activeFrame === "local-enu" && !localIsRecovery;
   const recoveryActive = activeFrame === "local-enu" && localIsRecovery;
   return { source: wireSource(value.source), modelIdentity: value.modelIdentity, sourceEstimateIdentity: value.estimateIdentity,
     sourceChecksum: value.checksum, ageReleases: value.ageReleases, validityMask: BigInt(value.validityMask),
     ecefPositionQ12Km: ecefPosition, ecefVelocityQ24KmS: ecefVelocity, gcrfPositionQ12Km: gcrfPosition,
     gcrfVelocityQ24KmS: gcrfVelocity,
-    launchEnuPositionQ12Km: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION) ? value.launchEnu.positionQ12Km : launchActive ? value.active.positionQ12Km : undefined,
-    launchEnuVelocityQ24KmS: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_VELOCITY) ? value.launchEnu.velocityQ24KmS : launchActive ? value.active.velocityQ24KmS : undefined,
-    recoveryEnuPositionQ12Km: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_POSITION) ? value.recoveryEnu.positionQ12Km : recoveryActive ? value.active.positionQ12Km : undefined,
-    recoveryEnuVelocityQ24KmS: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_VELOCITY) ? value.recoveryEnu.velocityQ24KmS : recoveryActive ? value.active.velocityQ24KmS : undefined,
-    bodyToLaunchEnuQ30: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_ATTITUDE) ? value.launchEnu.attitudeQ30 : launchActive ? value.active.attitudeQ30 : undefined,
-    bodyToRecoveryEnuQ30: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_ATTITUDE) ? value.recoveryEnu.attitudeQ30 : recoveryActive ? value.active.attitudeQ30 : undefined,
-    bodyToEcefQ30: valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_ATTITUDE) ? value.ecef.attitudeQ30 : activeFrame === "ecef" ? value.active.attitudeQ30 : undefined,
-    bodyToGcrfQ30: valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_ATTITUDE) ? value.gcrf.attitudeQ30 : activeFrame === "gcrf" ? value.active.attitudeQ30 : undefined,
-    bodyAngularRateQ24RadS: value.angularRateQ24 };
+    launchEnuPositionQ12Km: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION) ? value.launchEnu.positionQ12Km : launchActive && activePositionValid ? value.active.positionQ12Km : undefined,
+    launchEnuVelocityQ24KmS: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_VELOCITY) ? value.launchEnu.velocityQ24KmS : launchActive && activeVelocityValid ? value.active.velocityQ24KmS : undefined,
+    recoveryEnuPositionQ12Km: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_POSITION) ? value.recoveryEnu.positionQ12Km : recoveryActive && activePositionValid ? value.active.positionQ12Km : undefined,
+    recoveryEnuVelocityQ24KmS: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_VELOCITY) ? value.recoveryEnu.velocityQ24KmS : recoveryActive && activeVelocityValid ? value.active.velocityQ24KmS : undefined,
+    bodyToLaunchEnuQ30: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_ATTITUDE) ? value.launchEnu.attitudeQ30 : launchActive && valid(value.validityMask, GLOBAL_POSE_VALID_ACTIVE_ATTITUDE) ? value.active.attitudeQ30 : undefined,
+    bodyToRecoveryEnuQ30: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_ATTITUDE) ? value.recoveryEnu.attitudeQ30 : recoveryActive && valid(value.validityMask, GLOBAL_POSE_VALID_ACTIVE_ATTITUDE) ? value.active.attitudeQ30 : undefined,
+    bodyToEcefQ30: valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_ATTITUDE) ? value.ecef.attitudeQ30 : activeFrame === "ecef" && valid(value.validityMask, GLOBAL_POSE_VALID_ACTIVE_ATTITUDE) ? value.active.attitudeQ30 : undefined,
+    bodyToGcrfQ30: valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_ATTITUDE) ? value.gcrf.attitudeQ30 : activeFrame === "gcrf" && valid(value.validityMask, GLOBAL_POSE_VALID_ACTIVE_ATTITUDE) ? value.active.attitudeQ30 : undefined,
+    bodyAngularRateQ24RadS: valid(value.validityMask, GLOBAL_POSE_VALID_ANGULAR_RATE) ? value.angularRateQ24 : undefined };
 }
 function replayKind(value: number): GlobalReplayMarkerV1["kind"] { switch (value) { case 1: return "event"; case 2: return "transition"; case 3: return "action"; case 4: return "fault"; case 5: return "terminal"; default: throw new Error("unsupported global replay entry kind"); } }
 function replayLabel(release: number, identity: number): string {
@@ -594,30 +614,51 @@ export function buildExactGlobalDisplay(input: ExactGlobalDisplayInput): GlobalD
   }
   const paths: GlobalDisplayPathChunkV1[] = [];
   for (const chunks of grouped.values()) {
-    chunks.sort((left, right) => left.chunkIndex - right.chunkIndex);
     const first = chunks[0];
     if (first === undefined) continue;
-    const compatible = chunks.filter((chunk) =>
-      chunk.modelIdentity === first.modelIdentity &&
-      chunk.estimateIdentity === first.estimateIdentity &&
-      chunk.sourceChecksum === first.sourceChecksum &&
-      chunk.continuityIdentity === first.continuityIdentity &&
-      chunk.chunkCount === first.chunkCount);
-    const complete = compatible.length === first.chunkCount &&
-      compatible.every((chunk, index) => chunk.chunkIndex === index);
-    const combinedFlags = compatible.reduce((flags, chunk) => flags | chunk.flags, 0);
+    if (!Number.isSafeInteger(first.chunkCount) || first.chunkCount <= 0 || chunks.length !== first.chunkCount) {
+      throw new Error("exact global display path has a missing or extra chunk");
+    }
+    const seen = new Set<number>();
+    for (const chunk of chunks) {
+      const metadataMatches = chunk.pathIdentity === first.pathIdentity && chunk.source === first.source &&
+        chunk.displayFrame === first.displayFrame && chunk.lod === first.lod && chunk.flags === first.flags &&
+        chunk.modelIdentity === first.modelIdentity && chunk.estimateIdentity === first.estimateIdentity &&
+        chunk.sourceChecksum === first.sourceChecksum && chunk.continuityIdentity === first.continuityIdentity &&
+        chunk.chunkCount === first.chunkCount;
+      if (!metadataMatches) throw new Error("exact global display path chunk metadata changed within one path");
+      if (!Number.isSafeInteger(chunk.chunkIndex) || chunk.chunkIndex < 0 || chunk.chunkIndex >= first.chunkCount ||
+        seen.has(chunk.chunkIndex)) throw new Error("exact global display path contains a duplicate or invalid chunk index");
+      seen.add(chunk.chunkIndex);
+    }
+    for (let index = 0; index < first.chunkCount; index += 1) {
+      if (!seen.has(index)) throw new Error("exact global display path is missing a chunk index");
+    }
+    chunks.sort((left, right) => left.chunkIndex - right.chunkIndex);
+    for (let index = 1; index < chunks.length; index += 1) {
+      const previous = chunks[index - 1]?.points.at(-1);
+      const current = chunks[index]?.points[0];
+      if (previous !== undefined && current !== undefined &&
+        (current.releaseEpoch <= previous.releaseEpoch || current.missionTimeQ16 <= previous.missionTimeQ16)) {
+        throw new Error("exact global display path point order changed between chunks");
+      }
+    }
     paths.push({
       pathIdentity: first.pathIdentity,
       modelIdentity: first.modelIdentity,
+      sourceEstimateIdentity: first.estimateIdentity,
+      sourceChecksum: first.sourceChecksum,
+      continuityIdentity: first.continuityIdentity,
+      flags: first.flags,
       source: wireSource(first.source),
       frame: wireFrame(first.displayFrame),
       lodSeconds: first.lod === 1 ? 0 : first.lod === 2 ? 1 : 4,
       chunkSequence: first.sourceChecksum,
       validityMask: BigInt(first.continuityIdentity),
-      stale: (combinedFlags & GLOBAL_PATH_FLAG_STALE) !== 0,
-      incomplete: !complete || (combinedFlags & GLOBAL_PATH_FLAG_INCOMPLETE) !== 0,
-      terminal: complete && (combinedFlags & GLOBAL_PATH_FLAG_TERMINAL) !== 0,
-      points: compatible.flatMap((chunk) => chunk.points.map((point) => ({
+      stale: (first.flags & GLOBAL_PATH_FLAG_STALE) !== 0,
+      incomplete: (first.flags & GLOBAL_PATH_FLAG_INCOMPLETE) !== 0,
+      terminal: (first.flags & GLOBAL_PATH_FLAG_TERMINAL) !== 0,
+      points: chunks.flatMap((chunk) => chunk.points.map((point) => ({
         releaseEpoch: point.releaseEpoch,
         missionTimeQ16: point.missionTimeQ16,
         segment: wireSegment(point.segment),

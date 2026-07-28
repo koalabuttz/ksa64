@@ -373,10 +373,22 @@ try {
                 "global_display::exact_replay_tests::exact_nominal_replay_reproduces_frozen_release_boundaries",
                 "--", "--ignored", "--exact")
         }
+        Gate "native bridge exact nominal path parity" {
+            Invoke-ExactCargoTest @(
+                "test", "-p", "ksa64-viewer-bridge", "--lib", "--locked",
+                "global_display::tests::nominal_direct_and_bridge_path_products_match",
+                "--", "--ignored", "--exact")
+        }
         Gate "exact 21,591-release GNSS-loss session" {
             Invoke-ExactCargoTest @(
                 "test", "-p", "ksa64-session", "--lib", "--locked",
                 "phase12b_live::tests::scripted_full_mission_seals_exact_evidence_and_succeeds",
+                "--", "--ignored", "--exact")
+        }
+        Gate "native bridge terminal guided path parity" {
+            Invoke-ExactCargoTest @(
+                "test", "-p", "ksa64-viewer-bridge", "--lib", "--locked",
+                "global_display::tests::completed_guided_direct_and_bridge_path_products_match",
                 "--", "--ignored", "--exact")
         }
         Gate "strict GNSS-loss replay and normalized display stream" {

@@ -48,6 +48,7 @@ public:
     void CommitAction();
     void CancelAction();
     bool RequestShutdown();
+    bool SetCompletedGlobalDisplayRetention(bool bRetain);
     bool SaveCompletedEvidence();
     void SetDashboardVisible(bool bVisible);
     bool IsDashboardVisible() const { return bDashboardRequestedVisible; }
@@ -152,6 +153,7 @@ private:
     bool bDashboardRequestedVisible = true;
     bool bEvidenceSaved = false;
     bool bGlobalReplayMode = false;
+    bool bRetainCompletedGlobalDisplaySession = false;
     bool bAcceptanceMode = false;
     bool bAcceptanceVerified = false;
     bool bAcceptanceExitRequested = false;

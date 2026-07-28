@@ -145,3 +145,31 @@ Shutdown is asynchronous and distinct from evidence finalization. A requested cl
 The accepted build is `ksa64_viewer_bridge-423c116cf586-120b0001.dll` with SHA-256 `da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565`. Both C++ harnesses, 17/17 Unreal operations tests, the standalone full mission, exact KSB11 finalization, and the D3D12 presentation gate pass. See [PHASE12B_COMPLETION.md](PHASE12B_COMPLETION.md) and [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md).
 
 The frozen manifest's historical header-digest discrepancy and the exact, fail-closed compatibility treatment are recorded in [FROZEN_BRIDGE_HEADER_AUDIT.md](FROZEN_BRIDGE_HEADER_AUDIT.md). The manifest, DLL, accepted source header, and canonical evidence remain unchanged.
+
+
+## Phase 12C optional global-display extension
+
+Phase 12C preserves every ABI-v1 export and structure. New native consumers
+discover the separately size-tagged `GlobalDisplayApiV1` function table; an
+older bridge may omit it and remain valid. The table provides bounded
+definition, exact-sample range, path, replay-index, and nominal-replay calls
+over Rust-owned, role-filtered `GlobalDisplayV1` products. Path consumers must
+preserve source/model/estimate and continuity identities plus the raw
+stale/incomplete/terminal/resynchronization flags; semantic checksums bind
+release, time, segment, event, anchor, and XYZ. It does not expose canonical
+K-record internals or permit a renderer to own frames, events, mission
+outcomes, or actions. Camera and display-frame selections are normalized to one
+supported shared view mode before renderer semantics are compared.
+
+The packaged Unreal global-viewer plugin reuses the operations plugin's loaded
+bridge and creates no second worker or authority. Its evidence binds the clean
+source commit, commit-qualified bridge and manifest, packaged executable,
+semantic captures, screenshots, and package inventory. Guided Operator data
+contains no SIM truth; SIM Director truth starts hidden and stays explicitly
+labelled when enabled.
+
+For the UE 5.8 Launcher build, project modules compile with
+`RayTracingMode=Inline` solely so custom scene-proxy vtables match the
+precompiled Renderer ABI. Runtime ray tracing remains disabled with
+`r.RayTracing=False`; no bridge or global-display capability depends on
+ray-tracing hardware.

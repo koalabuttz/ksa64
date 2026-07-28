@@ -682,12 +682,15 @@ impl FullMissionSession {
         lod: ksa64_presentation::GlobalDisplayPathLod,
         chunk_index: u16,
     ) -> Result<ksa64_presentation::GlobalDisplayPathChunkV1, GlobalDisplayPublishError> {
-        let mut pinned_releases = Vec::with_capacity(
-            self.timeline.len() + self.events.len() + self.transcript.records.len(),
-        );
-        pinned_releases.extend(self.timeline.iter().map(|event| event.epoch));
-        pinned_releases.extend(self.events.iter().map(|event| event.release_epoch));
-        pinned_releases.extend(self.transcript.records.iter().map(|record| record.epoch));
+        // The replay index is the reviewed semantic bookmark set. Routine
+        // MissionSessionEventKind::Release notifications deliberately do not
+        // pin every sample into the one- and four-second path products.
+        let replay_index = self.global_display_replay_index();
+        let mut pinned_releases: Vec<u32> = replay_index
+            .entries
+            .iter()
+            .map(|entry| entry.release_epoch)
+            .collect();
         pinned_releases.sort_unstable();
         pinned_releases.dedup();
         self.global_display.path_chunk_with_pins(
@@ -2313,6 +2316,14 @@ mod tests {
             )
             .unwrap();
         assert!(!path.points.is_empty());
+        assert!(
+            path.points.len() < samples.len(),
+            "routine release notifications must not pin every path sample"
+        );
+        assert!(
+            path.points.iter().any(|point| point.release_epoch == 29),
+            "the ENU-to-ECEF transition remains a semantic path pin"
+        );
 
         let mut guided = FullMissionSession::new(OperationalRole::GuidedOperator).unwrap();
         guided.prepare().unwrap();

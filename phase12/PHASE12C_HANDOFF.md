@@ -1,8 +1,9 @@
 # Phase 12C handoff — complete global engineering viewer
 
-Status: historical scope boundary consumed by `PHASE12C_PLAN.md`. Phase 12C is
-in progress. The remaining Phase 12B.5 physical-device qualifications are
-tracked independently and no longer gate Phase 12C.
+Status: historical scope boundary consumed by `PHASE12C_PLAN.md`. Phase 12C
+implementation is hardened and its completion audit is in progress. The
+remaining Phase 12B.5 physical-device qualifications are tracked independently
+and no longer gate Phase 12C.
 
 Date: 2026-07-27
 

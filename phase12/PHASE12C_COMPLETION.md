@@ -13,7 +13,7 @@ complete only after `complete-phase12c.ps1` passes every non-skipped gate with
 the explicit Unreal, packaged, rendered-browser, and runtime/parity evidence
 enabled.
 
-## Implemented scope awaiting completion audit
+## Implemented and hardened scope awaiting completion audit
 
 The Phase 12C source tree contains the intended additive boundaries:
 
@@ -31,11 +31,47 @@ The Phase 12C source tree contains the intended additive boundaries:
 - a procedural Unreal global-viewer plugin that consumes the existing
   operations bridge rather than opening a second authority;
 - a Babylon/React viewer using the same semantic display contract with WebGPU,
-  WebGL2, and complete 2-D fallback lanes; and
+  WebGL2, and complete 2-D fallback lanes;
 - deterministic semantic scene snapshots intended for cross-renderer
-  comparison.
+  comparison;
+- source-bound native, packaged-Unreal, and rendered-browser evidence producers
+  whose raw artifacts are consumed by one strict cross-renderer comparator;
+- one shared Rust path builder for in-process/WASM and native-bridge products,
+  with semantic replay bookmarks pinned and routine release ticks excluded;
+- matching semantic path products whose exact FNV-1a checksum binds each
+  point's release, Q16 time, segment, event mask, anchor, and signed Q12 XYZ;
+- end-to-end preservation and visible treatment of the raw stale, incomplete,
+  terminal, and resynchronization-required path flags; and
+- one normalized camera/display-frame view mode in both renderers, preventing
+  unsupported camera and frame combinations from entering parity evidence.
 
 This list describes implementation inventory, not accepted runtime evidence.
+
+### Renderer authority and packaged-runtime policy
+
+Rust remains the sole owner of ENU/ECEF/GCRF conversion, source labels, role
+filtering, event and discontinuity classification, path levels, replay
+selection, and multidimensional mission disposition. Unreal and Babylon are
+passive consumers of the same normalized products. A screenshot, camera
+position, local origin, interpolation result, or renderer backend can never
+become mission evidence or alter action ordering.
+
+The Unreal Launcher build has a precompiled Renderer ABI whose scene-proxy
+virtual layout includes the ray-tracing declarations even when hardware ray
+tracing is not used. Project modules therefore compile with
+`RayTracingMode=Inline` so their C++ layout matches that precompiled ABI.
+Runtime and hardware ray tracing remain disabled with `r.RayTracing=False`.
+This is a binary-compatibility setting, not a visual feature, performance
+claim, or Phase 12C requirement for ray-tracing-capable hardware. A compile-time
+guard prevents the custom global-line proxy from being rebuilt with a
+mismatched layout.
+
+Packaged evidence must be emitted by the packaged executable, bind a clean
+source commit plus the staged bridge DLL and manifest, and include semantic
+captures and screenshots at the reviewed milestones. Guided Operator products
+must contain no SIM-truth pose or path. Read-only SIM Director replay may
+receive truth, but truth begins hidden and must retain a persistent
+`SIM TRUTH` label whenever shown.
 
 ## Frozen evidence boundary
 
@@ -70,6 +106,7 @@ No pending row may be inferred as passed from a related test:
 | Formatting and warnings-denied Clippy | Pending final audit | — |
 | Complete native workspace suite | Pending final audit | — |
 | GlobalDisplay Rust/C++/TypeScript vectors | Pending final audit | — |
+| Shared in-process/WASM/native path products | Pending final audit | — |
 | Legacy KPS1 1.0 and ABI-v1 exactness | Pending final audit | — |
 | Broker, LAN, reconnect, and role isolation | Pending final audit | — |
 | WebAssembly capability and exact-evidence lanes | Pending final audit | — |
@@ -83,7 +120,8 @@ No pending row may be inferred as passed from a related test:
 | Babylon forced-WebGL2 rendered lane | Pending runtime capture | — |
 | Babylon complete 2-D fallback | Pending runtime capture | — |
 | Context-loss fallback | Pending runtime capture | — |
-| Unreal/Babylon semantic parity | Pending runtime capture | — |
+| Exact source/path/event/discontinuity/continuity parity | Pending runtime capture | — |
+| Raw path-state flags and normalized view-mode parity | Pending runtime capture | — |
 | Render/action/evidence invariance | Pending runtime capture | — |
 | Phase 0–12B.5 frozen regressions | Pending final audit | — |
 
@@ -109,6 +147,12 @@ means unmeasured, not zero.
 | Nominal replay memory | report only | Pending |
 | Exact active-window path memory | report only | Pending |
 | Renderer origin changes | report count and continuity | Pending |
+
+The final cross-renderer record schema is
+`ksa64.phase12c.cross-renderer-evidence.v2`. Its final SHA-256, source commit,
+producer manifests, screenshots, measurements, and package inventory remain
+pending until the source-bound completion run finishes. No placeholder in this
+record is an inferred pass.
 
 ## Completion command
 
@@ -140,13 +184,24 @@ completion claim.
 ### Evidence integrity rule
 
 The final runtime manifest must be the deterministic output of
-`compare-phase12c-renderers.mjs`. The completion script reruns that comparator from
-the actual native C++ harness JSON, packaged Unreal manifest/semantic files/screenshots,
-and rendered-browser raw records/screenshots, then requires an exact SHA-256 match
-with the recorded manifest. All three producers must bind the same clean source
-commit. The accepted record contains nine nominal milestones and six GNSS operations
-milestones (outage onset/qualification and four accepted action epochs); aggregate
-`pass` booleans alone are never evidence.
+`compare-phase12c-renderers.mjs`. The completion script reruns that comparator
+from the actual native C++ harness JSON, packaged Unreal manifest, semantic
+files and screenshots, and rendered-browser raw records and screenshots. It then
+requires an exact SHA-256 match with the recorded manifest. All three producers must bind the same clean source
+commit. The accepted record contains nine nominal milestones and six GNSS
+operations milestones: outage onset at release 5,760, outage qualification at
+5,824, and the four accepted action epochs at 6,080, 6,240, 6,560, and 6,720.
+At every nominal and guided milestone, Unreal and Babylon must match the
+complete visible source and path products plus the event mask, discontinuity
+mask, and continuity identity. Path equality includes the exact checksum over
+release, time, segment, event, anchor, and XYZ; aggregate `pass` booleans alone
+are never evidence.
+
+The completion audit also verifies that the packaged Unreal process can start,
+load the commit-qualified bridge, construct its global scene only after an
+active game world begins play, capture its evidence, and exit cleanly without
+Editor, MCP, or Python. This runtime lifecycle gate is separate from Editor
+compilation and automation.
 
 ## Limitations retained
 
@@ -160,5 +215,5 @@ milestones (outage onset/qualification and four accepted action epochs); aggrega
 - Visual agreement is numerical/presentation evidence, not launch approval,
   certification, regulation, or safety authority.
 
-The Phase 12C.5 handoff remains a draft until every completion gate above is
-accepted.
+The Phase 12C.5 and Phase 12D handoffs remain drafts until every completion
+gate above is accepted.

@@ -2,6 +2,15 @@
 
 #include "CoreMinimal.h"
 
+namespace Ksa64GlobalPathFlags
+{
+constexpr uint16 Stale = 1u << 0;
+constexpr uint16 Incomplete = 1u << 1;
+constexpr uint16 Terminal = 1u << 2;
+constexpr uint16 ResyncRequired = 1u << 3;
+constexpr uint16 Mask = (1u << 4) - 1u;
+}
+
 /** Rust-owned WGS 84/display definition. Values remain in accepted fixed-point units. */
 struct FKsa64GlobalDisplayDefinitionProduct
 {

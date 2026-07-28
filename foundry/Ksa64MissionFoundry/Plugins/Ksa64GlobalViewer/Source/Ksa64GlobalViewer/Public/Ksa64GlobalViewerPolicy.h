@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Ksa64GlobalDisplayCodec.h"
 #include "Ksa64GlobalViewerTypes.h"
 
 namespace Ksa64GlobalViewerPolicy
@@ -18,6 +19,11 @@ FVector3d Ksa64RightHandedToUnrealCentimetres(
 FVector3d Ksa64RightHandedToUnrealCentimetres(
     const int64 PositionQ12Km[3],
     const int64 OriginQ12Km[3]);
+uint32 HashPathPoints(
+    const TArray<FKsa64GlobalPathPointProduct>& Points,
+    int32 StartIndex,
+    int32 PointCount);
+FLinearColor PathColorForFlags(const FLinearColor& Normal, uint16 Flags);
 bool ShouldSnap(
     const FKsa64GlobalSceneSample& Previous,
     const FKsa64GlobalSceneSample& Current);

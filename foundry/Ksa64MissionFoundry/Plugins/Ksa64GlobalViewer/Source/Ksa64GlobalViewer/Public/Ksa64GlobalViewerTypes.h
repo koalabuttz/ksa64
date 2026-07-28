@@ -75,6 +75,34 @@ struct FKsa64GlobalSceneSample
     bool bExactSnap = true;
 };
 
+struct FKsa64GlobalVisibleSourceSemantic
+{
+    uint8 Source = 0;
+    uint32 ModelIdentity = 0;
+    uint32 EstimateIdentity = 0;
+    uint32 SourceChecksum = 0;
+    uint32 AgeReleases = 0;
+    int32 PositionQ12Km[3] = {0, 0, 0};
+    int32 AttitudeQ30[4] = {0, 0, 0, 0};
+    bool bAttitudeValid = false;
+};
+
+struct FKsa64GlobalVisiblePathSemantic
+{
+    uint32 Identity = 0;
+    uint8 Source = 0;
+    uint32 ModelIdentity = 0;
+    uint32 EstimateIdentity = 0;
+    uint32 SourceChecksum = 0;
+    uint32 ContinuityIdentity = 0;
+    uint16 Flags = 0;
+    uint32 AnchorIdentity = 0;
+    uint32 StripIndex = 0;
+    uint32 LodSeconds = 0;
+    uint32 PointCount = 0;
+    uint32 PointChecksum = 0;
+};
+
 struct FKsa64GlobalSemanticState
 {
     FString Schema = TEXT("ksa64.unreal-global-viewer-semantic.v1");
@@ -93,6 +121,9 @@ struct FKsa64GlobalSemanticState
     uint32 DiscontinuityMask = 0;
     uint64 ContinuityIdentity = 0;
     uint32 SourceMask = 0;
+    uint32 VisibleSourceMask = 0;
+    TArray<FKsa64GlobalVisibleSourceSemantic> VisibleSources;
+    TArray<FKsa64GlobalVisiblePathSemantic> VisiblePaths;
     uint32 ObservedPathPoints = 0;
     uint32 PlannedPathPoints = 0;
     uint32 OnboardPathPoints = 0;
