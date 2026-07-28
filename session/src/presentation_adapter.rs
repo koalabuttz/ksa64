@@ -11,7 +11,7 @@ use crate::phase11_live::{
 };
 use crate::phase11_operations::ProcedureState;
 use crate::phase11_prediction::HostPrediction;
-use crate::phase12b::{OverallMissionDisposition, GNSS_LOSS_RELEASE, GNSS_QUALIFIED_RELEASE};
+use crate::phase12b::{OverallMissionDisposition, GNSS_LOSS_RELEASE};
 use crate::phase12b_live::{FullMissionCompletion, FullMissionSession};
 use ksa64_core::scenario::crc32_ieee;
 use ksa64_interface::phase11::OperationalRole;
@@ -697,13 +697,7 @@ fn timeline_severity(value: u8) -> TimelineSeverity {
 }
 
 fn gnss_state(release_epoch: u32) -> u8 {
-    if release_epoch < GNSS_LOSS_RELEASE {
-        1
-    } else if release_epoch < GNSS_QUALIFIED_RELEASE {
-        2
-    } else {
-        3
-    }
+    if release_epoch < GNSS_LOSS_RELEASE { 1 } else { 2 }
 }
 
 fn proposal_from_load(
@@ -840,6 +834,13 @@ mod tests {
     use crate::phase12b_live::{
         BRANCH_COMMIT_RELEASE, BRANCH_STAGE_RELEASE, UPDATE_COMMIT_RELEASE, UPDATE_STAGE_RELEASE,
     };
+
+    #[test]
+    fn gnss_presentation_state_stays_within_frozen_enum() {
+        assert_eq!(gnss_state(GNSS_LOSS_RELEASE - 1), 1);
+        assert_eq!(gnss_state(GNSS_LOSS_RELEASE), 2);
+        assert_eq!(gnss_state(u32::MAX), 2);
+    }
 
     #[test]
     fn observer_snapshot_never_contains_private_truth_and_cannot_act() {
