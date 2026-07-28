@@ -64,8 +64,49 @@ jobs:
       - name: Native workspace tests
         run: cargo test --workspace --features fixtures --locked
 
+      - name: Broker security, reconnect, and portable authority tests
+        run: cargo test -p ksa64-session-broker --all-features --locked
+
       - name: Bridge library and contained panic tests
         run: cargo test -p ksa64-viewer-bridge --lib --profile viewer --features panic-probe --locked
+
+      - name: Portable native bridge harness
+        shell: bash
+        run: |
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            pwsh -NoProfile -File viewer-bridge/harness/build.ps1 -PanicProbe
+          else
+            sh viewer-bridge/harness/build.sh --panic-probe
+          fi
+
+      - name: Full exact bridge mission
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            pwsh -NoProfile -File viewer-bridge/harness/build-full.ps1
+          else
+            sh viewer-bridge/harness/build.sh --full
+          fi
+
+      - name: Build checksum-qualified engineering archive (Windows)
+        if: github.event_name != 'pull_request' && runner.os == 'Windows'
+        shell: pwsh
+        run: ./phase12/package-native.ps1
+
+      - name: Build checksum-qualified engineering archive (Unix)
+        if: github.event_name != 'pull_request' && runner.os != 'Windows'
+        shell: bash
+        run: sh ./phase12/package-native.sh
+
+      - name: Upload engineering archive
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ksa64-phase12b5-${{ matrix.name }}
+          path: dist/phase12b5/*
+          if-no-files-found: error
+          retention-days: 14
 
   wasm:
     name: Browser-safe Rust session and presentation
@@ -85,16 +126,40 @@ jobs:
         env:
           RUSTFLAGS: -D warnings
         run: >-
-          cargo check -p ksa64-session --no-default-features
-          --target wasm32-unknown-unknown --locked
+          cargo check --locked -p ksa64-session --no-default-features
+          --target wasm32-unknown-unknown
 
       - name: Check no_std presentation protocol
         env:
           RUSTFLAGS: -D warnings
         run: >-
-          cargo check -p ksa64-presentation --no-default-features --target wasm32-unknown-unknown
-          --locked
+          cargo check --locked -p ksa64-presentation --no-default-features --target wasm32-unknown-unknown
 
+      - name: Build exported browser authority
+        run: cargo build -p ksa64-session-wasm --target wasm32-unknown-unknown --release --locked
+
+      - name: Prove exact local-WASM mission evidence
+        run: node session-wasm/tools/harness.mjs target/wasm32-unknown-unknown/release/ksa64_session_wasm.wasm
+
+  vita-host-fixture:
+    name: Vita bounded client host fixture
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+
+      - name: Test bounded Vita client
+        run: cargo test --manifest-path vita/Cargo.toml -p ksa64-vita-client --all-targets --locked
+
+      - name: Lint bounded Vita client
+        run: cargo clippy --manifest-path vita/Cargo.toml -p ksa64-vita-client --all-targets --locked -- -D warnings
+
+      - name: Exercise host presentation fixture
+        run: cargo run --manifest-path vita/Cargo.toml -p ksa64-vita-client --bin vita-fixture --locked --quiet
   web:
     name: Web lockfile, tests, and production build
     runs-on: ubuntu-24.04
@@ -106,33 +171,22 @@ jobs:
           lfs: false
           persist-credentials: false
 
-      - name: Detect web workspace
-        id: web
-        shell: bash
-        run: |
-          if [[ -f web/package-lock.json ]]; then
-            echo "ready=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "ready=false" >> "${GITHUB_OUTPUT}"
-            echo "::notice::web/package-lock.json is not present yet; the web gate will activate when it is committed."
-          fi
-
       - name: Set up Node
-        if: steps.web.outputs.ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      - name: Verify committed web lockfile
+        shell: bash
+        run: test -f web/package-lock.json
+
       - name: Install locked web dependencies
-        if: steps.web.outputs.ready == 'true'
         run: npm ci --prefix web
 
       - name: Run web tests
-        if: steps.web.outputs.ready == 'true'
         run: npm test --prefix web
 
       - name: Build self-hosted web product
-        if: steps.web.outputs.ready == 'true'
         run: npm run build --prefix web

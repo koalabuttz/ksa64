@@ -64,3 +64,29 @@ jobs:
           cargo test -p ksa64-sim --lib --features fixtures --locked
           phase10_avionics::tests::inactive_reference_package_matches_frozen_phase10_full_mission_exactly
           -- --ignored --exact
+
+  exact-wasm:
+    name: Exact GNSS-loss evidence / browser WASM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+
+      - name: Install pinned WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Prove no-action presentation reaches a valid completed transport state
+        run: >-
+          cargo test -p ksa64-session-wasm --locked
+          fast_no_action_poll_reaches_completed_transport_state
+          -- --ignored
+
+      - name: Build real Rust worker authority
+        run: cargo build -p ksa64-session-wasm --target wasm32-unknown-unknown --release --locked
+
+      - name: Reproduce exact accepted KSB11 through exported WASM ABI
+        run: node session-wasm/tools/harness.mjs target/wasm32-unknown-unknown/release/ksa64_session_wasm.wasm

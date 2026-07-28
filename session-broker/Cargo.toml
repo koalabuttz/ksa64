@@ -1,0 +1,39 @@
+[package]
+name = "ksa64-session-broker"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+ksa64-presentation = { path = "../presentation" }
+ksa64-interface = { path = "../interface", optional = true }
+ksa64-session = { path = "../session", default-features = false, optional = true }
+getrandom = { version = "0.3", optional = true }
+blake2 = { version = "0.10", default-features = false }
+snow = { version = "0.10", default-features = false, features = ["default-resolver", "use-chacha20poly1305", "use-blake2", "use-curve25519"] }
+httparse = { version = "1.10", optional = true }
+tungstenite = { version = "0.28", default-features = false, features = ["handshake"], optional = true }
+
+[dev-dependencies]
+ksa64-interface = { path = "../interface" }
+
+[features]
+default = ["std", "network"]
+std = ["dep:getrandom", "snow/use-getrandom"]
+network = ["std", "dep:httparse", "dep:tungstenite"]
+portable-session = ["std", "dep:ksa64-session"]
+launcher = ["portable-session", "network", "dep:ksa64-interface"]
+
+[lib]
+path = "src/lib.rs"
+
+
+[[bin]]
+name = "ksa64-session-broker"
+path = "src/bin/ksa64-session-broker.rs"
+required-features = ["launcher"]
+
+[[bin]]
+name = "ksa64-paired-lan"
+path = "src/bin/ksa64-paired-lan.rs"
+required-features = ["launcher"]

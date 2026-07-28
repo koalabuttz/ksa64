@@ -4,6 +4,12 @@ The Phase 12A base contract is frozen. Phase 12B extends it additively; no ABI-v
 
 Status: normative 12A interface and containment contract.
 
+## Phase 12B.5 portability amendment
+
+ABI v1 remains byte-for-byte compatible with the accepted Win64 build. New builds use the same C surface on Windows x64, Linux x64/ARM64, and macOS ARM64; only the export/calling-convention macros and native library suffix vary. The portable harness loads `.dll`, `.so`, or `.dylib` through a platform adapter and validates a manifest-v2 record containing the generic filename, target triple, OS, architecture, source commit, profile, SHA-256, catalog identity, build identity, and all public structure sizes. The archived Win64 manifest-v1 layout remains accepted.
+
+The Win64 DLL and D3D12 statements below describe the frozen 12A/12B acceptance lane; they do not restrict later ABI-v1 libraries to Windows. Vita links `ksa64-presentation` statically and does not consume this 64-bit bridge.
+
 ## Boundary
 
 The bridge is a versioned Windows MSVC Rust `cdylib` that calls
@@ -137,3 +143,5 @@ Polling and draining are passive. High-level actions use Rust-generated proposal
 Shutdown is asynchronous and distinct from evidence finalization. A requested clean stop of a partial session may terminate the worker while finalization remains `InProgress` with no archive. It is not an evidence failure. `Failed` requires an actual worker/finalizer error, and `Completed` requires a Rust-sealed archive.
 
 The accepted build is `ksa64_viewer_bridge-423c116cf586-120b0001.dll` with SHA-256 `da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565`. Both C++ harnesses, 17/17 Unreal operations tests, the standalone full mission, exact KSB11 finalization, and the D3D12 presentation gate pass. See [PHASE12B_COMPLETION.md](PHASE12B_COMPLETION.md) and [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md).
+
+The frozen manifest's historical header-digest discrepancy and the exact, fail-closed compatibility treatment are recorded in [FROZEN_BRIDGE_HEADER_AUDIT.md](FROZEN_BRIDGE_HEADER_AUDIT.md). The manifest, DLL, accepted source header, and canonical evidence remain unchanged.

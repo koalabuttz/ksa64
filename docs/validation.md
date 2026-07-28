@@ -539,3 +539,19 @@ Phase 12B product acceptance passed both native C++ harnesses, the Unreal Editor
 Automation covers 30/60/144-Hz presentation schedules and proves identical action, release, and KSB11 evidence; it does not claim that every GPU sustains those display rates. The pinned-workstation D3D12 acceptance capture is 1920x1080 at exact release 6,080. A fixed-60-Hz sample with 120 warmup and 600 measured frames advances exactly 320 authoritative releases from 6,144 to 6,464, reports zero queue overflow and no pending command, and records 258,900 ns p99 plus 460,000 ns maximum bridge/presentation service time. These values pass the 1 ms p99 and 2 ms maximum gates, but measure poll/drain/path/enqueue service work rather than total GPU frame time.
 
 The accepted presentation uses high contrast, reduced motion, 1.25 text scale, and disabled sound cues. Clean partial shutdown leaves finalization unfinished rather than falsely marking evidence failed; a completed archive exists only after Rust seals it. The packaged product has no runtime dependency on Editor, MCP, Python, Starter Content, NASA assets, or network services.
+
+
+## Phase 12B.5 portable-runtime validation
+
+Phase 12B.5 separates software implementation evidence from platform and physical-device qualification. Local Windows acceptance composes the frozen Phase 12B audit with:
+
+- warning-free workspace formatting, Clippy, native tests, and no-default portable-crate builds;
+- exact 21,591-release native authority, strict Rust KSB11 replay, independent C/C++ bridge execution, and real exported WebAssembly execution, all producing the accepted 2,911,464-byte KSB11 and SHA-256;
+- Rust, TypeScript, and C KPS1 vectors plus corruption, size, sequence, nonce, cursor-gap, overflow, and role-isolation rejection;
+- loopback WebSocket admission, authority continuation through disconnect, Noise XX comparison, Noise IK reconnect, immutable role binding, revocation, tamper rejection, and bounded queues/rates;
+- a production PWA exercised in WebGPU, forced WebGL2, 2-D-only, and offline-shell modes; and
+- Vita host fixtures, shared Noise transport, target compilation, and VPK construction.
+
+Hosted Windows x64, Linux x64, Linux ARM64, and macOS ARM64 jobs must reproduce the exact session after the checkpoint is pushed. Physical Lenovo Duet 11 and physical Vita evidence cannot be inferred from CI or desktop emulation. Vita3K is useful repeatable emulator evidence but does not replace physical controls, network, suspend/resume, memory, or frame-time measurements. Until those gates pass, the phase is software-complete but not fully accepted.
+
+Client polling, rendering backend, reconnect, or replay may never become an authority input. A terminated WASM worker, truncated replay, browser suspension, or incomplete device run remains incomplete and cannot fabricate a sealed archive.

@@ -119,14 +119,42 @@ or feature-gates a browser-safe session/evidence layer containing the accepted
 world, flight package, `FullMissionSession`, role filtering, action handling,
 and in-memory KSB11 encoder. Filesystem, terminal, process, native-thread,
 report, target, campaign, and optimizer facilities remain in native host code.
-A thin `wasm-bindgen` adapter owns browser messages and storage requests; the
-native C ABI remains frozen for desktop consumers.
+A thin fixed-width raw WASM worker ABI owns browser messages and bounded memory
+transfers; the native C ABI remains frozen for desktop consumers. The dedicated
+replay worker passes opaque KSB11 bytes to this Rust boundary and receives only
+stateless bounded KPS1 batches after complete validation and deterministic
+re-execution.
 
 Local WebAssembly becomes accepted only when an identical definition and action
 transcript reproduce the native catalog identity, release order, event order,
 physical/navigation/command checksums, outcome axes, terminal release, exact
 2,911,464-byte KSB11 archive, and accepted SHA-256. Renderer backend, refresh
 rate, polling, window size, and presentation quality may not alter those bytes.
+
+## Strict replay boundary
+
+Accepted KSB11 replay is owned by Rust, not by React, Babylon, Unreal, SDL2, or
+network clients. The portable ksa64-session replay reader performs the
+following fail-closed sequence:
+
+1. validate the sealed KSB11 segment chain, CRCs, identities, reserved bytes,
+   terminal manifest, and manifest SHA-256;
+2. strictly decode the sole KAL11 action log, including its length, identity,
+   contiguous sequence, prior-chain links, record CRCs, and final chain;
+3. re-execute the compiled mission through FullMissionPresentationSession with
+   the recorded stage/commit timing;
+4. require the regenerated sealed KSB11 to equal the input byte for byte; and
+5. only then release sequential, nonce-bound KPS1 frames filtered to the
+   immutable requested role.
+
+The public replay API exposes safe replay metadata and KPS1 presentation frames
+only. It does not return KSB11 segments, canonical telemetry records, world
+state, or flight-computer internals. Snapshot filtering is applied again at the
+replay emitter immediately before KPS1 encoding, so a non-SIM-Director replay
+cannot inherit private truth even if an upstream adapter is changed later.
+Replay release samples remain explicitly lossy presentation history; they are
+not a replacement for canonical evidence. KSB11 stays opaque client custody,
+and any corruption or deterministic mismatch prevents all replay output.
 
 ## Browser lifecycle and failure policy
 

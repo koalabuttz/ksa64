@@ -51,7 +51,7 @@ Import-VsDevEnvironment
 Push-Location $repo
 try {
     if (-not $SkipBridgeBuild) {
-        & cargo build -p ksa64-viewer-bridge --profile viewer
+        & cargo build -p ksa64-viewer-bridge --profile viewer --locked
         if ($LASTEXITCODE -ne 0) { throw "viewer bridge build failed" }
     }
 

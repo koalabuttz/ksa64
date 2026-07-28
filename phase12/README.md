@@ -1,6 +1,6 @@
 # Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: active. Phase 12A and Phase 12B are complete and accepted; Phase 12B.5 implementation is active from entry commit `b9f2c79`.
+Status: Phase 12A and Phase 12B are complete and accepted. Phase 12B.5 software implementation and local acceptance are complete from entry commit `b9f2c79`; full acceptance remains pending hosted cross-platform CI and the required physical Duet/Vita gates.
 
 Phase 12 began with an accepted native-Windows Unreal presentation and now
 expands through portable Rust authority, desktop Unreal, web/PWA, SDL2/Vita,
@@ -14,7 +14,7 @@ The work is divided so that each slice proves one coherent boundary:
 |---|---|
 | 12A | **Complete:** pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaged smoke test, and optional MCP feasibility |
 | 12B | **Complete:** accepted 674.71875-second GNSS-loss mission, human-scale operations, multi-axis outcomes, packaged 2-D command desk, 17/17 automation, exact evidence, and bounded presentation-service timing |
-| 12B.5 | **Active:** portable session authority and KPS1 presentation protocol, native platform matrix, 8 GB Duet ARM64, compact React/Babylon PWA with exact Rust/WASM authority, paired LAN, and Vita/SDL2 |
+| 12B.5 | **Software-complete; qualification pending:** portable session/KPS1 authority, bridge/platform packaging, secure loopback and paired LAN, compact React/Babylon PWA, exact Rust/WASM authority, and Vita/SDL2; hosted platform and physical-device gates remain open |
 | 12C | Renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2 |
 | 12C.5 | Portable web/PWA, Vita/SDL2, Android, and iOS operations clients |
 | 12D | Mission Foundry vehicle/mission authoring and GUI/headless compiler parity |
@@ -31,7 +31,8 @@ The work is divided so that each slice proves one coherent boundary:
 - [PHASE12B_COMPLETION.md](PHASE12B_COMPLETION.md) — accepted live-operations outcome, Unreal evidence, measurements, and limitations.
 - [phase12b-completion-audit.json](phase12b-completion-audit.json) — machine-readable full-reference hashes, outcome axes, authority boundary, and accepted product gates.
 - [PHASE12B5_HANDOFF.md](PHASE12B5_HANDOFF.md) — historical cross-platform runtime, browser, mobile, and Vita planning boundary.
-- [PHASE12B5_PLAN.md](PHASE12B5_PLAN.md) — active implementation and acceptance contract.
+- [PHASE12B5_PLAN.md](PHASE12B5_PLAN.md) — implementation and acceptance contract.
+- [PHASE12B5_COMPLETION.md](PHASE12B5_COMPLETION.md) — software-complete checkpoint, local evidence, and explicit pending qualification gates.
 - [CI.md](CI.md) — hosted native/WASM checks and the explicit physical-device exclusions.
 - [WEB_PLATFORM.md](WEB_PLATFORM.md) — accepted Babylon.js, React/TypeScript, Rust/WASM, browser-authority, lifecycle, and Duet decision.
 - [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md) — frozen Phase 12B global-viewer boundary, consumed after 12B.5.
@@ -96,3 +97,5 @@ The 8 GB Lenovo Chromebook Duet 11 is the reference ARM64 Linux and ChromeOS dev
 The web stack is React plus TypeScript and Vite for the PWA, Babylon.js for 3-D, and a dedicated Rust/WASM Web Worker for optional local authority. The browser may ultimately run World, flight computer, operations, evidence, Mission Control, and 3-D together, but only after its complete KSB11 is byte-identical to native Rust. Babylon remains presentation-only and its physics integration is disabled.
 
 PlayStation Vita is a first-class constrained SDL2 target. Its initial product is Mission Control, replay, and high-level operations; bounded host-world/Vita-flight and selected Vita-world placements follow exact compile, vector, and physical timing evidence.
+
+The explicit native/Vita paired-LAN host lane is separate from the loopback browser broker. `ksa64-paired-lan` accepts only a user-selected private or link-local interface, requires a locally compared Noise XX code before storing a peer, binds the peer to immutable Guided Operator authority, supports local list/revocation, and uses Noise IK for reconnect. Its host identity and peer registry are local noncanonical configuration; physical Vita/Vita3K acceptance remains pending.

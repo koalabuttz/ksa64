@@ -5,7 +5,7 @@
 //! host-only presentation/evidence layer. The compact nine-release Phase 11
 //! fixture remains unchanged as a compatibility oracle.
 
-use crate::phase10::GlobalFixtureSet;
+use crate::global_fixtures::GlobalFixtureSet;
 use crate::phase10_mission::{
     encode_kph10, encode_ksr10, encode_ktt10, mission_update_with_case, GlobalMissionCapture,
     PHASE10_RECORD_STRIDE_RELEASES,

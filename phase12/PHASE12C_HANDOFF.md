@@ -1,6 +1,6 @@
 # Phase 12C handoff — complete global engineering viewer
 
-Status: ready to plan. Phase 12B is complete and accepted.
+Status: scope frozen. Phase 12B is complete and accepted; Phase 12C planning entry awaits the remaining Phase 12B.5 hosted and physical qualification gates.
 
 Date: 2026-07-27
 

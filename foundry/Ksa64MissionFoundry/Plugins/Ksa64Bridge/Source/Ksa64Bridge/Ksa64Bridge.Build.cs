@@ -39,7 +39,7 @@ public class Ksa64Bridge : ModuleRules
                 + "A qualified Unreal host and staged bridge are still required for packaging.");
         }
 
-        string BridgeInclude = Path.Combine(ModuleDirectory, "..", "ThirdParty", "ViewerBridge", "include");
+        string BridgeInclude = Path.Combine(ModuleDirectory, "..", "ThirdParty", "ViewerBridgePortable", "include");
         PublicIncludePaths.Add(Path.GetFullPath(BridgeInclude));
 
         // A separate explicit staging command builds Rust outside UnrealBuildTool.

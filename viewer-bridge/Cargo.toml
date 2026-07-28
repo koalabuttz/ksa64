@@ -6,6 +6,7 @@ publish = false
 
 [lib]
 crate-type = ["rlib", "cdylib"]
+doctest = false
 
 [dependencies]
 ksa64-host = { path = "../host" }

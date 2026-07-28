@@ -16,7 +16,7 @@ The harnesses remain deliberately separate. `harness/build.ps1` runs the frozen 
 
 The checked-in C header contains no Windows-only public contract. `KSA64_VIEWER_CALL` remains `__cdecl` on Windows and becomes the platform C calling convention elsewhere; symbol visibility is expressed separately. ABI-v1 symbols, field order, structure sizes, result codes, and behavior are unchanged. The dynamic harness supports `.dll`, `.so`, and `.dylib` using native loader services and an embedded, dependency-free SHA-256 verifier. The 64-bit ABI has qualification lanes for Windows x64, Linux x64/ARM64, and macOS ARM64. Vita deliberately uses the presentation crate statically rather than this pointer-width-specific ABI.
 
-New artifacts use `ksa64.viewer-bridge-artifact.v2`, which records the generic library filename, target triple, OS, architecture, source commit, profile, SHA-256, catalog identity, ABI/build identity, and public structure sizes. The Rust codec continues accepting the archived `ksa64.viewer-bridge-artifact.v1` Win64 manifest; unsupported schemas, unknown fields, path-bearing filenames, malformed hashes, and missing required sizes fail closed.
+New artifacts use `ksa64.viewer-bridge-artifact.v2`, which records the generic library filename, target triple, OS, architecture, source commit, profile, SHA-256, catalog identity, ABI/build identity, and public structure sizes generated directly from the Rust ABI types. The Rust codec continues accepting the archived `ksa64.viewer-bridge-artifact.v1` Win64 manifest; unsupported schemas, unknown fields, path-bearing filenames, malformed hashes, and missing required sizes fail closed.
 
 ## In-process containment limit
 

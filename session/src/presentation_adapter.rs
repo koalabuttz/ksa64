@@ -5,6 +5,7 @@
 //! FullMissionSession. Polling and presentation cursors cannot advance or
 //! otherwise mutate mission authority.
 
+use crate::phase11_authoring::CompiledMissionProject;
 use crate::phase11_live::{
     MissionActionReceipt, MissionOperatorAction, MissionSessionError, MissionSessionEventKind,
     MissionSessionLifecycle, MissionSessionPace, LIVE_RELEASE_PERIOD_MICROS,
@@ -79,6 +80,24 @@ pub struct FullMissionPresentationSession {
 impl FullMissionPresentationSession {
     pub fn new(role: OperationalRole) -> Result<Self, PresentationSessionError> {
         let authority = FullMissionSession::new(role)?;
+        Self::from_authority(authority, role)
+    }
+
+    /// Opens a compiled full-duration mission through the same presentation boundary.
+    /// Runtime role policy does not alter the compiled definition identity.
+    pub fn compiled(
+        mut project: CompiledMissionProject,
+        role: OperationalRole,
+    ) -> Result<Self, PresentationSessionError> {
+        project.role = role;
+        let authority = FullMissionSession::compiled(project)?;
+        Self::from_authority(authority, role)
+    }
+
+    fn from_authority(
+        authority: FullMissionSession,
+        role: OperationalRole,
+    ) -> Result<Self, PresentationSessionError> {
         let presentation_role = PresentationRole::from(role);
         let mut value = Self {
             authority,
@@ -135,7 +154,19 @@ impl FullMissionPresentationSession {
         maximum_releases: u32,
     ) -> Result<u32, PresentationSessionError> {
         let before = self.authority.snapshot().release_epoch;
-        self.authority.advance_bounded(maximum_releases)?;
+        for _ in 0..maximum_releases {
+            self.authority.advance_bounded(1)?;
+            if self.authority.recommended_load().is_some()
+                || matches!(
+                    self.authority.lifecycle(),
+                    MissionSessionLifecycle::Completed
+                        | MissionSessionLifecycle::Paused
+                        | MissionSessionLifecycle::Aborted
+                )
+            {
+                break;
+            }
+        }
         self.refresh_publications()?;
         Ok(self
             .authority
@@ -413,8 +444,11 @@ impl PresentationSession for FullMissionPresentationSession {
     fn transport_status(&self) -> TransportStatusView {
         TransportStatusView {
             staleness: PresentationStaleness::Current,
-            worker_state: self.latest_snapshot.lifecycle as u8,
-            finalization_state: u8::from(self.authority.completed_session().is_some()),
+            worker_state: transport_worker_state(self.latest_snapshot.lifecycle),
+            finalization_state: transport_finalization_state(
+                self.latest_snapshot.lifecycle,
+                self.authority.completed_session().is_some(),
+            ),
             queue: PresentationQueueStatus {
                 command_capacity: 1,
                 commands_pending: u32::from(self.authority.staged_load_identity().is_some()),
@@ -630,6 +664,30 @@ fn empty_snapshot(role: PresentationRole) -> OperationalSnapshot {
     }
 }
 
+fn transport_worker_state(lifecycle: PresentationLifecycle) -> u8 {
+    match lifecycle {
+        PresentationLifecycle::Completed | PresentationLifecycle::Aborted => 2,
+        PresentationLifecycle::Incomplete => 3,
+        PresentationLifecycle::Compiled
+        | PresentationLifecycle::Ready
+        | PresentationLifecycle::Running
+        | PresentationLifecycle::Paused => 1,
+    }
+}
+
+fn transport_finalization_state(lifecycle: PresentationLifecycle, sealed: bool) -> u8 {
+    if sealed {
+        1
+    } else if matches!(
+        lifecycle,
+        PresentationLifecycle::Aborted | PresentationLifecycle::Incomplete
+    ) {
+        2
+    } else {
+        0
+    }
+}
+
 fn presentation_lifecycle(value: MissionSessionLifecycle) -> PresentationLifecycle {
     match value {
         MissionSessionLifecycle::Compiled => PresentationLifecycle::Compiled,
@@ -697,7 +755,11 @@ fn timeline_severity(value: u8) -> TimelineSeverity {
 }
 
 fn gnss_state(release_epoch: u32) -> u8 {
-    if release_epoch < GNSS_LOSS_RELEASE { 1 } else { 2 }
+    if release_epoch < GNSS_LOSS_RELEASE {
+        1
+    } else {
+        2
+    }
 }
 
 fn proposal_from_load(
@@ -832,8 +894,28 @@ mod tests {
     use super::*;
     use crate::phase11_session::sha256;
     use crate::phase12b_live::{
-        BRANCH_COMMIT_RELEASE, BRANCH_STAGE_RELEASE, UPDATE_COMMIT_RELEASE, UPDATE_STAGE_RELEASE,
+        BRANCH_COMMIT_RELEASE, BRANCH_STAGE_RELEASE, UPDATE_COMMIT_RELEASE,
+        UPDATE_EFFECTIVE_RELEASE, UPDATE_STAGE_RELEASE,
     };
+
+    #[test]
+    fn transport_worker_and_finalization_states_are_distinct_from_session_lifecycle() {
+        assert_eq!(transport_worker_state(PresentationLifecycle::Running), 1);
+        assert_eq!(transport_worker_state(PresentationLifecycle::Completed), 2);
+        assert_eq!(transport_worker_state(PresentationLifecycle::Incomplete), 3);
+        assert_eq!(
+            transport_finalization_state(PresentationLifecycle::Running, false),
+            0
+        );
+        assert_eq!(
+            transport_finalization_state(PresentationLifecycle::Completed, true),
+            1
+        );
+        assert_eq!(
+            transport_finalization_state(PresentationLifecycle::Incomplete, false),
+            2
+        );
+    }
 
     #[test]
     fn gnss_presentation_state_stays_within_frozen_enum() {
@@ -964,6 +1046,29 @@ mod tests {
                 0xad, 0x34, 0x20, 0x4e, 0x12, 0xf8, 0x62, 0x52, 0xef, 0xd0, 0x0e, 0xcf, 0x74, 0x4c,
                 0x0e, 0xe0, 0xfc, 0xd4,
             ]
+        );
+    }
+
+    #[test]
+    fn fast_bounded_advancement_stops_at_the_first_operator_gate() {
+        let mut session =
+            FullMissionPresentationSession::new(OperationalRole::GuidedOperator).unwrap();
+        session.prepare().unwrap();
+        session.set_pace(PresentationPace::Fast).unwrap();
+
+        while session.latest_snapshot().release_epoch < UPDATE_STAGE_RELEASE {
+            session.advance_bounded(256).unwrap();
+        }
+
+        assert_eq!(
+            session.latest_snapshot().release_epoch,
+            UPDATE_STAGE_RELEASE
+        );
+        let proposal = session.current_action_proposal().unwrap();
+        assert_eq!(proposal.activation_epoch, UPDATE_EFFECTIVE_RELEASE);
+        assert_ne!(
+            session.latest_snapshot().validity_mask & SNAPSHOT_VALID_ACTION,
+            0
         );
     }
 }

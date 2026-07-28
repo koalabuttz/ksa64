@@ -1,8 +1,6 @@
 //! Headless Phase 11 mission authoring, execution, replay, and verification SDK.
 
 use crate::phase11_debrief::{build_gnss_loss_debrief, encode_debrief, DebriefEvidence};
-#[cfg(feature = "native")]
-use crate::phase11_debrief::{debrief_html, debrief_json};
 use crate::phase11_scenarios::{
     run_gnss_loss_procedure, run_ground_blackout_probe, run_guidance_update_probe,
     run_invalid_operations_probe, run_nominal_operations_probe, OperationalScenarioEvidence,
@@ -21,10 +19,6 @@ use ksa64_interface::phase11::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-#[cfg(feature = "native")]
-use std::fs;
-#[cfg(feature = "native")]
-use std::path::Path;
 
 pub const KSD11_LENGTH: usize = 256;
 pub const KSD11_COMPILER_ID: u32 = 0x11d1_0001;
@@ -447,21 +441,6 @@ pub fn replay_completed_session(input: &[u8]) -> Result<SessionRunEvidence, Auth
 
 pub fn verify_session(input: &[u8]) -> Result<SessionBundleScan, AuthoringError> {
     verify_complete_session(input).map_err(Into::into)
-}
-
-#[cfg(feature = "native")]
-pub fn write_debrief_reports(
-    completed: &CompletedMissionSession,
-    directory: &Path,
-) -> Result<(), AuthoringError> {
-    fs::create_dir_all(directory).map_err(|_| AuthoringError::Io)?;
-    let Some(debrief) = &completed.debrief else {
-        return Err(AuthoringError::Missing);
-    };
-    let json_bytes =
-        serde_json::to_vec_pretty(&debrief_json(debrief)).map_err(|_| AuthoringError::Json)?;
-    fs::write(directory.join("debrief.json"), json_bytes).map_err(|_| AuthoringError::Io)?;
-    fs::write(directory.join("debrief.html"), debrief_html(debrief)).map_err(|_| AuthoringError::Io)
 }
 
 pub(crate) fn push_definition_segments(

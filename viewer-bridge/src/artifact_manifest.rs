@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
 
-pub const BRIDGE_MANIFEST_V1_SCHEMA: &str = "ksa64.viewer-bridge-artifact.v1";
+pub const BRIDGE_MANIFEST_V1_SCHEMA: &str = "ksa64.viewer-bridge-manifest.v1";
 pub const BRIDGE_MANIFEST_V2_SCHEMA: &str = "ksa64.viewer-bridge-artifact.v2";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -14,9 +14,20 @@ pub const BRIDGE_MANIFEST_V2_SCHEMA: &str = "ksa64.viewer-bridge-artifact.v2";
 pub struct BridgeArtifactManifestV1 {
     pub schema: String,
     pub abi_version: u32,
-    pub commit: String,
-    pub file: String,
-    pub sha256: String,
+    pub build_identity: u32,
+    pub source_commit: String,
+    pub source_tree_clean: bool,
+    pub target_triple: String,
+    pub cargo_profile: String,
+    pub build_command: String,
+    pub dll_filename: String,
+    pub dll_sha256: String,
+    pub header_filename: String,
+    pub header_sha256: String,
+    pub catalog_schema: String,
+    pub catalog_count: u32,
+    pub catalog_sha256: String,
+    pub structure_sizes: BTreeMap<String, u32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -86,14 +97,57 @@ fn validate_v1(value: &BridgeArtifactManifestV1) -> Result<(), ManifestError> {
     if value.abi_version != crate::KSA64_VIEWER_ABI_VERSION {
         return Err(ManifestError::InvalidField("abi_version"));
     }
-    if value.commit.is_empty() || !value.commit.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err(ManifestError::InvalidField("commit"));
+    if value.build_identity != crate::KSA64_VIEWER_BUILD_IDENTITY
+        && value.build_identity != 0x120a_0001
+    {
+        return Err(ManifestError::InvalidField("build_identity"));
     }
-    if !valid_library_file(&value.file) {
-        return Err(ManifestError::InvalidField("file"));
+    if !is_lower_hex(&value.source_commit, 40) {
+        return Err(ManifestError::InvalidField("source_commit"));
     }
-    if !is_lower_hex(&value.sha256, 64) {
-        return Err(ManifestError::InvalidField("sha256"));
+    if !value.source_tree_clean {
+        return Err(ManifestError::InvalidField("source_tree_clean"));
+    }
+    if value.target_triple != "x86_64-pc-windows-msvc" {
+        return Err(ManifestError::InvalidField("target_triple"));
+    }
+    if value.cargo_profile != "viewer" || value.build_command.is_empty() {
+        return Err(ManifestError::InvalidField("cargo_profile"));
+    }
+    if !valid_library_file(&value.dll_filename)
+        || value.dll_filename
+            != format!(
+                "ksa64_viewer_bridge-{}-{:08x}.dll",
+                &value.source_commit[..12],
+                value.build_identity
+            )
+    {
+        return Err(ManifestError::InvalidField("dll_filename"));
+    }
+    if !is_lower_hex(&value.dll_sha256, 64) {
+        return Err(ManifestError::InvalidField("dll_sha256"));
+    }
+    if value.header_filename != "ksa64_viewer_bridge.h" {
+        return Err(ManifestError::InvalidField("header_filename"));
+    }
+    if !is_lower_hex(&value.header_sha256, 64) {
+        return Err(ManifestError::InvalidField("header_sha256"));
+    }
+    if value.catalog_schema != "ksa64.product-catalog.v1" || value.catalog_count != 13 {
+        return Err(ManifestError::InvalidField("catalog_schema"));
+    }
+    if !is_lower_hex(&value.catalog_sha256, 64) {
+        return Err(ManifestError::InvalidField("catalog_sha256"));
+    }
+    let expected_legacy_sizes = BTreeMap::from([
+        ("abi_info".to_owned(), 132),
+        ("span".to_owned(), 24),
+        ("owned_buffer".to_owned(), 32),
+        ("event".to_owned(), 24),
+        ("snapshot".to_owned(), 184),
+    ]);
+    if value.structure_sizes != expected_legacy_sizes {
+        return Err(ManifestError::InvalidField("structure_sizes"));
     }
     Ok(())
 }
@@ -254,11 +308,28 @@ mod tests {
     use super::*;
 
     const ACCEPTED_V1: &str = r#"{
-  "schema": "ksa64.viewer-bridge-artifact.v1",
+  "schema": "ksa64.viewer-bridge-manifest.v1",
   "abi_version": 1,
-  "commit": "423c116cf586",
-  "file": "ksa64_viewer_bridge-423c116cf586-120b0001.dll",
-  "sha256": "da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565"
+  "build_identity": 302710785,
+  "source_commit": "423c116cf58632f344d4a48774a97a4487c34113",
+  "source_tree_clean": true,
+  "target_triple": "x86_64-pc-windows-msvc",
+  "cargo_profile": "viewer",
+  "build_command": "cargo build --locked --target x86_64-pc-windows-msvc --target-dir target/viewer-bridge-staging/423c116cf586 --profile viewer --package ksa64-viewer-bridge",
+  "dll_filename": "ksa64_viewer_bridge-423c116cf586-120b0001.dll",
+  "dll_sha256": "da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565",
+  "header_filename": "ksa64_viewer_bridge.h",
+  "header_sha256": "8227d7d7de442049eb71d23178a9d9703bc228668e958edfc4d7100d694a682e",
+  "catalog_schema": "ksa64.product-catalog.v1",
+  "catalog_count": 13,
+  "catalog_sha256": "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13",
+  "structure_sizes": {
+    "abi_info": 132,
+    "span": 24,
+    "owned_buffer": 32,
+    "event": 24,
+    "snapshot": 184
+  }
 }"#;
 
     fn portable() -> BridgeArtifactManifestV2 {
@@ -289,8 +360,15 @@ mod tests {
     fn accepted_v1_manifest_remains_readable() {
         match decode_manifest(ACCEPTED_V1.as_bytes()).unwrap() {
             BridgeArtifactManifest::LegacyV1(value) => {
-                assert_eq!(value.commit, "423c116cf586");
-                assert!(value.file.ends_with(".dll"));
+                assert_eq!(
+                    value.source_commit,
+                    "423c116cf58632f344d4a48774a97a4487c34113"
+                );
+                assert_eq!(
+                    value.dll_sha256,
+                    "da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565"
+                );
+                assert!(value.dll_filename.ends_with(".dll"));
             }
             BridgeArtifactManifest::PortableV2(_) => panic!("decoded legacy manifest as v2"),
         }

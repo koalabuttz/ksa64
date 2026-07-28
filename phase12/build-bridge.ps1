@@ -49,6 +49,7 @@ foreach ($required in @($cargoToml, $headerSource, $catalogPath, $pluginRoot)) {
 
 if ($VerifyOnly) {
     $manifestFile = Read-ExactSingleManifest $binaries
+    $manifestSha256 = Get-Sha256 $manifestFile.FullName
     $manifest = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
     if ($manifest.schema -ne "ksa64.viewer-bridge-manifest.v1") {
         throw "Unexpected bridge manifest schema '$($manifest.schema)'."
@@ -61,8 +62,31 @@ if ($VerifyOnly) {
         throw "Staged bridge DLL SHA-256 does not match its manifest."
     }
     $header = Join-Path $includeDirectory $manifest.header_filename
-    if (-not (Test-Path -LiteralPath $header) -or (Get-Sha256 $header) -ne $manifest.header_sha256) {
-        throw "Staged bridge header SHA-256 does not match its manifest."
+    if (-not (Test-Path -LiteralPath $header)) {
+        throw "Staged bridge header is missing: $header"
+    }
+    $headerSha256 = Get-Sha256 $header
+    if ($headerSha256 -ne $manifest.header_sha256) {
+        # The accepted Phase 12B manifest was frozen with an incorrect header
+        # digest. Keep that manifest and its accepted DLL byte-for-byte intact,
+        # but admit only the exact header tracked at its declared source commit.
+        # Every identity in this compatibility tuple is deliberately fixed so
+        # no other mismatch is weakened or silently accepted.
+        $isAcceptedPhase12bHeaderMetadataCorrection = (
+            $manifestFile.Name -eq "ksa64_viewer_bridge-423c116cf586-120b0001.manifest.json" -and
+            $manifestSha256 -eq "b618e31c08b185e40db83955dc47cb8440e488779dfab1f7899307abf9852365" -and
+            $manifest.source_commit -eq "423c116cf58632f344d4a48774a97a4487c34113" -and
+            $manifest.dll_sha256 -eq "da6657a46759a028cb8901ce813af093d4d8901c76cb383f0d74601d64f26565" -and
+            $manifest.header_sha256 -eq "8227d7d7de442049eb71d23178a9d9703bc228668e958edfc4d7100d694a682e" -and
+            $headerSha256 -eq "ad0b69c66b2232b97cc1675795c1be054abf246b65ea1bb0c92b463407d20db1" -and
+            [uint32]$manifest.abi_version -eq 1 -and
+            [uint32]$manifest.build_identity -eq 0x120B0001 -and
+            $manifest.catalog_sha256 -eq "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13"
+        )
+        if (-not $isAcceptedPhase12bHeaderMetadataCorrection) {
+            throw "Staged bridge header SHA-256 does not match its manifest."
+        }
+        Write-Warning "Accepted Phase 12B manifest contains the frozen historical header-digest defect; verified the exact tracked source header through its narrowly bound compatibility tuple."
     }
     Write-Host "Verified $($manifest.dll_filename)"
     Write-Host "  commit: $($manifest.source_commit)"

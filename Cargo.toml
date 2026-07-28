@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "flight", "host", "interface", "presentation", "session", "sim", "viewer-bridge"]
+members = ["core", "flight", "host", "interface", "presentation", "session", "session-broker", "session-wasm", "sim", "viewer-bridge"]
 exclude = ["third_party/clap", "third_party/anstyle"]
 resolver = "2"
 

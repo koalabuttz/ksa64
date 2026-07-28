@@ -9,6 +9,11 @@ separate Unreal lanes:
 | Linux x64 | `Linux` | `x86_64-unknown-linux-gnu` | Source/staging lane; package only on a qualified Linux Unreal host |
 | macOS ARM64 | `Mac` | `aarch64-apple-darwin` | Source/staging lane; package only on a qualified macOS ARM64 Unreal host |
 
+The frozen Phase 12B header remains under `ThirdParty/ViewerBridge`; Phase 12B.5
+builds use the byte-identical ABI surface with portable export macros from
+`ThirdParty/ViewerBridgePortable`. This preserves the accepted header hash while
+allowing Linux and macOS compilation.
+
 The bridge uses Unreal's platform-neutral dynamic-library loader and a local
 portable SHA-256 implementation to verify a staged library before loading it.
 There is no Windows BCrypt, `.dll`, or Win64-only runtime assumption in the

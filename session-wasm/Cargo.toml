@@ -1,0 +1,14 @@
+[package]
+name = "ksa64-session-wasm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Browser-worker ABI for the KSA64 deterministic presentation session"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+ksa64-presentation = { path = "../presentation" }
+ksa64-interface = { path = "../interface" }
+ksa64-session = { path = "../session", default-features = false }

@@ -1,33 +1,43 @@
-# Phase 12B.5 Vita feasibility build helper.
-# Requires the versions recorded in toolchain-manifest.toml. This script does
-# not install tools and never contacts a network service.
+# Phase 12B.5 Vita VPK build helper.
+# Uses the pinned WSL VitaSDK lane recorded in toolchain-manifest.toml.
 param(
     [ValidateSet("debug", "release")]
-    [string]$Profile = "debug"
+    [string]$Profile = "release",
+    [string]$Distro = "Ubuntu",
+    [string]$VitaSdk = "/home/david/.local/vitasdk"
 )
 
 $ErrorActionPreference = "Stop"
-$root = Split-Path -Parent $PSScriptRoot
-$clientManifest = Join-Path $root "client\Cargo.toml"
-
-if (-not $env:VITASDK) {
-    throw "VITASDK is required. Install the pinned VitaSDK before building."
+$vitaWindows = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+if ($vitaWindows -notmatch '^([A-Za-z]):\\(.*)$') {
+    throw "The Vita workspace must be on a Windows drive visible to WSL."
 }
-if (-not (Get-Command cargo-vita -ErrorAction SilentlyContinue)) {
-    throw "cargo-vita is required. Install the pinned tool recorded in toolchain-manifest.toml."
-}
+$drive = $Matches[1].ToLowerInvariant()
+$tail = $Matches[2].Replace("\", "/")
+$vitaWsl = "/mnt/$drive/$tail"
+$profileArgs = if ($Profile -eq "release") { "--release" } else { "" }
 
-$arguments = @(
-    "vita", "vpk",
-    "--manifest-path", $clientManifest,
-    "--bin", "ksa64-vita",
-    "--target", "armv7-sony-vita-newlibeabihf"
-)
-if ($Profile -eq "release") {
-    $arguments += "--release"
-}
+$command = @"
+export PATH=/home/david/.cargo/bin:/usr/bin:/bin
+export VITASDK='$VitaSdk'
+cd '$vitaWsl'
+test -x '$VitaSdk/bin/arm-vita-eabi-gcc'
+cargo +nightly-2026-07-20 vita build vpk -- --manifest-path client/Cargo.toml --no-default-features --features vita-target --bin ksa64-vita $profileArgs
+"@
 
-& cargo +nightly @arguments
+& wsl -d $Distro -- bash -lc $command
 if ($LASTEXITCODE -ne 0) {
     throw "cargo-vita failed with exit code $LASTEXITCODE"
 }
+
+$profileDir = if ($Profile -eq "release") { "release" } else { "debug" }
+$vpk = Join-Path $vitaWindows "target\armv7-sony-vita-newlibeabihf\$profileDir\ksa64-vita.vpk"
+if (-not (Test-Path -LiteralPath $vpk)) {
+    throw "Expected VPK was not produced: $vpk"
+}
+$artifact = Get-Item -LiteralPath $vpk
+$hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $vpk).Hash.ToLowerInvariant()
+Write-Host "VPK: $($artifact.FullName)"
+Write-Host "Bytes: $($artifact.Length)"
+Write-Host "SHA-256: $hash"
+Write-Host "Packaging evidence only; Vita3K and physical Vita acceptance remain pending."

@@ -7,9 +7,11 @@ publish = false
 [features]
 default = ["host-fixture"]
 host-fixture = []
+vita-target = ["dep:ksa64-session-broker"]
 
 [dependencies]
 ksa64-presentation = { path = "../../presentation" }
+ksa64-session-broker = { path = "../../session-broker", default-features = false, optional = true }
 
 [lib]
 path = "src/lib.rs"
@@ -22,4 +24,17 @@ required-features = ["host-fixture"]
 [[bin]]
 name = "ksa64-vita"
 path = "src/bin/vita.rs"
-required-features = ["host-fixture"]
+required-features = ["vita-target"]
+
+[package.metadata.vita]
+title_id = "KSA640001"
+title_name = "KSA64 Mission Control"
+build_std = "std,panic_unwind"
+vita_make_fself_flags = ["-s"]
+vita_mksfoex_flags = ["-d", "ATTRIBUTE2=12"]
+
+[package.metadata.vita.profile.dev]
+strip_symbols = true
+
+[package.metadata.vita.profile.release]
+strip_symbols = true

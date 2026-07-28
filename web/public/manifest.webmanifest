@@ -1,0 +1,20 @@
+{
+  "name": "KSA64 Mission Control",
+  "short_name": "KSA64",
+  "description": "Role-filtered mission operations presentation for KSA64.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#071013",
+  "theme_color": "#071013",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/ksa64.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

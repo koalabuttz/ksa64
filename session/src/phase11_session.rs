@@ -1,12 +1,6 @@
 //! KSB11 segmented, identity-bound mission-session archives.
 
 use ksa64_interface::crc32_ieee;
-#[cfg(feature = "native")]
-use std::fs::{self, File};
-#[cfg(feature = "native")]
-use std::io::Write;
-#[cfg(feature = "native")]
-use std::path::{Path, PathBuf};
 
 pub const KSB11_HEADER_LENGTH: usize = 64;
 pub const KSB11_TRAILER_LENGTH: usize = 4;
@@ -183,18 +177,6 @@ impl SessionBundleBuilder {
         output.extend_from_slice(&final_segment);
         Ok(output)
     }
-
-    #[cfg(feature = "native")]
-    pub fn write_atomic(&self, path: &Path) -> Result<(), SessionBundleError> {
-        let bytes = self.encode()?;
-        let temporary = temporary_path(path);
-        {
-            let mut file = File::create(&temporary).map_err(|_| SessionBundleError::Io)?;
-            file.write_all(&bytes).map_err(|_| SessionBundleError::Io)?;
-            file.sync_all().map_err(|_| SessionBundleError::Io)?;
-        }
-        fs::rename(temporary, path).map_err(|_| SessionBundleError::Io)
-    }
 }
 
 pub fn scan_session_bundle(input: &[u8]) -> Result<SessionBundleScan, SessionBundleError> {
@@ -368,13 +350,6 @@ fn encode_segment(
     let crc = crc32_ieee(&output[..length - 4]);
     write_u32(&mut output, length - 4, crc);
     Ok(output)
-}
-
-#[cfg(feature = "native")]
-fn temporary_path(path: &Path) -> PathBuf {
-    let mut name = path.as_os_str().to_os_string();
-    name.push(".tmp");
-    PathBuf::from(name)
 }
 
 fn write_u16(output: &mut [u8], offset: usize, value: u16) {

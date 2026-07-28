@@ -1,14 +1,19 @@
 # Phase 12B.5 Vita feasibility toolchain record.
-# Values are intentionally explicit; update only through a reviewed toolchain
-# refresh and retain the resulting version output in target evidence.
+# Installed and verified in WSL Ubuntu on 2026-07-27/28 UTC.
 
 [toolchain]
 rust_channel = "nightly-2026-07-20"
+rustc = "1.99.0-nightly (9f36de775 2026-07-19)"
+rust_commit = "9f36de775bc636c8e88c31a173c2bcb6995956a0"
 rust_target = "armv7-sony-vita-newlibeabihf"
-cargo_vita = "0.3.2"
-vitasdk = "2026-07-01"
-sdl2_vita = "2.30"
-vitasdk_environment = "VITASDK"
+rust_src = true
+cargo_vita = "0.2.2"
+vitasdk_release = "master-linux-v2.540"
+vitasdk_archive = "vitasdk-x86_64-linux-gnu-2026-05-24_12-05-02.tar.bz2"
+vitasdk_root = "/home/david/.local/vitasdk"
+vdpm_commit = "e423be457622a9ba517858f4831566dcd263729a"
+arm_vita_eabi_gcc = "15.2.0"
+sdl2_vita = "2.32.8"
 target_kind = "static-presentation-client"
 
 [package]
@@ -22,6 +27,7 @@ frame_rate_target = 30
 
 [policy]
 authority = "remote-or-replay-only"
-transport = "paired-noise-lan-or-offline-replay"
+transport = "offline-replay-default; explicit VitaSDK private-LAN Noise XX/IK client compiled"
 direct_effector_commands = false
+vita3k_acceptance_required = true
 physical_acceptance_required = true

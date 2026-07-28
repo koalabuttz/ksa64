@@ -35,13 +35,14 @@ $root = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $plugin = Join-Path $root "foundry\Ksa64MissionFoundry\Plugins\Ksa64Bridge"
 $binaries = Join-Path $plugin ("Binaries\" + $Platform)
 $headerSource = Join-Path $root "viewer-bridge\ksa64_viewer_bridge.h"
-$headerDestination = Join-Path $plugin "Source\ThirdParty\ViewerBridge\include\ksa64_viewer_bridge.h"
+$headerDestination = Join-Path $plugin "Source\ThirdParty\ViewerBridgePortable\include\ksa64_viewer_bridge.h"
 $catalog = Join-Path $root "phase11_5\product-catalog-v1.json"
 $catalogHash = Get-Sha256 $catalog
 $acceptedCatalog = "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13"
 if ($catalogHash -ne $acceptedCatalog) { throw "The accepted product catalog identity changed; refusing to stage a bridge." }
 
 if ($VerifyOnly) {
+    if (-not (Test-Path -LiteralPath $headerDestination) -or (Get-Sha256 $headerDestination) -ne (Get-Sha256 $headerSource)) { throw "Portable bridge header mirror differs from the canonical header." }
     $manifests = @(Get-ChildItem -LiteralPath $binaries -Filter "*.manifest.json" -File -ErrorAction Stop)
     if ($manifests.Count -ne 1) { throw "Expected exactly one bridge manifest in '$binaries'." }
     $manifest = Get-Content -LiteralPath $manifests[0].FullName -Raw | ConvertFrom-Json

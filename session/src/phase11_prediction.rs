@@ -456,7 +456,7 @@ mod tests {
         GlobalNavigation,
         GroundEstimate,
     ) {
-        let earth = crate::phase10::GlobalFixtureSet::embedded().earth;
+        let earth = crate::global_fixtures::GlobalFixtureSet::embedded().earth;
         let plan = ksa64_flight::phase11::ksa_g10r_reference_mission_plan();
         let position = [WGS84_SEMI_MAJOR_Q12_KM + 409_600, 0, 0];
         let velocity = [100_000, 120_000_000, 0];

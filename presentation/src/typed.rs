@@ -450,7 +450,8 @@ fn read_truth(reader: &mut PayloadReader<'_>) -> Result<SimTruthView, Kps1Error>
 fn encode_procedure(value: &ProcedureView) -> Result<Vec<u8>, Kps1Error> {
     if value.procedure_identity == 0
         || value.step_count == 0
-        || value.active_step >= value.step_count
+        || value.active_step == 0
+        || value.active_step > value.step_count
         || value.predicates.len() > PRESENTATION_PREDICATE_MAX_COUNT
     {
         return Err(Kps1Error::Identity);
@@ -493,7 +494,8 @@ fn decode_procedure(input: &[u8]) -> Result<ProcedureView, Kps1Error> {
     reader.reserved(2)?;
     if procedure_identity == 0
         || step_count == 0
-        || active_step >= step_count
+        || active_step == 0
+        || active_step > step_count
         || count > PRESENTATION_PREDICATE_MAX_COUNT
     {
         return Err(Kps1Error::Identity);
@@ -1359,6 +1361,23 @@ mod tests {
         let bytes = encode_typed_payload(&value, role).unwrap();
         assert!(bytes.len() <= KPS1_MAX_PAYLOAD_LENGTH);
         assert_eq!(decode_typed_payload(kind, &bytes, role), Ok(value));
+    }
+
+    #[test]
+    fn procedure_wire_format_accepts_one_based_terminal_step_ids() {
+        let value = PresentationPayload::Procedure(ProcedureView {
+            procedure_identity: 0x12b3_1001,
+            active_step: 7,
+            step_count: 7,
+            state: ProcedureStepState::Failed,
+            entered_epoch: 7_800,
+            deadline_epoch: 7_872,
+            title: String::from("GNSS LOSS / FAIL"),
+            instruction: String::from("Procedure window expired."),
+            predicates: Vec::new(),
+            hints_available: true,
+        });
+        round_trip(value, PresentationRole::GuidedOperator);
     }
 
     #[test]

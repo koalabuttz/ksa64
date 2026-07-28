@@ -599,14 +599,14 @@ try {
     }
 
     Gate "Phase 12B bounded Rust and ABI tests" {
-        cargo test -p ksa64-host --lib --locked phase12b
+        cargo test -p ksa64-session --lib --locked phase12b
         Check
         cargo test -p ksa64-viewer-bridge --lib --profile viewer --features panic-probe --locked
         Check
     }
 
     Gate "Phase 12B accepted full scripted evidence" {
-        cargo test -p ksa64-host --lib --locked `
+        cargo test -p ksa64-session --lib --locked `
             phase12b_live::tests::scripted_full_mission_seals_exact_evidence_and_succeeds `
             -- --ignored --exact
     }
@@ -619,21 +619,21 @@ try {
 
     if (-not $SkipExtendedRustCases) {
         Gate "Phase 12B no-action and alternate recovery outcomes" {
-            cargo test -p ksa64-host --lib --locked `
+            cargo test -p ksa64-session --lib --locked `
                 phase12b_live::tests::no_action_can_finish_as_degraded_success `
                 -- --ignored --exact
             Check
-            cargo test -p ksa64-host --lib --locked `
+            cargo test -p ksa64-session --lib --locked `
                 phase12b_live::tests::safe_recovery_branch_completes_as_contingency_success `
                 -- --ignored --exact
             Check
         }
         Gate "Phase 12B role-neutral and application-facade replay parity" {
-            cargo test -p ksa64-host --lib --locked `
+            cargo test -p ksa64-session --lib --locked `
                 phase12b_live::tests::guided_and_scripted_action_transcripts_are_byte_identical `
                 -- --ignored --exact
             Check
-            cargo test -p ksa64-host --lib --locked `
+            cargo test -p ksa64-session --lib --locked `
                 phase12b_live::tests::full_authoring_sdk_bundle_matches_direct_full_session `
                 -- --ignored --exact
         }

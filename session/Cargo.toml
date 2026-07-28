@@ -17,3 +17,8 @@ serde_json = "1"
 [features]
 default = ["native"]
 native = []
+
+[[example]]
+name = "exact_gnss_loss"
+path = "examples/exact_gnss_loss.rs"
+required-features = ["native"]

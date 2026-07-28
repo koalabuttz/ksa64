@@ -10,6 +10,7 @@ phase0/candidates/oscar64/out/
 
 # Future local build output
 build/
+/dist/
 
 # Python reference-generator caches
 __pycache__/

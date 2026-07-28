@@ -1606,7 +1606,7 @@ the authoritative worker did not advance.
 
 Date: 2026-07-27
 
-Status: accepted for implementation.
+Status: implemented; full acceptance pending hosted and physical qualification.
 
 Enter Phase 12B.5 at commit `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615`. Preserve all accepted Phase 0-12B artifacts, the 13-entry catalog, ABI-v1 layouts, and the exact 2,911,464-byte guided GNSS-loss KSB11. Extract exact session authority into `ksa64-session` and role-filtered, renderer-neutral DTOs plus the noncanonical KPS1 protocol into `ksa64-presentation`; desktop services remain in `ksa64-host`.
 
