@@ -1,0 +1,19 @@
+{
+  "format": "ksa64.vita.input-fixture.v1",
+  "resolution": [960, 544],
+  "role": "guided-operator",
+  "events": [
+    {"frame": 1, "input": "right", "expect_page": "navigation"},
+    {"frame": 2, "input": "right", "expect_page": "procedure"},
+    {"frame": 3, "input": "right", "expect_page": "trajectory"},
+    {"frame": 4, "input": "right", "expect_page": "timeline"},
+    {"frame": 5, "input": "right", "expect_page": "evidence"},
+    {"frame": 6, "input": "left", "expect_page": "timeline"},
+    {"frame": 7, "input": "cross", "expect_action": "review"},
+    {"frame": 8, "input": "cross", "expect_action": "stage"},
+    {"frame": 9, "input": "cross", "expect_action": "commit"},
+    {"frame": 10, "input": "network-drop", "expect_connection": "stale"},
+    {"frame": 11, "input": "network-reconnect", "expect_connection": "current"},
+    {"frame": 12, "input": "resync-required", "expect_resync": true}
+  ]
+}

@@ -1,0 +1,25 @@
+[package]
+name = "ksa64-vita-client"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+default = ["host-fixture"]
+host-fixture = []
+
+[dependencies]
+ksa64-presentation = { path = "../../presentation" }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "vita-fixture"
+path = "src/bin/fixture.rs"
+required-features = ["host-fixture"]
+
+[[bin]]
+name = "ksa64-vita"
+path = "src/bin/vita.rs"
+required-features = ["host-fixture"]

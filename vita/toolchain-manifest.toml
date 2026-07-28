@@ -1,0 +1,27 @@
+# Phase 12B.5 Vita feasibility toolchain record.
+# Values are intentionally explicit; update only through a reviewed toolchain
+# refresh and retain the resulting version output in target evidence.
+
+[toolchain]
+rust_channel = "nightly-2026-07-20"
+rust_target = "armv7-sony-vita-newlibeabihf"
+cargo_vita = "0.3.2"
+vitasdk = "2026-07-01"
+sdl2_vita = "2.30"
+vitasdk_environment = "VITASDK"
+target_kind = "static-presentation-client"
+
+[package]
+title_id = "KSA640001"
+title = "KSA64 Mission Control"
+version = "0.1.0"
+screen_width = 960
+screen_height = 544
+working_set_limit_bytes = 67108864
+frame_rate_target = 30
+
+[policy]
+authority = "remote-or-replay-only"
+transport = "paired-noise-lan-or-offline-replay"
+direct_effector_commands = false
+physical_acceptance_required = true

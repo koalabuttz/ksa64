@@ -1,0 +1,5 @@
+# Local Vita build outputs and SDK staging.
+target/
+*.vpk
+*.velf
+*.self
