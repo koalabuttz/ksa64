@@ -5,7 +5,9 @@ import { Kps1MessageKind, type Kps1Frame } from "./protocol/kps1";
 import { BasePresentationTransport, type PresentationActionIntent, type PresentationConnection } from "./transport";
 import { proposalPayload, receiptPayload, snapshotPayload, testFrame } from "./test/presentationFixtures";
 
-vi.mock("./components/RendererProbe", () => ({ RendererProbe: () => <section aria-label="Renderer probe">2-D probe</section> }));
+vi.mock("./components/GlobalMissionViewer", () => ({
+  GlobalMissionViewer: () => <section aria-label="Global mission director">Global viewer</section>,
+}));
 
 class TestTransport extends BasePresentationTransport {
   readonly kind = "replay" as const;

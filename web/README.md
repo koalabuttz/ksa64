@@ -1,8 +1,9 @@
 # KSA64 Mission Control Web
 
-This directory contains the Phase 12B.5 compact Mission Control PWA. The UI is
-only a role-filtered presentation client: Rust remains the authority for the
-world, flight software, operations, procedures, actions, and KSB11 evidence.
+This directory contains the portable Mission Control PWA and the Phase 12C
+global mission viewer. The UI is only a role-filtered presentation client:
+Rust remains the authority for the world, flight software, operations, frames,
+procedures, actions, dispositions, and evidence.
 
 ## Run locally
 
@@ -30,6 +31,29 @@ maintained service worker caches same-origin presentation assets while excluding
 the reserved `/session/` native-authority endpoint and the per-launch
 `/runtime-config.js` credential response. The broker marks that response
 `no-store`, so launch tokens never enter the offline cache.
+
+## Global mission viewer
+
+The viewer consumes the additive, negotiated `GLOBAL_DISPLAY_V1` KPS1 stream.
+Rust supplies fixed-point ECEF, GCRF, and applicable ENU poses, source validity,
+frame transitions, event bookmarks, path levels, role filtering, and terminal
+disposition. TypeScript does not perform accepted physical frame conversion.
+The older 2-D operations stream can still produce a visibly labelled schematic
+compatibility view, but it is never accepted GlobalDisplayV1 or renderer-parity
+evidence.
+
+The default hybrid mission-director layout combines the procedural WGS 84 view
+with the existing operations desk. Engineering split and cinematic layouts,
+automatic and manually selected cameras, exact-release replay controls, event
+jumps, source-labelled paths, a screen-space locator, and a true-scale vehicle
+inset are also available. SIM truth is structurally absent for ordinary roles;
+a director stream may expose it, but it remains hidden until explicitly enabled
+and carries a persistent label.
+
+Babylon uses WebGPU when available, WebGL2 as the next choice, and a complete
+2-D Canvas fallback. Context loss changes only the passive presentation backend.
+The absolute Rust pose, selected release, action ordering, and evidence identity
+are unaffected by renderer, camera, layout, polling rate, or local origin.
 
 ## Native broker mode
 
@@ -72,7 +96,7 @@ a live connection failure; it is never described as live or sealed evidence.
 - `src/transport` provides local Worker, native WebSocket, and replay adapters.
 - `src/workers/session.worker.ts` owns one local Rust/WASM authority worker; `replay.worker.ts` owns strict opaque-evidence replay.
 - `scripts/build-local-wasm.mjs` explicitly builds and copies the raw module; Vite never invokes Cargo implicitly.
-- `src/render` probes WebGPU, then WebGL2, then a complete 2-D Canvas fallback.
+- `src/render` presents the procedural global scene through WebGPU, WebGL2, or the complete 2-D Canvas fallback.
 - Babylon physics is not imported or enabled.
 
 Only high-level Review, Stage, Commit, and Cancel proposal intents cross the

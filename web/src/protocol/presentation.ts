@@ -1,4 +1,11 @@
 import { Kps1MessageKind, type Kps1Frame } from "./kps1";
+import {
+  decodeGlobalDisplayDefinitionPayload, decodeGlobalDisplayPathPayload,
+  decodeGlobalDisplaySamplesPayload, decodeGlobalDisplayTransitionPayload,
+  decodeGlobalReplayIndexPayload, type GlobalDisplayDefinitionV1,
+  type GlobalDisplayPathChunkV1, type GlobalDisplaySampleV1,
+  type GlobalDisplayTransitionV1, type GlobalReplayIndexV1,
+} from "./globalDisplay";
 
 export type NumericRole = 1 | 2 | 3 | 4 | 5 | 6;
 export type NumericLifecycle = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -222,6 +229,11 @@ export type DecodedPresentationPayload =
   | { readonly kind: "samples"; readonly value: readonly ReleaseSampleView[] }
   | { readonly kind: "prediction-path"; readonly value: PredictionPathView }
   | { readonly kind: "transport"; readonly value: TransportStatusView }
+  | { readonly kind: "global-definition"; readonly value: GlobalDisplayDefinitionV1 }
+  | { readonly kind: "global-samples"; readonly value: readonly GlobalDisplaySampleV1[] }
+  | { readonly kind: "global-path"; readonly value: GlobalDisplayPathChunkV1 }
+  | { readonly kind: "global-transition"; readonly value: GlobalDisplayTransitionV1 }
+  | { readonly kind: "global-replay-index"; readonly value: GlobalReplayIndexV1 }
   | { readonly kind: "evidence"; readonly value: EvidenceMetadata }
   | { readonly kind: "evidence-chunk"; readonly value: EvidenceChunk }
   | { readonly kind: "error"; readonly value: PresentationErrorView }
@@ -513,6 +525,11 @@ export function decodePresentationPayload(frame: Kps1Frame, expectedRole?: Numer
     case Kps1MessageKind.ReleaseSampleBatch: return { kind: "samples", value: decodeSamples(frame.payload) };
     case Kps1MessageKind.PredictionPath: return { kind: "prediction-path", value: decodePath(frame.payload) };
     case Kps1MessageKind.TransportStatus: return { kind: "transport", value: decodeTransport(frame.payload) };
+    case Kps1MessageKind.GlobalDisplayDefinition: return { kind: "global-definition", value: decodeGlobalDisplayDefinitionPayload(frame.payload, expectedRole ?? 1) };
+    case Kps1MessageKind.GlobalDisplaySampleBatch: return { kind: "global-samples", value: decodeGlobalDisplaySamplesPayload(frame.payload, expectedRole ?? 1) };
+    case Kps1MessageKind.GlobalDisplayPathChunk: return { kind: "global-path", value: decodeGlobalDisplayPathPayload(frame.payload, expectedRole ?? 1) };
+    case Kps1MessageKind.GlobalDisplayTransition: return { kind: "global-transition", value: decodeGlobalDisplayTransitionPayload(frame.payload) };
+    case Kps1MessageKind.GlobalReplayIndex: return { kind: "global-replay-index", value: decodeGlobalReplayIndexPayload(frame.payload) };
     case Kps1MessageKind.EvidenceMetadata: return { kind: "evidence", value: decodeEvidence(frame.payload) };
     case Kps1MessageKind.EvidenceChunk: return { kind: "evidence-chunk", value: decodeEvidenceChunk(frame.payload) };
     case Kps1MessageKind.Error: return { kind: "error", value: decodeError(frame.payload) };

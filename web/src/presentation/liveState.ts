@@ -3,6 +3,8 @@ import { decodePresentationPayload, type ActionProposalView, type ActionReceiptV
   type PredictionPathView, type PresentationErrorView, type PresentationEventView,
   type ProcedureView, type ReleaseSampleView, type TimelineEventView, type TransportStatusView,
 } from "../protocol/presentation";
+import type { GlobalDisplayDefinitionV1, GlobalDisplayPathChunkV1, GlobalDisplaySampleV1,
+  GlobalDisplayTransitionV1, GlobalReplayIndexV1 } from "../protocol/globalDisplay";
 import type { PresentationTransportEvent, PresentationTransportState } from "../transport";
 import { appendEvidenceChunk, beginEvidenceAssembly, type EvidenceAssembly } from "./evidenceAssembly";
 
@@ -21,6 +23,11 @@ export interface LivePresentationState {
   readonly samples: readonly ReleaseSampleView[];
   readonly paths: ReadonlyMap<number, PredictionPathView>;
   readonly transport?: TransportStatusView;
+  readonly globalDefinition?: GlobalDisplayDefinitionV1;
+  readonly globalSamples: readonly GlobalDisplaySampleV1[];
+  readonly globalPaths: ReadonlyMap<string, GlobalDisplayPathChunkV1>;
+  readonly globalTransitions: readonly GlobalDisplayTransitionV1[];
+  readonly globalReplayIndex?: GlobalReplayIndexV1;
   readonly evidence?: EvidenceMetadata;
   readonly evidenceAssembly?: EvidenceAssembly;
   readonly sealedEvidence?: Uint8Array;
@@ -31,7 +38,8 @@ export interface LivePresentationState {
 }
 
 export function initialLivePresentationState(demo = false): LivePresentationState {
-  return { connection: "idle", receipts: [], timeline: [], events: [], samples: [], paths: new Map(), demo };
+  return { connection: "idle", receipts: [], timeline: [], events: [], samples: [], paths: new Map(),
+    globalSamples: [], globalPaths: new Map(), globalTransitions: [], demo };
 }
 
 function appendUnique<T>(current: readonly T[], incoming: readonly T[], key: (value: T) => bigint, limit: number): readonly T[] {
@@ -79,6 +87,20 @@ export function reduceTransportEvent(
         return { ...state, paths, decodeError: undefined };
       }
       case "transport": return { ...state, transport: decoded.value, decodeError: undefined };
+      case "global-definition": return { ...state, globalDefinition: decoded.value, decodeError: undefined };
+      case "global-samples": return { ...state,
+        globalSamples: appendUnique(state.globalSamples, decoded.value, (value) => value.sequence, 32_768),
+        decodeError: undefined };
+      case "global-path": {
+        const globalPaths = new Map(state.globalPaths);
+        globalPaths.set(`${decoded.value.pathIdentity}:${decoded.value.chunkIndex}`, decoded.value);
+        return { ...state, globalPaths, decodeError: undefined };
+      }
+      case "global-transition": return { ...state,
+        globalTransitions: appendUnique(state.globalTransitions, [decoded.value],
+          (value) => (BigInt(value.releaseEpoch) << 32n) | BigInt(value.transitionIdentity), 64),
+        decodeError: undefined };
+      case "global-replay-index": return { ...state, globalReplayIndex: decoded.value, decodeError: undefined };
       case "evidence": {
         const evidenceAssembly = beginEvidenceAssembly(state.evidenceAssembly, decoded.value);
         return { ...state, evidence: decoded.value, evidenceAssembly,

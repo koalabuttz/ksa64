@@ -959,3 +959,351 @@ footer {
   color: var(--text);
   font-size: 0.68rem;
 }
+
+
+/* Phase 12C global mission presentation. Renderer-local state remains passive. */
+.global-viewer-panel {
+  grid-column: 1 / -1;
+  padding: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 75% 0%, rgb(35 108 122 / 18%), transparent 30rem),
+    linear-gradient(150deg, rgb(10 24 29 / 98%), rgb(4 11 14 / 98%));
+}
+
+.global-viewer-header,
+.global-viewer-footer,
+.global-layout-switcher,
+.global-viewer-controls,
+.global-source-legend,
+.global-replay-controls {
+  padding-inline: 1rem;
+}
+
+.global-viewer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.9rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.global-viewer-header h2 { margin-top: 0.18rem; }
+
+.global-viewer-status {
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.global-viewer-status span:first-child { color: var(--teal); }
+.global-viewer-status span[data-state="2d"] { color: var(--amber); }
+
+.global-layout-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-block: 0.55rem;
+  border-bottom: 1px solid var(--line);
+  background: rgb(3 10 13 / 58%);
+}
+
+.global-layout-switcher button,
+.global-viewer-controls button,
+.global-replay-controls button {
+  min-height: 2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.35rem;
+  padding: 0.36rem 0.65rem;
+  background: var(--surface-raised);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.62rem;
+}
+
+.global-layout-switcher button[aria-pressed="true"],
+.global-viewer-controls button:hover,
+.global-replay-controls button:not(:disabled):hover {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.global-viewer-workspace {
+  position: relative;
+  min-height: 31rem;
+  background: #03080b;
+}
+
+.global-render-stage,
+.global-renderer-canvas {
+  display: block;
+  width: 100%;
+  height: 31rem;
+}
+
+.global-render-stage {
+  position: relative;
+  overflow: hidden;
+}
+
+.global-renderer-canvas { touch-action: none; }
+
+.global-render-loading {
+  display: grid;
+  position: absolute;
+  inset: 0;
+  place-items: center;
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.7rem;
+}
+
+.global-scene-overlay {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.85rem;
+  display: grid;
+  gap: 0.16rem;
+  max-width: min(28rem, calc(100% - 1.7rem));
+  padding: 0.6rem 0.72rem;
+  border: 1px solid rgb(49 84 92 / 72%);
+  border-radius: 0.36rem;
+  background: rgb(3 10 13 / 78%);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 28%);
+  backdrop-filter: blur(8px);
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.6rem;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.global-scene-overlay strong { color: var(--text); font-size: 0.72rem; }
+
+.sim-truth-watermark {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  padding: 0.45rem 0.62rem;
+  border: 2px solid #d46dff;
+  border-radius: 0.28rem;
+  background: rgb(40 9 55 / 70%);
+  color: #f1baff;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.vehicle-locator-card {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.85rem;
+  width: min(17rem, calc(100% - 1.7rem));
+  padding: 0.7rem;
+  border: 1px solid rgb(49 84 92 / 78%);
+  border-radius: 0.42rem;
+  background: rgb(3 10 13 / 82%);
+  backdrop-filter: blur(9px);
+}
+
+.vehicle-locator-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin: 0.6rem 0 0;
+}
+
+.vehicle-locator-card dd { font-size: 0.62rem; }
+.vehicle-locator-card small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.57rem;
+  line-height: 1.4;
+}
+
+.vehicle-inset-diagram {
+  display: flex;
+  align-items: center;
+  height: 1.7rem;
+  margin-top: 0.55rem;
+}
+
+.vehicle-inset-nose {
+  width: 1.2rem;
+  height: 0.72rem;
+  border-radius: 100% 0 0 100%;
+  background: var(--text);
+}
+
+.vehicle-inset-body {
+  width: 8.2rem;
+  height: 0.72rem;
+  border-left: 2px solid var(--bg);
+  background: linear-gradient(180deg, #dce9e6, #78918e);
+}
+
+.vehicle-inset-plume {
+  width: 2.6rem;
+  height: 0.5rem;
+  clip-path: polygon(0 22%, 100% 50%, 0 78%);
+  background: linear-gradient(90deg, var(--amber), transparent);
+}
+
+.global-viewer-controls,
+.global-replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.55rem;
+  padding-block: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+.global-viewer-controls label,
+.global-replay-controls label {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 10rem;
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.global-viewer-controls select,
+.global-replay-controls select {
+  min-height: 2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.35rem;
+  padding-inline: 0.5rem;
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 0.66rem;
+}
+
+.global-source-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 1rem;
+  padding-block: 0.55rem;
+  border-top: 1px solid var(--line);
+  background: rgb(3 10 13 / 42%);
+}
+
+.global-source-legend label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.global-source-swatch {
+  width: 1.5rem;
+  border-top: 2px solid var(--muted);
+}
+.global-source-legend [data-source="planned"] .global-source-swatch { border-top-style: dashed; }
+.global-source-legend [data-source="onboard"] .global-source-swatch { border-color: var(--amber); }
+.global-source-legend [data-source="ground"] .global-source-swatch { border-color: var(--blue); }
+.global-source-legend [data-source="truth"] .global-source-swatch { border-color: #d46dff; }
+
+.truth-boundary-label {
+  margin-left: auto;
+  color: var(--green);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+
+.global-replay-controls {
+  align-items: center;
+  background: rgb(3 10 13 / 58%);
+}
+
+.replay-buttons { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.global-replay-controls button:disabled { cursor: not-allowed; opacity: 0.38; }
+
+.release-scrubber { flex: 1 1 18rem; }
+.release-scrubber input { width: 100%; accent-color: var(--teal); }
+
+.global-viewer-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-block: 0.52rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.58rem;
+}
+
+.dashboard[data-viewer-layout="engineering"] .global-viewer-workspace,
+.dashboard[data-viewer-layout="engineering"] .global-render-stage,
+.dashboard[data-viewer-layout="engineering"] .global-renderer-canvas {
+  height: 25rem;
+  min-height: 25rem;
+}
+
+.dashboard[data-viewer-layout="cinematic"] .global-viewer-workspace,
+.dashboard[data-viewer-layout="cinematic"] .global-render-stage,
+.dashboard[data-viewer-layout="cinematic"] .global-renderer-canvas {
+  height: min(70vh, 52rem);
+  min-height: 36rem;
+}
+
+.dashboard[data-operations-desk="closed"] > .operations-panel { display: none; }
+
+@media (max-width: 52rem) {
+  .global-viewer-workspace,
+  .global-render-stage,
+  .global-renderer-canvas {
+    height: 25rem;
+    min-height: 25rem;
+  }
+
+  .global-viewer-header { display: grid; }
+  .global-viewer-status { justify-items: start; }
+  .vehicle-locator-card { width: 14rem; }
+  .global-viewer-controls label,
+  .global-replay-controls label { flex: 1 1 10rem; }
+  .truth-boundary-label { width: 100%; margin-left: 0; }
+}
+
+@media (max-width: 32rem) {
+  .global-viewer-header,
+  .global-viewer-footer,
+  .global-layout-switcher,
+  .global-viewer-controls,
+  .global-source-legend,
+  .global-replay-controls { padding-inline: 0.65rem; }
+
+  .global-viewer-workspace,
+  .global-render-stage,
+  .global-renderer-canvas {
+    height: 22rem;
+    min-height: 22rem;
+  }
+
+  .vehicle-locator-card { display: none; }
+  .global-viewer-controls,
+  .global-replay-controls { align-items: stretch; }
+  .replay-buttons { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+}
+
+@media print {
+  .global-layout-switcher,
+  .global-viewer-controls,
+  .global-replay-controls { display: none; }
+  .global-viewer-panel { break-inside: avoid; }
+}

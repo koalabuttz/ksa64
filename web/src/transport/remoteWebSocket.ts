@@ -1,3 +1,4 @@
+import { GLOBAL_DISPLAY_V1_CAPABILITY } from "../protocol/globalDisplay";
 import {
   decodeKps1,
   encodeKps1,
@@ -122,7 +123,7 @@ export class RemoteWebSocketTransport extends BasePresentationTransport {
           const payload = encodeHandshakePayload({
             role: this.expectedRole ?? 2,
             clientInstance: this.clientInstance ?? createClientInstance(),
-            capabilityMask: 0n,
+            capabilityMask: GLOBAL_DISPLAY_V1_CAPABILITY,
             cursors: this.cursors,
           });
           socket.send(encodeKps1({ kind: Kps1MessageKind.HandshakeRequest, flags: 0,

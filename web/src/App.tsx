@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { RendererProbe } from "./components/RendererProbe";
+import { GlobalMissionViewer } from "./components/GlobalMissionViewer";
 import { TrajectoryPlot } from "./components/TrajectoryPlot";
 import { groundTrajectory as demoGround, onboardTrajectory as demoOnboard,
   procedures as demoProcedures, timeline as demoTimeline, type ProcedureStep, type TimelineEvent } from "./model/demo";
+import { buildExactGlobalDisplay, buildLegacySchematicDisplay, type GlobalDisplayLayoutV1 } from "./model/globalDisplay";
 import { plannedTrajectory } from "./model/missionReference";
 import type { TrajectoryPoint } from "./model/trajectory";
 import { usePresentationSession } from "./presentation/usePresentationSession";
@@ -139,6 +140,8 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
   const [demo, setDemo] = useState(false);
   const [demoActionIndex, setDemoActionIndex] = useState(0);
   const [actionError, setActionError] = useState<string>();
+  const [viewerLayout, setViewerLayout] = useState<GlobalDisplayLayoutV1>("hybrid");
+  const [operationsDeskOpen, setOperationsDeskOpen] = useState(true);
 
   const snapshot = demo ? undefined : state.snapshot;
   const liveProcedure = demo ? undefined : state.procedure;
@@ -184,6 +187,13 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
   const evidenceReceived = state.evidenceAssembly?.receivedLength ?? 0;
   const dispositionLabel = overallLabels[state.disposition?.overall ?? 0];
   const overall = demo ? "Contingency success" : dispositionLabel || lifecycleName(snapshot?.lifecycle);
+  const globalDisplay = useMemo(() => state.globalDefinition === undefined
+    ? buildLegacySchematicDisplay({ snapshot, samples: state.samples, paths: state.paths, timeline: state.timeline,
+      truthAllowed: role === "sim-director" && snapshot?.truthPresent === true, demonstration: demo })
+    : buildExactGlobalDisplay({ definition: state.globalDefinition, samples: state.globalSamples,
+      paths: state.globalPaths, transitions: state.globalTransitions, replay: state.globalReplayIndex }),
+  [demo, role, snapshot, state.globalDefinition, state.globalPaths, state.globalReplayIndex, state.globalSamples,
+    state.globalTransitions, state.paths, state.samples, state.timeline]);
 
   return (
     <div className="app-shell" data-contrast={contrast ? "high" : "standard"}>
@@ -211,7 +221,8 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
       {demo && <aside className="demo-banner" role="status">Demonstration mode uses static, non-authoritative test data.
         <button type="button" onClick={() => setDemo(false)}>Return to live connection</button></aside>}
 
-      <main id="main-content" className="dashboard">
+      <main id="main-content" className="dashboard" data-viewer-layout={viewerLayout}
+        data-operations-desk={operationsDeskOpen ? "open" : "closed"}>
         <section className="mission-strip" aria-labelledby="mission-title"><div>
           <p className="eyebrow">KSA-G10R · GNSS-loss operations</p><h2 id="mission-title">{overall}</h2></div>
           <dl className="mission-metrics">
@@ -222,10 +233,18 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
           </dl><div className="phase-progress"><span>Mission progress</span><progress value={demo ? 56.7 : progress} max="100">{progress.toFixed(1)}%</progress>
             <strong>{demo ? "56.7" : progress.toFixed(1)}%</strong></div></section>
 
-        <section className="panel trajectory-panel"><TrajectoryPlot planned={plannedTrajectory}
+        <GlobalMissionViewer model={globalDisplay} replay={transport.kind === "replay"}
+          layout={viewerLayout} deskOpen={operationsDeskOpen}
+          onLayoutChange={(value) => {
+            setViewerLayout(value);
+            if (value !== "cinematic") setOperationsDeskOpen(true);
+          }}
+          onDeskOpenChange={setOperationsDeskOpen} />
+
+        <section className="panel trajectory-panel operations-panel"><TrajectoryPlot planned={plannedTrajectory}
           onboard={onboardPath} ground={groundPath} apogeeKm={demo ? 249.8 : snapshot === undefined ? undefined : q12(snapshot.prediction.apogeeQ12Km)} /></section>
 
-        <section className="panel procedure-panel" aria-labelledby="procedure-title"><div className="panel-heading"><div>
+        <section className="panel procedure-panel operations-panel" aria-labelledby="procedure-title"><div className="panel-heading"><div>
           <p className="eyebrow">{demo ? "ASCENT / LOSS OF GPS AIDING" : liveProcedure?.title ?? "Operational procedures"}</p>
           <h2 id="procedure-title">{liveProcedure === undefined && !demo ? "Awaiting procedure" : "Active procedure"}</h2></div>
           <span className="count-pill">{demo ? "2 / 4" : liveProcedure === undefined ? "—" : `${liveProcedure.activeStep} / ${liveProcedure.stepCount}`}</span></div>
@@ -246,7 +265,7 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
               receiptFeedback(state.receipts, pendingAction))}</p></div>
         </section>
 
-        <section className="panel nav-panel" aria-labelledby="nav-title"><div className="panel-heading"><div><p className="eyebrow">Independent estimates</p>
+        <section className="panel nav-panel operations-panel" aria-labelledby="nav-title"><div className="panel-heading"><div><p className="eyebrow">Independent estimates</p>
           <h2 id="nav-title">Navigation residuals</h2></div><span className={snapshot?.gnssState === 2 || demo ? "warning-badge" : "count-pill"}>
             {demo || snapshot?.gnssState === 2 ? "GNSS invalid" : snapshot === undefined ? "Awaiting" : "GNSS healthy"}</span></div>
           <dl className="residual-grid"><div><dt>Position</dt><dd>{demo ? "0.41" : positionResidual.toFixed(2)} km</dd><span>onboard ↔ ground estimate</span></div>
@@ -258,14 +277,14 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
             <meter value={Math.min(positionResidual, 0.75)} min="0" max="0.75">position gate</meter></div><div><span>Velocity gate</span>
             <meter value={Math.min(velocityResidual, 3)} min="0" max="3">velocity gate</meter></div></div></section>
 
-        <section className="panel timeline-panel" aria-labelledby="timeline-title"><div className="panel-heading"><div><p className="eyebrow">Operational record</p>
+        <section className="panel timeline-panel operations-panel" aria-labelledby="timeline-title"><div className="panel-heading"><div><p className="eyebrow">Operational record</p>
           <h2 id="timeline-title">Event timeline</h2></div><span className="count-pill">{timeline.length} events</span></div>
           <ol className="timeline">{timeline.length === 0 ? <li data-severity="nominal"><time>—</time><span><strong>Awaiting events</strong>
             <small>Timeline records are ordered and never coalesced.</small></span></li> : timeline.map((event, index) => (
             <li key={`${event.time}-${event.title}-${index}`} data-severity={event.severity}><time>{event.time}</time><span><strong>{event.title}</strong>
               <small>{event.detail}</small></span></li>))}</ol></section>
 
-        <section className="panel disposition-panel" aria-labelledby="disposition-title"><div className="panel-heading"><div><p className="eyebrow">Not a single pass/fail bit</p>
+        <section className="panel disposition-panel operations-panel" aria-labelledby="disposition-title"><div className="panel-heading"><div><p className="eyebrow">Not a single pass/fail bit</p>
           <h2 id="disposition-title">Mission disposition</h2></div><span className="count-pill">{overall}</span></div>
           <dl className="outcome-grid">{axes.map((axis) => <div key={axis.label} data-state={axis.state}><dt>{axis.label}</dt><dd>{axis.value}</dd></div>)}</dl>
           <div className="evidence-card" data-complete={evidenceComplete}><span className="integrity-mark" aria-hidden="true">{evidenceComplete ? "✓" : "…"}</span><span>
@@ -273,7 +292,6 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
             <small>{demo ? "Static fixture · not a completed archive" : `${snapshot?.releaseEpoch ?? 0} ordered releases · ${snapshot?.actionCount ?? 0} accepted actions · ${evidenceReceived}/${(state.evidence?.totalLength ?? 0n).toString()} bytes verified`}</small>
           </span>{evidenceComplete && state.sealedEvidence !== undefined ? <button type="button" onClick={() => downloadEvidence(state.sealedEvidence!)}>Save KSB11</button> : null}</div></section>
 
-        <RendererProbe />
       </main><footer><span>KSA64 role-filtered engineering presentation</span><span>{demo ? "DEMONSTRATION FIXTURE · no live authority" :
         transport.kind === "replay" ? "Read-only role-filtered replay" : "Rust owns world, flight, operations, and evidence"}</span></footer>
     </div>
