@@ -3041,6 +3041,23 @@ bool UKsa64GlobalViewerSubsystem::WriteCompletedGuidedSemanticRecord(
             Record.ReleaseEpoch));
         return false;
     }
+    if (Record.OverallDisposition != SemanticState.OverallDisposition
+        || Record.ObjectiveDisposition != SemanticState.ObjectiveDisposition
+        || Record.VehicleDisposition != SemanticState.VehicleDisposition
+        || Record.ProcedureDisposition != SemanticState.ProcedureDisposition
+        || Record.OperatorDisposition != SemanticState.OperatorDisposition
+        || Record.AvionicsDisposition != SemanticState.AvionicsDisposition
+        || Record.EvidenceDisposition != SemanticState.EvidenceDisposition)
+    {
+        FailGlobalEvidence(FString::Printf(
+            TEXT("guided terminal disposition parity failed at release %u: record=%u/%u scene=%u/%u"),
+            Record.ReleaseEpoch,
+            Record.OverallDisposition,
+            Record.EvidenceDisposition,
+            SemanticState.OverallDisposition,
+            SemanticState.EvidenceDisposition));
+        return false;
+    }
 
     bool bPlannedPath = false;
     bool bOnboardPath = false;
@@ -3858,6 +3875,21 @@ void UKsa64GlobalViewerSubsystem::TickGlobalEvidence(float DeltaSeconds)
                 SemanticState.OverallDisposition,
                 SemanticState.EvidenceDisposition));
             return;
+        }
+        // The historical release metadata above was captured live, before a terminal
+        // mission disposition existed. Cross-renderer evidence is a verified completed
+        // replay, so bind every retained milestone to Rust's terminal multidimensional
+        // disposition before recapturing its role-filtered scene. Frame, source, GNSS,
+        // action, and release metadata remain the exact values observed live.
+        for (FKsa64GlobalGuidedEvidenceRecord& Record : GlobalEvidenceGuidedRecords)
+        {
+            Record.OverallDisposition = GuidedView.OverallDisposition;
+            Record.ObjectiveDisposition = GuidedView.ObjectiveDisposition;
+            Record.VehicleDisposition = GuidedView.VehicleDisposition;
+            Record.ProcedureDisposition = GuidedView.ProcedureDisposition;
+            Record.OperatorDisposition = GuidedView.OperatorDisposition;
+            Record.AvionicsDisposition = GuidedView.AvionicsDisposition;
+            Record.EvidenceDisposition = GuidedView.EvidenceDisposition;
         }
         GlobalEvidenceGuidedRecaptureIndex = 0;
         GlobalEvidencePhase = 11;
