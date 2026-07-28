@@ -578,8 +578,13 @@ execution remain measured follow-ons rather than assumptions.
 
 ### Phase 12C: complete global engineering viewer
 
-Status: planned after Phase 12B.5. The frozen global-viewer boundary remains
-`phase12/PHASE12C_HANDOFF.md`.
+Status: implementation in progress from commit `eb666cb`. The accepted
+implementation contract is `phase12/PHASE12C_PLAN.md`.
+
+The remaining physical Duet, Vita3K, and physical Vita Phase 12B.5
+qualifications are an independent follow-up workstream. They no longer gate
+Phase 12C implementation or completion, and Phase 12B.5 is not thereby
+reclassified as complete.
 
 Purpose: replay the complete accepted Phase 10 KSA-G10R mission to prove the
 engineering-viewer responsibilities that the short GNSS-loss coast scenario

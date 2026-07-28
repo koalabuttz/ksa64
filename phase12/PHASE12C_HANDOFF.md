@@ -1,6 +1,8 @@
 # Phase 12C handoff — complete global engineering viewer
 
-Status: scope frozen. Phase 12B is complete and accepted; Phase 12C planning entry awaits the remaining Phase 12B.5 physical Duet, Vita3K emulator, and physical Vita qualification gates.
+Status: historical scope boundary consumed by `PHASE12C_PLAN.md`. Phase 12C is
+in progress. The remaining Phase 12B.5 physical-device qualifications are
+tracked independently and no longer gate Phase 12C.
 
 Date: 2026-07-27
 

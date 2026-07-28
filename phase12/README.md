@@ -15,7 +15,7 @@ The work is divided so that each slice proves one coherent boundary:
 | 12A | **Complete:** pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaged smoke test, and optional MCP feasibility |
 | 12B | **Complete:** accepted 674.71875-second GNSS-loss mission, human-scale operations, multi-axis outcomes, packaged 2-D command desk, 17/17 automation, exact evidence, and bounded presentation-service timing |
 | 12B.5 | **Software- and hosted-portable-runtime-qualified; device acceptance pending:** portable session/KPS1 authority, bridge/platform packaging, secure loopback and paired LAN, compact React/Babylon PWA, exact Rust/WASM authority, and Vita/SDL2; device and emulator gates remain open |
-| 12C | Renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2 |
+| 12C | **In progress:** renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2 |
 | 12C.5 | Portable web/PWA, Vita/SDL2, Android, and iOS operations clients |
 | 12D | Mission Foundry vehicle/mission authoring and GUI/headless compiler parity |
 | 12E | Production visual assets, NASA-derived reference material, effects, quality tiers, and visual performance |
@@ -35,7 +35,9 @@ The work is divided so that each slice proves one coherent boundary:
 - [PHASE12B5_COMPLETION.md](PHASE12B5_COMPLETION.md) — software-complete checkpoint, local evidence, and explicit pending qualification gates.
 - [CI.md](CI.md) — hosted native/WASM checks and the explicit physical-device exclusions.
 - [WEB_PLATFORM.md](WEB_PLATFORM.md) — accepted Babylon.js, React/TypeScript, Rust/WASM, browser-authority, lifecycle, and Duet decision.
-- [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md) — frozen Phase 12B global-viewer boundary, consumed after 12B.5.
+- [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md) — historical frozen Phase 12B global-viewer boundary.
+- [PHASE12C_PLAN.md](PHASE12C_PLAN.md) — accepted global-display, renderer,
+  replay, role, compatibility, and completion contract.
 - [complete-phase12b.ps1](complete-phase12b.ps1) — composed Phase 12A, Rust, C++ harness, and explicit optional Unreal audit.
 - [ENGINE_DECISION.md](ENGINE_DECISION.md) — accepted engine, authority, and
   rollout decision, including deliberate changes to the supplied Unreal guide.
