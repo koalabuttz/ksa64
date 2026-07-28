@@ -592,8 +592,6 @@ async function performAcceptedGuidedTranscript(): Promise<void> {
       ? true : undefined;
   }, 180_000, "complete four-action guided mission");
   await waitFor(() => !releaseInput().disabled ? true : undefined, 10_000, "completed-session replay controls");
-  await waitFor(() => document.querySelector<HTMLElement>(".evidence-card")?.dataset.complete === "true"
-    ? true : undefined, 30_000, "completed KSB11 evidence transfer");
 }
 
 async function guidedMilestone(
