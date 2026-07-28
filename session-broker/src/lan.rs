@@ -11,10 +11,11 @@ use std::{
 
 use ksa64_presentation::{
     decode_typed_payload, encode_typed_payload, parse_kps1_frame, write_kps1_frame, CursorError,
-    Kps1Header, PresentationCursors, PresentationErrorView, PresentationHandshake,
-    PresentationMessageKind, PresentationPace, PresentationPayload, PresentationRole,
-    SealedEvidenceChunk, SealedEvidenceMetadata, KPS1_EVIDENCE_CHUNK_DATA_MAX_LENGTH,
-    KPS1_FLAG_RESPONSE, KPS1_HEADER_LENGTH,
+    Kps1Header, Kps1SequenceCursor, PresentationCursors, PresentationErrorView,
+    PresentationHandshake, PresentationMessageKind, PresentationPace, PresentationPayload,
+    PresentationRole, SealedEvidenceChunk, SealedEvidenceMetadata,
+    KPS1_CAPABILITY_GLOBAL_DISPLAY_V1, KPS1_EVIDENCE_CHUNK_DATA_MAX_LENGTH, KPS1_FLAG_RESPONSE,
+    KPS1_HEADER_LENGTH,
 };
 
 use crate::{
@@ -35,6 +36,7 @@ pub const LAN_HANDSHAKE_TIMEOUT_MILLIS: u64 = 5_000;
 pub const LAN_MAX_CONTROL_ADVANCE_RELEASES: u32 = 4_096;
 pub const LAN_ERROR_RESYNC_REQUIRED: u16 = 1_001;
 pub const LAN_ERROR_CURSOR_AHEAD: u16 = 1_002;
+pub const LAN_SUPPORTED_PRESENTATION_CAPABILITIES: u64 = KPS1_CAPABILITY_GLOBAL_DISPLAY_V1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PairedLanError {
@@ -53,6 +55,7 @@ pub enum PairedLanError {
     Protocol,
     ProtocolFrame,
     ProtocolPayload,
+    ProtocolSequence,
     ProtocolEncode(PresentationMessageKind),
     ProtocolControl,
     ProtocolSequenceOverflow,
@@ -694,6 +697,7 @@ fn run_encrypted_session(
         broker: context.broker.as_ref(),
         client_id,
     };
+    let capability_mask = handshake.capability_mask & LAN_SUPPORTED_PRESENTATION_CAPABILITIES;
     let mut outbound_sequence = 1_u64;
     write_secure_payload(
         stream,
@@ -701,7 +705,7 @@ fn run_encrypted_session(
         &PresentationPayload::HandshakeResponse(PresentationHandshake {
             role,
             client_instance: client_id,
-            capability_mask: handshake.capability_mask,
+            capability_mask,
             cursors: attached.cursors,
         }),
         role,
@@ -710,8 +714,21 @@ fn run_encrypted_session(
         decoded.header.correlation_id,
         KPS1_FLAG_RESPONSE,
     )?;
+    let mut inbound_sequence = Kps1SequenceCursor::new(context.session_nonce, 2)
+        .map_err(|_| PairedLanError::ProtocolSequence)?;
     let mut cursors = handshake.cursors;
     let mut evidence_sent = false;
+    poll_and_send_secure_publication(
+        stream,
+        channel,
+        client_id,
+        role,
+        context,
+        &mut outbound_sequence,
+        &mut cursors,
+        &mut evidence_sent,
+        0,
+    )?;
     while !context.shutdown.load(Ordering::Acquire) {
         {
             let registry = context
@@ -732,9 +749,11 @@ fn run_encrypted_session(
             client_id,
             role,
             context,
+            &mut inbound_sequence,
             &mut outbound_sequence,
             &mut cursors,
             &mut evidence_sent,
+            capability_mask,
         )?;
     }
     Ok(())
@@ -751,6 +770,20 @@ impl Drop for LanBrokerDisconnectGuard<'_> {
     }
 }
 
+fn validate_encrypted_client_header(
+    header: Kps1Header,
+    capability_mask: u64,
+    inbound_sequence: &mut Kps1SequenceCursor,
+) -> Result<(), PairedLanError> {
+    inbound_sequence
+        .accept(header)
+        .map_err(|_| PairedLanError::ProtocolSequence)?;
+    if !header.kind.is_negotiated_by(capability_mask) {
+        return Err(PairedLanError::ProtocolControl);
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle_encrypted_client_frame(
     stream: &mut TcpStream,
@@ -759,11 +792,14 @@ fn handle_encrypted_client_frame(
     client_id: u64,
     role: PresentationRole,
     context: &LanListenerContext,
+    inbound_sequence: &mut Kps1SequenceCursor,
     outbound_sequence: &mut u64,
     client_cursors: &mut PresentationCursors,
     evidence_sent: &mut bool,
+    capability_mask: u64,
 ) -> Result<(), PairedLanError> {
     let frame = parse_kps1_frame(bytes).map_err(|_| PairedLanError::ProtocolFrame)?;
+    validate_encrypted_client_header(frame.header, capability_mask, inbound_sequence)?;
     let payload = decode_typed_payload(frame.header.kind, frame.payload, role)
         .map_err(|_| PairedLanError::ProtocolPayload)?;
     let correlation = frame.header.correlation_id;
@@ -824,8 +860,55 @@ fn handle_encrypted_client_frame(
                 KPS1_FLAG_RESPONSE,
             )?;
         }
+        PresentationPayload::GlobalDisplayRangeRequest(request) => {
+            let publication = context
+                .broker
+                .global_display(client_id, request)
+                .map_err(PairedLanError::Broker)?
+                .ok_or(PairedLanError::ProtocolControl)?;
+            send_secure_global_display_publication(
+                stream,
+                channel,
+                publication,
+                role,
+                context.session_nonce,
+                outbound_sequence,
+                correlation,
+            )?;
+            return Ok(());
+        }
         _ => return Err(PairedLanError::ProtocolControl),
     }
+    poll_and_send_secure_publication(
+        stream,
+        channel,
+        client_id,
+        role,
+        context,
+        outbound_sequence,
+        client_cursors,
+        evidence_sent,
+        correlation,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn poll_and_send_secure_publication(
+    stream: &mut TcpStream,
+    channel: &mut AuthenticatedNoiseChannel,
+    client_id: u64,
+    role: PresentationRole,
+    context: &LanListenerContext,
+    outbound_sequence: &mut u64,
+    client_cursors: &mut PresentationCursors,
+    evidence_sent: &mut bool,
+    correlation: u64,
+) -> Result<(), PairedLanError> {
+    let response_flags = if correlation == 0 {
+        0
+    } else {
+        KPS1_FLAG_RESPONSE
+    };
     let publication = match context.broker.poll(client_id, *client_cursors, 256) {
         Ok(publication) => publication,
         Err(BrokerError::Cursor(CursorError::ResyncRequired { oldest_available })) => {
@@ -842,7 +925,7 @@ fn handle_encrypted_client_frame(
                 context.session_nonce,
                 outbound_sequence,
                 correlation,
-                KPS1_FLAG_RESPONSE,
+                response_flags,
             )?;
             return Ok(());
         }
@@ -860,7 +943,7 @@ fn handle_encrypted_client_frame(
                 context.session_nonce,
                 outbound_sequence,
                 correlation,
-                KPS1_FLAG_RESPONSE,
+                response_flags,
             )?;
             return Ok(());
         }
@@ -892,6 +975,84 @@ fn handle_encrypted_client_frame(
         }
     }
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn send_secure_global_display_publication(
+    stream: &mut TcpStream,
+    channel: &mut AuthenticatedNoiseChannel,
+    publication: crate::GlobalDisplayPublication,
+    role: PresentationRole,
+    session_nonce: u64,
+    sequence: &mut u64,
+    correlation: u64,
+) -> Result<(), PairedLanError> {
+    write_secure_payload(
+        stream,
+        channel,
+        &PresentationPayload::GlobalDisplayDefinition(publication.definition),
+        role,
+        session_nonce,
+        sequence,
+        0,
+        0,
+    )?;
+    if !publication.samples.is_empty() {
+        write_secure_payload(
+            stream,
+            channel,
+            &PresentationPayload::GlobalDisplaySampleBatch(publication.samples),
+            role,
+            session_nonce,
+            sequence,
+            0,
+            0,
+        )?;
+    }
+    for path in publication.paths {
+        write_secure_payload(
+            stream,
+            channel,
+            &PresentationPayload::GlobalDisplayPathChunk(path),
+            role,
+            session_nonce,
+            sequence,
+            0,
+            0,
+        )?;
+    }
+    for transition in publication.transitions {
+        write_secure_payload(
+            stream,
+            channel,
+            &PresentationPayload::GlobalDisplayTransition(transition),
+            role,
+            session_nonce,
+            sequence,
+            0,
+            0,
+        )?;
+    }
+    write_secure_payload(
+        stream,
+        channel,
+        &PresentationPayload::GlobalReplayIndex(publication.replay_index),
+        role,
+        session_nonce,
+        sequence,
+        0,
+        0,
+    )?;
+    write_secure_payload(
+        stream,
+        channel,
+        &PresentationPayload::GlobalDisplayCursorState(publication.cursor),
+        role,
+        session_nonce,
+        sequence,
+        correlation,
+        KPS1_FLAG_RESPONSE,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1225,7 +1386,14 @@ mod tests {
         fn current_disposition(&self) -> Option<DispositionView> {
             Some(DispositionView {
                 overall: OverallDisposition::DegradedSuccess,
-                axes: Default::default(),
+                axes: ksa64_presentation::DispositionAxes {
+                    objective: 1,
+                    vehicle: 1,
+                    procedure: 1,
+                    operator: 1,
+                    avionics: 1,
+                    evidence: 1,
+                },
                 reason_identity: 1,
             })
         }
@@ -1339,6 +1507,52 @@ mod tests {
         fn step_one_release(&mut self) -> Result<u32, AuthorityError> {
             self.advance_bounded(1)
         }
+    }
+
+    #[test]
+    fn post_handshake_kps1_nonce_and_sequence_are_strict() {
+        let header = Kps1Header {
+            kind: PresentationMessageKind::ReplayControl,
+            flags: 0,
+            session_nonce: 99,
+            sequence: 2,
+            correlation_id: 7,
+            payload_length: 0,
+        };
+        let mut cursor = Kps1SequenceCursor::new(99, 2).unwrap();
+        assert_eq!(
+            validate_encrypted_client_header(header, 0, &mut cursor),
+            Ok(())
+        );
+        assert_eq!(
+            validate_encrypted_client_header(header, 0, &mut cursor),
+            Err(PairedLanError::ProtocolSequence)
+        );
+
+        let mut wrong_nonce = Kps1SequenceCursor::new(99, 2).unwrap();
+        assert_eq!(
+            validate_encrypted_client_header(
+                Kps1Header {
+                    session_nonce: 100,
+                    ..header
+                },
+                0,
+                &mut wrong_nonce,
+            ),
+            Err(PairedLanError::ProtocolSequence)
+        );
+        let mut reordered = Kps1SequenceCursor::new(99, 2).unwrap();
+        assert_eq!(
+            validate_encrypted_client_header(
+                Kps1Header {
+                    sequence: 3,
+                    ..header
+                },
+                0,
+                &mut reordered,
+            ),
+            Err(PairedLanError::ProtocolSequence)
+        );
     }
 
     #[test]
@@ -1532,6 +1746,22 @@ mod tests {
             return Err(PairedLanError::Protocol);
         };
         assert_ne!(handshake.client_instance, claimed_client_id);
+        assert_eq!(handshake.cursors, PresentationCursors::default());
+
+        // A successful reconnect immediately receives the retained publication
+        // requested by the handshake cursors. Drain it through the transport
+        // status boundary before issuing another control frame.
+        let mut saw_initial_snapshot = false;
+        loop {
+            let publication = read_one_secure_frame(stream, channel)?;
+            let frame =
+                parse_kps1_frame(&publication).map_err(|_| PairedLanError::ProtocolFrame)?;
+            saw_initial_snapshot |= frame.header.kind == PresentationMessageKind::Snapshot;
+            if frame.header.kind == PresentationMessageKind::TransportStatus {
+                break;
+            }
+        }
+        assert!(saw_initial_snapshot);
 
         write_secure_payload(
             stream,
@@ -1543,9 +1773,17 @@ mod tests {
             10,
             0,
         )?;
-        let publication = read_one_secure_frame(stream, channel)?;
-        let frame = parse_kps1_frame(&publication).map_err(|_| PairedLanError::ProtocolFrame)?;
-        assert_eq!(frame.header.kind, PresentationMessageKind::Snapshot);
+        let mut saw_snapshot = false;
+        loop {
+            let publication = read_one_secure_frame(stream, channel)?;
+            let frame =
+                parse_kps1_frame(&publication).map_err(|_| PairedLanError::ProtocolFrame)?;
+            saw_snapshot |= frame.header.kind == PresentationMessageKind::Snapshot;
+            if frame.header.kind == PresentationMessageKind::TransportStatus {
+                break;
+            }
+        }
+        assert!(saw_snapshot);
         Ok(handshake.client_instance)
     }
 

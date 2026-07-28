@@ -11,7 +11,9 @@
 #![allow(clippy::missing_safety_doc)]
 
 pub mod artifact_manifest;
+mod global_display;
 mod presentation;
+pub use global_display::*;
 pub use presentation::*;
 
 use ksa64_host::application::{Ksa64Application, MissionDisplay, MissionPace, MissionRequest};
@@ -237,6 +239,17 @@ struct Shared {
     onboard_trajectory_points: Vec<PredictionPathPointV1>,
     ground_trajectory_header: Option<PredictionPathHeaderV1>,
     ground_trajectory_points: Vec<PredictionPathPointV1>,
+    global_role: Option<ksa64_presentation::PresentationRole>,
+    global_definition: Option<ksa64_presentation::GlobalDisplayDefinitionV1>,
+    global_samples: VecDeque<ksa64_presentation::GlobalDisplaySampleV1>,
+    global_all_samples: Vec<ksa64_presentation::GlobalDisplaySampleV1>,
+    global_planned_samples: Vec<ksa64_presentation::GlobalDisplaySampleV1>,
+    global_transitions: VecDeque<ksa64_presentation::GlobalDisplayTransitionV1>,
+    global_replay_index: Option<ksa64_presentation::GlobalReplayIndexV1>,
+    global_accepted_exact: bool,
+    global_transition_count: u32,
+    global_sample_overflow: bool,
+    global_transition_overflow: bool,
     action_proposal: Option<ActionProposalV1>,
     action_receipt: Option<ActionReceiptV1>,
     recommended: Option<Vec<u8>>,
@@ -1362,11 +1375,21 @@ fn publish_full(
     event_cursor: &mut u32,
     timeline_cursor: &mut u32,
     sample_cursor: &mut u32,
+    global_sample_cursor: &mut u32,
+    global_transition_cursor: &mut u32,
 ) -> Result<(), ResultCode> {
     let snapshot = session.snapshot();
     let events = session.events_after(*event_cursor);
     let timeline = session.timeline_after(*timeline_cursor);
     let samples = session.release_samples_after(*sample_cursor);
+    let global_definition = session.global_display_definition();
+    let global_samples = session.global_display_samples_after(*global_sample_cursor);
+    let global_transitions = session
+        .global_display_transitions_after(*global_transition_cursor)
+        .to_vec();
+    let global_replay_index = session.global_display_replay_index();
+    let global_planned_samples = session.global_display_planned_samples().to_vec();
+    let global_role = ksa64_presentation::PresentationRole::from(session.role());
     let recommended = if let Some(load) = session.recommended_load() {
         let mut bytes = vec![0; KUL11_LENGTH];
         write_kul11(&load, &mut bytes).map_err(|_| ResultCode::Internal)?;
@@ -1412,6 +1435,31 @@ fn publish_full(
     state.ground_trajectory_header = ground_trajectory_header;
     state.ground_trajectory_points = ground_trajectory_points;
     state.last_command_result = result as i32;
+    state.global_role = Some(global_role);
+    state.global_definition = Some(global_definition);
+    state.global_accepted_exact = true;
+    state.global_replay_index = Some(global_replay_index);
+    if state.global_planned_samples.is_empty() {
+        state.global_planned_samples = global_planned_samples;
+    }
+    for sample in global_samples {
+        if state.global_samples.len() == KSA64_VIEWER_SAMPLE_CAPACITY {
+            state.global_samples.pop_front();
+            state.global_sample_overflow = true;
+        }
+        state.global_all_samples.push(sample.clone());
+        state.global_samples.push_back(sample);
+        *global_sample_cursor = global_sample_cursor.saturating_add(1);
+    }
+    for transition in global_transitions {
+        if state.global_transitions.len() == KSA64_VIEWER_EVENT_CAPACITY {
+            state.global_transitions.pop_front();
+            state.global_transition_overflow = true;
+        }
+        state.global_transitions.push_back(transition);
+        state.global_transition_count = state.global_transition_count.saturating_add(1);
+        *global_transition_cursor = global_transition_cursor.saturating_add(1);
+    }
     for event in events {
         if event.kind != MissionSessionEventKind::Release {
             if state.events.len() == KSA64_VIEWER_EVENT_CAPACITY {
@@ -1567,6 +1615,8 @@ fn full_worker_main(
     let mut event_cursor = 0_u32;
     let mut timeline_cursor = 0_u32;
     let mut sample_cursor = 0_u32;
+    let mut global_sample_cursor = 0_u32;
+    let mut global_transition_cursor = 0_u32;
     if let Err(error) = publish_full(
         &shared,
         &live,
@@ -1576,6 +1626,8 @@ fn full_worker_main(
         &mut event_cursor,
         &mut timeline_cursor,
         &mut sample_cursor,
+        &mut global_sample_cursor,
+        &mut global_transition_cursor,
     ) {
         let _ = initialized.send(Err(error));
         if let Ok(mut state) = shared.lock() {
@@ -1621,6 +1673,8 @@ fn full_worker_main(
             &mut event_cursor,
             &mut timeline_cursor,
             &mut sample_cursor,
+            &mut global_sample_cursor,
+            &mut global_transition_cursor,
         ) {
             if let Ok(mut state) = shared.lock() {
                 state.worker_failed = true;
@@ -3053,7 +3107,7 @@ mod tests {
     // The full Phase 12B fixture uses the accepted process-global reference
     // pack cache. Serialize the two FFI tests that construct that fixture so
     // ordinary parallel cargo test execution cannot race initialization.
-    static FULL_SESSION_TEST_LOCK: Mutex<()> = Mutex::new(());
+    pub(crate) static FULL_SESSION_TEST_LOCK: Mutex<()> = Mutex::new(());
     fn buf() -> OwnedBuffer {
         OwnedBuffer {
             abi_version: 1,

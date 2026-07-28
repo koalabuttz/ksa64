@@ -9,7 +9,8 @@ import {
   type GlobalDisplayModelV1,
   type GlobalDisplaySourceV1,
 } from "../model/globalDisplay";
-import { buildGlobalSceneSnapshot } from "../model/globalScene";
+import { buildGlobalSceneSemanticSnapshot, buildGlobalSceneSnapshot, shouldSnapExactly,
+  type GlobalDisplayMotionMode, type GlobalDisplayPathDetail, type GlobalSceneSemanticSnapshotV1 } from "../model/globalScene";
 import {
   startGlobalMissionRenderer,
   type GlobalMissionRenderer,
@@ -24,6 +25,7 @@ export interface GlobalMissionViewerProps {
   readonly deskOpen: boolean;
   onLayoutChange(layout: GlobalDisplayLayoutV1): void;
   onDeskOpenChange(open: boolean): void;
+  onSemanticSnapshot?(snapshot: GlobalSceneSemanticSnapshotV1): void;
 }
 
 type PlaybackRate = 0.25 | 0.5 | 1 | 2 | 4 | 8 | 16 | "unpaced";
@@ -59,6 +61,14 @@ function segmentLabel(value: string): string {
   return value.split("-").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" ");
 }
 
+function projectedBodyAxisDegrees(quaternion: readonly [number, number, number, number] | undefined): number {
+  if (quaternion === undefined) return 0;
+  const [w, x, y, z] = quaternion;
+  const axisX = 1 - 2 * (y * y + z * z);
+  const axisUp = 2 * (x * z - w * y);
+  return Math.atan2(-axisUp, axisX) * 180 / Math.PI;
+}
+
 function formatMet(rawQ16: number): string {
   const seconds = rawQ16 / 65_536;
   const minutes = Math.floor(seconds / 60);
@@ -72,6 +82,7 @@ export function GlobalMissionViewer({
   deskOpen,
   onLayoutChange,
   onDeskOpenChange,
+  onSemanticSnapshot,
 }: GlobalMissionViewerProps) {
   const container = useRef<HTMLDivElement>(null);
   const renderer = useRef<GlobalMissionRenderer | undefined>(undefined);
@@ -88,6 +99,9 @@ export function GlobalMissionViewer({
   const [truthVisible, setTruthVisible] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1);
+  const [interpolationAlpha, setInterpolationAlpha] = useState(1);
+  const [motionMode, setMotionMode] = useState<GlobalDisplayMotionMode>("smooth");
+  const [pathDetail, setPathDetail] = useState<GlobalDisplayPathDetail>("auto");
 
   useEffect(() => {
     if (!replay || playing || selectedRelease >= latestRelease) setSelectedRelease(latestRelease);
@@ -104,14 +118,20 @@ export function GlobalMissionViewer({
     camera,
     domain,
     selectedRelease,
+    motionMode,
+    pathDetail,
     visibleSources,
     truthVisible,
     directorEnabled,
-  }), [camera, directorEnabled, domain, selectedRelease, truthVisible, visibleSources]);
+    interpolationAlpha,
+  }), [camera, directorEnabled, domain, interpolationAlpha, motionMode, pathDetail, selectedRelease, truthVisible, visibleSources]);
   const sceneSnapshot = useMemo(
     () => buildGlobalSceneSnapshot(model, sample, controls, previous),
     [controls, model, previous, sample],
   );
+  const semanticSnapshot = useMemo(() => buildGlobalSceneSemanticSnapshot(sceneSnapshot), [sceneSnapshot]);
+
+  useEffect(() => { onSemanticSnapshot?.(semanticSnapshot); }, [onSemanticSnapshot, semanticSnapshot]);
 
   useEffect(() => {
     if (container.current === null) return;
@@ -146,6 +166,27 @@ export function GlobalMissionViewer({
   useEffect(() => {
     renderer.current?.update(sceneSnapshot);
   }, [sceneSnapshot]);
+
+  useEffect(() => {
+    const mayInterpolate = motionMode === "smooth" && (!replay || playing) && playbackRate !== "unpaced" &&
+      !shouldSnapExactly(previous, sample);
+    if (!mayInterpolate || typeof window.requestAnimationFrame !== "function") {
+      setInterpolationAlpha(1);
+      return;
+    }
+    const rate = replay ? playbackRate : 1;
+    const durationMillis = 31.25 / rate;
+    const started = window.performance.now();
+    let animationFrame = 0;
+    setInterpolationAlpha(0);
+    const animate = (now: number): void => {
+      const alpha = Math.min(1, Math.max(0, (now - started) / durationMillis));
+      setInterpolationAlpha(alpha);
+      if (alpha < 1) animationFrame = window.requestAnimationFrame(animate);
+    };
+    animationFrame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [motionMode, playbackRate, playing, previous, replay, sample]);
 
   useEffect(() => {
     if (!replay || !playing || model.samples.length < 2) return;
@@ -191,6 +232,7 @@ export function GlobalMissionViewer({
   const actualCamera = directorEnabled ? directorCameraForSample(sample) : camera;
   const truthAvailable = model.definition.availableSources.includes("truth");
   const onboard = sceneSnapshot.sources.find((value) => value.source === "onboard");
+  const insetAttitudeDegrees = projectedBodyAxisDegrees(onboard?.bodyQuaternion);
   const markerOptions = model.replay.markers.filter((value) =>
     value.releaseEpoch >= model.replay.firstRelease && value.releaseEpoch <= Math.max(model.replay.lastRelease, latestRelease));
 
@@ -203,6 +245,7 @@ export function GlobalMissionViewer({
       data-semantic-frame={sceneSnapshot.frame}
       data-semantic-camera={sceneSnapshot.camera}
       data-quality={sceneSnapshot.quality}
+      data-semantic-scene={JSON.stringify(semanticSnapshot)}
     >
       <header className="global-viewer-header">
         <div>
@@ -240,7 +283,9 @@ export function GlobalMissionViewer({
         {sceneSnapshot.truthLabelVisible ? <div className="sim-truth-watermark">SIM TRUTH</div> : null}
         <aside className="vehicle-locator-card" aria-label="True-scale vehicle inspection">
           <p className="eyebrow">True-scale local inset</p>
-          <div className="vehicle-inset-diagram" aria-hidden="true">
+          <div className="vehicle-inset-diagram" aria-hidden="true"
+            data-release={sceneSnapshot.releaseEpoch}
+            style={{ transform: `rotate(${insetAttitudeDegrees.toFixed(3)}deg)` }}>
             <span className="vehicle-inset-nose" />
             <span className="vehicle-inset-body" />
             <span className="vehicle-inset-plume" />
@@ -249,6 +294,7 @@ export function GlobalMissionViewer({
             <div><dt>Vehicle</dt><dd>KSA-G10R</dd></div>
             <div><dt>Length</dt><dd>≈ 8 m</dd></div>
             <div><dt>Locator</dt><dd>{onboard?.locatorRequired ? "Screen-scale marker" : "Local scale"}</dd></div>
+            <div><dt>Attitude</dt><dd>{onboard?.bodyQuaternion === undefined ? "Retired / unavailable" : `Telemetry · ${insetAttitudeDegrees.toFixed(1)}° projected`}</dd></div>
           </dl>
           <small>The Earth view never enlarges the physical trajectory or silently changes vehicle scale.</small>
         </aside>
@@ -270,6 +316,18 @@ export function GlobalMissionViewer({
           onChange={(event) => selectCamera(event.target.value as GlobalDisplayCameraV1)}>
           {model.definition.availableCameras.map((value) =>
             <option value={value} key={value}>{CAMERA_LABEL[value]}</option>)}
+        </select></label>
+        <label>Motion<select aria-label="Global display motion" value={motionMode}
+          onChange={(event) => setMotionMode(event.target.value as GlobalDisplayMotionMode)}>
+          <option value="smooth">Smooth compatible samples</option>
+          <option value="exact">Exact releases</option>
+        </select></label>
+        <label>Path detail<select aria-label="Global path detail" value={String(pathDetail)}
+          onChange={(event) => setPathDetail(event.target.value === "auto" ? "auto" : Number(event.target.value) as 0 | 1 | 4)}>
+          <option value="auto">Automatic by camera</option>
+          <option value="0">Exact active window</option>
+          <option value="1">One-second mission path</option>
+          <option value="4">Four-second overview</option>
         </select></label>
         {!directorEnabled ? <button type="button" onClick={() => selectCamera("director")}>Resume director</button> : null}
       </div>
@@ -331,7 +389,7 @@ export function GlobalMissionViewer({
       <footer className="global-viewer-footer">
         <span>Camera: {CAMERA_LABEL[actualCamera]}</span>
         <span>Frame: {frameLabel(actualDomain)}</span>
-        <span>{sceneSnapshot.exactSnapRequired ? "Exact event/sample snap" : "Compatible sample smoothing permitted"}</span>
+        <span>{motionMode === "exact" ? "Exact-release display" : sceneSnapshot.exactSnapRequired ? "Exact event/sample snap" : sceneSnapshot.interpolated ? "One-sample-latency smoothing" : "Compatible sample smoothing permitted"}</span>
       </footer>
     </section>
   );

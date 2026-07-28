@@ -27,6 +27,8 @@ pub enum PresentationPayload {
     GlobalDisplayPathChunk(GlobalDisplayPathChunkV1),
     GlobalDisplayTransition(GlobalDisplayTransitionV1),
     GlobalReplayIndex(GlobalReplayIndexV1),
+    GlobalDisplayCursorState(GlobalDisplayCursorStateV1),
+    GlobalDisplayRangeRequest(GlobalDisplayRangeRequestV1),
     TransportStatus(TransportStatusView),
     ActionIntent(PresentationActionIntent),
     ActionReceipt(ActionReceiptView),
@@ -56,6 +58,10 @@ impl PresentationPayload {
             Self::GlobalDisplayPathChunk(_) => PresentationMessageKind::GlobalDisplayPathChunk,
             Self::GlobalDisplayTransition(_) => PresentationMessageKind::GlobalDisplayTransition,
             Self::GlobalReplayIndex(_) => PresentationMessageKind::GlobalReplayIndex,
+            Self::GlobalDisplayCursorState(_) => PresentationMessageKind::GlobalDisplayCursorState,
+            Self::GlobalDisplayRangeRequest(_) => {
+                PresentationMessageKind::GlobalDisplayRangeRequest
+            }
             Self::TransportStatus(_) => PresentationMessageKind::TransportStatus,
             Self::ActionIntent(_) => PresentationMessageKind::ActionIntent,
             Self::ActionReceipt(_) => PresentationMessageKind::ActionReceipt,
@@ -101,6 +107,12 @@ pub fn encode_typed_payload(
             encode_global_display_transition_payload(*value)
         }
         PresentationPayload::GlobalReplayIndex(value) => encode_global_replay_index_payload(value),
+        PresentationPayload::GlobalDisplayCursorState(value) => {
+            encode_global_display_cursor_state_payload(*value)
+        }
+        PresentationPayload::GlobalDisplayRangeRequest(value) => {
+            encode_global_display_range_request_payload(*value)
+        }
         PresentationPayload::TransportStatus(value) => encode_transport_status(*value),
         PresentationPayload::ActionIntent(value) => {
             let mut bytes = alloc::vec![0; ACTION_INTENT_PAYLOAD_LENGTH];
@@ -186,6 +198,16 @@ pub fn decode_typed_payload(
         }
         PresentationMessageKind::GlobalReplayIndex => {
             PresentationPayload::GlobalReplayIndex(decode_global_replay_index_payload(input)?)
+        }
+        PresentationMessageKind::GlobalDisplayCursorState => {
+            PresentationPayload::GlobalDisplayCursorState(
+                decode_global_display_cursor_state_payload(input)?,
+            )
+        }
+        PresentationMessageKind::GlobalDisplayRangeRequest => {
+            PresentationPayload::GlobalDisplayRangeRequest(
+                decode_global_display_range_request_payload(input)?,
+            )
         }
         PresentationMessageKind::TransportStatus => {
             PresentationPayload::TransportStatus(decode_transport_status(input)?)

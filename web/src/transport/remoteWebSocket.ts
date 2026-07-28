@@ -1,4 +1,4 @@
-import { GLOBAL_DISPLAY_V1_CAPABILITY } from "../protocol/globalDisplay";
+import { encodeGlobalDisplayRangeRequestPayload, GLOBAL_DISPLAY_V1_CAPABILITY } from "../protocol/globalDisplay";
 import {
   decodeKps1,
   encodeKps1,
@@ -64,6 +64,8 @@ export class RemoteWebSocketTransport extends BasePresentationTransport {
   private clientInstance?: bigint;
   private pollTimer?: ReturnType<typeof setInterval>;
   private cursors: PresentationCursorsView = initialPresentationCursors();
+  private globalDisplayNegotiated = false;
+  private globalNextRelease = 0;
 
   constructor(private readonly options: RemoteWebSocketOptions) {
     super();
@@ -92,6 +94,8 @@ export class RemoteWebSocketTransport extends BasePresentationTransport {
     this.publish({ type: "state", state: "connecting" });
     this.expectedRole = numericRole(connection.role);
     const expectedReconnectNonce = connection.sessionNonce ?? this.sessionNonce;
+    if (expectedReconnectNonce === undefined) this.globalNextRelease = 0;
+    this.globalDisplayNegotiated = false;
     this.sessionNonce = undefined;
     this.clientInstance = connection.clientInstance ?? this.clientInstance ?? createClientInstance();
     this.cursors = {
@@ -146,6 +150,8 @@ export class RemoteWebSocketTransport extends BasePresentationTransport {
             }
             const handshake = decodeHandshakePayload(frame.payload);
             if (handshake.role !== this.expectedRole) throw new Error("immutable role mismatch");
+            if ((handshake.capabilityMask & ~GLOBAL_DISPLAY_V1_CAPABILITY) !== 0n) throw new Error("server negotiated an unknown presentation capability");
+            this.globalDisplayNegotiated = (handshake.capabilityMask & GLOBAL_DISPLAY_V1_CAPABILITY) !== 0n;
             if (expectedReconnectNonce !== undefined && frame.sessionNonce !== expectedReconnectNonce) throw new Error("reconnect session nonce mismatch");
             this.sessionNonce = frame.sessionNonce;
             this.cursors = handshake.cursors;
@@ -234,8 +240,15 @@ export class RemoteWebSocketTransport extends BasePresentationTransport {
   private startPolling(): void {
     this.stopPolling();
     const interval = Math.max(50, this.options.pollIntervalMillis ?? 125);
-    this.pollTimer = setInterval(() => this.sendClientFrame(Kps1MessageKind.ReplayControl, encodeCursorsPayload(this.cursors)), interval);
-    this.sendClientFrame(Kps1MessageKind.ReplayControl, encodeCursorsPayload(this.cursors));
+    const poll = (): void => {
+      this.sendClientFrame(Kps1MessageKind.ReplayControl, encodeCursorsPayload(this.cursors));
+      if (this.globalDisplayNegotiated) {
+        this.sendClientFrame(Kps1MessageKind.GlobalDisplayRangeRequest,
+          encodeGlobalDisplayRangeRequestPayload(this.globalNextRelease));
+      }
+    };
+    this.pollTimer = setInterval(poll, interval);
+    poll();
   }
 
   private stopPolling(): void {
@@ -251,6 +264,8 @@ export class RemoteWebSocketTransport extends BasePresentationTransport {
       case "timeline": this.cursors = { ...this.cursors, timeline: decoded.value.sequence + 1n }; break;
       case "action-receipt": this.cursors = { ...this.cursors, actionReceipts: decoded.value.publicationSequence + 1n }; break;
       case "samples": if (decoded.value.length > 0) this.cursors = { ...this.cursors, releaseSamples: decoded.value.at(-1)!.sequence + 1n }; break;
+      case "global-samples": if (decoded.value.length > 0) this.globalNextRelease = decoded.value.at(-1)!.releaseEpoch + 1; break;
+      case "global-cursor": if (decoded.value.resyncMask !== 0) this.globalNextRelease = decoded.value.oldestSampleRelease; break;
       default: break;
     }
   }

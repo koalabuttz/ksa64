@@ -208,3 +208,30 @@ a local mission only after exact native evidence parity.
 The Vita Rust target is community maintained and unaffiliated with Sony.
 VitaSDK/SDL packages are unofficial homebrew outputs and must be labelled as
 such; they are not official PlayStation distribution artifacts.
+
+
+## Phase 12C global-display references
+
+Phase 12C uses the accepted Phase 10 WGS 84, Earth-orientation, frame, and
+mission evidence as its coordinate authority. Renderer documentation informs
+precision and presentation implementation only; it is not a frame, time,
+physics, or evidence oracle.
+
+- Unreal Engine Large World Coordinates: <https://dev.epicgames.com/documentation/en-us/unreal-engine/large-world-coordinates-in-unreal-engine>
+- Unreal Engine GeoReferencing plugin: <https://dev.epicgames.com/documentation/en-us/unreal-engine/georeferencing-a-level-in-unreal-engine>
+- Babylon.js WebGPU support: <https://doc.babylonjs.com/setup/support/webGPU/>
+- Babylon.js right-handed coordinate systems: <https://doc.babylonjs.com/features/featuresDeepDive/mesh/transforms/center_origin/rotation_conventions>
+- MDN WebGL context-loss handling: <https://developer.mozilla.org/en-US/docs/Web/API/WEBGL_lose_context>
+- W3C quaternion SLERP discussion in Web Animations: <https://www.w3.org/TR/web-animations-1/>
+
+Unreal LWC reduces large-world precision loss but does not replace explicit
+renderer-local origin management. Unreal GeoReferencing may corroborate selected
+ECEF fixtures but never owns KSA64 GCRF, Earth time, or accepted transforms.
+Babylon runs in right-handed mode and consumes Rust-resolved poses. Each
+renderer applies only its tested engine-axis mapping and camera-relative
+subtraction.
+
+Phase 12C contains procedural engineering visuals only. NASA imagery and 3-D
+resources remain deferred to Phase 12E and retain the rights, provenance,
+credit, transformation, and `engineering_authority: false` policy recorded
+above.

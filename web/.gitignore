@@ -3,3 +3,4 @@ dist/
 .npm-cache/
 *.tsbuildinfo
 coverage/
+public/phase12c-build-identity.json

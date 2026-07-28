@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 
+import { GLOBAL_DISPLAY_V1_CAPABILITY } from "../protocol/globalDisplay";
 import { decodeKps1 } from "../protocol/kps1";
 import {
   decodeKsr1Result,
@@ -24,6 +25,10 @@ interface ReplayWasmExports {
   readonly ksa64_wasm_submit: (pointer: number, length: number) => number;
   readonly ksa64_wasm_open_replay: (
     pointer: number, length: number, role: number, nonceLow: number, nonceHigh: number,
+  ) => number;
+  readonly ksa64_wasm_open_replay_v2: (
+    pointer: number, length: number, role: number, nonceLow: number, nonceHigh: number,
+    capabilityLow: number, capabilityHigh: number,
   ) => number;
   readonly ksa64_wasm_result_ptr: () => number;
   readonly ksa64_wasm_result_len: () => number;
@@ -57,7 +62,8 @@ async function loadWasm(): Promise<ReplayWasmExports> {
   const exports = instance.instance.exports as Partial<ReplayWasmExports>;
   if (exports.memory === undefined || exports.ksa64_wasm_alloc === undefined ||
       exports.ksa64_wasm_dealloc === undefined || exports.ksa64_wasm_submit === undefined ||
-      exports.ksa64_wasm_open_replay === undefined || exports.ksa64_wasm_result_ptr === undefined ||
+      exports.ksa64_wasm_open_replay === undefined || exports.ksa64_wasm_open_replay_v2 === undefined ||
+      exports.ksa64_wasm_result_ptr === undefined ||
       exports.ksa64_wasm_result_len === undefined) {
     throw new Error("local KSA64 WASM module has an incompatible replay ABI");
   }
@@ -109,12 +115,14 @@ async function initialize(archive: ArrayBuffer, roleName: string): Promise<void>
   const pointer = wasm.ksa64_wasm_alloc(archive.byteLength);
   try {
     new Uint8Array(wasm.memory.buffer, pointer, archive.byteLength).set(new Uint8Array(archive));
-    const callStatus = wasm.ksa64_wasm_open_replay(
+    const callStatus = wasm.ksa64_wasm_open_replay_v2(
       pointer,
       archive.byteLength,
       roleCode(roleName),
       Number(nonce & 0xffff_ffffn),
       Number(nonce >> 32n),
+      Number(GLOBAL_DISPLAY_V1_CAPABILITY & 0xffff_ffffn),
+      Number(GLOBAL_DISPLAY_V1_CAPABILITY >> 32n),
     );
     const decoded = decodeKsr1Result(result());
     if (callStatus !== 0 || decoded.status !== 0) {

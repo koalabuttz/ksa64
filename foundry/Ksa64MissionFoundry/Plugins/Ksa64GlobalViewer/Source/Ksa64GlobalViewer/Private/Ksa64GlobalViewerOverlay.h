@@ -27,6 +27,7 @@ private:
         const FOnClicked& Clicked,
         TAttribute<bool> Enabled = TAttribute<bool>(true)) const;
     FReply OnStart();
+    FReply OnNominalReplay();
     FReply OnLayout();
     FReply OnCamera();
     FReply OnAutomatic();
@@ -34,11 +35,15 @@ private:
     FReply OnTruth();
     FReply OnPauseResume();
     FReply OnStep();
+    FReply OnReplayPace();
+    FReply OnPreviousBookmark();
+    FReply OnNextBookmark();
     EVisibility EngineeringVisibility() const;
     EVisibility BottomVisibility() const;
     FText TruthButtonText() const;
     FText OperationsButtonText() const;
     FText PauseButtonText() const;
+    FText ReplayPaceButtonText() const;
 
     TWeakObjectPtr<UKsa64GlobalViewerSubsystem> Subsystem;
 };

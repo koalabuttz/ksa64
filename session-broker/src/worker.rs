@@ -5,11 +5,13 @@ use std::{
 };
 
 use ksa64_presentation::{
-    ActionReceiptView, CursorError, DispositionView, OperationalSnapshot, PredictionPathView,
-    PresentationActionIntent, PresentationBatch, PresentationCursors, PresentationEventView,
-    PresentationLifecycle, PresentationPace, PresentationRole, PresentationSession, ProcedureView,
-    ReleaseSampleView, SealedEvidenceMetadata, TimelineEventView, TransportStatusView,
-    SNAPSHOT_VALID_ACTION,
+    ActionReceiptView, CursorError, DispositionView, GlobalDisplayCursorStateV1,
+    GlobalDisplayDefinitionV1, GlobalDisplayPathChunkV1, GlobalDisplayRangeRequestV1,
+    GlobalDisplaySampleV1, GlobalDisplayTransitionV1, GlobalReplayIndexV1, OperationalSnapshot,
+    PredictionPathView, PresentationActionIntent, PresentationBatch, PresentationCursors,
+    PresentationEventView, PresentationLifecycle, PresentationPace, PresentationRole,
+    PresentationSession, ProcedureView, ReleaseSampleView, SealedEvidenceMetadata,
+    TimelineEventView, TransportStatusView, SNAPSHOT_VALID_ACTION,
 };
 
 pub const DEFAULT_WORKER_COMMAND_CAPACITY: usize = 32;
@@ -32,6 +34,15 @@ pub trait BrokerAuthority: PresentationSession<Error = AuthorityError> + Send + 
         -> Result<(), AuthorityError>;
     fn step_one_release(&mut self) -> Result<u32, AuthorityError>;
     fn sealed_evidence(&self) -> Option<Vec<u8>> {
+        None
+    }
+
+    /// Optional additive Phase 12C publication. The default keeps authorities
+    /// and all capability-zero clients on the frozen Phase 12B.5 path.
+    fn global_display(
+        &self,
+        _request: GlobalDisplayRangeRequestV1,
+    ) -> Option<GlobalDisplayPublication> {
         None
     }
 }
@@ -90,6 +101,16 @@ pub struct AttachReply {
     pub controlling: bool,
     pub session_nonce: u64,
     pub cursors: PresentationCursors,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GlobalDisplayPublication {
+    pub definition: GlobalDisplayDefinitionV1,
+    pub samples: Vec<GlobalDisplaySampleV1>,
+    pub paths: Vec<GlobalDisplayPathChunkV1>,
+    pub transitions: Vec<GlobalDisplayTransitionV1>,
+    pub replay_index: GlobalReplayIndexV1,
+    pub cursor: GlobalDisplayCursorStateV1,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -152,6 +173,11 @@ enum WorkerCommand {
     Evidence {
         client_id: u64,
         reply: SyncSender<Result<Option<Vec<u8>>, BrokerError>>,
+    },
+    GlobalDisplay {
+        client_id: u64,
+        request: GlobalDisplayRangeRequestV1,
+        reply: SyncSender<Result<Option<GlobalDisplayPublication>, BrokerError>>,
     },
     Shutdown,
 }
@@ -293,6 +319,23 @@ impl SessionBrokerHandle {
     pub fn sealed_evidence(&self, client_id: u64) -> Result<Option<Vec<u8>>, BrokerError> {
         let (reply, receiver) = mpsc::sync_channel(1);
         self.request(WorkerCommand::Evidence { client_id, reply }, receiver)
+    }
+
+    pub fn global_display(
+        &self,
+        client_id: u64,
+        request: GlobalDisplayRangeRequestV1,
+    ) -> Result<Option<GlobalDisplayPublication>, BrokerError> {
+        request.validate().map_err(|_| BrokerError::InvalidLimit)?;
+        let (reply, receiver) = mpsc::sync_channel(1);
+        self.request(
+            WorkerCommand::GlobalDisplay {
+                client_id,
+                request,
+                reply,
+            },
+            receiver,
+        )
     }
 
     fn request<T>(
@@ -476,7 +519,11 @@ fn handle_command<A: BrokerAuthority>(
                 Ok(AttachReply {
                     controlling: state.attach(client_id, role)?,
                     session_nonce,
-                    cursors: authority.cursors(),
+                    // The handshake cursor is the client's retained-stream
+                    // resume point. Returning the authority tail here would
+                    // silently skip every record published while the client
+                    // was disconnected.
+                    cursors,
                 })
             })();
             let _ = reply.try_send(result);
@@ -581,6 +628,16 @@ fn handle_command<A: BrokerAuthority>(
             let result = state
                 .require_attached(client_id)
                 .map(|()| authority.sealed_evidence());
+            let _ = reply.try_send(result);
+        }
+        WorkerCommand::GlobalDisplay {
+            client_id,
+            request,
+            reply,
+        } => {
+            let result = state
+                .require_attached(client_id)
+                .map(|()| authority.global_display(request));
             let _ = reply.try_send(result);
         }
         WorkerCommand::Shutdown => {}
@@ -900,6 +957,31 @@ mod tests {
                 .unwrap()
                 .controlling
         );
+    }
+
+    #[test]
+    fn attach_preserves_the_clients_requested_reconnect_cursors() {
+        let (authority, _) =
+            MockAuthority::new(PresentationRole::Observer, PresentationPace::Paused);
+        let broker = SessionBrokerHandle::spawn(
+            authority,
+            WorkerConfig {
+                autonomous_pacing: false,
+                ..WorkerConfig::default()
+            },
+        )
+        .unwrap();
+        let requested = PresentationCursors {
+            snapshots: 1,
+            events: 2,
+            timeline: 3,
+            action_receipts: 4,
+            release_samples: 5,
+        };
+        let attached = broker
+            .attach(41, 99, PresentationRole::Observer, requested)
+            .unwrap();
+        assert_eq!(attached.cursors, requested);
     }
 
     #[test]

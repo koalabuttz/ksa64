@@ -7,6 +7,7 @@ export interface Ksa64BrowserRuntimeConfig {
   readonly endpoint?: string;
   readonly browserToken?: string;
   readonly allowedOrigin?: string;
+  readonly experience?: "gnss-loss" | "nominal-global";
 }
 
 declare global {
@@ -22,5 +23,5 @@ export function createDefaultPresentationTransport(): PresentationTransport {
     return new RemoteWebSocketTransport({ url: new URL(config.endpoint), browserToken: config.browserToken,
       allowedOrigin: config.allowedOrigin ?? window.location.origin });
   }
-  return new LocalWorkerTransport();
+  return new LocalWorkerTransport(config?.experience ?? "gnss-loss");
 }

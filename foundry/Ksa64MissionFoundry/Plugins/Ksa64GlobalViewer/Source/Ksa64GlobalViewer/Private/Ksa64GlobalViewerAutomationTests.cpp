@@ -1,10 +1,93 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Ksa64GlobalDisplayCodec.h"
 #include "Ksa64GlobalViewerPolicy.h"
 #include "Ksa64GlobalViewerSubsystem.h"
+#include "Ksa64LiveMissionSubsystem.h"
 
 #include "Engine/GameInstance.h"
 #include "Misc/AutomationTest.h"
+
+namespace
+{
+void PushU8(TArray<uint8>& Bytes, uint8 Value) { Bytes.Add(Value); }
+void PushU16(TArray<uint8>& Bytes, uint16 Value)
+{
+    Bytes.Add(static_cast<uint8>(Value));
+    Bytes.Add(static_cast<uint8>(Value >> 8));
+}
+void PushU32(TArray<uint8>& Bytes, uint32 Value)
+{
+    for (int32 Shift = 0; Shift < 32; Shift += 8)
+        Bytes.Add(static_cast<uint8>(Value >> Shift));
+}
+void PushI32(TArray<uint8>& Bytes, int32 Value)
+{
+    PushU32(Bytes, static_cast<uint32>(Value));
+}
+TArray<uint8> BeginPayload(const ANSICHAR Magic[5])
+{
+    TArray<uint8> Bytes;
+    Bytes.Append(reinterpret_cast<const uint8*>(Magic), 4);
+    PushU16(Bytes, 1);
+    PushU16(Bytes, 12);
+    PushU32(Bytes, 0);
+    return Bytes;
+}
+void FinishPayload(TArray<uint8>& Bytes)
+{
+    const uint32 Length = Bytes.Num();
+    for (int32 Shift = 0; Shift < 32; Shift += 8)
+        Bytes[8 + Shift / 8] = static_cast<uint8>(Length >> Shift);
+}
+void PushPose(TArray<uint8>& Bytes, int32 X)
+{
+    PushI32(Bytes, X); PushI32(Bytes, 0); PushI32(Bytes, 0);
+    PushI32(Bytes, 0); PushI32(Bytes, 0); PushI32(Bytes, 0);
+    PushI32(Bytes, 1 << 30); PushI32(Bytes, 0);
+    PushI32(Bytes, 0); PushI32(Bytes, 0);
+}
+TArray<uint8> DefinitionVector()
+{
+    TArray<uint8> Bytes = BeginPayload("PGD1");
+    PushU32(Bytes, 0x12c00001); PushU32(Bytes, 0x45415254);
+    PushU32(Bytes, 0x54524e53); PushU32(Bytes, 0x4d495353);
+    PushI32(Bytes, 19'723); PushU16(Bytes, 37); PushU16(Bytes, 0);
+    PushI32(Bytes, 26'125'873); PushI32(Bytes, 26'038'281);
+    PushI32(Bytes, 313'300'000);
+    PushU32(Bytes, 0x4c41554e);
+    PushI32(Bytes, 133'564'245); PushI32(Bytes, -377'184'448); PushI32(Bytes, 12);
+    PushU32(Bytes, 0x52454356);
+    PushI32(Bytes, 130'000'000); PushI32(Bytes, -360'000'000); PushI32(Bytes, 4);
+    PushU32(Bytes, 0x07); PushU8(Bytes, 0x07); PushU8(Bytes, 0); PushU16(Bytes, 0x00ff);
+    FinishPayload(Bytes);
+    return Bytes;
+}
+TArray<uint8> SampleVector()
+{
+    TArray<uint8> Bytes = BeginPayload("PGS1");
+    PushU16(Bytes, 1); PushU16(Bytes, 0);
+    PushU32(Bytes, 1); PushU32(Bytes, 0);
+    PushU32(Bytes, 29); PushU32(Bytes, 59'392);
+    PushU8(Bytes, 2); PushU8(Bytes, 2); PushU8(Bytes, 1); PushU8(Bytes, 1);
+    PushU16(Bytes, 0); PushU16(Bytes, 1);
+    PushU32(Bytes, 0); PushU32(Bytes, 0xabcddcba);
+    PushI32(Bytes, 0); PushI32(Bytes, 0); PushI32(Bytes, 0);
+    for (int32 Index = 0; Index < 6; ++Index) PushI32(Bytes, 0);
+    PushU16(Bytes, 0); PushU16(Bytes, 0);
+    for (int32 Index = 0; Index < 12; ++Index) PushU8(Bytes, 0);
+    PushU8(Bytes, 0); PushU8(Bytes, 0); PushU16(Bytes, 0);
+    PushU8(Bytes, 2); PushU8(Bytes, 2); PushU16(Bytes, 0);
+    PushU32(Bytes, (1u << 0) | (1u << 2) | (1u << 4) | (1u << 6));
+    PushU32(Bytes, 0x0badf00d); PushU32(Bytes, 1);
+    PushU32(Bytes, 2); PushU32(Bytes, 0);
+    PushPose(Bytes, 4'096); PushPose(Bytes, 4'096);
+    PushPose(Bytes, 0); PushPose(Bytes, 0); PushPose(Bytes, 0);
+    PushI32(Bytes, 0); PushI32(Bytes, 0); PushI32(Bytes, 0);
+    FinishPayload(Bytes);
+    return Bytes;
+}
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64GlobalViewerCoordinateBasisTest,
@@ -37,6 +120,13 @@ bool FKsa64GlobalViewerCoordinateBasisTest::RunTest(const FString&)
             Point,
             RelativeOrigin);
     TestEqual(TEXT("client origin changes presentation only"), Relative.X, -9'900'000.0);
+    const int32 PositiveYawQ30[4] = {759'250'125, 0, 0, 759'250'125};
+    const FQuat Reflected =
+        Ksa64GlobalViewerPolicy::Ksa64BodyToFrameQuaternionToUnreal(
+            PositiveYawQ30);
+    TestTrue(TEXT("single Y reflection reverses right-handed yaw"), Reflected.Z < 0.0);
+    TestTrue(TEXT("converted attitude stays normalized"),
+        FMath::IsNearlyEqual(Reflected.SizeSquared(), 1.0, 1.0e-9));
     return true;
 }
 
@@ -128,6 +218,67 @@ bool FKsa64GlobalViewerDirectorTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64GlobalViewerImportantReleaseSemanticTest,
+    "KSA64.Phase12C.Semantics.ImportantReleaseSnapshots",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64GlobalViewerImportantReleaseSemanticTest::RunTest(const FString&)
+{
+    TStrongObjectPtr<UGameInstance> GameInstance(
+        NewObject<UGameInstance>(GetTransientPackage()));
+    TStrongObjectPtr<UKsa64GlobalViewerSubsystem> Viewer(
+        NewObject<UKsa64GlobalViewerSubsystem>(GameInstance.Get()));
+    Viewer->SetGlobalAvailabilityForAutomation(true, true, 0x07);
+
+    struct FBookmark
+    {
+        uint32 Release;
+        uint32 Frame;
+        uint32 Segment;
+        EKsa64GlobalCameraMode Camera;
+    };
+    const FBookmark Bookmarks[] = {
+        {29, 2, 2, EKsa64GlobalCameraMode::EarthFixed},
+        {3'579, 3, 3, EKsa64GlobalCameraMode::EarthInertial},
+        {12'669, 2, 4, EKsa64GlobalCameraMode::VehicleChase},
+        {15'255, 1, 5, EKsa64GlobalCameraMode::RecoveryLocalEnu},
+    };
+    uint64 Continuity = 100;
+    for (const FBookmark& Bookmark : Bookmarks)
+    {
+        FKsa64GlobalSceneSample Sample;
+        Sample.ReleaseEpoch = Bookmark.Release;
+        Sample.MissionTimeQ16 = Bookmark.Release * 2'048;
+        Sample.FrameIdentity = Bookmark.Frame;
+        Sample.SegmentIdentity = Bookmark.Segment;
+        Sample.ContinuityIdentity = Continuity++;
+        Sample.DiscontinuityMask = 1;
+        Sample.bPositionValid = true;
+        Sample.bAttitudeValid = true;
+        Sample.bExactSnap = true;
+        Viewer->ApplySampleForAutomation(Sample, false);
+        const FKsa64GlobalSemanticState& State = Viewer->GetSemanticState();
+        TestEqual(TEXT("bookmark release stays exact"), State.ReleaseEpoch, Bookmark.Release);
+        TestEqual(TEXT("director selects frame-aware camera"),
+            State.ResolvedCamera, Bookmark.Camera);
+        TestTrue(TEXT("typed exact stream is acceptance eligible"),
+            State.bAcceptanceEligible);
+        TestFalse(TEXT("guided semantic snapshot has no truth"),
+            State.bTruthPermitted);
+        const FString Json = Viewer->ExportSemanticStateJson();
+        TestTrue(TEXT("snapshot records exact release"),
+            Json.Contains(FString::Printf(TEXT("\"release_epoch\":%u"), Bookmark.Release)));
+        TestTrue(TEXT("snapshot records exact product status"),
+            Json.Contains(TEXT("\"acceptance_eligible\":true")));
+    }
+
+    Viewer->SetGlobalAvailabilityForAutomation(false, false, 0x03);
+    TestFalse(TEXT("legacy fallback can never count as exact evidence"),
+        Viewer->GetSemanticState().bAcceptanceEligible);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64GlobalViewerRoleAndSemanticTest,
     "KSA64.Phase12C.Semantics.TruthAndRendererInvariance",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -202,6 +353,140 @@ bool FKsa64GlobalViewerDispositionTest::RunTest(const FString&)
     TestTrue(TEXT("plan residual remains informational"), Json.Contains(TEXT("PLAN RESIDUAL PRESENT")));
     TestFalse(TEXT("viewer does not invent failure"), Json.Contains(TEXT("MISSION FAILURE")));
     TestEqual(TEXT("semantic serialization is deterministic"), State.ToDeterministicJson(), Json);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64GlobalViewerRealBridgeReplayTest,
+    "KSA64.Phase12C.Integration.RealBridgeNominalMilestones",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64GlobalViewerRealBridgeReplayTest::RunTest(const FString&)
+{
+    TStrongObjectPtr<UGameInstance> GameInstance(
+        NewObject<UGameInstance>(GetTransientPackage()));
+    TStrongObjectPtr<UKsa64LiveMissionSubsystem> Operations(
+        NewObject<UKsa64LiveMissionSubsystem>(GameInstance.Get()));
+    TStrongObjectPtr<UKsa64GlobalViewerSubsystem> Viewer(
+        NewObject<UKsa64GlobalViewerSubsystem>(GameInstance.Get()));
+    if (!Operations->InitializeForAutomation())
+    {
+        AddError(FString::Printf(TEXT("real bridge unavailable: %s"),
+            *Operations->GetViewModel().LastDiagnostic));
+        return false;
+    }
+    struct FMilestone { uint32 Release; uint32 Frame; uint32 Segment; };
+    const FMilestone Milestones[] = {
+        {29, 2, 2}, {1'920, 2, 2}, {3'579, 3, 3},
+        {8'124, 3, 3}, {12'669, 2, 4}, {15'255, 1, 5},
+        {20'929, 1, 5}, {22'014, 1, 5},
+    };
+    for (const FMilestone& Milestone : Milestones)
+    {
+        if (!Viewer->OpenNominalReleaseForAutomation(*Operations, Milestone.Release))
+        {
+            AddError(FString::Printf(
+                TEXT("real GlobalDisplayV1 replay failed at release %u: %s"),
+                Milestone.Release,
+                *Operations->GetViewModel().LastDiagnostic));
+            Operations->CloseForAutomation();
+            return false;
+        }
+        const FKsa64GlobalSemanticState& State = Viewer->GetSemanticState();
+        TestEqual(TEXT("real release exact"), State.ReleaseEpoch, Milestone.Release);
+        TestEqual(TEXT("real frame exact"), State.FrameIdentity, Milestone.Frame);
+        TestEqual(TEXT("real segment exact"), State.SegmentIdentity, Milestone.Segment);
+        TestTrue(TEXT("real display accepted"), State.bAcceptanceEligible);
+        TestTrue(TEXT("real replay snaps on seek"), State.bExactSnap);
+        TestTrue(TEXT("SIM Director truth is permitted"), State.bTruthPermitted);
+        TestFalse(TEXT("SIM truth starts hidden"), State.bTruthVisible);
+        TestTrue(TEXT("real onboard path is present"), State.OnboardPathPoints > 0);
+        TestTrue(TEXT("real transition index is present"), State.TransitionMarkers >= 4);
+    }
+    const FKsa64GlobalSemanticState& Terminal = Viewer->GetSemanticState();
+    TestEqual(TEXT("real terminal disposition"), Terminal.OverallDisposition, 1u);
+    TestEqual(TEXT("real terminal label"), Terminal.DispositionLabel, TEXT("NOMINAL SUCCESS"));
+    Operations->CloseForAutomation();
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64GlobalViewerReplayDispositionMappingTest,
+    "KSA64.Phase12C.Semantics.ReplayDispositionAxisMapping",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64GlobalViewerReplayDispositionMappingTest::RunTest(const FString&)
+{
+    TStrongObjectPtr<UGameInstance> GameInstance(
+        NewObject<UGameInstance>(GetTransientPackage()));
+    TStrongObjectPtr<UKsa64GlobalViewerSubsystem> Viewer(
+        NewObject<UKsa64GlobalViewerSubsystem>(GameInstance.Get()));
+    FKsa64GlobalReplayIndexProduct Replay;
+    Replay.IndexIdentity = 0x12c0d150;
+    Replay.TerminalDisposition = 3;
+    Replay.DispositionAxes[0] = 1;
+    Replay.DispositionAxes[1] = 2;
+    Replay.DispositionAxes[2] = 3;
+    Replay.DispositionAxes[3] = 4;
+    Replay.DispositionAxes[4] = 2;
+    Replay.DispositionAxes[5] = 1;
+    Viewer->ApplyReplayIndexForAutomation(Replay);
+    const FKsa64GlobalSemanticState& State = Viewer->GetSemanticState();
+    TestEqual(TEXT("overall disposition"), State.OverallDisposition, 3u);
+    TestEqual(TEXT("objective axis"), State.ObjectiveDisposition, 1u);
+    TestEqual(TEXT("vehicle axis"), State.VehicleDisposition, 2u);
+    TestEqual(TEXT("procedure axis"), State.ProcedureDisposition, 3u);
+    TestEqual(TEXT("operator axis"), State.OperatorDisposition, 4u);
+    TestEqual(TEXT("avionics axis"), State.AvionicsDisposition, 2u);
+    TestEqual(TEXT("evidence axis"), State.EvidenceDisposition, 1u);
+    TestEqual(TEXT("overall label derives from Rust disposition"),
+        State.DispositionLabel, TEXT("CONTINGENCY SUCCESS"));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64GlobalDisplayCodecTest,
+    "KSA64.Phase12C.Contracts.GlobalDisplayPayloads",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64GlobalDisplayCodecTest::RunTest(const FString&)
+{
+    FString Error;
+    FKsa64GlobalDisplayDefinitionProduct Definition;
+    TArray<uint8> DefinitionBytes = DefinitionVector();
+    TestTrue(
+        TEXT("independent PGD1 vector decodes"),
+        FKsa64GlobalDisplayCodec::DecodeDefinition(
+            DefinitionBytes, Definition, Error));
+    TestEqual(TEXT("Earth semimajor comes from Rust product"),
+        Definition.SemiMajorQ12Km, 26'125'873);
+    TestEqual(TEXT("all frame capabilities preserved"),
+        Definition.AvailableFrameMask, static_cast<uint8>(7));
+    TArray<uint8> CorruptDefinition = DefinitionBytes;
+    CorruptDefinition[34] = 1;
+    TestFalse(
+        TEXT("nonzero reserved definition byte fails closed"),
+        FKsa64GlobalDisplayCodec::DecodeDefinition(
+            CorruptDefinition, Definition, Error));
+
+    TArray<FKsa64GlobalDisplaySampleProduct> Samples;
+    const TArray<uint8> SampleBytes = SampleVector();
+    TestTrue(
+        TEXT("independent PGS1 vector decodes"),
+        FKsa64GlobalDisplayCodec::DecodeSamples(
+            SampleBytes, 1u << 1, Samples, Error));
+    TestEqual(TEXT("one exact release decoded"), Samples.Num(), 1);
+    if (Samples.Num() == 1)
+    {
+        TestEqual(TEXT("release remains exact"), Samples[0].ReleaseEpoch, 29u);
+        TestEqual(TEXT("onboard source retained"), Samples[0].Sources[0].Source, static_cast<uint8>(2));
+        TestEqual(TEXT("resolved ECEF x remains Q12 km"),
+            Samples[0].Sources[0].Ecef.PositionQ12Km[0], 4'096);
+    }
+    TestFalse(
+        TEXT("source forbidden by negotiated role fails closed"),
+        FKsa64GlobalDisplayCodec::DecodeSamples(
+            SampleBytes, 1u << 0, Samples, Error));
     return true;
 }
 

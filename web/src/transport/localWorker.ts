@@ -14,9 +14,15 @@ interface LocalWorkerMessage {
 
 export class LocalWorkerTransport extends BasePresentationTransport {
   readonly kind = "local-worker" as const;
+  private readonly experience: "gnss-loss" | "nominal-global";
   private worker?: Worker;
   private sessionNonce?: bigint;
   private sequence?: Kps1SequenceValidator;
+
+  constructor(experience: "gnss-loss" | "nominal-global" = "gnss-loss") {
+    super();
+    this.experience = experience;
+  }
 
   connect(connection: PresentationConnection): Promise<void> {
     if (this.state !== "idle" && this.state !== "closed") {
@@ -76,7 +82,7 @@ export class LocalWorkerTransport extends BasePresentationTransport {
         }
       };
       worker.onerror = () => fail("local authority worker failed", true);
-      worker.postMessage({ type: "initialize", connection });
+      worker.postMessage({ type: "initialize", connection, experience: this.experience });
     });
   }
 

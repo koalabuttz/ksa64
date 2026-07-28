@@ -1,4 +1,6 @@
 #include "Ksa64BridgeModule.h"
+
+#include "Algo/AllOf.h"
 #include "Ksa64BridgeTypedValidation.h"
 #include "Ksa64BridgeSha256.h"
 
@@ -303,6 +305,7 @@ struct FKsa64BridgeModule::FApi
     using FTransportStatusV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerTransportStatusV1*);
     using FFinishStatusV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*, Ksa64ViewerFinishStatusV1*);
     using FRequestShutdownV1 = int32(KSA64_VIEWER_CALL*)(const Ksa64ViewerHandle*);
+    using FGlobalDisplayApiV1 = int32(KSA64_VIEWER_CALL*)(Ksa64GlobalDisplayApiV1*);
 
     FGetAbiInfo GetAbiInfo = nullptr;
     FCatalog Catalog = nullptr;
@@ -344,6 +347,8 @@ struct FKsa64BridgeModule::FApi
     FTransportStatusV1 TransportStatusV1 = nullptr;
     FFinishStatusV1 FinishStatusV1 = nullptr;
     FRequestShutdownV1 RequestShutdownV1 = nullptr;
+    FGlobalDisplayApiV1 GlobalDisplayEntry = nullptr;
+    Ksa64GlobalDisplayApiV1 GlobalDisplay = {};
 
     bool Bind(void* Dll, FString& OutDiagnostic)
     {
@@ -390,6 +395,38 @@ struct FKsa64BridgeModule::FApi
         KSA64_OPTIONAL(TransportStatusV1, "ksa64_viewer_transport_status_v1");
         KSA64_OPTIONAL(FinishStatusV1, "ksa64_viewer_finish_status_v1");
         KSA64_OPTIONAL(RequestShutdownV1, "ksa64_viewer_request_shutdown_v1");
+        KSA64_OPTIONAL(GlobalDisplayEntry, "ksa64_viewer_global_display_api_v1");
+        if (GlobalDisplayEntry != nullptr)
+        {
+            GlobalDisplay = {};
+            GlobalDisplay.api_version = KSA64_GLOBAL_DISPLAY_API_VERSION;
+            GlobalDisplay.struct_size = sizeof(GlobalDisplay);
+            const int32 GlobalResult = GlobalDisplayEntry(&GlobalDisplay);
+            const bool bValidGlobalTable =
+                GlobalResult == KSA64_VIEWER_OK
+                && GlobalDisplay.api_version == KSA64_GLOBAL_DISPLAY_API_VERSION
+                && GlobalDisplay.struct_size == sizeof(GlobalDisplay)
+                && GlobalDisplay.replay_start_request_size == sizeof(Ksa64GlobalDisplayReplayStartRequestV1)
+                && GlobalDisplay.availability_size == sizeof(Ksa64GlobalDisplayAvailabilityV1)
+                && GlobalDisplay.path_request_size == sizeof(Ksa64GlobalDisplayPathRequestV1)
+                && GlobalDisplay.sample_range_request_size == sizeof(Ksa64GlobalDisplaySampleRangeRequestV1)
+                && GlobalDisplay.owned_buffer_size == sizeof(Ksa64ViewerOwnedBuffer)
+                && (GlobalDisplay.feature_flags & KSA64_GLOBAL_DISPLAY_API_IMPLEMENTED) != 0
+                && (GlobalDisplay.feature_flags & KSA64_GLOBAL_DISPLAY_API_ROLE_FILTERED) != 0
+                && GlobalDisplay.start_nominal_replay != nullptr
+                && GlobalDisplay.availability != nullptr
+                && GlobalDisplay.definition_payload != nullptr
+                && GlobalDisplay.poll_sample_payload != nullptr
+                && GlobalDisplay.sample_range_payload != nullptr
+                && GlobalDisplay.poll_transition_payload != nullptr
+                && GlobalDisplay.replay_index_payload != nullptr
+                && GlobalDisplay.path_chunk_payload != nullptr;
+            if (!bValidGlobalTable)
+            {
+                GlobalDisplayEntry = nullptr;
+                GlobalDisplay = {};
+            }
+        }
 #undef KSA64_OPTIONAL
         return true;
     }
@@ -412,6 +449,18 @@ struct FKsa64BridgeModule::FApi
     bool HasAsyncStatusV1() const
     {
         return TransportStatusV1 && FinishStatusV1 && RequestShutdownV1;
+    }
+    bool HasGlobalDisplayV1() const
+    {
+        return GlobalDisplayEntry != nullptr
+            && GlobalDisplay.start_nominal_replay != nullptr
+            && GlobalDisplay.availability != nullptr
+            && GlobalDisplay.definition_payload != nullptr
+            && GlobalDisplay.poll_sample_payload != nullptr
+            && GlobalDisplay.sample_range_payload != nullptr
+            && GlobalDisplay.poll_transition_payload != nullptr
+            && GlobalDisplay.replay_index_payload != nullptr
+            && GlobalDisplay.path_chunk_payload != nullptr;
     }
 };
 
@@ -890,6 +939,42 @@ bool FKsa64BridgeModule::StartGuidedOperationsV1(uint32 ScenarioIdentity)
     return true;
 }
 
+bool FKsa64BridgeModule::StartNominalGlobalReplayV1(uint32 Role)
+{
+    if (Status != EKsa64BridgeStatus::Ready || Session != nullptr)
+    {
+        Diagnostic = TEXT("nominal global replay requires a ready bridge with no open session");
+        return false;
+    }
+    if (Role != 5u || !Api.IsValid() || !Api->HasGlobalDisplayV1())
+    {
+        Diagnostic = TEXT("read-only SIM Director nominal replay is unavailable in this bridge");
+        return false;
+    }
+
+    Ksa64GlobalDisplayReplayStartRequestV1 Request = {};
+    Request.api_version = KSA64_GLOBAL_DISPLAY_API_VERSION;
+    Request.struct_size = static_cast<uint32>(sizeof(Request));
+    Request.role = Role;
+    Request.flags = KSA64_GLOBAL_DISPLAY_REPLAY_READ_ONLY;
+    const int32 Result = Api->GlobalDisplay.start_nominal_replay(&Request, &Session);
+    if (Result != KSA64_VIEWER_OK || Session == nullptr)
+    {
+        Session = nullptr;
+        Diagnostic = FString::Printf(TEXT("nominal global replay start failed with code %d"), Result);
+        return false;
+    }
+    ActiveTypedScenarioIdentity = 0;
+    ActiveTypedAdapterIdentity = 0;
+    ValidatedPredictionPathIdentity = 0;
+    ValidatedPredictionPointCount = 0;
+    FMemory::Memzero(ValidatedTrajectoryPathIdentities);
+    FMemory::Memzero(ValidatedTrajectoryPointCounts);
+    Status = EKsa64BridgeStatus::SessionOpen;
+    Diagnostic = TEXT("nominal Phase 10 global replay validating");
+    return true;
+}
+
 int32 FKsa64BridgeModule::AdvanceReleases(uint32 MaximumReleases)
 {
     if (Status != EKsa64BridgeStatus::SessionOpen || Session == nullptr)
@@ -1259,6 +1344,180 @@ bool FKsa64BridgeModule::TickAsyncClose(float)
         UE_LOG(LogKsa64Bridge, Warning, TEXT("async close status poll failed: %d"), Result);
     }
     return true;
+}
+
+bool FKsa64BridgeModule::SupportsGlobalDisplayV1() const
+{
+    return Status == EKsa64BridgeStatus::SessionOpen
+        && Session != nullptr
+        && Api.IsValid()
+        && Api->HasGlobalDisplayV1();
+}
+
+int32 FKsa64BridgeModule::GlobalDisplayAvailability(
+    Ksa64GlobalDisplayAvailabilityV1& OutAvailability) const
+{
+    if (!SupportsGlobalDisplayV1()) return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64GlobalDisplayAvailabilityV1 Candidate = {};
+    Candidate.api_version = KSA64_GLOBAL_DISPLAY_API_VERSION;
+    Candidate.struct_size = sizeof(Candidate);
+    const int32 Result = Api->GlobalDisplay.availability(Session, &Candidate);
+    if (Result != KSA64_VIEWER_OK) return Result;
+    const bool bReservedZero = Algo::AllOf(
+        Candidate.reserved,
+        [](uint32 Value) { return Value == 0; });
+    if (!bReservedZero
+        || Candidate.api_version != KSA64_GLOBAL_DISPLAY_API_VERSION
+        || Candidate.struct_size != sizeof(Candidate)
+        || Candidate.display_identity == 0
+        || Candidate.role < 1 || Candidate.role > 5
+        || (Candidate.flags & ~KSA64_GLOBAL_DISPLAY_AVAILABILITY_ACCEPTED_EXACT) != 0
+        || Candidate.available_source_mask == 0
+        || (Candidate.available_source_mask & ~0x0fu) != 0
+        || Candidate.available_frame_mask == 0
+        || (Candidate.available_frame_mask & ~0x07u) != 0
+        || (Candidate.sample_count != 0
+            && Candidate.oldest_sample_release > Candidate.newest_sample_release))
+    {
+        return KSA64_VIEWER_INTERNAL;
+    }
+    OutAvailability = Candidate;
+    return KSA64_VIEWER_OK;
+}
+
+int32 FKsa64BridgeModule::CopyGlobalPayload(
+    Ksa64GlobalPayloadFn Function,
+    TArray<uint8>& OutPayload) const
+{
+    OutPayload.Reset();
+    if (!SupportsGlobalDisplayV1() || Function == nullptr)
+        return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerOwnedBuffer Buffer = {};
+    Buffer.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Buffer.struct_size = sizeof(Buffer);
+    const int32 Result = Function(Session, &Buffer);
+    if (Result != KSA64_VIEWER_OK)
+    {
+        if (Buffer.data != nullptr) Api->FreeBuffer(&Buffer);
+        return Result;
+    }
+    if (Buffer.data == nullptr
+        || Buffer.length == 0
+        || Buffer.length > 256u * 1024u
+        || Buffer.length > static_cast<uint64>(MAX_int32))
+    {
+        if (Buffer.data != nullptr) Api->FreeBuffer(&Buffer);
+        return KSA64_VIEWER_INTERNAL;
+    }
+    OutPayload.Append(Buffer.data, static_cast<int32>(Buffer.length));
+    const int32 FreeResult = Api->FreeBuffer(&Buffer);
+    if (FreeResult != KSA64_VIEWER_OK)
+    {
+        OutPayload.Reset();
+        return FreeResult;
+    }
+    return KSA64_VIEWER_OK;
+}
+
+int32 FKsa64BridgeModule::GlobalDisplayDefinition(TArray<uint8>& OutPayload) const
+{
+    return CopyGlobalPayload(
+        SupportsGlobalDisplayV1() ? Api->GlobalDisplay.definition_payload : nullptr,
+        OutPayload);
+}
+
+int32 FKsa64BridgeModule::PollGlobalDisplaySample(TArray<uint8>& OutPayload) const
+{
+    return CopyGlobalPayload(
+        SupportsGlobalDisplayV1() ? Api->GlobalDisplay.poll_sample_payload : nullptr,
+        OutPayload);
+}
+
+int32 FKsa64BridgeModule::GlobalDisplaySampleRange(
+    const Ksa64GlobalDisplaySampleRangeRequestV1& Request,
+    TArray<uint8>& OutPayload) const
+{
+    OutPayload.Reset();
+    if (!SupportsGlobalDisplayV1()) return KSA64_VIEWER_UNSUPPORTED;
+    const bool bReservedZero = Algo::AllOf(
+        Request.reserved,
+        [](uint32 Value) { return Value == 0; });
+    if (!bReservedZero
+        || Request.api_version != KSA64_GLOBAL_DISPLAY_API_VERSION
+        || Request.struct_size != sizeof(Request)
+        || Request.flags != 0
+        || Request.max_count == 0
+        || Request.max_count > 256u)
+    {
+        return KSA64_VIEWER_INVALID_ARGUMENT;
+    }
+
+    Ksa64ViewerOwnedBuffer Buffer = {};
+    Buffer.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Buffer.struct_size = sizeof(Buffer);
+    const int32 Result =
+        Api->GlobalDisplay.sample_range_payload(Session, &Request, &Buffer);
+    if (Result != KSA64_VIEWER_OK)
+    {
+        if (Buffer.data != nullptr) Api->FreeBuffer(&Buffer);
+        return Result;
+    }
+    if (Buffer.data == nullptr
+        || Buffer.length == 0
+        || Buffer.length > 256u * 1024u
+        || Buffer.length > static_cast<uint64>(MAX_int32))
+    {
+        if (Buffer.data != nullptr) Api->FreeBuffer(&Buffer);
+        return KSA64_VIEWER_INTERNAL;
+    }
+    OutPayload.Append(Buffer.data, static_cast<int32>(Buffer.length));
+    const int32 FreeResult = Api->FreeBuffer(&Buffer);
+    if (FreeResult != KSA64_VIEWER_OK) OutPayload.Reset();
+    return FreeResult;
+}
+
+int32 FKsa64BridgeModule::PollGlobalDisplayTransition(TArray<uint8>& OutPayload) const
+{
+    return CopyGlobalPayload(
+        SupportsGlobalDisplayV1() ? Api->GlobalDisplay.poll_transition_payload : nullptr,
+        OutPayload);
+}
+
+int32 FKsa64BridgeModule::GlobalReplayIndex(TArray<uint8>& OutPayload) const
+{
+    return CopyGlobalPayload(
+        SupportsGlobalDisplayV1() ? Api->GlobalDisplay.replay_index_payload : nullptr,
+        OutPayload);
+}
+
+int32 FKsa64BridgeModule::GlobalPathChunk(
+    const Ksa64GlobalDisplayPathRequestV1& Request,
+    TArray<uint8>& OutPayload) const
+{
+    OutPayload.Reset();
+    if (!SupportsGlobalDisplayV1()) return KSA64_VIEWER_UNSUPPORTED;
+    Ksa64ViewerOwnedBuffer Buffer = {};
+    Buffer.abi_version = KSA64_VIEWER_ABI_VERSION;
+    Buffer.struct_size = sizeof(Buffer);
+    const int32 Result =
+        Api->GlobalDisplay.path_chunk_payload(Session, &Request, &Buffer);
+    if (Result != KSA64_VIEWER_OK)
+    {
+        if (Buffer.data != nullptr) Api->FreeBuffer(&Buffer);
+        return Result;
+    }
+    if (Buffer.data == nullptr
+        || Buffer.length == 0
+        || Buffer.length > 256u * 1024u
+        || Buffer.length > static_cast<uint64>(MAX_int32))
+    {
+        if (Buffer.data != nullptr) Api->FreeBuffer(&Buffer);
+        return KSA64_VIEWER_INTERNAL;
+    }
+    OutPayload.Append(Buffer.data, static_cast<int32>(Buffer.length));
+    const int32 FreeResult = Api->FreeBuffer(&Buffer);
+    if (FreeResult != KSA64_VIEWER_OK) OutPayload.Reset();
+    return FreeResult;
 }
 
 int32 FKsa64BridgeModule::GetCompletedKsb11(TArray<uint8>& OutBytes) const

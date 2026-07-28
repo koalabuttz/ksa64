@@ -578,8 +578,10 @@ execution remain measured follow-ons rather than assumptions.
 
 ### Phase 12C: complete global engineering viewer
 
-Status: implementation in progress from commit `eb666cb`. The accepted
-implementation contract is `phase12/PHASE12C_PLAN.md`.
+Status: implementation is under completion audit from commit `eb666cb`. The
+accepted implementation contract is `phase12/PHASE12C_PLAN.md`; the fail-closed
+nominal-lineage decision is `phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`; and
+`phase12/PHASE12C_COMPLETION.md` is a draft ledger, not an acceptance claim.
 
 The remaining physical Duet, Vita3K, and physical Vita Phase 12B.5
 qualifications are an independent follow-up workstream. They no longer gate
@@ -604,6 +606,27 @@ exact-event fixtures; it is the preferred native-feeling Chromebook 3-D path. Un
 contracts and evidence, not one renderer implementation. Low, medium, and high
 presentation budgets begin here, and no high-end Unreal feature may become an
 authority or base-tier requirement.
+
+Completion is deliberately two-level. The default
+`phase12/complete-phase12c.ps1` invocation can certify frozen inputs, portable
+contracts, exact replays, role filtering, broker/WASM publication, bridge
+compatibility, and the production web build. It cannot certify the phase. A
+completion PASS also requires explicit Unreal build and automation, a packaged
+Win64/D3D12 smoke, real rendered WebGPU/WebGL2/2-D evidence, cross-renderer
+semantic parity, and source-bound runtime metrics meeting the 1080p60/30-fps
+and 1-ms publication/polling budgets. Skipped or unavailable visual gates stay
+pending rather than becoming inferred passes.
+
+The nominal viewer preserves the frozen KTT10/KPH10/KSR10 bytes as the planned
+reference while using the current checked-in portable re-execution for
+exact-release SIM truth. Both lineages are hash-bound, strictly decoded,
+separately labelled, and checked against reviewed divergence limits before the
+display stream is exposed. This is a narrow compatibility decision, not a new
+canonical mission or permission for future drift.
+
+The Phase 12C.5 handoff is drafted in `phase12/PHASE12C5_HANDOFF.md` but does
+not activate until the Phase 12C completion ledger records every required
+renderer, parity, and runtime gate.
 
 ### Phase 12C.5: portable operations clients
 

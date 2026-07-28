@@ -5,9 +5,10 @@ use std::{
 
 use ksa64_interface::phase11::OperationalRole;
 use ksa64_presentation::{
-    encode_typed_payload, write_kps1_frame, ActionProposalView, Kps1Header,
+    encode_typed_payload, write_kps1_frame, ActionProposalView, GlobalDisplayCursorStateV1,
+    GlobalDisplayFrameId, GlobalDisplayPathLod, GlobalDisplaySourceId, Kps1Header,
     PresentationActionIntent, PresentationActionOperation, PresentationPace, PresentationPayload,
-    PresentationRole, PresentationSession, SealedEvidenceChunk,
+    PresentationRole, PresentationSession, SealedEvidenceChunk, KPS1_CAPABILITY_GLOBAL_DISPLAY_V1,
     KPS1_EVIDENCE_CHUNK_DATA_MAX_LENGTH, KPS1_EVIDENCE_OBJECT_MAX_LENGTH, KPS1_FLAG_RESPONSE,
 };
 use ksa64_session::{
@@ -29,6 +30,7 @@ pub const COMMAND_LENGTH: usize = 32;
 pub const RESULT_HEADER_LENGTH: usize = 12;
 pub const REPLAY_INFO_LENGTH: usize = 72;
 pub const REPLAY_READ_MAX_FRAMES: u32 = 256;
+const GLOBAL_DISPLAY_SAMPLE_POLL_LIMIT: usize = 256;
 pub const REPLAY_READ_MAX_BYTES: usize = 1024 * 1024;
 pub const EXPECTED_RELEASE_EPOCH: u32 = 21_591;
 pub const EXPECTED_EVIDENCE_LENGTH: usize = 2_911_464;
@@ -54,6 +56,7 @@ pub enum WorkerCommandKind {
     Summary = 11,
     ReplayInfo = 12,
     ReplayRead = 13,
+    OpenNominalGlobalReplay = 14,
 }
 
 impl WorkerCommandKind {
@@ -72,6 +75,7 @@ impl WorkerCommandKind {
             11 => Some(Self::Summary),
             12 => Some(Self::ReplayInfo),
             13 => Some(Self::ReplayRead),
+            14 => Some(Self::OpenNominalGlobalReplay),
             _ => None,
         }
     }
@@ -191,6 +195,11 @@ pub struct WasmAuthority {
     completed_summary: Option<(u32, u32)>,
     evidence_published: bool,
     replay: Option<VerifiedPresentationReplay>,
+    capability_mask: u64,
+    global_static_published: bool,
+    global_final_paths_published: bool,
+    global_next_sample_release: u32,
+    global_transition_index: u32,
     last_result: Vec<u8>,
 }
 
@@ -206,6 +215,11 @@ impl Default for WasmAuthority {
             completed_summary: None,
             evidence_published: false,
             replay: None,
+            capability_mask: 0,
+            global_static_published: false,
+            global_final_paths_published: false,
+            global_next_sample_release: 0,
+            global_transition_index: 0,
             last_result: Vec::new(),
         }
     }
@@ -241,6 +255,12 @@ impl WasmAuthority {
                 self.role = PresentationRole::from(role);
                 self.session_nonce = session_nonce;
                 self.server_sequence = 1;
+                self.capability_mask = (u64::from(command.arg3) | (u64::from(command.arg4) << 32))
+                    & KPS1_CAPABILITY_GLOBAL_DISPLAY_V1;
+                self.global_static_published = false;
+                self.global_final_paths_published = false;
+                self.global_next_sample_release = 0;
+                self.global_transition_index = 0;
                 self.session = Some(FullMissionPresentationSession::new(role)?);
                 self.evidence = None;
                 self.completed_summary = None;
@@ -280,6 +300,11 @@ impl WasmAuthority {
                 self.completed_summary = None;
                 self.evidence_published = false;
                 self.replay = None;
+                self.capability_mask = 0;
+                self.global_static_published = false;
+                self.global_final_paths_published = false;
+                self.global_next_sample_release = 0;
+                self.global_transition_index = 0;
                 self.session_nonce = 0;
                 self.server_sequence = 1;
                 self.incomplete = false;
@@ -288,6 +313,7 @@ impl WasmAuthority {
             WorkerCommandKind::Summary => self.summary(),
             WorkerCommandKind::ReplayInfo => self.replay_info(),
             WorkerCommandKind::ReplayRead => self.replay_read(command),
+            WorkerCommandKind::OpenNominalGlobalReplay => self.open_nominal_global_replay(command),
         }
     }
 
@@ -303,6 +329,16 @@ impl WasmAuthority {
         role_raw: u8,
         session_nonce: u64,
     ) -> Result<Vec<u8>, WorkerError> {
+        self.open_replay_with_capabilities(input, role_raw, session_nonce, 0)
+    }
+
+    pub fn open_replay_with_capabilities(
+        &mut self,
+        input: &[u8],
+        role_raw: u8,
+        session_nonce: u64,
+        capability_mask: u64,
+    ) -> Result<Vec<u8>, WorkerError> {
         if self.incomplete {
             return Err(WorkerError::Incomplete);
         }
@@ -316,8 +352,43 @@ impl WasmAuthority {
         if session_nonce == 0 {
             return Err(WorkerError::Value);
         }
-        let replay = VerifiedPresentationReplay::open(input, role, session_nonce)?;
+        let capability_mask = capability_mask & KPS1_CAPABILITY_GLOBAL_DISPLAY_V1;
+        let replay = VerifiedPresentationReplay::open_with_capabilities(
+            input,
+            role,
+            session_nonce,
+            capability_mask,
+        )?;
         self.role = role;
+        self.capability_mask = capability_mask;
+        self.session_nonce = session_nonce;
+        self.replay = Some(replay);
+        self.replay_info()
+    }
+
+    fn open_nominal_global_replay(
+        &mut self,
+        command: WorkerCommand,
+    ) -> Result<Vec<u8>, WorkerError> {
+        if self.incomplete
+            || self.session.is_some()
+            || self.replay.is_some()
+            || self.evidence.is_some()
+        {
+            return Err(WorkerError::Lifecycle);
+        }
+        let role = replay_role_from_raw(command.arg0 as u8)?;
+        let session_nonce = u64::from(command.arg1) | (u64::from(command.arg2) << 32);
+        let capability_mask = u64::from(command.arg3) | (u64::from(command.arg4) << 32);
+        if session_nonce == 0
+            || capability_mask & KPS1_CAPABILITY_GLOBAL_DISPLAY_V1 == 0
+            || capability_mask & !KPS1_CAPABILITY_GLOBAL_DISPLAY_V1 != 0
+        {
+            return Err(WorkerError::Value);
+        }
+        let replay = VerifiedPresentationReplay::open_nominal_global(role, session_nonce)?;
+        self.role = role;
+        self.capability_mask = KPS1_CAPABILITY_GLOBAL_DISPLAY_V1;
         self.session_nonce = session_nonce;
         self.replay = Some(replay);
         self.replay_info()
@@ -412,6 +483,78 @@ impl WasmAuthority {
         }
         if let Some(value) = session.current_action_proposal() {
             payloads.push(PresentationPayload::ActionProposal(value));
+        }
+        if self.capability_mask & KPS1_CAPABILITY_GLOBAL_DISPLAY_V1 != 0 {
+            let authority = session.authority();
+            let definition = authority.global_display_definition().filter_for_role(role);
+            if !self.global_static_published {
+                payloads.push(PresentationPayload::GlobalDisplayDefinition(definition));
+            }
+            let samples = authority.global_display_samples_from_release(
+                self.global_next_sample_release,
+                GLOBAL_DISPLAY_SAMPLE_POLL_LIMIT,
+            );
+            if let Some(last) = samples.last() {
+                self.global_next_sample_release = last.release_epoch.saturating_add(1);
+            }
+            for chunk in samples.chunks(128) {
+                payloads.push(PresentationPayload::GlobalDisplaySampleBatch(
+                    chunk
+                        .iter()
+                        .cloned()
+                        .map(|sample| sample.filter_for_role(role))
+                        .collect(),
+                ));
+            }
+            let transitions = authority
+                .global_display_transitions_after(self.global_transition_index)
+                .to_vec();
+            self.global_transition_index = self
+                .global_transition_index
+                .saturating_add(u32::try_from(transitions.len()).unwrap_or(u32::MAX));
+            for transition in transitions {
+                payloads.push(PresentationPayload::GlobalDisplayTransition(transition));
+            }
+            let replay_index = authority.global_display_replay_index();
+            let completed =
+                session.lifecycle() == ksa64_presentation::PresentationLifecycle::Completed;
+            let newest_sample_release = authority.global_display_newest_sample_release();
+            let exact_samples_caught_up =
+                newest_sample_release.is_none_or(|newest| self.global_next_sample_release > newest);
+            let publish_initial_paths = !self.global_static_published;
+            let publish_final_paths =
+                completed && exact_samples_caught_up && !self.global_final_paths_published;
+            // Exact sample batches are the live path delta. Cumulative path
+            // chunks are intentionally published only at initialization and
+            // terminal finalization; rebuilding and resending every 32
+            // releases made late-mission polling quadratic in history length.
+            if publish_initial_paths || publish_final_paths {
+                append_global_display_paths(authority, &mut payloads);
+            }
+            if publish_initial_paths || publish_final_paths {
+                payloads.push(PresentationPayload::GlobalReplayIndex(replay_index.clone()));
+            }
+            if publish_initial_paths {
+                self.global_static_published = true;
+            }
+            if publish_final_paths {
+                self.global_final_paths_published = true;
+            }
+            payloads.push(PresentationPayload::GlobalDisplayCursorState(
+                GlobalDisplayCursorStateV1 {
+                    sample_count: u32::try_from(authority.global_display_sample_count())
+                        .unwrap_or(u32::MAX),
+                    oldest_sample_release: authority
+                        .global_display_oldest_sample_release()
+                        .unwrap_or(0),
+                    newest_sample_release: newest_sample_release.unwrap_or(0),
+                    transition_count: u32::try_from(authority.global_display_transition_count())
+                        .unwrap_or(u32::MAX),
+                    path_generation: definition.display_identity,
+                    replay_generation: replay_index.index_identity,
+                    resync_mask: 0,
+                },
+            ));
         }
         let mut frames = Vec::new();
         for value in payloads {
@@ -635,6 +778,41 @@ impl WasmAuthority {
 
     fn evidence_bytes(&self) -> Result<Vec<u8>, WorkerError> {
         Ok(self.evidence_slice()?.to_vec())
+    }
+}
+
+fn append_global_display_paths(
+    authority: &ksa64_session::phase12b_live::FullMissionSession,
+    payloads: &mut Vec<PresentationPayload>,
+) {
+    for source in [
+        GlobalDisplaySourceId::Planned,
+        GlobalDisplaySourceId::OnboardEstimate,
+        GlobalDisplaySourceId::GroundEstimate,
+        GlobalDisplaySourceId::SimTruth,
+    ] {
+        for frame in [
+            GlobalDisplayFrameId::LocalEnu,
+            GlobalDisplayFrameId::EarthFixedEcef,
+            GlobalDisplayFrameId::EarthInertialGcrf,
+        ] {
+            for lod in [
+                GlobalDisplayPathLod::OneSecond,
+                GlobalDisplayPathLod::FourSecond,
+            ] {
+                let mut chunk_index = 0_u16;
+                while let Ok(chunk) =
+                    authority.global_display_path_chunk(source, frame, lod, chunk_index)
+                {
+                    let chunk_count = chunk.chunk_count;
+                    payloads.push(PresentationPayload::GlobalDisplayPathChunk(chunk));
+                    chunk_index = chunk_index.saturating_add(1);
+                    if chunk_index >= chunk_count {
+                        break;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -864,6 +1042,67 @@ pub unsafe extern "C" fn ksa64_wasm_open_replay(
     return_code
 }
 
+/// Phase 12C replay entrypoint with an additive negotiated KPS1 capability mask.
+/// The original ABI remains capability-zero and byte-identical.
+///
+/// # Safety
+///
+/// The pointer/length contract is identical to `ksa64_wasm_open_replay`.
+#[no_mangle]
+pub unsafe extern "C" fn ksa64_wasm_open_replay_v2(
+    pointer: *const u8,
+    length: usize,
+    role: u32,
+    nonce_low: u32,
+    nonce_high: u32,
+    capability_low: u32,
+    capability_high: u32,
+) -> i32 {
+    let domain_result = if (pointer.is_null() && length != 0)
+        || length > KPS1_EVIDENCE_OBJECT_MAX_LENGTH as usize
+        || role > u32::from(u8::MAX)
+    {
+        Err(WorkerError::Value)
+    } else {
+        let input = if length == 0 {
+            &[]
+        } else {
+            std::slice::from_raw_parts(pointer, length)
+        };
+        let nonce = u64::from(nonce_low) | (u64::from(nonce_high) << 32);
+        let capability_mask = u64::from(capability_low) | (u64::from(capability_high) << 32);
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            WORKER.with(|worker| {
+                worker.borrow_mut().open_replay_with_capabilities(
+                    input,
+                    role as u8,
+                    nonce,
+                    capability_mask,
+                )
+            })
+        }));
+        match result {
+            Ok(value) => value,
+            Err(_) => {
+                WORKER.with(|worker| worker.borrow_mut().incomplete = true);
+                Err(WorkerError::Panic)
+            }
+        }
+    };
+    let return_code = domain_result
+        .as_ref()
+        .err()
+        .copied()
+        .filter(|error| *error == WorkerError::Panic)
+        .map_or(0, |error| i32::from(error.code()));
+    let encoded = match domain_result {
+        Ok(payload) => encode_result(0, &payload),
+        Err(error) => encode_result(error.code(), &[]),
+    };
+    WORKER.with(|worker| worker.borrow_mut().last_result = encoded);
+    return_code
+}
+
 #[no_mangle]
 pub extern "C" fn ksa64_wasm_result_ptr() -> *const u8 {
     WORKER.with(|worker| worker.borrow().last_result.as_ptr())
@@ -925,6 +1164,206 @@ mod tests {
         assert_eq!(&payload[..4], b"KPW1");
         assert!(payload.len() > 16);
     }
+    fn publication_kinds(payload: &[u8]) -> Vec<ksa64_presentation::PresentationMessageKind> {
+        assert_eq!(&payload[..4], b"KPW1");
+        let count = usize::from(get_u16(payload, 6));
+        let mut at = 8_usize;
+        let mut kinds = Vec::with_capacity(count);
+        for _ in 0..count {
+            let length = get_u32(payload, at) as usize;
+            at += 4;
+            let decoded = ksa64_presentation::parse_kps1_frame(&payload[at..at + length]).unwrap();
+            kinds.push(decoded.header.kind);
+            at += length;
+        }
+        assert_eq!(at, payload.len());
+        kinds
+    }
+
+    fn publication_payloads(payload: &[u8], role: PresentationRole) -> Vec<PresentationPayload> {
+        assert_eq!(&payload[..4], b"KPW1");
+        let count = usize::from(get_u16(payload, 6));
+        let mut at = 8_usize;
+        let mut values = Vec::with_capacity(count);
+        for _ in 0..count {
+            let length = get_u32(payload, at) as usize;
+            at += 4;
+            let frame = ksa64_presentation::parse_kps1_frame(&payload[at..at + length]).unwrap();
+            values.push(
+                ksa64_presentation::decode_typed_payload(frame.header.kind, frame.payload, role)
+                    .unwrap(),
+            );
+            at += length;
+        }
+        assert_eq!(at, payload.len());
+        values
+    }
+
+    #[test]
+    fn capability_zero_and_unknown_capability_preserve_legacy_poll_bytes() {
+        fn poll(capability: u32) -> Vec<u8> {
+            let mut worker = WasmAuthority::default();
+            assert_eq!(
+                parse_result(
+                    &worker.execute(&command(WorkerCommandKind::Start, [2, 7, 0, capability, 0],))
+                )
+                .unwrap()
+                .0,
+                0,
+            );
+            assert_eq!(
+                parse_result(&worker.execute(&command(WorkerCommandKind::Prepare, [0; 5])))
+                    .unwrap()
+                    .0,
+                0,
+            );
+            let result = worker.execute(&command(WorkerCommandKind::Poll, [0; 5]));
+            parse_result(&result).unwrap().1.to_vec()
+        }
+        assert_eq!(poll(0), poll(1));
+    }
+
+    #[test]
+    fn negotiated_global_display_is_additive_and_truth_filtered() {
+        let mut worker = WasmAuthority::default();
+        assert_eq!(
+            parse_result(&worker.execute(&command(
+                WorkerCommandKind::Start,
+                [2, 7, 0, KPS1_CAPABILITY_GLOBAL_DISPLAY_V1 as u32, 0],
+            )))
+            .unwrap()
+            .0,
+            0,
+        );
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Prepare, [0; 5])))
+                .unwrap()
+                .0,
+            0,
+        );
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Advance, [1, 0, 0, 0, 0],)))
+                .unwrap()
+                .0,
+            0,
+        );
+        let result = worker.execute(&command(WorkerCommandKind::Poll, [0; 5]));
+        let (_, payload) = parse_result(&result).unwrap();
+        let kinds = publication_kinds(payload);
+        assert!(
+            kinds.contains(&ksa64_presentation::PresentationMessageKind::GlobalDisplayDefinition)
+        );
+        assert!(
+            kinds.contains(&ksa64_presentation::PresentationMessageKind::GlobalDisplaySampleBatch)
+        );
+        assert!(
+            kinds.contains(&ksa64_presentation::PresentationMessageKind::GlobalDisplayCursorState)
+        );
+        let mut at = 8_usize;
+        for _ in 0..usize::from(get_u16(payload, 6)) {
+            let length = get_u32(payload, at) as usize;
+            at += 4;
+            let frame = ksa64_presentation::parse_kps1_frame(&payload[at..at + length]).unwrap();
+            if frame.header.kind
+                == ksa64_presentation::PresentationMessageKind::GlobalDisplaySampleBatch
+            {
+                let decoded = ksa64_presentation::decode_typed_payload(
+                    frame.header.kind,
+                    frame.payload,
+                    PresentationRole::GuidedOperator,
+                )
+                .unwrap();
+                let PresentationPayload::GlobalDisplaySampleBatch(samples) = decoded else {
+                    unreachable!()
+                };
+                assert!(samples.iter().all(|sample| sample
+                    .sources
+                    .iter()
+                    .all(|pose| pose.source != GlobalDisplaySourceId::SimTruth)));
+            }
+            at += length;
+        }
+    }
+
+    #[test]
+    fn live_global_publication_is_bounded_and_does_not_resend_midflight_paths() {
+        let mut worker = WasmAuthority::default();
+        let start = worker.execute(&command(
+            WorkerCommandKind::Start,
+            [2, 7, 0, KPS1_CAPABILITY_GLOBAL_DISPLAY_V1 as u32, 0],
+        ));
+        assert_eq!(parse_result(&start).unwrap().0, 0);
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Prepare, [0; 5])))
+                .unwrap()
+                .0,
+            0
+        );
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Pace, [1, 0, 0, 0, 0])))
+                .unwrap()
+                .0,
+            0
+        );
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Advance, [1, 0, 0, 0, 0])))
+                .unwrap()
+                .0,
+            0
+        );
+
+        let initial = worker.execute(&command(WorkerCommandKind::Poll, [0; 5]));
+        let (_, initial_bytes) = parse_result(&initial).unwrap();
+        let initial_payloads =
+            publication_payloads(initial_bytes, PresentationRole::GuidedOperator);
+        assert!(initial_payloads
+            .iter()
+            .any(|value| matches!(value, PresentationPayload::GlobalDisplayPathChunk(_))));
+
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Advance, [512, 0, 0, 0, 0],)))
+                .unwrap()
+                .0,
+            0
+        );
+
+        for expected_samples in [GLOBAL_DISPLAY_SAMPLE_POLL_LIMIT; 2] {
+            let publication = worker.execute(&command(WorkerCommandKind::Poll, [0; 5]));
+            let (_, bytes) = parse_result(&publication).unwrap();
+            let values = publication_payloads(bytes, PresentationRole::GuidedOperator);
+            let sample_count = values
+                .iter()
+                .filter_map(|value| {
+                    let PresentationPayload::GlobalDisplaySampleBatch(samples) = value else {
+                        return None;
+                    };
+                    Some(samples.len())
+                })
+                .sum::<usize>();
+            assert_eq!(sample_count, expected_samples);
+            assert!(!values
+                .iter()
+                .any(|value| matches!(value, PresentationPayload::GlobalDisplayPathChunk(_))));
+            assert!(values.iter().any(|value| {
+                matches!(
+                    value,
+                    PresentationPayload::GlobalDisplayCursorState(cursor)
+                        if cursor.sample_count >= 513
+                )
+            }));
+        }
+
+        let empty = worker.execute(&command(WorkerCommandKind::Poll, [0; 5]));
+        let (_, empty_bytes) = parse_result(&empty).unwrap();
+        let empty_payloads = publication_payloads(empty_bytes, PresentationRole::GuidedOperator);
+        assert!(!empty_payloads.iter().any(|value| {
+            matches!(value, PresentationPayload::GlobalDisplaySampleBatch(samples) if !samples.is_empty())
+        }));
+        assert!(!empty_payloads
+            .iter()
+            .any(|value| matches!(value, PresentationPayload::GlobalDisplayPathChunk(_))));
+    }
+
     #[test]
     fn replay_rejection_is_transactional_and_destroy_recovers_incomplete_state() {
         let mut worker = WasmAuthority::default();
@@ -1186,6 +1625,96 @@ mod tests {
             parse_result(&out_of_range).unwrap().0,
             WorkerError::Value.code()
         );
+    }
+
+    #[test]
+    fn nominal_global_worker_replay_is_exact_and_read_only() {
+        let mut worker = WasmAuthority::default();
+        let opened = worker.execute(&command(
+            WorkerCommandKind::OpenNominalGlobalReplay,
+            [
+                PresentationRole::SimDirector as u32,
+                0x5566_7788,
+                0x1122_3344,
+                KPS1_CAPABILITY_GLOBAL_DISPLAY_V1 as u32,
+                (KPS1_CAPABILITY_GLOBAL_DISPLAY_V1 >> 32) as u32,
+            ],
+        ));
+        let (status, info) = parse_result(&opened).unwrap();
+        assert_eq!(status, 0);
+        assert_eq!(&info[..4], b"KPRI");
+        assert_eq!(info[28], PresentationRole::SimDirector as u8);
+        let frame_count = u64::from_le_bytes(info[8..16].try_into().unwrap());
+        assert!(frame_count > 170);
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Action, [1, 0, 0, 0, 1],)))
+                .unwrap()
+                .0,
+            WorkerError::Lifecycle.code()
+        );
+
+        let mut first = 0_u64;
+        let mut release_count = 0_usize;
+        let mut final_release = None;
+        let mut saw_definition = false;
+        let mut saw_index = false;
+        while first < frame_count {
+            let bundle = worker.execute(&command(
+                WorkerCommandKind::ReplayRead,
+                [
+                    first as u32,
+                    (first >> 32) as u32,
+                    256,
+                    REPLAY_READ_MAX_BYTES as u32,
+                    0,
+                ],
+            ));
+            let (read_status, bytes) = parse_result(&bundle).unwrap();
+            assert_eq!(read_status, 0);
+            let count = usize::from(get_u16(bytes, 6));
+            assert!(count > 0);
+            let mut at = 8_usize;
+            for _ in 0..count {
+                let length = get_u32(bytes, at) as usize;
+                at += 4;
+                let decoded =
+                    ksa64_presentation::parse_kps1_frame(&bytes[at..at + length]).unwrap();
+                at += length;
+                first += 1;
+                assert_eq!(decoded.header.sequence, first);
+                assert_eq!(decoded.header.session_nonce, 0x1122_3344_5566_7788);
+                match ksa64_presentation::decode_typed_payload(
+                    decoded.header.kind,
+                    decoded.payload,
+                    PresentationRole::SimDirector,
+                )
+                .unwrap()
+                {
+                    PresentationPayload::GlobalDisplayDefinition(value) => {
+                        saw_definition = true;
+                        assert_ne!(
+                            value.available_source_mask
+                                & ksa64_presentation::GLOBAL_DISPLAY_SOURCE_SIM_TRUTH,
+                            0
+                        );
+                    }
+                    PresentationPayload::GlobalDisplaySampleBatch(values) => {
+                        release_count += values.len();
+                        final_release = values.last().map(|value| value.release_epoch);
+                    }
+                    PresentationPayload::GlobalReplayIndex(value) => {
+                        saw_index = true;
+                        assert_eq!(value.last_release, 22_014);
+                    }
+                    _ => {}
+                }
+            }
+            assert_eq!(at, bytes.len());
+        }
+        assert!(saw_definition);
+        assert!(saw_index);
+        assert_eq!(release_count, 22_015);
+        assert_eq!(final_release, Some(22_014));
     }
 
     #[test]

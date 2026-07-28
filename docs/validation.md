@@ -555,3 +555,68 @@ Phase 12B.5 separates software implementation evidence from platform and physica
 Hosted Windows x64, Linux x64, Linux ARM64, and macOS ARM64 exact execution plus WASM worker exactness under the Node harness passed at `aae737c03b8d23e171f77d0b0e95b9dbff22746e` in runs `30326378656` and `30326378684`, including qualified archive generation on all four native hosts. Physical Lenovo Duet 11 and physical Vita evidence cannot be inferred from CI or desktop emulation. Vita3K is useful repeatable emulator evidence but does not replace physical controls, network, suspend/resume, memory, or frame-time measurements. Until the physical Duet, Vita3K emulator, and physical Vita gates pass, the phase is software- and hosted-portable-runtime-qualified but not fully accepted.
 
 Client polling, rendering backend, reconnect, or replay may never become an authority input. A terminated WASM worker, truncated replay, browser suspension, or incomplete device run remains incomplete and cannot fabricate a sealed archive.
+
+
+## Phase 12C global-display and renderer-parity validation
+
+Status: implementation audit in progress; renderer/runtime completion evidence
+is pending. No results in this section imply a Phase 12C acceptance claim.
+
+The frozen entry gate requires the Phase 12B.5 entry commit to remain in
+history, the 13-entry catalog hash to remain exact, the accepted 21,591-release
+four-action KSB11 to remain 2,911,464 bytes with SHA-256
+`7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4`,
+and the nominal KTT10/KPH10/KSR10 hashes to remain unchanged. The independent
+physical Duet, Vita3K, and physical Vita qualification backlog is recorded but
+not inferred from Phase 12C.
+
+Portable validation covers:
+
+- warnings-denied formatting, Clippy, and the native workspace;
+- strict Rust/C++/TypeScript GlobalDisplay vectors and corruption rejection;
+- additive KPS1 capability negotiation with legacy 1.0 byte preservation;
+- additive C function-table layout, misuse, panic containment, and ABI-v1
+  preservation;
+- role filtering before native, broker, WebAssembly, or replay boundaries;
+- bounded exact range/cursor behavior and explicit resynchronization gaps;
+- exact 22,015-release nominal replay and 21,591-release GNSS-loss replay;
+- identical normalized display records between live and verified replay;
+- transition/event-preserving exact, one-second, and four-second paths;
+- snap behavior across frames, segments, deployment, invalidity, replacement,
+  seek, gaps, and terminal events; and
+- action, procedure, disposition, checksum, and KSB11 invariance under display
+  polling, backend, camera, layout, and playback changes.
+
+The nominal compatibility audit strictly decodes and hashes both lineages. The
+frozen accepted path uses KTT10
+`a50b4b32b1c0feb44a54fc9041c40833717b9032ce127af67a9d34c3488e824a`,
+KPH10 `cd664e8b72eff7aff1e3c4a5b7fb6859bb9d5178d3b6b6d4c2c06f2c61ed9cf2`,
+and KSR10
+`9e8691933789ce6d870d561218d6888f65acb04ef24e02796be33a704c8678aa`.
+Current exact re-execution must match its separately reviewed hashes and every
+delta bound in `phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`; neither lineage
+may be silently substituted for the other.
+
+Renderer acceptance additionally requires:
+
+- `KSA64.Phase12C` Unreal automation with no failed, skipped, or in-process
+  tests;
+- a packaged Win64/D3D12 viewer that needs no Editor, MCP, or Python;
+- semantic snapshots at all frame transitions, burnout, apogee, deployment,
+  landing, actions, and faults;
+- identical Unreal and Babylon source availability, release, frame, paths,
+  events, and dispositions at those snapshots;
+- real WebGPU, forced-WebGL2, context-loss fallback, and complete 2-D lanes;
+- no truth fields in non-director products and persistent truth labelling when
+  enabled for a director;
+- origin changes with no semantic pose or visible path discontinuity;
+- 1920x1080 at 60 fps on the accepted RTX 2080 Super procedural Unreal tier;
+- display publication and bridge polling each below 1 ms p99; and
+- responsive 30-fps Babylon WebGPU and WebGL2 lanes.
+
+`phase12/complete-phase12c.ps1` reports a portable/contracts PASS when only
+the nonvisual gates run. It reports a completion PASS only when every default
+gate and explicit Unreal build, automation, package, rendered-browser,
+cross-renderer parity, and runtime-evidence input passes. Skipped gates remain
+pending. Current measurements and their pending status are recorded in
+`phase12/PHASE12C_COMPLETION.md`.

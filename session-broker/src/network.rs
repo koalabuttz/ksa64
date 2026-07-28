@@ -14,8 +14,8 @@ use ksa64_presentation::{
     Kps1Header, Kps1SequenceCursor, PresentationCursors, PresentationErrorView,
     PresentationHandshake, PresentationMessageKind, PresentationPace, PresentationPayload,
     PresentationRole, SealedEvidenceChunk, SealedEvidenceMetadata,
-    KPS1_EVIDENCE_CHUNK_DATA_MAX_LENGTH, KPS1_FLAG_RESPONSE, KPS1_HEADER_LENGTH,
-    KPS1_MAX_PAYLOAD_LENGTH,
+    KPS1_CAPABILITY_GLOBAL_DISPLAY_V1, KPS1_EVIDENCE_CHUNK_DATA_MAX_LENGTH, KPS1_FLAG_RESPONSE,
+    KPS1_HEADER_LENGTH, KPS1_MAX_PAYLOAD_LENGTH,
 };
 use tungstenite::{
     handshake::server::create_response,
@@ -42,6 +42,7 @@ pub const MAX_CONTROL_ADVANCE_RELEASES: u32 = 4_096;
 pub const SOCKET_POLL_MILLIS: u64 = 100;
 pub const PRESENTATION_ERROR_RESYNC_REQUIRED: u16 = 1_001;
 pub const PRESENTATION_ERROR_CURSOR_AHEAD: u16 = 1_002;
+pub const SUPPORTED_PRESENTATION_CAPABILITIES: u64 = KPS1_CAPABILITY_GLOBAL_DISPLAY_V1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NetworkServiceError {
@@ -513,11 +514,12 @@ fn run_websocket(
         client_id: handshake.client_instance,
     };
 
+    let capability_mask = handshake.capability_mask & SUPPORTED_PRESENTATION_CAPABILITIES;
     let mut outbound_sequence = 1_u64;
     let response = PresentationPayload::HandshakeResponse(PresentationHandshake {
         role: handshake.role,
         client_instance: handshake.client_instance,
-        capability_mask: handshake.capability_mask,
+        capability_mask,
         cursors: attached.cursors,
     });
     send_payload(
@@ -533,6 +535,17 @@ fn run_websocket(
         Kps1SequenceCursor::new(session_nonce, 2).map_err(|_| NetworkServiceError::Protocol)?;
     let mut client_cursors = handshake.cursors;
     let mut evidence_sent = false;
+    poll_and_send_websocket_publication(
+        socket,
+        handshake.client_instance,
+        handshake.role,
+        session_nonce,
+        &broker,
+        &mut outbound_sequence,
+        &mut client_cursors,
+        &mut evidence_sent,
+        0,
+    )?;
 
     while !shutdown.load(Ordering::Acquire) {
         let message = match socket.read() {
@@ -577,6 +590,7 @@ fn run_websocket(
             &mut outbound_sequence,
             &mut client_cursors,
             &mut evidence_sent,
+            capability_mask,
         );
         complete_command(&admission);
         result?;
@@ -607,8 +621,12 @@ fn handle_client_frame(
     outbound_sequence: &mut u64,
     client_cursors: &mut PresentationCursors,
     evidence_sent: &mut bool,
+    capability_mask: u64,
 ) -> Result<(), NetworkServiceError> {
     let frame = parse_kps1_frame(bytes).map_err(|_| NetworkServiceError::ProtocolFrame)?;
+    if !frame.header.kind.is_negotiated_by(capability_mask) {
+        return Err(NetworkServiceError::ProtocolControl);
+    }
     inbound_sequence
         .accept(frame.header)
         .map_err(|_| NetworkServiceError::ProtocolSequence)?;
@@ -665,8 +683,53 @@ fn handle_client_frame(
                 KPS1_FLAG_RESPONSE,
             )?;
         }
+        PresentationPayload::GlobalDisplayRangeRequest(request) => {
+            let publication = broker
+                .global_display(client_id, request)
+                .map_err(NetworkServiceError::Broker)?
+                .ok_or(NetworkServiceError::ProtocolControl)?;
+            send_global_display_publication(
+                socket,
+                publication,
+                role,
+                session_nonce,
+                outbound_sequence,
+                correlation,
+            )?;
+            return Ok(());
+        }
         _ => return Err(NetworkServiceError::ProtocolControl),
     }
+    poll_and_send_websocket_publication(
+        socket,
+        client_id,
+        role,
+        session_nonce,
+        broker,
+        outbound_sequence,
+        client_cursors,
+        evidence_sent,
+        correlation,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn poll_and_send_websocket_publication(
+    socket: &mut WebSocket<PrefixedStream>,
+    client_id: u64,
+    role: PresentationRole,
+    session_nonce: u64,
+    broker: &SessionBrokerHandle,
+    outbound_sequence: &mut u64,
+    client_cursors: &mut PresentationCursors,
+    evidence_sent: &mut bool,
+    correlation: u64,
+) -> Result<(), NetworkServiceError> {
+    let response_flags = if correlation == 0 {
+        0
+    } else {
+        KPS1_FLAG_RESPONSE
+    };
     let publication = match broker.poll(client_id, *client_cursors, 256) {
         Ok(publication) => publication,
         Err(BrokerError::Cursor(CursorError::ResyncRequired { oldest_available })) => {
@@ -682,7 +745,7 @@ fn handle_client_frame(
                 session_nonce,
                 outbound_sequence,
                 correlation,
-                KPS1_FLAG_RESPONSE,
+                response_flags,
             )?;
             return Ok(());
         }
@@ -699,7 +762,7 @@ fn handle_client_frame(
                 session_nonce,
                 outbound_sequence,
                 correlation,
-                KPS1_FLAG_RESPONSE,
+                response_flags,
             )?;
             return Ok(());
         }
@@ -731,6 +794,76 @@ fn handle_client_frame(
         }
     }
     Ok(())
+}
+
+fn send_global_display_publication(
+    socket: &mut WebSocket<PrefixedStream>,
+    publication: crate::GlobalDisplayPublication,
+    role: PresentationRole,
+    session_nonce: u64,
+    sequence: &mut u64,
+    correlation: u64,
+) -> Result<(), NetworkServiceError> {
+    send_payload(
+        socket,
+        &PresentationPayload::GlobalDisplayDefinition(publication.definition),
+        role,
+        session_nonce,
+        sequence,
+        0,
+        0,
+    )?;
+    if !publication.samples.is_empty() {
+        send_payload(
+            socket,
+            &PresentationPayload::GlobalDisplaySampleBatch(publication.samples),
+            role,
+            session_nonce,
+            sequence,
+            0,
+            0,
+        )?;
+    }
+    for path in publication.paths {
+        send_payload(
+            socket,
+            &PresentationPayload::GlobalDisplayPathChunk(path),
+            role,
+            session_nonce,
+            sequence,
+            0,
+            0,
+        )?;
+    }
+    for transition in publication.transitions {
+        send_payload(
+            socket,
+            &PresentationPayload::GlobalDisplayTransition(transition),
+            role,
+            session_nonce,
+            sequence,
+            0,
+            0,
+        )?;
+    }
+    send_payload(
+        socket,
+        &PresentationPayload::GlobalReplayIndex(publication.replay_index),
+        role,
+        session_nonce,
+        sequence,
+        0,
+        0,
+    )?;
+    send_payload(
+        socket,
+        &PresentationPayload::GlobalDisplayCursorState(publication.cursor),
+        role,
+        session_nonce,
+        sequence,
+        correlation,
+        KPS1_FLAG_RESPONSE,
+    )
 }
 
 fn send_publication(
@@ -1412,8 +1545,15 @@ mod tests {
     fn service() -> (LoopbackWebService, Arc<SessionBrokerHandle>, Arc<AtomicU32>) {
         let advances = Arc::new(AtomicU32::new(0));
         let authority = NetworkAuthority::new(advances.clone());
-        let broker =
-            Arc::new(SessionBrokerHandle::spawn(authority, WorkerConfig::default()).unwrap());
+        let (service, broker) = service_with_authority(authority, WorkerConfig::default());
+        (service, broker, advances)
+    }
+
+    fn service_with_authority(
+        authority: NetworkAuthority,
+        worker_config: WorkerConfig,
+    ) -> (LoopbackWebService, Arc<SessionBrokerHandle>) {
+        let broker = Arc::new(SessionBrokerHandle::spawn(authority, worker_config).unwrap());
         let config = BrowserServiceConfig::loopback(
             0,
             ["http://127.0.0.1:4173".to_owned()],
@@ -1437,7 +1577,7 @@ mod tests {
             Arc::new(assets),
         )
         .unwrap();
-        (service, broker, advances)
+        (service, broker)
     }
 
     fn connect(
@@ -1469,6 +1609,42 @@ mod tests {
         socket: &mut WebSocket<TcpStream>,
         client_instance: u64,
         cursors: PresentationCursors,
+    ) -> PresentationHandshake {
+        send_handshake_request(socket, client_instance, cursors);
+        let response = socket.read().unwrap().into_data();
+        let decoded = parse_kps1_frame(&response).unwrap();
+        assert_eq!(
+            decoded.header.kind,
+            PresentationMessageKind::HandshakeResponse
+        );
+        assert_eq!(decoded.header.session_nonce, 77);
+        let PresentationPayload::HandshakeResponse(handshake) = decode_typed_payload(
+            decoded.header.kind,
+            decoded.payload,
+            PresentationRole::GuidedOperator,
+        )
+        .unwrap() else {
+            panic!("expected handshake response");
+        };
+        assert_eq!(handshake.cursors, cursors);
+
+        // A successful attach immediately replays retained records. Drain this
+        // initial publication through its required transport-status terminator
+        // so callers begin at the next client command boundary.
+        loop {
+            let publication = socket.read().unwrap().into_data();
+            let frame = parse_kps1_frame(&publication).unwrap();
+            if frame.header.kind == PresentationMessageKind::TransportStatus {
+                break;
+            }
+        }
+        handshake
+    }
+
+    fn send_handshake_request(
+        socket: &mut WebSocket<TcpStream>,
+        client_instance: u64,
+        cursors: PresentationCursors,
     ) {
         let payload = encode_typed_payload(
             &PresentationPayload::HandshakeRequest(PresentationHandshake {
@@ -1495,13 +1671,6 @@ mod tests {
         )
         .unwrap();
         socket.send(Message::Binary(frame.into())).unwrap();
-        let response = socket.read().unwrap().into_data();
-        let decoded = parse_kps1_frame(&response).unwrap();
-        assert_eq!(
-            decoded.header.kind,
-            PresentationMessageKind::HandshakeResponse
-        );
-        assert_eq!(decoded.header.session_nonce, 77);
     }
 
     fn send_client_payload(
@@ -1635,6 +1804,114 @@ mod tests {
         )
         .unwrap();
         send_handshake(&mut reconnected, 55, PresentationCursors::default());
+    }
+
+    #[test]
+    fn reconnect_replays_requested_retained_records_or_reports_resync() {
+        let advances = Arc::new(AtomicU32::new(0));
+        let mut authority = NetworkAuthority::new(advances);
+        for sequence in 1..=3_u64 {
+            authority
+                .events
+                .push(PresentationEventView {
+                    sequence,
+                    release_epoch: sequence as u32,
+                    kind: 1,
+                    detail_identity: sequence as u32,
+                })
+                .unwrap();
+        }
+        let (service, _broker) = service_with_authority(
+            authority,
+            WorkerConfig {
+                autonomous_pacing: false,
+                ..WorkerConfig::default()
+            },
+        );
+        let mut socket = connect(
+            &service,
+            "http://127.0.0.1:4173",
+            service.launch_subprotocol(),
+        )
+        .unwrap();
+        let requested = PresentationCursors {
+            events: 2,
+            ..PresentationCursors::default()
+        };
+        send_handshake_request(&mut socket, 0x5151, requested);
+        let response = socket.read().unwrap().into_data();
+        let frame = parse_kps1_frame(&response).unwrap();
+        let PresentationPayload::HandshakeResponse(handshake) = decode_typed_payload(
+            frame.header.kind,
+            frame.payload,
+            PresentationRole::GuidedOperator,
+        )
+        .unwrap() else {
+            panic!("expected handshake response");
+        };
+        assert_eq!(handshake.cursors, requested);
+        let mut replayed = Vec::new();
+        loop {
+            let bytes = socket.read().unwrap().into_data();
+            let frame = parse_kps1_frame(&bytes).unwrap();
+            let payload = decode_typed_payload(
+                frame.header.kind,
+                frame.payload,
+                PresentationRole::GuidedOperator,
+            )
+            .unwrap();
+            if let PresentationPayload::EventBatch(events) = payload {
+                replayed.extend(events.into_iter().map(|event| event.sequence));
+            }
+            if frame.header.kind == PresentationMessageKind::TransportStatus {
+                break;
+            }
+        }
+        assert_eq!(replayed, vec![2, 3]);
+        drop(socket);
+        drop(service);
+
+        let advances = Arc::new(AtomicU32::new(0));
+        let mut overflowed = NetworkAuthority::new(advances);
+        for sequence in 1..=20_u64 {
+            overflowed
+                .events
+                .push(PresentationEventView {
+                    sequence,
+                    release_epoch: sequence as u32,
+                    kind: 1,
+                    detail_identity: sequence as u32,
+                })
+                .unwrap();
+        }
+        let (service, _broker) = service_with_authority(
+            overflowed,
+            WorkerConfig {
+                autonomous_pacing: false,
+                ..WorkerConfig::default()
+            },
+        );
+        let mut socket = connect(
+            &service,
+            "http://127.0.0.1:4173",
+            service.launch_subprotocol(),
+        )
+        .unwrap();
+        send_handshake_request(&mut socket, 0x5252, PresentationCursors::default());
+        let _handshake = socket.read().unwrap();
+        let error = socket.read().unwrap().into_data();
+        let frame = parse_kps1_frame(&error).unwrap();
+        let PresentationPayload::Error(error) = decode_typed_payload(
+            frame.header.kind,
+            frame.payload,
+            PresentationRole::GuidedOperator,
+        )
+        .unwrap() else {
+            panic!("expected explicit resynchronization error");
+        };
+        assert_eq!(error.code, PRESENTATION_ERROR_RESYNC_REQUIRED);
+        assert_eq!(error.detail_identity, 5);
+        assert!(!error.fatal);
     }
 
     #[test]

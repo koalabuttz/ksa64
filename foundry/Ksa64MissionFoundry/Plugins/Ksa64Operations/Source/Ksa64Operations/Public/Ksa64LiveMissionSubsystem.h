@@ -28,6 +28,9 @@ public:
     bool StartGuidedOperations();
 
     UFUNCTION(BlueprintCallable, Category = "KSA64|Operations")
+    bool StartNominalGlobalReplay();
+
+    UFUNCTION(BlueprintCallable, Category = "KSA64|Operations")
     void PausePresentation();
 
     UFUNCTION(BlueprintCallable, Category = "KSA64|Operations")
@@ -37,6 +40,9 @@ public:
     void StepOneRelease();
 
     void SetPace(EKsa64OperationsPace Pace);
+    bool QueueBoundedAdvanceToRelease(
+        uint32 TargetRelease,
+        uint32 MaximumBatch = 64);
     void ReviewAction();
     void StageAction();
     void CommitAction();
@@ -45,6 +51,26 @@ public:
     bool SaveCompletedEvidence();
     void SetDashboardVisible(bool bVisible);
     bool IsDashboardVisible() const { return bDashboardRequestedVisible; }
+    bool IsGlobalReplayMode() const { return bGlobalReplayMode; }
+
+    /** Passive additive Phase 12C stream; authority remains in the Rust worker. */
+    bool SupportsGlobalDisplayV1() const;
+    EKsa64OperationsAdapterResult GetGlobalDisplayAvailability(
+        Ksa64GlobalDisplayAvailabilityV1& OutAvailability) const;
+    EKsa64OperationsAdapterResult GetGlobalDisplayDefinition(
+        TArray<uint8>& OutPayload) const;
+    EKsa64OperationsAdapterResult PollGlobalDisplaySample(
+        TArray<uint8>& OutPayload) const;
+    EKsa64OperationsAdapterResult GetGlobalDisplaySampleRange(
+        const Ksa64GlobalDisplaySampleRangeRequestV1& Request,
+        TArray<uint8>& OutPayload) const;
+    EKsa64OperationsAdapterResult PollGlobalDisplayTransition(
+        TArray<uint8>& OutPayload) const;
+    EKsa64OperationsAdapterResult GetGlobalReplayIndex(
+        TArray<uint8>& OutPayload) const;
+    EKsa64OperationsAdapterResult GetGlobalPathChunk(
+        const Ksa64GlobalDisplayPathRequestV1& Request,
+        TArray<uint8>& OutPayload) const;
 
     const FKsa64OperationsViewModel& GetViewModel() const { return ViewModel; }
     const TArray<FKsa64OperationsReleasePoint>& GetReleaseHistory() const { return ReleaseHistory; }
@@ -125,6 +151,7 @@ private:
     bool bDashboardInstalled = false;
     bool bDashboardRequestedVisible = true;
     bool bEvidenceSaved = false;
+    bool bGlobalReplayMode = false;
     bool bAcceptanceMode = false;
     bool bAcceptanceVerified = false;
     bool bAcceptanceExitRequested = false;

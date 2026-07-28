@@ -1613,3 +1613,49 @@ Enter Phase 12B.5 at commit `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615`. Preserve
 Pin native/WASM work to Rust 1.93 while keeping rust-mos and Vita nightlies isolated. Qualify Windows x64, Linux x64, Linux ARM64, and macOS ARM64 in hosted CI, with full exact missions on main/manual gates. Require physical Lenovo Duet 11 and Vita evidence before claiming those devices accepted.
 
 Use loopback-only browser transport by default. Native and Vita LAN clients require explicit Noise XX pairing, locally compared handshake codes, stored peer keys, immutable role binding, and Noise IK reconnect. No discovery, wildcard listener, cloud relay, or Internet service is authorized. React/TypeScript/Vite owns the compact PWA; Babylon remains presentation-only and full global 3-D remains Phase 12C. Unreal Linux/macOS evidence is conditional on qualified engine hosts.
+
+
+## D-119: Keep one Rust-owned global display model and preserve both nominal lineages
+
+Date: 2026-07-28
+
+Status: implemented; final renderer/runtime acceptance pending.
+
+Use one noncanonical `GlobalDisplayV1` layer, derived in Rust, for Unreal,
+Babylon, remote broker, local WebAssembly, and verified replay. Rust owns frame
+conversion, source/model labels, role filtering, validity, transitions,
+continuity, event classification, path LOD, replay indexing, and final mission
+disposition. Renderers own only cameras, materials, local-origin subtraction,
+compatible-sample interpolation, layouts, and input presentation.
+
+Keep KPS1 at version 1.0 and gate new message kinds with an explicit capability.
+Keep every ABI-v1 symbol and layout unchanged and expose native global-display
+operations through an optional size-tagged function table. Absence means that
+the old client/library pairing does not support the feature; it is not an
+excuse to reinterpret a legacy record.
+
+Use the frozen Phase 10 KTT10/KPH10/KSR10 artifacts for the labelled accepted
+planned/reference path. Use current checked-in portable re-execution for the
+exact-release SIM-truth display stream. A Phase 12C investigation proved that
+debug and release builds, including source reconstructed at the Phase 10
+completion commit, reproduce the current lineage but diverge from the frozen
+lineage by bounded recovery-state cells after step 15328. Replacing the frozen
+artifacts would break compatibility; changing current physics to chase stale
+bytes would hide the audit defect. Preserve, hash-bind, strictly decode,
+compare, and label both instead.
+
+This is a narrow fail-closed compatibility exception documented in
+`phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`. Any identity, event schedule,
+first-difference, strict decode, hash, or reviewed raw-bound mismatch blocks the
+display. It creates no new canonical artifact and grants no general tolerance
+for future drift.
+
+Treat mission-plan deviation as informational. Only Rust-owned objective,
+vehicle, procedure, operator, avionics, and evidence dispositions may classify
+a run as nominal, degraded, contingency, or failed. A renderer never turns a
+path residual red by inventing mission failure.
+
+Require explicit packaged Unreal, rendered WebGPU/WebGL2/2-D, cross-renderer
+semantic, and runtime-performance evidence before Phase 12C is complete. Source
+implementation or unit tests alone may produce only a portable/contracts audit
+pass.

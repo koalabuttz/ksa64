@@ -121,9 +121,21 @@ function paint2d(canvas: HTMLCanvasElement, snapshot: GlobalSceneSnapshot): void
     context.strokeStyle = "#050b0d";
     context.lineWidth = 2;
     context.beginPath();
-    context.arc(x, y, source.source === "onboard" ? 5 : 4, 0, Math.PI * 2);
+    if (source.source === "onboard") {
+      context.arc(x, y, 5, 0, Math.PI * 2);
+    } else if (source.source === "ground") {
+      context.moveTo(x, y - 5); context.lineTo(x + 5, y);
+      context.lineTo(x, y + 5); context.lineTo(x - 5, y); context.closePath();
+    } else if (source.source === "truth") {
+      context.moveTo(x, y - 5); context.lineTo(x + 5, y + 4);
+      context.lineTo(x - 5, y + 4); context.closePath();
+    } else {
+      context.rect(x - 4, y - 4, 8, 8);
+    }
+    context.globalAlpha = source.source === "ground" ? 0.55 : source.source === "truth" ? 0.7 : 1;
     context.fill();
     context.stroke();
+    context.globalAlpha = 1;
   }
 
   context.fillStyle = "#dce9e6";
@@ -137,14 +149,28 @@ async function makeBabylonRenderer(
   initial: GlobalSceneSnapshot,
   options: GlobalMissionRendererOptions,
 ): Promise<{ update(snapshot: GlobalSceneSnapshot): void; dispose(): void }> {
+  // Babylon's tree-shaken material and line builders do not register shader programs
+  // by themselves. Register the exact backend's stock shaders before creating any
+  // material so a packaged Vite build cannot mistake HTML fallbacks for shader code.
+  if (backend === "webgpu") {
+    await Promise.all([
+      import("@babylonjs/core/ShadersWGSL/default.vertex"),
+      import("@babylonjs/core/ShadersWGSL/default.fragment"),
+      import("@babylonjs/core/ShadersWGSL/color.vertex"),
+      import("@babylonjs/core/ShadersWGSL/color.fragment"),
+    ]);
+  }
+
   const [
     { Scene },
     { ArcRotateCamera },
     { HemisphericLight },
     { DirectionalLight },
-    { Vector3 },
+    { Quaternion, Vector3 },
+    { TransformNode },
+    { CreateCylinder },
     { CreateSphere },
-    { CreateLines },
+    { CreateDashedLines, CreateLines },
     { StandardMaterial },
     { Color3 },
   ] = await Promise.all([
@@ -153,6 +179,8 @@ async function makeBabylonRenderer(
     import("@babylonjs/core/Lights/hemisphericLight"),
     import("@babylonjs/core/Lights/directionalLight"),
     import("@babylonjs/core/Maths/math.vector"),
+    import("@babylonjs/core/Meshes/transformNode"),
+    import("@babylonjs/core/Meshes/Builders/cylinderBuilder"),
     import("@babylonjs/core/Meshes/Builders/sphereBuilder"),
     import("@babylonjs/core/Meshes/Builders/linesBuilder"),
     import("@babylonjs/core/Materials/standardMaterial"),
@@ -254,10 +282,51 @@ async function makeBabylonRenderer(
     gridMeshes.push(line);
   }
 
+  const earthAxes = [
+    ["ecef-x", new Vector3(0, 0, 0), new Vector3(1.25, 0, 0), new Color3(0.82, 0.28, 0.25)],
+    ["ecef-y", new Vector3(0, 0, 0), new Vector3(0, 1.25, 0), new Color3(0.34, 0.78, 0.50)],
+    ["ecef-z", new Vector3(0, 0, 0), new Vector3(0, 0, 1.25), new Color3(0.31, 0.55, 0.92)],
+  ].map(([name, start, finish, color]) => {
+    const line = CreateLines(String(name), { points: [start as InstanceType<typeof Vector3>, finish as InstanceType<typeof Vector3>] }, scene);
+    line.color = color as InstanceType<typeof Color3>;
+    line.alpha = 0.52;
+    return line;
+  });
+  const localGridMeshes: ReturnType<typeof CreateLines>[] = [];
+  for (let step = -5; step <= 5; step += 1) {
+    const offset = step * 0.0015;
+    const eastWest = CreateLines(`local-grid-east-${step}`, {
+      points: [new Vector3(-0.008, 0, offset), new Vector3(0.008, 0, offset)],
+    }, scene);
+    const northSouth = CreateLines(`local-grid-north-${step}`, {
+      points: [new Vector3(offset, 0, -0.008), new Vector3(offset, 0, 0.008)],
+    }, scene);
+    eastWest.color = gridMaterialColors.grid; northSouth.color = gridMaterialColors.grid;
+    eastWest.alpha = step === 0 ? 0.55 : 0.20; northSouth.alpha = step === 0 ? 0.55 : 0.20;
+    localGridMeshes.push(eastWest, northSouth);
+  }
+  const anchorMeshes = new Map<string, ReturnType<typeof CreateSphere>>();
+
   const sourceMeshes = new Map<string, ReturnType<typeof CreateSphere>>();
+  const sourceVehicles = new Map<string, InstanceType<typeof TransformNode>>();
   const sourceMaterials = new Map<string, InstanceType<typeof StandardMaterial>>();
-  const pathMeshes = new Map<number, ReturnType<typeof CreateLines>>();
-  const pathPointCounts = new Map<number, number>();
+  const pathMeshes = new Map<string, ReturnType<typeof CreateLines>>();
+  const pathPointCounts = new Map<string, number>();
+  const pathDashedStyles = new Map<string, boolean>();
+
+  const quaternionProduct = (left: readonly [number, number, number, number], right: readonly [number, number, number, number]): readonly [number, number, number, number] => [
+    left[0] * right[0] - left[1] * right[1] - left[2] * right[2] - left[3] * right[3],
+    left[0] * right[1] + left[1] * right[0] + left[2] * right[3] - left[3] * right[2],
+    left[0] * right[2] - left[1] * right[3] + left[2] * right[0] + left[3] * right[1],
+    left[0] * right[3] + left[1] * right[2] - left[2] * right[1] + left[3] * right[0],
+  ];
+  const quaternion = (value: readonly [number, number, number, number]): InstanceType<typeof Quaternion> => {
+    const half = Math.SQRT1_2;
+    const basis: readonly [number, number, number, number] = [half, -half, 0, 0];
+    const inverse: readonly [number, number, number, number] = [half, half, 0, 0];
+    const mapped = quaternionProduct(quaternionProduct(basis, value), inverse);
+    return new Quaternion(mapped[1], mapped[2], mapped[3], mapped[0]);
+  };
 
   const vector = (value: F64x3, origin: F64x3): InstanceType<typeof Vector3> => {
     const mapped = ksaToBabylon(value, origin);
@@ -298,9 +367,33 @@ async function makeBabylonRenderer(
 
   const update = (snapshot: GlobalSceneSnapshot): void => {
     const earthPosition = vector([0, 0, 0], snapshot.originKm);
+    const localDomain = snapshot.frame === "local-enu";
+    earth.setEnabled(!localDomain);
+    atmosphere.setEnabled(!localDomain);
     earth.position.copyFrom(earthPosition);
     atmosphere.position.copyFrom(earthPosition);
-    for (const grid of gridMeshes) grid.position.copyFrom(earthPosition);
+    for (const grid of gridMeshes) {
+      grid.setEnabled(snapshot.frame === "ecef");
+      grid.position.copyFrom(earthPosition);
+    }
+    for (const axis of earthAxes) { axis.setEnabled(!localDomain); axis.position.copyFrom(earthPosition); }
+    for (const grid of localGridMeshes) { grid.setEnabled(localDomain); grid.position.copyFrom(earthPosition); }
+    const activeAnchors = new Set<string>();
+    for (const anchor of snapshot.anchors) {
+      activeAnchors.add(anchor.kind);
+      let marker = anchorMeshes.get(anchor.kind);
+      if (marker === undefined) {
+        marker = CreateSphere(`anchor-${anchor.kind}`, { diameter: 0.018, segments: 10 }, scene);
+        const material = new StandardMaterial(`anchor-${anchor.kind}-material`, scene);
+        material.diffuseColor = anchor.kind === "launch" ? new Color3(0.31, 0.86, 0.78) : new Color3(0.94, 0.65, 0.35);
+        material.emissiveColor = anchor.kind === "launch" ? new Color3(0.08, 0.28, 0.24) : new Color3(0.28, 0.14, 0.04);
+        marker.material = material;
+        anchorMeshes.set(anchor.kind, marker);
+      }
+      marker.setEnabled(true);
+      marker.position.copyFrom(vector(anchor.positionKm, snapshot.originKm));
+    }
+    for (const [kind, marker] of anchorMeshes) if (!activeAnchors.has(kind)) marker.setEnabled(false);
     const activeSources = new Set<string>();
     for (const source of snapshot.sources) {
       activeSources.add(source.source);
@@ -315,29 +408,60 @@ async function makeBabylonRenderer(
         marker.material = material;
         sourceMeshes.set(source.source, marker);
         sourceMaterials.set(source.source, material);
+
+        material.alpha = source.source === "ground" ? 0.42 : source.source === "truth" ? 0.62 : 1;
+        material.wireframe = source.source === "ground";
+        if (source.source === "onboard") {
+          const root = new TransformNode("vehicle-onboard", scene);
+          const bodyLength = 0.0068 / EQUATORIAL_RADIUS_KM;
+          const noseLength = 0.0012 / EQUATORIAL_RADIUS_KM;
+          const diameter = 0.0004 / EQUATORIAL_RADIUS_KM;
+          const body = CreateCylinder("vehicle-body-onboard", { height: bodyLength, diameter, tessellation: 12 }, scene);
+          body.parent = root; body.rotation.z = Math.PI / 2; body.position.x = -noseLength / 2;
+          const nose = CreateCylinder("vehicle-nose-onboard", { height: noseLength, diameterBottom: diameter, diameterTop: 0, tessellation: 12 }, scene);
+          nose.parent = root; nose.rotation.z = -Math.PI / 2; nose.position.x = bodyLength / 2;
+          const vehicleMaterial = new StandardMaterial("vehicle-onboard-material", scene);
+          vehicleMaterial.diffuseColor = new Color3(red, green, blue);
+          vehicleMaterial.emissiveColor = new Color3(red * 0.10, green * 0.10, blue * 0.10);
+          body.material = vehicleMaterial; nose.material = vehicleMaterial;
+          sourceMaterials.set("vehicle-onboard", vehicleMaterial);
+          sourceVehicles.set(source.source, root);
+        }
       }
       marker.setEnabled(true);
       marker.position.copyFrom(vector(source.positionKm, snapshot.originKm));
-      marker.scaling.setAll(source.source === "onboard" ? 1 : 0.78);
+      const locatorScale = Math.max(0.000_02, camera.radius * (source.source === "onboard" ? 0.008 : 0.006));
+      marker.scaling.setAll(locatorScale);
+      const vehicle = sourceVehicles.get(source.source);
+      if (vehicle !== undefined) {
+        vehicle.setEnabled(true);
+        vehicle.position.copyFrom(marker.position);
+        vehicle.rotationQuaternion = source.bodyQuaternion === undefined ? null : quaternion(source.bodyQuaternion);
+      }
     }
     for (const [source, marker] of sourceMeshes) if (!activeSources.has(source)) marker.setEnabled(false);
+    for (const [source, vehicle] of sourceVehicles) if (!activeSources.has(source)) vehicle.setEnabled(false);
 
-    const activePaths = new Set<number>();
+    const activePaths = new Set<string>();
     for (const path of snapshot.paths) {
       if (path.pointsKm.length < 2) continue;
-      activePaths.add(path.identity);
+      const pathKey = `${path.identity}:${path.anchorIdentity}:${path.stripIndex}`;
+      activePaths.add(pathKey);
       const renderPoints = path.pointsKm.slice(0, MAX_RENDER_PATH_POINTS);
-      let line = pathMeshes.get(path.identity);
-      if (line === undefined || pathPointCounts.get(path.identity) !== renderPoints.length) {
+      let line = pathMeshes.get(pathKey);
+      const createPath = path.dashed ? CreateDashedLines : CreateLines;
+      if (line === undefined || pathPointCounts.get(pathKey) !== renderPoints.length ||
+          pathDashedStyles.get(pathKey) !== path.dashed) {
         line?.dispose();
-        line = CreateLines(`path-${path.identity}`, {
+        line = createPath(`path-${path.identity}-${path.anchorIdentity}-${path.stripIndex}`, {
           points: renderPoints.map((point) => vector(point, snapshot.originKm)),
           updatable: true,
         }, scene);
-        pathMeshes.set(path.identity, line);
-        pathPointCounts.set(path.identity, renderPoints.length);
+        pathMeshes.set(pathKey, line);
+        pathPointCounts.set(pathKey, renderPoints.length);
+        pathDashedStyles.set(pathKey, path.dashed);
       } else {
-        line = CreateLines(`path-${path.identity}`, {
+        line = createPath(`path-${path.identity}-${path.anchorIdentity}-${path.stripIndex}`, {
           points: renderPoints.map((point) => vector(point, snapshot.originKm)),
           instance: line,
         }, scene);
@@ -353,8 +477,36 @@ async function makeBabylonRenderer(
 
   const resize = () => engine.resize();
   window.addEventListener("resize", resize);
-  engine.runRenderLoop(() => scene.render());
   update(initial);
+
+  // Do not announce a GPU backend until its shader set has compiled and one
+  // observable frame has rendered. A failure here is safely handled by the
+  // caller's WebGPU -> WebGL2 -> 2-D fallback chain.
+  let readinessTimer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      scene.whenReadyAsync(true),
+      new Promise<never>((_, reject) => {
+        readinessTimer = setTimeout(() => reject(new Error("Babylon scene readiness timed out")), 8_000);
+      }),
+    ]);
+    scene.render();
+    const width = Math.max(1, Math.min(16, engine.getRenderWidth()));
+    const height = Math.max(1, Math.min(16, engine.getRenderHeight()));
+    const pixels = await engine.readPixels(0, 0, width, height, true, true);
+    const bytes = new Uint8Array(pixels.buffer, pixels.byteOffset, pixels.byteLength);
+    let nonBlack = false;
+    for (let index = 0; index + 2 < bytes.length; index += 4) {
+      if ((bytes[index] ?? 0) > 1 || (bytes[index + 1] ?? 0) > 1 || (bytes[index + 2] ?? 0) > 1) {
+        nonBlack = true;
+        break;
+      }
+    }
+    if (!nonBlack) throw new Error("Babylon produced an empty initial frame");
+  } finally {
+    if (readinessTimer !== undefined) clearTimeout(readinessTimer);
+  }
+  engine.runRenderLoop(() => scene.render());
   return {
     update,
     dispose() {

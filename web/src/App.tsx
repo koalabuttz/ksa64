@@ -12,16 +12,23 @@ import type { ActionOperation, ActionReceiptView, DispositionView, PredictionPat
 import { createDefaultPresentationTransport, type PresentationActionKind,
   type PresentationPaceMode, type PresentationRole, type PresentationTransport } from "./transport";
 
-const TOTAL_RELEASES = 21_591;
+const GNSS_LOSS_RELEASES = 21_591;
+const NOMINAL_GLOBAL_RELEASES = 22_015;
 const Q12 = 4096;
 const Q16 = 65_536;
 const Q24 = 16_777_216;
+const SNAPSHOT_VALID_NAVIGATION = 1n << 1n;
+const SNAPSHOT_VALID_GROUND_ESTIMATE = 1n << 2n;
+const SNAPSHOT_VALID_PREDICTION = 1n << 3n;
 const OPERATION_CODE: Record<PresentationActionKind, ActionOperation> = { review: 1, stage: 2, commit: 3, cancel: 4 };
 const PERMISSION_BIT: Record<PresentationActionKind, number> = { review: 1, stage: 2, commit: 4, cancel: 8 };
+
+export type PresentationExperience = "gnss-loss" | "nominal-global";
 
 export interface AppProps {
   readonly transport?: PresentationTransport;
   readonly role?: PresentationRole;
+  readonly experience?: PresentationExperience;
   readonly autoConnect?: boolean;
 }
 
@@ -59,8 +66,11 @@ function pathPoints(path?: PredictionPathView): readonly TrajectoryPoint[] {
 }
 
 function samplePoints(samples: readonly ReleaseSampleView[], source: "onboard" | "ground"): readonly TrajectoryPoint[] {
-  return samples.map((sample) => ({ downrange: q12(sample.downrangeQ12Km),
-    altitude: q12(source === "onboard" ? sample.onboardPosition[2] : sample.groundPosition[2]) }));
+  const required = source === "onboard" ? SNAPSHOT_VALID_NAVIGATION : SNAPSHOT_VALID_GROUND_ESTIMATE;
+  return samples.filter((sample) => (sample.validityMask & required) !== 0n).map((sample) => ({
+    downrange: q12(sample.downrangeQ12Km),
+    altitude: q12(source === "onboard" ? sample.onboardPosition[2] : sample.groundPosition[2]),
+  }));
 }
 
 function procedureItems(value?: ProcedureView): readonly ProcedureStep[] {
@@ -132,7 +142,11 @@ function receiptFeedback(receipts: readonly ActionReceiptView[], pending?: Prese
     : `${operation} rejected (reason ${receipt.reason}).`;
 }
 
-export function App({ transport: suppliedTransport, role = "guided-operator", autoConnect = true }: AppProps) {
+export function App({ transport: suppliedTransport, role: suppliedRole, experience: suppliedExperience, autoConnect = true }: AppProps) {
+  const experience = suppliedExperience ?? window.__KSA64_PRESENTATION__?.experience ?? "gnss-loss";
+  const role = suppliedRole ?? (experience === "nominal-global" ? "sim-director" : "guided-operator");
+  const nominalGlobal = experience === "nominal-global";
+  const totalReleases = nominalGlobal ? NOMINAL_GLOBAL_RELEASES : GNSS_LOSS_RELEASES;
   const transport = useMemo(() => suppliedTransport ?? createDefaultPresentationTransport(), [suppliedTransport]);
   const { state, pendingAction, submit, setPace, reconnect } = usePresentationSession({ transport, role, autoConnect });
   const [pace, setPaceSelection] = useState<PresentationPaceMode>("realtime");
@@ -142,6 +156,7 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
   const [actionError, setActionError] = useState<string>();
   const [viewerLayout, setViewerLayout] = useState<GlobalDisplayLayoutV1>("hybrid");
   const [operationsDeskOpen, setOperationsDeskOpen] = useState(true);
+  const phase12cEvidenceMode = new URLSearchParams(window.location.search).get("phase12c-evidence") === "1";
 
   const snapshot = demo ? undefined : state.snapshot;
   const liveProcedure = demo ? undefined : state.procedure;
@@ -155,9 +170,17 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
     { label: "Procedure", value: "In progress", state: "active" as const },
     { label: "Avionics", value: "Degraded operational", state: "warning" as const },
   ] : outcomeAxes(state.disposition);
-  const positionResidual = snapshot === undefined ? 0 : residual(snapshot.onboard.position, snapshot.ground.position, Q12);
-  const velocityResidual = snapshot === undefined ? 0 : residual(snapshot.onboard.velocity, snapshot.ground.velocity, Q24) * 1000;
-  const progress = Math.min(100, ((snapshot?.releaseEpoch ?? 0) / TOTAL_RELEASES) * 100);
+  const navigationValid = snapshot !== undefined && (snapshot.validityMask & SNAPSHOT_VALID_NAVIGATION) !== 0n;
+  const groundEstimateValid = snapshot !== undefined && (snapshot.validityMask & SNAPSHOT_VALID_GROUND_ESTIMATE) !== 0n;
+  const predictionValid = snapshot !== undefined && (snapshot.validityMask & SNAPSHOT_VALID_PREDICTION) !== 0n;
+  const estimatesReady = navigationValid && groundEstimateValid;
+  const positionResidual = estimatesReady ? residual(snapshot.onboard.position, snapshot.ground.position, Q12) : undefined;
+  const velocityResidual = estimatesReady ? residual(snapshot.onboard.velocity, snapshot.ground.velocity, Q24) * 1000 : undefined;
+  const exactDisplaySample = state.globalSamples.at(-1);
+  const displayedRelease = snapshot?.releaseEpoch ?? exactDisplaySample?.releaseEpoch ?? 0;
+  const displayedMissionTime = snapshot?.missionTimeQ16 ?? exactDisplaySample?.missionTimeQ16;
+  const displayedFrame = snapshot?.frameIdentity ?? exactDisplaySample?.activeFrame;
+  const progress = Math.min(100, (displayedRelease / totalReleases) * 100);
   const proposal = state.proposal;
   const acceptedOperations = new Set(state.receipts.filter((receipt) => receipt.accepted && receipt.proposalIdentity === proposal?.proposalIdentity)
     .map((receipt) => receipt.operation));
@@ -185,8 +208,21 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
   const evidenceComplete = state.evidence?.complete === true && state.sealedEvidence !== undefined &&
     BigInt(state.sealedEvidence.byteLength) === state.evidence.totalLength;
   const evidenceReceived = state.evidenceAssembly?.receivedLength ?? 0;
-  const dispositionLabel = overallLabels[state.disposition?.overall ?? 0];
+  const dispositionLabel = overallLabels[state.disposition?.overall ?? state.globalReplayIndex?.terminalDisposition ?? 0];
   const overall = demo ? "Contingency success" : dispositionLabel || lifecycleName(snapshot?.lifecycle);
+  const phase12cActionState = phase12cEvidenceMode ? JSON.stringify({
+    release_epoch: snapshot?.releaseEpoch ?? 0,
+    lifecycle: snapshot?.lifecycle ?? 0,
+    action_count: snapshot?.actionCount ?? 0,
+    proposal,
+    receipts: state.receipts.map(({ publicationSequence, ...receipt }) => ({
+      ...receipt, publication_sequence: publicationSequence.toString(),
+    })),
+  }) : undefined;
+  const phase12cTimelineState = phase12cEvidenceMode ? JSON.stringify(state.timeline.map(({ sequence, ...event }) => ({
+    ...event, sequence: sequence.toString(),
+  }))) : undefined;
+  const phase12cCompletedReplay = phase12cEvidenceMode && snapshot?.lifecycle === 5;
   const globalDisplay = useMemo(() => state.globalDefinition === undefined
     ? buildLegacySchematicDisplay({ snapshot, samples: state.samples, paths: state.paths, timeline: state.timeline,
       truthAllowed: role === "sim-director" && snapshot?.truthPresent === true, demonstration: demo })
@@ -222,18 +258,20 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
         <button type="button" onClick={() => setDemo(false)}>Return to live connection</button></aside>}
 
       <main id="main-content" className="dashboard" data-viewer-layout={viewerLayout}
-        data-operations-desk={operationsDeskOpen ? "open" : "closed"}>
+        data-operations-desk={operationsDeskOpen ? "open" : "closed"}
+        data-phase12c-action-state={phase12cActionState}
+        data-phase12c-timeline-state={phase12cTimelineState}>
         <section className="mission-strip" aria-labelledby="mission-title"><div>
-          <p className="eyebrow">KSA-G10R · GNSS-loss operations</p><h2 id="mission-title">{overall}</h2></div>
+          <p className="eyebrow">{nominalGlobal ? "KSA-G10R · Nominal global replay" : "KSA-G10R · GNSS-loss operations"}</p><h2 id="mission-title">{overall}</h2></div>
           <dl className="mission-metrics">
-            <div><dt>MET</dt><dd>{demo ? "06:22.406" : met(snapshot?.missionTimeQ16)}</dd></div>
-            <div><dt>Frame</dt><dd>{demo ? "GCRF" : frameName(snapshot?.frameIdentity)}</dd></div>
-            <div><dt>Package</dt><dd>Reference Ops V1</dd></div>
-            <div><dt>Release</dt><dd>{demo ? "12,237" : (snapshot?.releaseEpoch ?? 0).toLocaleString()} / {TOTAL_RELEASES.toLocaleString()}</dd></div>
+            <div><dt>MET</dt><dd>{demo ? "06:22.406" : met(displayedMissionTime)}</dd></div>
+            <div><dt>Frame</dt><dd>{demo ? "GCRF" : frameName(displayedFrame)}</dd></div>
+            <div><dt>Package</dt><dd>{nominalGlobal ? "Global Flight Computer" : "Reference Ops V1"}</dd></div>
+            <div><dt>Release</dt><dd>{demo ? "12,237" : displayedRelease.toLocaleString()} / {totalReleases.toLocaleString()}</dd></div>
           </dl><div className="phase-progress"><span>Mission progress</span><progress value={demo ? 56.7 : progress} max="100">{progress.toFixed(1)}%</progress>
             <strong>{demo ? "56.7" : progress.toFixed(1)}%</strong></div></section>
 
-        <GlobalMissionViewer model={globalDisplay} replay={transport.kind === "replay"}
+        <GlobalMissionViewer model={globalDisplay} replay={nominalGlobal || transport.kind === "replay" || phase12cCompletedReplay}
           layout={viewerLayout} deskOpen={operationsDeskOpen}
           onLayoutChange={(value) => {
             setViewerLayout(value);
@@ -268,14 +306,14 @@ export function App({ transport: suppliedTransport, role = "guided-operator", au
         <section className="panel nav-panel operations-panel" aria-labelledby="nav-title"><div className="panel-heading"><div><p className="eyebrow">Independent estimates</p>
           <h2 id="nav-title">Navigation residuals</h2></div><span className={snapshot?.gnssState === 2 || demo ? "warning-badge" : "count-pill"}>
             {demo || snapshot?.gnssState === 2 ? "GNSS invalid" : snapshot === undefined ? "Awaiting" : "GNSS healthy"}</span></div>
-          <dl className="residual-grid"><div><dt>Position</dt><dd>{demo ? "0.41" : positionResidual.toFixed(2)} km</dd><span>onboard ↔ ground estimate</span></div>
-            <div><dt>Velocity</dt><dd>{demo ? "1.82" : velocityResidual.toFixed(2)} m/s</dd><span>independent residual</span></div>
-            <div><dt>Prediction</dt><dd>{snapshot === undefined ? "—" : q16(snapshot.prediction.timeToApogeeQ16).toFixed(1)} s</dd><span>time to predicted apogee</span></div>
+          <dl className="residual-grid"><div><dt>Position</dt><dd>{demo ? "0.41 km" : positionResidual === undefined ? "Pending" : `${positionResidual.toFixed(2)} km`}</dd><span>onboard ↔ ground estimate</span></div>
+            <div><dt>Velocity</dt><dd>{demo ? "1.82 m/s" : velocityResidual === undefined ? "Pending" : `${velocityResidual.toFixed(2)} m/s`}</dd><span>independent residual</span></div>
+            <div><dt>Prediction</dt><dd>{!predictionValid ? "Pending" : `${q16(snapshot.prediction.timeToApogeeQ16).toFixed(1)} s`}</dd><span>time to predicted apogee</span></div>
             <div><dt>Transport</dt><dd>{state.transport === undefined ? state.connection : ["", "current", "delayed", "stale", "disconnected", "resync"][state.transport.staleness]}</dd>
               <span>{state.transport?.samplesPending ?? 0} samples pending</span></div></dl>
           <div className="mini-bars" aria-label="Navigation residual gate utilization"><div><span>Position gate</span>
-            <meter value={Math.min(positionResidual, 0.75)} min="0" max="0.75">position gate</meter></div><div><span>Velocity gate</span>
-            <meter value={Math.min(velocityResidual, 3)} min="0" max="3">velocity gate</meter></div></div></section>
+            <meter value={Math.min(positionResidual ?? 0, 0.75)} min="0" max="0.75">position gate</meter></div><div><span>Velocity gate</span>
+            <meter value={Math.min(velocityResidual ?? 0, 3)} min="0" max="3">velocity gate</meter></div></div></section>
 
         <section className="panel timeline-panel operations-panel" aria-labelledby="timeline-title"><div className="panel-heading"><div><p className="eyebrow">Operational record</p>
           <h2 id="timeline-title">Event timeline</h2></div><span className="count-pill">{timeline.length} events</span></div>

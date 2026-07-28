@@ -4,6 +4,7 @@
 #include "Containers/Ticker.h"
 #include "Modules/ModuleInterface.h"
 #include "ksa64_viewer_bridge.h"
+#include "ksa64_viewer_bridge_global_v1.h"
 
 enum class EKsa64BridgeStatus : uint8
 {
@@ -82,6 +83,23 @@ public:
     bool RequestAsyncClose();
     bool IsAsyncClosePending() const { return bAsyncClosePending; }
     int32 GetCompletedKsb11(TArray<uint8>& OutBytes) const;
+
+    /** Optional Phase 12C display extension. Absence keeps the frozen ABI-v1 path valid. */
+    bool SupportsGlobalDisplayV1() const;
+    bool StartNominalGlobalReplayV1(uint32 Role = 5u);
+    int32 GlobalDisplayAvailability(
+        Ksa64GlobalDisplayAvailabilityV1& OutAvailability) const;
+    int32 GlobalDisplayDefinition(TArray<uint8>& OutPayload) const;
+    int32 PollGlobalDisplaySample(TArray<uint8>& OutPayload) const;
+    int32 GlobalDisplaySampleRange(
+        const Ksa64GlobalDisplaySampleRangeRequestV1& Request,
+        TArray<uint8>& OutPayload) const;
+    int32 PollGlobalDisplayTransition(TArray<uint8>& OutPayload) const;
+    int32 GlobalReplayIndex(TArray<uint8>& OutPayload) const;
+    int32 GlobalPathChunk(
+        const Ksa64GlobalDisplayPathRequestV1& Request,
+        TArray<uint8>& OutPayload) const;
+
     void CloseSession();
 
     /** Validation-only helper used by automation before any DLL is loaded. */
@@ -99,6 +117,9 @@ private:
     void UnloadBridge();
     void SetFault(const FString& Message);
     bool TickAsyncClose(float DeltaSeconds);
+    int32 CopyGlobalPayload(
+        Ksa64GlobalPayloadFn Function,
+        TArray<uint8>& OutPayload) const;
 
     TUniquePtr<FApi> Api;
     void* DllHandle = nullptr;

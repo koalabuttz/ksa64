@@ -38,7 +38,9 @@ export type I16x2 = readonly [number, number];
 export type I32x3 = readonly [number, number, number];
 export type I32x4 = readonly [number, number, number, number];
 
-export interface GlobalDisplayAnchorV1 { readonly identity: number; readonly geodeticQ28Q12: I32x3; }
+export interface GlobalDisplayAnchorV1 {
+  readonly identity: number; readonly geodeticQ28Q12: I32x3; readonly ecefPositionQ12Km: I32x3;
+}
 export interface GlobalDisplayDefinitionV1 {
   readonly displayIdentity: number; readonly earthIdentity: number; readonly transformIdentity: number;
   readonly missionIdentity: number; readonly epochUnixDay: number; readonly epochTaiMinusUtc: number;
@@ -68,7 +70,7 @@ export interface GlobalDisplaySampleV1 {
 }
 export interface GlobalDisplayPathPointV1 {
   readonly releaseEpoch: number; readonly missionTimeQ16: number; readonly segment: GlobalDisplaySegment;
-  readonly eventMask: number; readonly positionQ12Km: I32x3;
+  readonly eventMask: number; readonly anchorIdentity: number; readonly positionQ12Km: I32x3;
 }
 export interface GlobalDisplayPathChunkV1 {
   readonly pathIdentity: number; readonly source: GlobalDisplaySourceId; readonly displayFrame: GlobalDisplayFrameId;
@@ -80,8 +82,8 @@ export interface GlobalDisplayTransitionV1 {
   readonly releaseEpoch: number; readonly missionTimeQ16: number; readonly fromFrame: GlobalDisplayFrameId;
   readonly toFrame: GlobalDisplayFrameId; readonly fromSegment: GlobalDisplaySegment; readonly toSegment: GlobalDisplaySegment;
   readonly reason: number; readonly transitionIdentity: number; readonly transformIdentity: number; readonly anchorIdentity: number;
-  readonly positionDeltaQ12Km: I32x3; readonly velocityDeltaQ24KmS: I32x3; readonly attitudeDeltaQ30: number;
-  readonly angularRateDeltaQ24: I32x3; readonly checksum: number;
+  readonly positionMaxDeltaRaw: number; readonly velocityMaxDeltaRaw: number;
+  readonly attitudeMaxDeltaRaw: number; readonly angularRateMaxDeltaRaw: number; readonly checksum: number;
 }
 export interface GlobalDisplayReplayEntryV1 {
   readonly releaseEpoch: number; readonly missionTimeQ16: number; readonly kind: GlobalDisplayReplayEntryKind;
@@ -139,7 +141,9 @@ function sourcePose(reader: Reader, role: number): GlobalDisplaySourcePoseV1 {
   return { source: poseSource, activeFrame, validityMask, modelIdentity, estimateIdentity, checksum,
     ageReleases, active, ecef, gcrf, launchEnu, recoveryEnu, angularRateQ24 };
 }
-function anchor(reader: Reader): GlobalDisplayAnchorV1 { return { identity: reader.u32(), geodeticQ28Q12: reader.i32x3() }; }
+function anchor(reader: Reader): GlobalDisplayAnchorV1 {
+  return { identity: reader.u32(), geodeticQ28Q12: reader.i32x3(), ecefPositionQ12Km: reader.i32x3() };
+}
 
 export function decodeGlobalDisplayDefinitionPayload(bytes: Uint8Array, role: number): GlobalDisplayDefinitionV1 {
   const reader = new Reader(bytes, "PGD1");
@@ -149,7 +153,10 @@ export function decodeGlobalDisplayDefinitionPayload(bytes: Uint8Array, role: nu
   const launchAnchor = anchor(reader); const recoveryAnchor = anchor(reader); const availableSourceMask = reader.u32();
   const availableFrameMask = reader.u8(); reader.reserved(1); const cameraDomainMask = reader.u16(); reader.finish();
   if (displayIdentity === 0 || earthIdentity === 0 || transformIdentity === 0 || missionIdentity === 0 ||
-      launchAnchor.identity === 0 || recoveryAnchor.identity === 0 || semiMajorQ12Km <= 0 || semiMinorQ12Km <= 0 ||
+      launchAnchor.identity === 0 || recoveryAnchor.identity === 0 ||
+      launchAnchor.ecefPositionQ12Km.every((value) => value === 0) ||
+      recoveryAnchor.ecefPositionQ12Km.every((value) => value === 0) ||
+      semiMajorQ12Km <= 0 || semiMinorQ12Km <= 0 ||
       inverseFlatteningQ20 <= 0 || availableSourceMask === 0 || (availableSourceMask & ~GLOBAL_DISPLAY_SOURCE_MASK) !== 0 ||
       availableFrameMask === 0 || (availableFrameMask & ~7) !== 0 || cameraDomainMask === 0 ||
       (role !== 5 && (availableSourceMask & GLOBAL_DISPLAY_SOURCE_SIM_TRUTH) !== 0)) throw new Error("invalid global display definition");
@@ -194,9 +201,13 @@ export function decodeGlobalDisplayPathPayload(bytes: Uint8Array, role: number):
   const points: GlobalDisplayPathPointV1[] = []; let priorRelease = -1; let priorTime = -1;
   for (let index = 0; index < count; index += 1) {
     const releaseEpoch = reader.u32(); const missionTimeQ16 = reader.u32(); const pointSegment = segment(reader.u8());
-    reader.reserved(1); const eventMask = reader.u16(); const positionQ12Km = reader.i32x3();
-    if (releaseEpoch <= priorRelease || missionTimeQ16 <= priorTime) throw new Error("invalid global display path sequence");
-    priorRelease = releaseEpoch; priorTime = missionTimeQ16; points.push({ releaseEpoch, missionTimeQ16, segment: pointSegment, eventMask, positionQ12Km });
+    reader.reserved(1); const eventMask = reader.u16(); const anchorIdentity = reader.u32(); const positionQ12Km = reader.i32x3();
+    if (releaseEpoch <= priorRelease || missionTimeQ16 <= priorTime ||
+        (displayFrame === 1 && anchorIdentity === 0) || (displayFrame !== 1 && anchorIdentity !== 0)) {
+      throw new Error("invalid global display path sequence or anchor");
+    }
+    priorRelease = releaseEpoch; priorTime = missionTimeQ16;
+    points.push({ releaseEpoch, missionTimeQ16, segment: pointSegment, eventMask, anchorIdentity, positionQ12Km });
   }
   reader.finish();
   if (pathIdentity === 0 || modelIdentity === 0 || continuityIdentity === 0 || chunkCount === 0 ||
@@ -210,8 +221,8 @@ export function decodeGlobalDisplayTransitionPayload(bytes: Uint8Array): GlobalD
   const toSegment = segment(reader.u8()); const reason = reader.u8(); reader.reserved(3);
   const value: GlobalDisplayTransitionV1 = { releaseEpoch, missionTimeQ16, fromFrame, toFrame, fromSegment, toSegment, reason,
     transitionIdentity: reader.u32(), transformIdentity: reader.u32(), anchorIdentity: reader.u32(),
-    positionDeltaQ12Km: reader.i32x3(), velocityDeltaQ24KmS: reader.i32x3(), attitudeDeltaQ30: reader.i32(),
-    angularRateDeltaQ24: reader.i32x3(), checksum: reader.u32() };
+    positionMaxDeltaRaw: reader.i32(), velocityMaxDeltaRaw: reader.i32(),
+    attitudeMaxDeltaRaw: reader.i32(), angularRateMaxDeltaRaw: reader.i32(), checksum: reader.u32() };
   reader.finish();
   if (releaseEpoch === 0 || fromFrame === toFrame || fromSegment === toSegment || reason === 0 ||
       value.transitionIdentity === 0 || value.transformIdentity === 0 || value.checksum === 0) throw new Error("invalid global display transition");
@@ -234,4 +245,37 @@ export function decodeGlobalReplayIndexPayload(bytes: Uint8Array): GlobalReplayI
   reader.finish();
   if (indexIdentity === 0 || sessionDefinitionIdentity === 0 || firstRelease > lastRelease || terminalDisposition > 5) throw new Error("invalid global replay index");
   return { indexIdentity, sessionDefinitionIdentity, firstRelease, lastRelease, terminalDisposition, dispositionAxes, entries };
+}
+
+
+export interface GlobalDisplayCursorStateV1 {
+  readonly sampleCount: number; readonly oldestSampleRelease: number; readonly newestSampleRelease: number;
+  readonly transitionCount: number; readonly pathGeneration: number; readonly replayGeneration: number;
+  readonly resyncMask: number;
+}
+
+export function encodeGlobalDisplayRangeRequestPayload(startRelease: number, maxCount = 256): Uint8Array {
+  if (!Number.isInteger(startRelease) || startRelease < 0 || startRelease > 0xffff_ffff ||
+      !Number.isInteger(maxCount) || maxCount < 1 || maxCount > 256) {
+    throw new RangeError("invalid bounded global display range");
+  }
+  const bytes = new Uint8Array(20); const view = new DataView(bytes.buffer);
+  bytes.set(new TextEncoder().encode("PGR1"), 0);
+  view.setUint16(4, 1, true); view.setUint16(6, 12, true); view.setUint32(8, bytes.byteLength, true);
+  view.setUint32(12, startRelease, true); view.setUint16(16, maxCount, true);
+  return bytes;
+}
+
+export function decodeGlobalDisplayCursorStatePayload(bytes: Uint8Array): GlobalDisplayCursorStateV1 {
+  const reader = new Reader(bytes, "PGC1");
+  const value: GlobalDisplayCursorStateV1 = { sampleCount: reader.u32(), oldestSampleRelease: reader.u32(),
+    newestSampleRelease: reader.u32(), transitionCount: reader.u32(), pathGeneration: reader.u32(),
+    replayGeneration: reader.u32(), resyncMask: reader.u32() };
+  reader.finish();
+  if ((value.resyncMask & ~0x0f) !== 0 ||
+      (value.sampleCount === 0 && (value.oldestSampleRelease !== 0 || value.newestSampleRelease !== 0)) ||
+      (value.sampleCount !== 0 && value.oldestSampleRelease > value.newestSampleRelease)) {
+    throw new Error("invalid global display cursor state");
+  }
+  return value;
 }

@@ -21,8 +21,14 @@ export function testFrame(kind: Kps1MessageKind, payload: Uint8Array, sequence =
   return { kind, flags: 0, sessionNonce: 99n, sequence, correlationId: kind === Kps1MessageKind.ActionReceipt ? sequence : 0n, payload };
 }
 
-export function snapshotPayload(role: NumericRole, truth = false, publicationSequence = 1n): Uint8Array {
-  const w = new Writer("POS1"); w.u32(0x12b50001); w.u32(0x12b01001); w.u64(publicationSequence); w.u64(truth ? (1n << 63n) | 0x1ffn : 0x1ffn);
+export function snapshotPayload(
+  role: NumericRole,
+  truth = false,
+  publicationSequence = 1n,
+  validityMask = 0x1ffn,
+): Uint8Array {
+  const w = new Writer("POS1"); w.u32(0x12b50001); w.u32(0x12b01001); w.u64(publicationSequence);
+  w.u64(truth ? (1n << 63n) | validityMask : validityMask);
   w.u8(role); w.u8(3); w.u8(2); w.u8(2); w.bool(false); w.bool(truth); w.reserved(2);
   w.u32(6000); w.u32(31250); w.u32(3); w.u32(200 * 65536);
   for (const offset of [0, 64]) { w.i32(1000 + offset); w.i32(2000); w.i32(100 * 4096); w.i32(100); w.i32(200); w.i32(300); w.u32(0x1000 + offset); }

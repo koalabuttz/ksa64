@@ -2,7 +2,9 @@ import {
   GLOBAL_PATH_FLAG_INCOMPLETE, GLOBAL_PATH_FLAG_STALE, GLOBAL_PATH_FLAG_TERMINAL,
   GLOBAL_POSE_VALID_ECEF_ATTITUDE, GLOBAL_POSE_VALID_ECEF_POSITION, GLOBAL_POSE_VALID_ECEF_VELOCITY,
   GLOBAL_POSE_VALID_GCRF_ATTITUDE, GLOBAL_POSE_VALID_GCRF_POSITION, GLOBAL_POSE_VALID_GCRF_VELOCITY,
-  GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION, GLOBAL_POSE_VALID_RECOVERY_ENU_POSITION,
+  GLOBAL_POSE_VALID_LAUNCH_ENU_ATTITUDE, GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION,
+  GLOBAL_POSE_VALID_LAUNCH_ENU_VELOCITY, GLOBAL_POSE_VALID_RECOVERY_ENU_ATTITUDE,
+  GLOBAL_POSE_VALID_RECOVERY_ENU_POSITION, GLOBAL_POSE_VALID_RECOVERY_ENU_VELOCITY,
   type GlobalDisplayDefinitionV1 as WireGlobalDisplayDefinitionV1,
   type GlobalDisplayPathChunkV1 as WireGlobalDisplayPathChunkV1,
   type GlobalDisplaySampleV1 as WireGlobalDisplaySampleV1,
@@ -49,6 +51,7 @@ export type I32x4 = readonly [number, number, number, number];
 export interface GlobalDisplayAnchorV1 {
   readonly identity: number;
   readonly geodeticQ28Q12: I32x3;
+  readonly ecefPositionQ12Km: I32x3;
 }
 
 export interface GlobalDisplayDefinitionV1 {
@@ -79,7 +82,11 @@ export interface GlobalDisplaySourcePoseV1 {
   readonly gcrfPositionQ12Km?: I32x3;
   readonly gcrfVelocityQ24KmS?: I32x3;
   readonly launchEnuPositionQ12Km?: I32x3;
+  readonly launchEnuVelocityQ24KmS?: I32x3;
   readonly recoveryEnuPositionQ12Km?: I32x3;
+  readonly recoveryEnuVelocityQ24KmS?: I32x3;
+  readonly bodyToLaunchEnuQ30?: I32x4;
+  readonly bodyToRecoveryEnuQ30?: I32x4;
   readonly bodyToEcefQ30?: I32x4;
   readonly bodyToGcrfQ30?: I32x4;
   readonly bodyAngularRateQ24RadS?: I32x3;
@@ -107,7 +114,10 @@ export interface GlobalDisplaySampleV1 {
 
 export interface GlobalDisplayPathPointV1 {
   readonly releaseEpoch: number;
+  readonly missionTimeQ16: number;
+  readonly segment: GlobalDisplaySegmentV1;
   readonly eventMask: bigint;
+  readonly anchorIdentity: number;
   readonly positionQ12Km: I32x3;
 }
 
@@ -138,6 +148,7 @@ export interface GlobalDisplayTransitionV1 {
   readonly continuityPositionQ12Km: number;
   readonly continuityVelocityQ24KmS: number;
   readonly continuityAttitudeQ30: number;
+  readonly continuityAngularRateQ24: number;
   readonly reasonIdentity: number;
 }
 
@@ -326,7 +337,10 @@ function pathPoint(
 ): GlobalDisplayPathPointV1 {
   return {
     releaseEpoch,
+    missionTimeQ16: releaseEpoch * 2048,
+    segment: segmentAtRelease(releaseEpoch),
     eventMask: 0n,
+    anchorIdentity: 0,
     positionQ12Km: schematicGroundPointQ12(
       downrangeQ12Km / Q12_KILOMETRES,
       crossrangeQ12Km / Q12_KILOMETRES,
@@ -450,6 +464,11 @@ export function buildLegacySchematicDisplay(input: OperationalDisplayInput): Glo
           i32(degrees(LAUNCH_LONGITUDE_DEGREES) * (1 << 28)),
           q12Km(0.003),
         ],
+        ecefPositionQ12Km: geodeticToEcefQ12(
+          LAUNCH_LATITUDE_DEGREES,
+          LAUNCH_LONGITUDE_DEGREES,
+          0.003,
+        ),
       },
       availableFrames: ["local-enu", "ecef", "gcrf"],
       availableSources,
@@ -527,17 +546,25 @@ function wireFrame(value: number): GlobalDisplayFrameV1 { switch (value) { case 
 function wireSegment(value: number): GlobalDisplaySegmentV1 { switch (value) { case 1: return "local-launch"; case 2: return "ecef-ascent"; case 3: return "eci-coast"; case 4: return "ecef-entry"; case 5: return "local-recovery"; default: throw new Error("unsupported global display segment"); } }
 function wireSource(value: number): GlobalDisplaySourceV1 { switch (value) { case 1: return "planned"; case 2: return "onboard"; case 3: return "ground"; case 4: return "truth"; default: throw new Error("unsupported global display source"); } }
 function valid(mask: number, bit: number): boolean { return (mask & bit) !== 0; }
-function wirePose(value: WireGlobalDisplaySourcePoseV1): GlobalDisplaySourcePoseV1 {
+function wirePose(value: WireGlobalDisplaySourcePoseV1, segment: GlobalDisplaySegmentV1): GlobalDisplaySourcePoseV1 {
   const activeFrame = wireFrame(value.activeFrame);
+  const localIsRecovery = segment === "local-recovery";
   const ecefPosition = valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_POSITION) ? value.ecef.positionQ12Km : activeFrame === "ecef" ? value.active.positionQ12Km : undefined;
   const ecefVelocity = valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_VELOCITY) ? value.ecef.velocityQ24KmS : activeFrame === "ecef" ? value.active.velocityQ24KmS : undefined;
   const gcrfPosition = valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_POSITION) ? value.gcrf.positionQ12Km : activeFrame === "gcrf" ? value.active.positionQ12Km : undefined;
   const gcrfVelocity = valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_VELOCITY) ? value.gcrf.velocityQ24KmS : activeFrame === "gcrf" ? value.active.velocityQ24KmS : undefined;
+  const launchActive = activeFrame === "local-enu" && !localIsRecovery;
+  const recoveryActive = activeFrame === "local-enu" && localIsRecovery;
   return { source: wireSource(value.source), modelIdentity: value.modelIdentity, sourceEstimateIdentity: value.estimateIdentity,
     sourceChecksum: value.checksum, ageReleases: value.ageReleases, validityMask: BigInt(value.validityMask),
     ecefPositionQ12Km: ecefPosition, ecefVelocityQ24KmS: ecefVelocity, gcrfPositionQ12Km: gcrfPosition,
-    gcrfVelocityQ24KmS: gcrfVelocity, launchEnuPositionQ12Km: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION) ? value.launchEnu.positionQ12Km : activeFrame === "local-enu" ? value.active.positionQ12Km : undefined,
-    recoveryEnuPositionQ12Km: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_POSITION) ? value.recoveryEnu.positionQ12Km : undefined,
+    gcrfVelocityQ24KmS: gcrfVelocity,
+    launchEnuPositionQ12Km: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_POSITION) ? value.launchEnu.positionQ12Km : launchActive ? value.active.positionQ12Km : undefined,
+    launchEnuVelocityQ24KmS: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_VELOCITY) ? value.launchEnu.velocityQ24KmS : launchActive ? value.active.velocityQ24KmS : undefined,
+    recoveryEnuPositionQ12Km: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_POSITION) ? value.recoveryEnu.positionQ12Km : recoveryActive ? value.active.positionQ12Km : undefined,
+    recoveryEnuVelocityQ24KmS: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_VELOCITY) ? value.recoveryEnu.velocityQ24KmS : recoveryActive ? value.active.velocityQ24KmS : undefined,
+    bodyToLaunchEnuQ30: valid(value.validityMask, GLOBAL_POSE_VALID_LAUNCH_ENU_ATTITUDE) ? value.launchEnu.attitudeQ30 : launchActive ? value.active.attitudeQ30 : undefined,
+    bodyToRecoveryEnuQ30: valid(value.validityMask, GLOBAL_POSE_VALID_RECOVERY_ENU_ATTITUDE) ? value.recoveryEnu.attitudeQ30 : recoveryActive ? value.active.attitudeQ30 : undefined,
     bodyToEcefQ30: valid(value.validityMask, GLOBAL_POSE_VALID_ECEF_ATTITUDE) ? value.ecef.attitudeQ30 : activeFrame === "ecef" ? value.active.attitudeQ30 : undefined,
     bodyToGcrfQ30: valid(value.validityMask, GLOBAL_POSE_VALID_GCRF_ATTITUDE) ? value.gcrf.attitudeQ30 : activeFrame === "gcrf" ? value.active.attitudeQ30 : undefined,
     bodyAngularRateQ24RadS: value.angularRateQ24 };
@@ -557,30 +584,68 @@ export function buildExactGlobalDisplay(input: ExactGlobalDisplayInput): GlobalD
     geodeticQ28Q12: value.geodeticQ28Q12, altitudeQ12Km: value.altitudeQ12Km, machQ24: value.machQ24,
     dynamicPressureQ14Pa: value.dynamicPressureQ14Pa, totalMassQ21Kg: value.totalMassQ21Kg,
     mainPropellantQ21Kg: value.mainPropellantQ21Kg, rcsPropellantQ21Kg: value.rcsPropellantQ21Kg,
-    componentStatusMask: BigInt(value.commandFlags) | (BigInt(value.commandDiscrete) << 8n) | (BigInt(value.alarms) << 16n), poses: value.sources.map(wirePose) }));
+    componentStatusMask: BigInt(value.commandFlags) | (BigInt(value.commandDiscrete) << 8n) | (BigInt(value.alarms) << 16n), poses: value.sources.map((pose) => wirePose(pose, wireSegment(value.segment))) }));
   const grouped = new Map<string, WireGlobalDisplayPathChunkV1[]>();
-  for (const value of input.paths.values()) { const key = [value.pathIdentity, value.source, value.displayFrame, value.lod].join(":"); const chunks = grouped.get(key) ?? []; chunks.push(value); grouped.set(key, chunks); }
+  for (const value of input.paths.values()) {
+    const key = [value.pathIdentity, value.source, value.displayFrame, value.lod].join(":");
+    const chunks = grouped.get(key) ?? [];
+    chunks.push(value);
+    grouped.set(key, chunks);
+  }
   const paths: GlobalDisplayPathChunkV1[] = [];
-  for (const chunks of grouped.values()) { chunks.sort((left, right) => left.chunkIndex - right.chunkIndex); const first = chunks[0]; if (first === undefined) continue;
-    paths.push({ pathIdentity: first.pathIdentity, modelIdentity: first.modelIdentity, source: wireSource(first.source), frame: wireFrame(first.displayFrame),
-      lodSeconds: first.lod === 1 ? 0 : first.lod === 2 ? 1 : 4, chunkSequence: 1, validityMask: BigInt(first.continuityIdentity),
-      stale: (first.flags & GLOBAL_PATH_FLAG_STALE) !== 0, incomplete: (first.flags & GLOBAL_PATH_FLAG_INCOMPLETE) !== 0,
-      terminal: (first.flags & GLOBAL_PATH_FLAG_TERMINAL) !== 0, points: chunks.flatMap((chunk) => chunk.points.map((point) => ({ releaseEpoch: point.releaseEpoch, eventMask: BigInt(point.eventMask), positionQ12Km: point.positionQ12Km }))) }); }
+  for (const chunks of grouped.values()) {
+    chunks.sort((left, right) => left.chunkIndex - right.chunkIndex);
+    const first = chunks[0];
+    if (first === undefined) continue;
+    const compatible = chunks.filter((chunk) =>
+      chunk.modelIdentity === first.modelIdentity &&
+      chunk.estimateIdentity === first.estimateIdentity &&
+      chunk.sourceChecksum === first.sourceChecksum &&
+      chunk.continuityIdentity === first.continuityIdentity &&
+      chunk.chunkCount === first.chunkCount);
+    const complete = compatible.length === first.chunkCount &&
+      compatible.every((chunk, index) => chunk.chunkIndex === index);
+    const combinedFlags = compatible.reduce((flags, chunk) => flags | chunk.flags, 0);
+    paths.push({
+      pathIdentity: first.pathIdentity,
+      modelIdentity: first.modelIdentity,
+      source: wireSource(first.source),
+      frame: wireFrame(first.displayFrame),
+      lodSeconds: first.lod === 1 ? 0 : first.lod === 2 ? 1 : 4,
+      chunkSequence: first.sourceChecksum,
+      validityMask: BigInt(first.continuityIdentity),
+      stale: (combinedFlags & GLOBAL_PATH_FLAG_STALE) !== 0,
+      incomplete: !complete || (combinedFlags & GLOBAL_PATH_FLAG_INCOMPLETE) !== 0,
+      terminal: complete && (combinedFlags & GLOBAL_PATH_FLAG_TERMINAL) !== 0,
+      points: compatible.flatMap((chunk) => chunk.points.map((point) => ({
+        releaseEpoch: point.releaseEpoch,
+        missionTimeQ16: point.missionTimeQ16,
+        segment: wireSegment(point.segment),
+        eventMask: BigInt(point.eventMask),
+        anchorIdentity: point.anchorIdentity,
+        positionQ12Km: point.positionQ12Km,
+      }))),
+    });
+  }
+  paths.sort((left, right) => left.pathIdentity - right.pathIdentity || left.source.localeCompare(right.source) || left.lodSeconds - right.lodSeconds);
   const transitions: GlobalDisplayTransitionV1[] = input.transitions.map((value) => ({ identity: value.transitionIdentity,
     releaseEpoch: value.releaseEpoch, missionTimeQ16: value.missionTimeQ16, oldFrame: wireFrame(value.fromFrame), newFrame: wireFrame(value.toFrame),
     oldSegment: wireSegment(value.fromSegment), newSegment: wireSegment(value.toSegment), transformIdentity: value.transformIdentity,
-    anchorIdentity: value.anchorIdentity, continuityPositionQ12Km: Math.max(...value.positionDeltaQ12Km.map(Math.abs)),
-    continuityVelocityQ24KmS: Math.max(...value.velocityDeltaQ24KmS.map(Math.abs)), continuityAttitudeQ30: Math.abs(value.attitudeDeltaQ30), reasonIdentity: value.reason }));
+    anchorIdentity: value.anchorIdentity, continuityPositionQ12Km: Math.abs(value.positionMaxDeltaRaw),
+    continuityVelocityQ24KmS: Math.abs(value.velocityMaxDeltaRaw), continuityAttitudeQ30: Math.abs(value.attitudeMaxDeltaRaw),
+    continuityAngularRateQ24: Math.abs(value.angularRateMaxDeltaRaw), reasonIdentity: value.reason }));
   const replayEntries = input.replay?.entries.map((value) => ({ identity: value.eventIdentity, releaseEpoch: value.releaseEpoch,
     kind: replayKind(value.kind), label: replayLabel(value.releaseEpoch, value.eventIdentity) })) ?? [];
   const firstRelease = input.replay?.firstRelease ?? samples[0]?.releaseEpoch ?? 0;
   const lastRelease = input.replay?.lastRelease ?? samples.at(-1)?.releaseEpoch ?? firstRelease;
   return { definition: { modelIdentity: input.definition.displayIdentity, definitionIdentity: input.definition.missionIdentity,
       earthIdentity: input.definition.earthIdentity, transformIdentity: input.definition.transformIdentity,
-      missionEpochTaiSeconds: BigInt(input.definition.epochUnixDay), equatorialRadiusQ12Km: input.definition.semiMajorQ12Km,
+      missionEpochTaiSeconds: BigInt(input.definition.epochUnixDay) * 86_400n + BigInt(input.definition.epochTaiMinusUtc), equatorialRadiusQ12Km: input.definition.semiMajorQ12Km,
       polarRadiusQ12Km: input.definition.semiMinorQ12Km,
-      launchAnchor: { identity: input.definition.launchAnchor.identity, geodeticQ28Q12: input.definition.launchAnchor.geodeticQ28Q12 },
-      recoveryAnchor: { identity: input.definition.recoveryAnchor.identity, geodeticQ28Q12: input.definition.recoveryAnchor.geodeticQ28Q12 },
+      launchAnchor: { identity: input.definition.launchAnchor.identity, geodeticQ28Q12: input.definition.launchAnchor.geodeticQ28Q12,
+        ecefPositionQ12Km: input.definition.launchAnchor.ecefPositionQ12Km },
+      recoveryAnchor: { identity: input.definition.recoveryAnchor.identity, geodeticQ28Q12: input.definition.recoveryAnchor.geodeticQ28Q12,
+        ecefPositionQ12Km: input.definition.recoveryAnchor.ecefPositionQ12Km },
       availableFrames: frameValues, availableSources: sourceValues,
       availableCameras: ["director", "launch", "chase", "earth-fixed", "inertial", "recovery", "free", "inspection"], quality: "global-display-v1" },
     samples, paths, transitions, replay: { firstRelease, lastRelease, selectedRelease: samples.at(-1)?.releaseEpoch ?? firstRelease,

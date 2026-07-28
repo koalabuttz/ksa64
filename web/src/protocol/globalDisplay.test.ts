@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  decodeGlobalDisplayCursorStatePayload,
   decodeGlobalDisplayDefinitionPayload,
   decodeGlobalDisplayPathPayload,
   decodeGlobalDisplaySamplesPayload,
   decodeGlobalDisplayTransitionPayload,
   decodeGlobalReplayIndexPayload,
+  encodeGlobalDisplayRangeRequestPayload,
   GLOBAL_DISPLAY_PUBLIC_SOURCE_MASK,
   GLOBAL_DISPLAY_SOURCE_SIM_TRUTH,
 } from "./globalDisplay";
@@ -43,8 +45,8 @@ function definitionPayload(sourceMask = GLOBAL_DISPLAY_PUBLIC_SOURCE_MASK): Uint
   writer.u32(0x12c00001); writer.u32(1); writer.u32(2); writer.u32(3);
   writer.i32(19_723); writer.i16(37); writer.zero(2);
   writer.i32(26_124_165); writer.i32(26_036_734); writer.i32(313_883_719);
-  writer.u32(4); writer.i32s([5, 6, 7]);
-  writer.u32(8); writer.i32s([9, 10, 11]);
+  writer.u32(4); writer.i32s([5, 6, 7]); writer.i32s([100, 101, 102]);
+  writer.u32(8); writer.i32s([9, 10, 11]); writer.i32s([103, 104, 105]);
   writer.u32(sourceMask); writer.u8(7); writer.zero(1); writer.u16(0xff);
   return writer.finish();
 }
@@ -78,8 +80,8 @@ function pathPayload(): Uint8Array {
   writer.u32(1); writer.u8(3); writer.u8(2); writer.u8(2); writer.zero(1);
   writer.u16(4); writer.u16(0); writer.u16(1); writer.u16(2);
   writer.u32(2); writer.u32(3); writer.u32(4); writer.u32(5);
-  writer.u32(32); writer.u32(65_536); writer.u8(2); writer.zero(1); writer.u16(0); writer.i32s([1, 2, 3]);
-  writer.u32(64); writer.u32(131_072); writer.u8(2); writer.zero(1); writer.u16(1); writer.i32s([4, 5, 6]);
+  writer.u32(32); writer.u32(65_536); writer.u8(2); writer.zero(1); writer.u16(0); writer.u32(0); writer.i32s([1, 2, 3]);
+  writer.u32(64); writer.u32(131_072); writer.u8(2); writer.zero(1); writer.u16(1); writer.u32(0); writer.i32s([4, 5, 6]);
   return writer.finish();
 }
 
@@ -89,7 +91,7 @@ describe("Rust-compatible GlobalDisplayV1 payloads", () => {
       displayIdentity: 0x12c00001,
       epochTaiMinusUtc: 37,
       availableSourceMask: GLOBAL_DISPLAY_PUBLIC_SOURCE_MASK,
-      recoveryAnchor: { identity: 8, geodeticQ28Q12: [9, 10, 11] },
+      recoveryAnchor: { identity: 8, geodeticQ28Q12: [9, 10, 11], ecefPositionQ12Km: [103, 104, 105] },
     });
     const corrupt = definitionPayload();
     corrupt[34] = 1;
@@ -118,9 +120,25 @@ describe("Rust-compatible GlobalDisplayV1 payloads", () => {
     expect(value).toMatchObject({ pathIdentity: 1, source: 3, lod: 2, flags: 4, chunkCount: 1 });
     expect(value.points).toHaveLength(2);
     const corrupt = pathPayload();
-    // Second release begins at byte 68 in this two-point fixture.
-    new DataView(corrupt.buffer).setUint32(68, 31, true);
+    // Second release begins at byte 72 in this two-point fixture.
+    new DataView(corrupt.buffer).setUint32(72, 31, true);
     expect(() => decodeGlobalDisplayPathPayload(corrupt, 2)).toThrow();
+  });
+
+  it("encodes bounded range requests and decodes reconnect cursor state", () => {
+    const request = encodeGlobalDisplayRangeRequestPayload(32, 128);
+    expect(new TextDecoder().decode(request.subarray(0, 4))).toBe("PGR1");
+    expect(new DataView(request.buffer).getUint32(12, true)).toBe(32);
+    expect(new DataView(request.buffer).getUint16(16, true)).toBe(128);
+    expect(() => encodeGlobalDisplayRangeRequestPayload(0, 257)).toThrow(/bounded/u);
+
+    const cursor = new Writer("PGC1");
+    cursor.u32(64); cursor.u32(1); cursor.u32(64); cursor.u32(1);
+    cursor.u32(2); cursor.u32(3); cursor.u32(0);
+    expect(decodeGlobalDisplayCursorStatePayload(cursor.finish())).toEqual({
+      sampleCount: 64, oldestSampleRelease: 1, newestSampleRelease: 64, transitionCount: 1,
+      pathGeneration: 2, replayGeneration: 3, resyncMask: 0,
+    });
   });
 
   it("decodes exact transition continuity and replay index records", () => {
@@ -128,8 +146,7 @@ describe("Rust-compatible GlobalDisplayV1 payloads", () => {
     transition.u32(29); transition.u32(59_392); transition.u8(1); transition.u8(2);
     transition.u8(1); transition.u8(2); transition.u8(1); transition.zero(3);
     transition.u32(1); transition.u32(2); transition.u32(3);
-    transition.i32s([0, 0, 0]); transition.i32s([0, 0, 0]); transition.i32(1);
-    transition.i32s([0, 0, 0]); transition.u32(4);
+    transition.i32(0); transition.i32(0); transition.i32(1); transition.i32(0); transition.u32(4);
     expect(decodeGlobalDisplayTransitionPayload(transition.finish())).toMatchObject({
       releaseEpoch: 29, fromFrame: 1, toFrame: 2, checksum: 4,
     });

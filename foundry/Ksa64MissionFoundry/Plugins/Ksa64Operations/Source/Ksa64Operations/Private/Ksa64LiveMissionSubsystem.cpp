@@ -163,6 +163,7 @@ void UKsa64LiveMissionSubsystem::Deinitialize()
 
 bool UKsa64LiveMissionSubsystem::StartGuidedOperations()
 {
+    bGlobalReplayMode = false;
     if (!Bridge.IsValid() || !Bridge->IsReady())
     {
         ViewModel.LastDiagnostic = Bridge.IsValid()
@@ -204,6 +205,116 @@ bool UKsa64LiveMissionSubsystem::StartGuidedOperations()
     return true;
 }
 
+bool UKsa64LiveMissionSubsystem::StartNominalGlobalReplay()
+{
+    if (!Bridge.IsValid() || !Bridge->IsReady())
+    {
+        ViewModel.LastDiagnostic = Bridge.IsValid()
+            ? Bridge->GetDiagnostic()
+            : TEXT("bridge adapter unavailable");
+        AppendTimeline(TEXT("BRIDGE"), TEXT("Nominal replay start rejected"), true);
+        return false;
+    }
+    if (!Bridge->StartNominalGlobalReplay())
+    {
+        ViewModel.LastDiagnostic = Bridge->GetDiagnostic();
+        AppendTimeline(TEXT("BRIDGE"), TEXT("Nominal replay validation start failed"), true);
+        return false;
+    }
+
+    bGlobalReplayMode = true;
+    ReleaseHistory.Reset();
+    Timeline.Reset();
+    PlannedReferencePath.Reset();
+    OnboardPredictionPath.Reset();
+    GroundPredictionPath.Reset();
+    LastObservedRelease = 0;
+    LastObservedCommandSequence = 0;
+    PacingController.Reset();
+    AdvanceTracker.Reset();
+    bEvidenceSaved = false;
+    bAcceptanceVerified = false;
+
+    const FKsa64OperationsBridgeCapabilities EmptyCapabilities;
+    ViewModel = FKsa64OperationsViewModel{};
+    ViewModel.bBridgeReady = true;
+    ViewModel.bSessionOpen = true;
+    ViewModel.bSnapshotValid = false;
+    ViewModel.bTruthFiltered = false;
+    ViewModel.BridgeStatus = TEXT("BRIDGE 12C GLOBAL DISPLAY");
+    ViewModel.SessionStatus = TEXT("VERIFYING FROZEN PHASE 10 REPLAY");
+    ViewModel.RoleLabel = TEXT("SIM DIRECTOR · READ ONLY");
+    ViewModel.PresentationPace = EKsa64OperationsPace::Paused;
+    ViewModel.LastDiagnostic = Bridge->GetDiagnostic();
+    ViewModel.Capabilities = EmptyCapabilities;
+    ViewModel.EvidenceStatus = TEXT("CANONICAL EVIDENCE VALIDATION REQUIRED");
+    AppendTimeline(TEXT("REPLAY"), TEXT("Frozen Phase 10 nominal replay validation started"));
+    return true;
+}
+
+bool UKsa64LiveMissionSubsystem::SupportsGlobalDisplayV1() const
+{
+    return Bridge.IsValid() && Bridge->SupportsGlobalDisplayV1();
+}
+
+EKsa64OperationsAdapterResult UKsa64LiveMissionSubsystem::GetGlobalDisplayAvailability(
+    Ksa64GlobalDisplayAvailabilityV1& OutAvailability) const
+{
+    return Bridge.IsValid()
+        ? Bridge->GlobalDisplayAvailability(OutAvailability)
+        : EKsa64OperationsAdapterResult::Unsupported;
+}
+
+EKsa64OperationsAdapterResult UKsa64LiveMissionSubsystem::GetGlobalDisplayDefinition(
+    TArray<uint8>& OutPayload) const
+{
+    return Bridge.IsValid()
+        ? Bridge->GlobalDisplayDefinition(OutPayload)
+        : EKsa64OperationsAdapterResult::Unsupported;
+}
+
+EKsa64OperationsAdapterResult UKsa64LiveMissionSubsystem::PollGlobalDisplaySample(
+    TArray<uint8>& OutPayload) const
+{
+    return Bridge.IsValid()
+        ? Bridge->PollGlobalDisplaySample(OutPayload)
+        : EKsa64OperationsAdapterResult::Unsupported;
+}
+
+EKsa64OperationsAdapterResult UKsa64LiveMissionSubsystem::GetGlobalDisplaySampleRange(
+    const Ksa64GlobalDisplaySampleRangeRequestV1& Request,
+    TArray<uint8>& OutPayload) const
+{
+    return Bridge.IsValid()
+        ? Bridge->GlobalDisplaySampleRange(Request, OutPayload)
+        : EKsa64OperationsAdapterResult::Unsupported;
+}
+
+EKsa64OperationsAdapterResult UKsa64LiveMissionSubsystem::PollGlobalDisplayTransition(
+    TArray<uint8>& OutPayload) const
+{
+    return Bridge.IsValid()
+        ? Bridge->PollGlobalDisplayTransition(OutPayload)
+        : EKsa64OperationsAdapterResult::Unsupported;
+}
+
+EKsa64OperationsAdapterResult UKsa64LiveMissionSubsystem::GetGlobalReplayIndex(
+    TArray<uint8>& OutPayload) const
+{
+    return Bridge.IsValid()
+        ? Bridge->GlobalReplayIndex(OutPayload)
+        : EKsa64OperationsAdapterResult::Unsupported;
+}
+
+EKsa64OperationsAdapterResult UKsa64LiveMissionSubsystem::GetGlobalPathChunk(
+    const Ksa64GlobalDisplayPathRequestV1& Request,
+    TArray<uint8>& OutPayload) const
+{
+    return Bridge.IsValid()
+        ? Bridge->GlobalPathChunk(Request, OutPayload)
+        : EKsa64OperationsAdapterResult::Unsupported;
+}
+
 void UKsa64LiveMissionSubsystem::SetDashboardVisible(bool bVisible)
 {
     bDashboardRequestedVisible = bVisible;
@@ -228,6 +339,10 @@ void UKsa64LiveMissionSubsystem::ResumeRealtime()
 
 void UKsa64LiveMissionSubsystem::StepOneRelease()
 {
+    if (bGlobalReplayMode)
+    {
+        return;
+    }
     if (!Bridge.IsValid() || !ViewModel.bSessionOpen || AdvanceTracker.IsOutstanding())
     {
         return;
@@ -248,6 +363,10 @@ void UKsa64LiveMissionSubsystem::StepOneRelease()
 
 void UKsa64LiveMissionSubsystem::SetPace(EKsa64OperationsPace Pace)
 {
+    if (bGlobalReplayMode)
+    {
+        return;
+    }
     if (ViewModel.PresentationPace == Pace)
     {
         return;
@@ -257,6 +376,42 @@ void UKsa64LiveMissionSubsystem::SetPace(EKsa64OperationsPace Pace)
         + static_cast<double>(ViewModel.ReleasePeriodMicros) / 1'000'000.0;
     PacingController.Reset();
     AppendTimeline(TEXT("PACE"), GetPaceLabel().ToString());
+}
+
+bool UKsa64LiveMissionSubsystem::QueueBoundedAdvanceToRelease(
+    uint32 TargetRelease,
+    uint32 MaximumBatch)
+{
+    if (bGlobalReplayMode
+        || !Bridge.IsValid()
+        || !ViewModel.bSessionOpen
+        || ViewModel.bShutdownRequested
+        || ViewModel.Lifecycle == 5
+        || ViewModel.Lifecycle == 6
+        || ViewModel.ReleaseEpoch > TargetRelease)
+    {
+        return false;
+    }
+    if (ViewModel.ReleaseEpoch == TargetRelease || AdvanceTracker.IsOutstanding())
+    {
+        return true;
+    }
+    SetPace(EKsa64OperationsPace::Paused);
+    const uint32 Count = FMath::Min(
+        FMath::Clamp(MaximumBatch, 1u, Ksa64OperationsPolicy::MaximumAdvanceReleases),
+        TargetRelease - ViewModel.ReleaseEpoch);
+    const EKsa64OperationsAdapterResult Result = Bridge->AdvanceReleases(Count);
+    HandleAdapterResult(Result, TEXT("bounded exact-release advance"));
+    if (Result != EKsa64OperationsAdapterResult::Ok
+        && Result != EKsa64OperationsAdapterResult::Queued)
+    {
+        return false;
+    }
+    AdvanceTracker.MarkAccepted(
+        ViewModel.CommandSequence,
+        ViewModel.ReleaseEpoch);
+    ViewModel.bAdvanceOutstanding = true;
+    return true;
 }
 
 void UKsa64LiveMissionSubsystem::ReviewAction()
@@ -759,6 +914,10 @@ void UKsa64LiveMissionSubsystem::CloseForAutomation()
 bool UKsa64LiveMissionSubsystem::Tick(float DeltaSeconds)
 {
     InstallDashboardIfPossible();
+    if (bGlobalReplayMode)
+    {
+        return true;
+    }
     if (bPresentationEvidenceMode)
     {
         TickPresentationEvidence(DeltaSeconds);
@@ -826,7 +985,7 @@ void UKsa64LiveMissionSubsystem::InstallDashboardIfPossible()
 
 void UKsa64LiveMissionSubsystem::PollBridge()
 {
-    if (!Bridge.IsValid() || !ViewModel.bSessionOpen)
+    if (bGlobalReplayMode || !Bridge.IsValid() || !ViewModel.bSessionOpen)
     {
         return;
     }

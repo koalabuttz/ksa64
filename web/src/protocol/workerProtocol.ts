@@ -19,6 +19,7 @@ export enum WasmWorkerCommandKind {
   Summary = 11,
   ReplayInfo = 12,
   ReplayRead = 13,
+  OpenNominalGlobalReplay = 14,
 }
 
 export interface WasmWorkerCommand {
@@ -50,7 +51,7 @@ function u32(value: number | undefined): number {
 }
 
 export function encodeKsw1Command(command: WasmWorkerCommand): Uint8Array {
-  if (!Number.isInteger(command.kind) || command.kind < 1 || command.kind > 13) {
+  if (!Number.isInteger(command.kind) || command.kind < 1 || command.kind > 14) {
     throw new RangeError("unknown worker command kind");
   }
   const bytes = new Uint8Array(KSW1_COMMAND_LENGTH);

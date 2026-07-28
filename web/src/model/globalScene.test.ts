@@ -8,8 +8,10 @@ import {
   type GlobalDisplaySourcePoseV1,
 } from "./globalDisplay";
 import {
+  buildGlobalSceneSemanticSnapshot,
   buildGlobalSceneSnapshot,
   compatibleForInterpolation,
+  interpolateQuaternion,
   ksaToBabylon,
   shouldSnapExactly,
   type GlobalSceneControls,
@@ -42,8 +44,8 @@ function sample(overrides: Partial<GlobalDisplaySampleV1> = {}): GlobalDisplaySa
 function definition(sources: GlobalDisplayDefinitionV1["availableSources"]): GlobalDisplayDefinitionV1 {
   return { modelIdentity: 1, definitionIdentity: 2, earthIdentity: 3, transformIdentity: 4,
     missionEpochTaiSeconds: 0n, equatorialRadiusQ12Km: 26_124_849, polarRadiusQ12Km: 26_036_734,
-    launchAnchor: { identity: 5, geodeticQ28Q12: [0, 0, 0] },
-    recoveryAnchor: { identity: 6, geodeticQ28Q12: [0, 0, 0] },
+    launchAnchor: { identity: 5, geodeticQ28Q12: [0, 0, 0], ecefPositionQ12Km: [26_124_849, 0, 0] },
+    recoveryAnchor: { identity: 6, geodeticQ28Q12: [0, 0, 0], ecefPositionQ12Km: [26_124_849, 1, 0] },
     availableFrames: ["local-enu", "ecef", "gcrf"], availableSources: sources,
     availableCameras: ["director", "launch", "chase", "earth-fixed", "inertial", "recovery", "free", "inspection"],
     quality: "global-display-v1" };
@@ -54,13 +56,13 @@ function model(sources: GlobalDisplayDefinitionV1["availableSources"], samples: 
     paths: sources.map((source, index) => ({ pathIdentity: index + 1, modelIdentity: 20 + index, source,
       frame: "ecef" as const, lodSeconds: 1 as const, chunkSequence: 1, validityMask: 1n,
       stale: false, incomplete: false, terminal: false,
-      points: [{ releaseEpoch: 100, eventMask: 0n, positionQ12Km: [26_124_849 + index, 0, 0] }] })),
+      points: [{ releaseEpoch: 100, missionTimeQ16: 204_800, segment: "ecef-ascent" as const, eventMask: 0n, anchorIdentity: 0, positionQ12Km: [26_124_849 + index, 0, 0] }] })),
     transitions: [], replay: { firstRelease: 100, lastRelease: 100, selectedRelease: 100,
       terminalDispositionIdentity: 0, markers: [] } };
 }
 
 function controls(overrides: Partial<GlobalSceneControls> = {}): GlobalSceneControls {
-  return { camera: "chase", domain: "auto", selectedRelease: 100,
+  return { camera: "chase", domain: "auto", selectedRelease: 100, motionMode: "smooth", pathDetail: "auto",
     visibleSources: new Set(["planned", "onboard", "ground"]), truthVisible: false,
     directorEnabled: false, ...overrides };
 }
@@ -74,6 +76,14 @@ describe("global semantic scene model", () => {
     expect(compatibleForInterpolation(previous, { ...next, eventMask: 1n }, "onboard")).toBe(false);
     expect(shouldSnapExactly(previous, { ...next, authoritativeFrame: "gcrf" })).toBe(true);
     expect(shouldSnapExactly(previous, { ...next, discontinuityMask: 1n })).toBe(true);
+
+    const start = sample({ poses: [pose("onboard", [0, 0, 0])] });
+    const finish = sample({ sequence: 2n, releaseEpoch: 101, poses: [pose("onboard", [4096, 8192, 0])] });
+    const smoothed = buildGlobalSceneSnapshot(model(["onboard"], [start, finish]), finish,
+      controls({ visibleSources: new Set(["onboard"]), interpolationAlpha: 0.5 }), start);
+    expect(smoothed.sources[0]?.positionKm).toEqual([0.5, 1, 0]);
+    expect(smoothed.interpolated).toBe(true);
+    expect(interpolateQuaternion([1, 0, 0, 0], [-1, 0, 0, 0], 0.5)).toEqual([1, 0, 0, 0]);
   });
 
   it("rebases only renderer coordinates and preserves a right-handed Babylon mapping", () => {
@@ -86,6 +96,48 @@ describe("global semantic scene model", () => {
     expect(chase.originKm).not.toEqual([0, 0, 0]);
     expect(globe.originKm).toEqual([0, 0, 0]);
     expect(ksaToBabylon([1, 2, 3])).toEqual([1, 3, -2]);
+    const semantic = buildGlobalSceneSemanticSnapshot(chase);
+    expect(buildGlobalSceneSemanticSnapshot({ ...chase, originKm: [123, 456, 789] })).toEqual(semantic);
+    expect(semantic.sources[0]?.positionQ12Km).toEqual([26_124_849, 0, 0]);
+  });
+
+  it("selects deterministic path detail without changing authoritative samples", () => {
+    const base = model(["onboard"], [sample()]);
+    const path = base.paths[0]!;
+    const withLods = { ...base, paths: [
+      { ...path, pathIdentity: 101, lodSeconds: 0 as const },
+      { ...path, pathIdentity: 102, lodSeconds: 1 as const },
+      { ...path, pathIdentity: 103, lodSeconds: 4 as const },
+    ] };
+    const exact = buildGlobalSceneSnapshot(withLods, base.samples[0],
+      controls({ camera: "chase", visibleSources: new Set(["onboard"]), pathDetail: "auto" }));
+    const overview = buildGlobalSceneSnapshot(withLods, base.samples[0],
+      controls({ camera: "earth-fixed", visibleSources: new Set(["onboard"]), pathDetail: "auto" }));
+    const oneSecond = buildGlobalSceneSnapshot(withLods, base.samples[0],
+      controls({ visibleSources: new Set(["onboard"]), pathDetail: 1 }));
+    expect(exact.paths.map((value) => value.lodSeconds)).toEqual([0]);
+    expect(overview.paths.map((value) => value.lodSeconds)).toEqual([4]);
+    expect(oneSecond.paths.map((value) => value.lodSeconds)).toEqual([1]);
+  });
+
+  it("splits launch and recovery ENU trail strips at the Rust anchor identity", () => {
+    const localSample = sample({ authoritativeFrame: "local-enu", segment: "local-launch",
+      poses: [{ ...pose("onboard", [0, 0, 0]), launchEnuPositionQ12Km: [0, 0, 0] }] });
+    const base = model(["onboard"], [localSample]);
+    const localModel: GlobalDisplayModelV1 = { ...base, paths: [{ ...base.paths[0]!,
+      frame: "local-enu", points: [
+        { releaseEpoch: 1, missionTimeQ16: 2_048, segment: "local-launch", eventMask: 0n, anchorIdentity: 5, positionQ12Km: [0, 0, 0] },
+        { releaseEpoch: 2, missionTimeQ16: 4_096, segment: "local-launch", eventMask: 0n, anchorIdentity: 5, positionQ12Km: [1, 0, 0] },
+        { releaseEpoch: 3, missionTimeQ16: 6_144, segment: "local-recovery", eventMask: 0n, anchorIdentity: 6, positionQ12Km: [0, 0, 0] },
+        { releaseEpoch: 4, missionTimeQ16: 8_192, segment: "local-recovery", eventMask: 0n, anchorIdentity: 6, positionQ12Km: [1, 0, 0] },
+      ],
+    }] };
+    const scene = buildGlobalSceneSnapshot(localModel, localSample, controls({
+      camera: "launch", visibleSources: new Set(["onboard"]), pathDetail: 1,
+    }));
+    expect(scene.paths).toHaveLength(2);
+    expect(scene.paths.map((path) => [path.anchorIdentity, path.pointsKm.length])).toEqual([[5, 2], [6, 2]]);
+    expect(buildGlobalSceneSemanticSnapshot(scene).paths.map((path) => path.anchorIdentity)).toEqual([5, 6]);
   });
 
   it("renders truth poses and paths only for a director-derived model when explicitly enabled", () => {
@@ -114,7 +166,8 @@ describe("global semantic scene model", () => {
     const wireDefinition: WireDefinition = { displayIdentity: 1, earthIdentity: 2, transformIdentity: 3,
       missionIdentity: 4, epochUnixDay: 19_723, epochTaiMinusUtc: 37,
       semiMajorQ12Km: 26_124_849, semiMinorQ12Km: 26_036_734, inverseFlatteningQ20: 313_883_719,
-      launchAnchor: { identity: 5, geodeticQ28Q12: [6, 7, 8] }, recoveryAnchor: { identity: 9, geodeticQ28Q12: [10, 11, 12] },
+      launchAnchor: { identity: 5, geodeticQ28Q12: [6, 7, 8], ecefPositionQ12Km: [21, 22, 23] },
+      recoveryAnchor: { identity: 9, geodeticQ28Q12: [10, 11, 12], ecefPositionQ12Km: [24, 25, 26] },
       availableSourceMask: 2, availableFrameMask: 7, cameraDomainMask: 0xff };
     const resolved: WireResolvedPose = { positionQ12Km: [111, 222, 333], velocityQ24KmS: [4, 5, 6], attitudeQ30: identityQuaternion };
     const wirePose: WireSourcePose = { source: 2, activeFrame: 2,
@@ -130,6 +183,8 @@ describe("global semantic scene model", () => {
       commandFlags: 0, commandDiscrete: 0, alarms: 0, sources: [wirePose] };
     const exact = buildExactGlobalDisplay({ definition: wireDefinition, samples: [wireSample], paths: new Map(), transitions: [] });
     expect(exact.definition.quality).toBe("global-display-v1");
+    expect(exact.definition.missionEpochTaiSeconds).toBe(19_723n * 86_400n + 37n);
+    expect(exact.samples[0]?.missionTimeQ16).toBe(2048);
     expect(exact.samples[0]?.poses[0]?.ecefPositionQ12Km).toEqual([111, 222, 333]);
 
     const legacy = buildLegacySchematicDisplay({ samples: [], paths: new Map(), timeline: [], truthAllowed: false });

@@ -24,8 +24,9 @@ function model(sources: readonly GlobalDisplaySourceV1[] = ["planned", "onboard"
   const samples = [sample(100, sources.filter((source) => source !== "planned")), sample(101, sources.filter((source) => source !== "planned"))];
   return { definition: { modelIdentity: 1, definitionIdentity: 2, earthIdentity: 3,
       transformIdentity: 4, missionEpochTaiSeconds: 0n, equatorialRadiusQ12Km: 26_124_165,
-      polarRadiusQ12Km: 26_036_734, launchAnchor: { identity: 5, geodeticQ28Q12: [0, 0, 0] },
-      recoveryAnchor: { identity: 6, geodeticQ28Q12: [0, 0, 0] },
+      polarRadiusQ12Km: 26_036_734,
+      launchAnchor: { identity: 5, geodeticQ28Q12: [0, 0, 0], ecefPositionQ12Km: [26_124_165, 0, 0] },
+      recoveryAnchor: { identity: 6, geodeticQ28Q12: [0, 0, 0], ecefPositionQ12Km: [26_124_165, 1, 0] },
       availableFrames: ["local-enu", "ecef", "gcrf"], availableSources: sources,
       availableCameras: ["director", "launch", "chase", "earth-fixed", "inertial", "recovery", "free", "inspection"],
       quality: "global-display-v1" }, samples, paths: [], transitions: [],
@@ -47,9 +48,19 @@ beforeEach(() => {
 describe("global mission viewer", () => {
   it("switches layouts, camera direction, backend state, and exact replay releases", async () => {
     const onLayoutChange = vi.fn();
+    const onSemanticSnapshot = vi.fn();
     render(<GlobalMissionViewer model={model()} replay layout="hybrid" deskOpen
-      onLayoutChange={onLayoutChange} onDeskOpenChange={vi.fn()} />);
+      onLayoutChange={onLayoutChange} onDeskOpenChange={vi.fn()} onSemanticSnapshot={onSemanticSnapshot} />);
     await waitFor(() => expect(rendererMock.start).toHaveBeenCalled());
+    await waitFor(() => expect(onSemanticSnapshot).toHaveBeenCalled());
+    const viewer = screen.getByRole("heading", { name: "Global mission director" }).closest("section");
+    expect(JSON.parse(viewer?.getAttribute("data-semantic-scene") ?? "{}")).toMatchObject({
+      schema: "ksa64.global-scene-semantic.v1", releaseEpoch: 101, frame: "ecef",
+    });
+    fireEvent.change(screen.getByLabelText("Global display motion"), { target: { value: "exact" } });
+    expect(screen.getByText("Exact-release display")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Global path detail"), { target: { value: "1" } });
+    expect(screen.getByLabelText("Global path detail")).toHaveValue("1");
     fireEvent.click(screen.getByRole("button", { name: "Engineering split" }));
     expect(onLayoutChange).toHaveBeenCalledWith("engineering");
     fireEvent.change(screen.getByLabelText("Global camera"), { target: { value: "free" } });

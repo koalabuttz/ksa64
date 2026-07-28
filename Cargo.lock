@@ -841,6 +841,8 @@ version = "0.1.0"
 dependencies = [
  "ksa64-host",
  "ksa64-interface",
+ "ksa64-presentation",
+ "ksa64-session",
  "serde",
  "serde_json",
 ]

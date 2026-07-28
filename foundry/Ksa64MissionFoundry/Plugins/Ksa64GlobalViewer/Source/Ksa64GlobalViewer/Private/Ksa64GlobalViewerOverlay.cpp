@@ -116,6 +116,12 @@ TSharedRef<SWidget> SKsa64GlobalViewerOverlay::BuildTopBar()
             + SHorizontalBox::Slot().AutoWidth().Padding(4.0f, 0.0f)
             [
                 Button(
+                    FText::FromString(TEXT("OPEN NOMINAL REPLAY")),
+                    FOnClicked::CreateSP(this, &SKsa64GlobalViewerOverlay::OnNominalReplay))
+            ]
+            + SHorizontalBox::Slot().AutoWidth().Padding(4.0f, 0.0f)
+            [
+                Button(
                     FText::FromString(TEXT("LAYOUT")),
                     FOnClicked::CreateSP(this, &SKsa64GlobalViewerOverlay::OnLayout))
             ]
@@ -228,6 +234,38 @@ TSharedRef<SWidget> SKsa64GlobalViewerOverlay::BuildBottomBar()
                     FText::FromString(TEXT("STEP +1")),
                     FOnClicked::CreateSP(this, &SKsa64GlobalViewerOverlay::OnStep))
             ]
+            + SHorizontalBox::Slot().AutoWidth().Padding(4.0f, 0.0f)
+            [
+                Button(
+                    TAttribute<FText>::CreateSP(
+                        this,
+                        &SKsa64GlobalViewerOverlay::ReplayPaceButtonText),
+                    FOnClicked::CreateSP(this, &SKsa64GlobalViewerOverlay::OnReplayPace),
+                    TAttribute<bool>::CreateLambda([Weak = Subsystem]()
+                    {
+                        return Weak.IsValid() && Weak->IsNominalReplay();
+                    }))
+            ]
+            + SHorizontalBox::Slot().AutoWidth().Padding(4.0f, 0.0f)
+            [
+                Button(
+                    FText::FromString(TEXT("< EVENT")),
+                    FOnClicked::CreateSP(this, &SKsa64GlobalViewerOverlay::OnPreviousBookmark),
+                    TAttribute<bool>::CreateLambda([Weak = Subsystem]()
+                    {
+                        return Weak.IsValid() && Weak->IsNominalReplay();
+                    }))
+            ]
+            + SHorizontalBox::Slot().AutoWidth().Padding(4.0f, 0.0f)
+            [
+                Button(
+                    FText::FromString(TEXT("EVENT >")),
+                    FOnClicked::CreateSP(this, &SKsa64GlobalViewerOverlay::OnNextBookmark),
+                    TAttribute<bool>::CreateLambda([Weak = Subsystem]()
+                    {
+                        return Weak.IsValid() && Weak->IsNominalReplay();
+                    }))
+            ]
             + SHorizontalBox::Slot().FillWidth(1.0f).Padding(14.0f, 0.0f)
             .VAlign(VAlign_Center)
             [
@@ -273,14 +311,13 @@ TSharedRef<SWidget> SKsa64GlobalViewerOverlay::Button(
 
 FReply SKsa64GlobalViewerOverlay::OnStart()
 {
-    if (Subsystem.IsValid() && Subsystem->GetGameInstance() != nullptr)
-    {
-        if (UKsa64LiveMissionSubsystem* Operations =
-                Subsystem->GetGameInstance()->GetSubsystem<UKsa64LiveMissionSubsystem>())
-        {
-            Operations->StartGuidedOperations();
-        }
-    }
+    if (Subsystem.IsValid()) Subsystem->StartGuidedOperations();
+    return FReply::Handled();
+}
+
+FReply SKsa64GlobalViewerOverlay::OnNominalReplay()
+{
+    if (Subsystem.IsValid()) Subsystem->StartNominalReplay();
     return FReply::Handled();
 }
 
@@ -316,35 +353,31 @@ FReply SKsa64GlobalViewerOverlay::OnTruth()
 
 FReply SKsa64GlobalViewerOverlay::OnPauseResume()
 {
-    if (Subsystem.IsValid() && Subsystem->GetGameInstance() != nullptr)
-    {
-        if (UKsa64LiveMissionSubsystem* Operations =
-                Subsystem->GetGameInstance()->GetSubsystem<UKsa64LiveMissionSubsystem>())
-        {
-            if (Operations->GetViewModel().PresentationPace
-                == EKsa64OperationsPace::Paused)
-            {
-                Operations->ResumeRealtime();
-            }
-            else
-            {
-                Operations->PausePresentation();
-            }
-        }
-    }
+    if (Subsystem.IsValid()) Subsystem->TogglePause();
     return FReply::Handled();
 }
 
 FReply SKsa64GlobalViewerOverlay::OnStep()
 {
-    if (Subsystem.IsValid() && Subsystem->GetGameInstance() != nullptr)
-    {
-        if (UKsa64LiveMissionSubsystem* Operations =
-                Subsystem->GetGameInstance()->GetSubsystem<UKsa64LiveMissionSubsystem>())
-        {
-            Operations->StepOneRelease();
-        }
-    }
+    if (Subsystem.IsValid()) Subsystem->StepOneRelease();
+    return FReply::Handled();
+}
+
+FReply SKsa64GlobalViewerOverlay::OnReplayPace()
+{
+    if (Subsystem.IsValid()) Subsystem->CycleReplayPace();
+    return FReply::Handled();
+}
+
+FReply SKsa64GlobalViewerOverlay::OnPreviousBookmark()
+{
+    if (Subsystem.IsValid()) Subsystem->JumpToPreviousBookmark();
+    return FReply::Handled();
+}
+
+FReply SKsa64GlobalViewerOverlay::OnNextBookmark()
+{
+    if (Subsystem.IsValid()) Subsystem->JumpToNextBookmark();
     return FReply::Handled();
 }
 
@@ -353,6 +386,8 @@ FReply SKsa64GlobalViewerOverlay::OnKeyDown(
     const FKeyEvent& InKeyEvent)
 {
     const FKey Key = InKeyEvent.GetKey();
+    if (Key == EKeys::G) return OnStart();
+    if (Key == EKeys::N) return OnNominalReplay();
     if (Key == EKeys::V) return OnLayout();
     if (Key == EKeys::C) return OnCamera();
     if (Key == EKeys::A) return OnAutomatic();
@@ -360,6 +395,9 @@ FReply SKsa64GlobalViewerOverlay::OnKeyDown(
     if (Key == EKeys::T) return OnTruth();
     if (Key == EKeys::SpaceBar) return OnPauseResume();
     if (Key == EKeys::Period) return OnStep();
+    if (Key == EKeys::LeftBracket) return OnPreviousBookmark();
+    if (Key == EKeys::RightBracket) return OnNextBookmark();
+    if (Key == EKeys::P) return OnReplayPace();
     return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
 }
 
@@ -403,17 +441,23 @@ FText SKsa64GlobalViewerOverlay::OperationsButtonText() const
 
 FText SKsa64GlobalViewerOverlay::PauseButtonText() const
 {
-    if (!Subsystem.IsValid() || Subsystem->GetGameInstance() == nullptr)
-    {
-        return FText::FromString(TEXT("PAUSE"));
-    }
-    if (const UKsa64LiveMissionSubsystem* Operations =
-            Subsystem->GetGameInstance()->GetSubsystem<UKsa64LiveMissionSubsystem>())
-    {
-        return FText::FromString(
-            Operations->GetViewModel().PresentationPace == EKsa64OperationsPace::Paused
-                ? TEXT("RESUME")
-                : TEXT("PAUSE"));
-    }
-    return FText::FromString(TEXT("PAUSE"));
+    if (!Subsystem.IsValid()) return FText::FromString(TEXT("PAUSE"));
+    const bool bPaused = Subsystem->IsNominalReplay()
+        ? Subsystem->GetSemanticState().ReplayPace == EKsa64GlobalReplayPace::Paused
+        : (Subsystem->GetGameInstance() != nullptr
+            && Subsystem->GetGameInstance()
+                ->GetSubsystem<UKsa64LiveMissionSubsystem>() != nullptr
+            && Subsystem->GetGameInstance()
+                ->GetSubsystem<UKsa64LiveMissionSubsystem>()
+                ->GetViewModel().PresentationPace == EKsa64OperationsPace::Paused);
+    return FText::FromString(bPaused ? TEXT("RESUME") : TEXT("PAUSE"));
+}
+
+FText SKsa64GlobalViewerOverlay::ReplayPaceButtonText() const
+{
+    return Subsystem.IsValid()
+        ? FText::FromString(FString::Printf(
+            TEXT("SPEED %s"),
+            *Subsystem->GetPaceText().ToString()))
+        : FText::FromString(TEXT("SPEED"));
 }

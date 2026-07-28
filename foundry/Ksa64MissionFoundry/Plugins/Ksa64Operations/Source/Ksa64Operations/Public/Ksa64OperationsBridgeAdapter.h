@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Ksa64OperationsTypes.h"
 #include "ksa64_viewer_bridge.h"
+#include "ksa64_viewer_bridge_global_v1.h"
 
 enum class EKsa64OperationsAdapterResult : uint8
 {
@@ -33,6 +34,7 @@ public:
     virtual FKsa64OperationsBridgeCapabilities GetCapabilities() const = 0;
 
     virtual bool StartGuidedOperations() = 0;
+    virtual bool StartNominalGlobalReplay() = 0;
     virtual void Close() = 0;
     virtual EKsa64OperationsAdapterResult AdvanceOneRelease() = 0;
     virtual EKsa64OperationsAdapterResult AdvanceReleases(uint32 MaximumReleases) = 0;
@@ -50,6 +52,24 @@ public:
     virtual EKsa64OperationsAdapterResult CancelAction() = 0;
     virtual EKsa64OperationsAdapterResult RequestShutdown() = 0;
     virtual EKsa64OperationsAdapterResult GetCompletedEvidence(TArray<uint8>& OutBytes) const = 0;
+
+    virtual bool SupportsGlobalDisplayV1() const = 0;
+    virtual EKsa64OperationsAdapterResult GlobalDisplayAvailability(
+        Ksa64GlobalDisplayAvailabilityV1& OutAvailability) const = 0;
+    virtual EKsa64OperationsAdapterResult GlobalDisplayDefinition(
+        TArray<uint8>& OutPayload) const = 0;
+    virtual EKsa64OperationsAdapterResult PollGlobalDisplaySample(
+        TArray<uint8>& OutPayload) const = 0;
+    virtual EKsa64OperationsAdapterResult GlobalDisplaySampleRange(
+        const Ksa64GlobalDisplaySampleRangeRequestV1& Request,
+        TArray<uint8>& OutPayload) const = 0;
+    virtual EKsa64OperationsAdapterResult PollGlobalDisplayTransition(
+        TArray<uint8>& OutPayload) const = 0;
+    virtual EKsa64OperationsAdapterResult GlobalReplayIndex(
+        TArray<uint8>& OutPayload) const = 0;
+    virtual EKsa64OperationsAdapterResult GlobalPathChunk(
+        const Ksa64GlobalDisplayPathRequestV1& Request,
+        TArray<uint8>& OutPayload) const = 0;
 
     static FKsa64OperationsViewModel MapLegacySnapshot(
         const Ksa64ViewerSnapshot& Snapshot,

@@ -11,6 +11,8 @@ doctest = false
 [dependencies]
 ksa64-host = { path = "../host" }
 ksa64-interface = { path = "../interface" }
+ksa64-presentation = { path = "../presentation" }
+ksa64-session = { path = "../session", features = ["native"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

@@ -5,6 +5,7 @@
 //! host-only presentation/evidence layer. The compact nine-release Phase 11
 //! fixture remains unchanged as a compatibility oracle.
 
+use crate::global_display::{GlobalDisplayPublishError, GlobalDisplayPublisher};
 use crate::global_fixtures::GlobalFixtureSet;
 use crate::phase10_mission::{
     encode_kph10, encode_ksr10, encode_ktt10, mission_update_with_case, GlobalMissionCapture,
@@ -250,6 +251,8 @@ pub struct FullMissionSession {
     last_barometer_q12_km: i32,
     last_transition_count: u8,
     completed: Option<FullMissionCompletion>,
+    global_display: GlobalDisplayPublisher,
+    pending_navigation_reset_release: Option<u32>,
 }
 
 impl FullMissionSession {
@@ -273,6 +276,8 @@ impl FullMissionSession {
         if project.scenario != MissionScenario::GnssLossFull {
             return Err(MissionSessionError::Unsupported);
         }
+        let global_display =
+            GlobalDisplayPublisher::new(fixtures()).map_err(|_| MissionSessionError::Authoring)?;
         let mut value = Self {
             project,
             role,
@@ -305,6 +310,8 @@ impl FullMissionSession {
             last_barometer_q12_km: 0,
             last_transition_count: 0,
             completed: None,
+            global_display,
+            pending_navigation_reset_release: None,
         };
         value.record(
             MissionSessionEventKind::Compiled,
@@ -560,6 +567,139 @@ impl FullMissionSession {
         &self.release_samples[start..]
     }
 
+    /// Rust-owned, role-filtered global display definition.
+    pub fn global_display_definition(&self) -> ksa64_presentation::GlobalDisplayDefinitionV1 {
+        self.global_display
+            .definition(ksa64_presentation::PresentationRole::from(self.role))
+    }
+
+    /// Exact per-release display products after a zero-based source index.
+    pub fn global_display_samples_after(
+        &self,
+        index: u32,
+    ) -> Vec<ksa64_presentation::GlobalDisplaySampleV1> {
+        self.global_display
+            .samples_after(index, ksa64_presentation::PresentationRole::from(self.role))
+    }
+
+    pub fn global_display_transitions_after(
+        &self,
+        index: u32,
+    ) -> &[ksa64_presentation::GlobalDisplayTransitionV1] {
+        self.global_display.transitions_after(index)
+    }
+
+    pub fn global_display_samples_from_release(
+        &self,
+        start_release: u32,
+        max_count: usize,
+    ) -> Vec<ksa64_presentation::GlobalDisplaySampleV1> {
+        self.global_display.samples_from_release(
+            start_release,
+            max_count,
+            ksa64_presentation::PresentationRole::from(self.role),
+        )
+    }
+
+    pub fn global_display_sample_count(&self) -> usize {
+        self.global_display.sample_count()
+    }
+
+    pub fn global_display_oldest_sample_release(&self) -> Option<u32> {
+        self.global_display.oldest_sample_release()
+    }
+
+    pub fn global_display_newest_sample_release(&self) -> Option<u32> {
+        self.global_display.newest_sample_release()
+    }
+
+    pub fn global_display_transition_count(&self) -> usize {
+        self.global_display.transition_count()
+    }
+
+    pub fn global_display_transitions_from_release(
+        &self,
+        start_release: u32,
+    ) -> &[ksa64_presentation::GlobalDisplayTransitionV1] {
+        self.global_display.transitions_from_release(start_release)
+    }
+
+    pub fn global_display_replay_index(&self) -> ksa64_presentation::GlobalReplayIndexV1 {
+        let (terminal, axes) = self.completed.as_ref().map_or((0, [0; 6]), |completion| {
+            let value = completion.disposition;
+            (
+                value.overall as u8,
+                [
+                    value.axes.objective as u8,
+                    value.axes.vehicle as u8,
+                    value.axes.procedure as u8,
+                    value.axes.operator as u8,
+                    value.axes.avionics as u8,
+                    value.axes.evidence as u8,
+                ],
+            )
+        });
+        let mut extra_entries = Vec::new();
+        extra_entries.extend(self.transcript.records.iter().map(|record| {
+            ksa64_presentation::GlobalDisplayReplayEntryV1 {
+                release_epoch: record.epoch,
+                mission_time_q16: record.epoch.saturating_mul(2_048),
+                kind: ksa64_presentation::GlobalDisplayReplayEntryKind::ProcedureAction,
+                source_identity: record.role as u32,
+                event_identity: record.chain,
+                detail_identity: record.load_identity,
+            }
+        }));
+        extra_entries.extend(
+            self.timeline
+                .iter()
+                .filter(|event| event.source == TimelineSource::Avionics && event.severity > 0)
+                .map(|event| ksa64_presentation::GlobalDisplayReplayEntryV1 {
+                    release_epoch: event.epoch,
+                    mission_time_q16: event.epoch.saturating_mul(2_048),
+                    kind: ksa64_presentation::GlobalDisplayReplayEntryKind::Fault,
+                    source_identity: event.source as u32,
+                    event_identity: event.event_identity,
+                    detail_identity: u32::from(event.severity),
+                }),
+        );
+        self.global_display.replay_index_with_entries(
+            self.definition_identity(),
+            terminal,
+            axes,
+            &extra_entries,
+        )
+    }
+
+    pub fn global_display_planned_samples(&self) -> &[ksa64_presentation::GlobalDisplaySampleV1] {
+        self.global_display.planned_samples()
+    }
+
+    pub fn global_display_path_chunk(
+        &self,
+        source: ksa64_presentation::GlobalDisplaySourceId,
+        display_frame: ksa64_presentation::GlobalDisplayFrameId,
+        lod: ksa64_presentation::GlobalDisplayPathLod,
+        chunk_index: u16,
+    ) -> Result<ksa64_presentation::GlobalDisplayPathChunkV1, GlobalDisplayPublishError> {
+        let mut pinned_releases = Vec::with_capacity(
+            self.timeline.len() + self.events.len() + self.transcript.records.len(),
+        );
+        pinned_releases.extend(self.timeline.iter().map(|event| event.epoch));
+        pinned_releases.extend(self.events.iter().map(|event| event.release_epoch));
+        pinned_releases.extend(self.transcript.records.iter().map(|record| record.epoch));
+        pinned_releases.sort_unstable();
+        pinned_releases.dedup();
+        self.global_display.path_chunk_with_pins(
+            ksa64_presentation::PresentationRole::from(self.role),
+            source,
+            display_frame,
+            lod,
+            chunk_index,
+            &pinned_releases,
+        )
+    }
+
     pub fn recommended_load(&self) -> Option<UplinkCommandLoad> {
         if self.staged_load.is_some() || self.release_epoch > DECISION_WINDOW_CLOSE_RELEASE {
             return None;
@@ -731,6 +871,10 @@ impl FullMissionSession {
                     if load.load_type == UplinkLoadType::ContingencyBranch {
                         self.selected_branch = load.arguments[0].clamp(0, u8::MAX as i32) as u8;
                     }
+                    if load.load_type == UplinkLoadType::GroundNavigationUpdate {
+                        self.pending_navigation_reset_release =
+                            Some(load.requested_effective_epoch);
+                    }
                     if let Some(procedure) = self.procedure.as_mut() {
                         procedure
                             .accept_action(self.role, epoch, load.load_type, true)
@@ -858,7 +1002,7 @@ impl FullMissionSession {
         }
         self.lifecycle = MissionSessionLifecycle::Running;
         let epoch = self.release_epoch;
-        let (bundle, world_snapshot, update, world_complete) = {
+        let (bundle, world_snapshot, update, world_complete, transition_records) = {
             let runner = self.runner.as_mut().ok_or(MissionSessionError::Lifecycle)?;
             let bundle = runner.release_bundle().map_err(world_error)?;
             let world_snapshot = runner.world().snapshot().map_err(world_error)?;
@@ -871,7 +1015,14 @@ impl FullMissionSession {
             )
             .map_err(world_error)?;
             let world_complete = runner.world().is_complete();
-            (bundle, world_snapshot, update, world_complete)
+            let transition_records = runner.world().transition_records();
+            (
+                bundle,
+                world_snapshot,
+                update,
+                world_complete,
+                transition_records,
+            )
         };
         self.latest_flight = Some(bundle.evidence);
         if self
@@ -966,6 +1117,23 @@ impl FullMissionSession {
         if epoch.is_multiple_of(32) {
             self.update_predictions(epoch, bundle.evidence)?;
         }
+        if self.pending_navigation_reset_release == Some(epoch) {
+            self.global_display.mark_navigation_reset();
+            self.pending_navigation_reset_release = None;
+        }
+        self.global_display.publish(
+            fixtures(),
+            epoch,
+            update.frame,
+            [
+                update.plot.latitude_q28_rad,
+                update.plot.longitude_q28_rad,
+                update.plot.altitude_q12_km,
+            ],
+            self.latest_ground,
+            transition_records,
+            world_complete,
+        );
         let important = epoch == 0
             || (epoch + 1).is_multiple_of(FULL_RECORDING_STRIDE_RELEASES)
             || world_snapshot.events != 0
@@ -2117,5 +2285,54 @@ mod tests {
         let sdk = complete_project_session(&project, true).unwrap();
         assert_eq!(sdk.evidence, direct.session.evidence);
         assert_eq!(sdk.bundle, direct.session.bundle);
+    }
+    #[test]
+    fn global_display_stream_is_exact_release_and_role_filtered() {
+        let mut director = FullMissionSession::new(OperationalRole::SimDirector).unwrap();
+        director.prepare().unwrap();
+        for _ in 0..32 {
+            director.advance_one_release().unwrap();
+        }
+        let samples = director.global_display_samples_after(0);
+        assert_eq!(samples.len(), 32);
+        assert_eq!(samples[0].release_epoch, 0);
+        assert_eq!(samples[0].mission_time_q16, 0);
+        assert!(samples
+            .iter()
+            .all(|sample| sample.sources.iter().any(
+                |source| source.source == ksa64_presentation::GlobalDisplaySourceId::SimTruth
+            )));
+        assert_eq!(director.global_display_transitions_after(0).len(), 1);
+        assert_eq!(director.global_display_replay_index().last_release, 31);
+        let path = director
+            .global_display_path_chunk(
+                ksa64_presentation::GlobalDisplaySourceId::SimTruth,
+                ksa64_presentation::GlobalDisplayFrameId::EarthFixedEcef,
+                ksa64_presentation::GlobalDisplayPathLod::OneSecond,
+                0,
+            )
+            .unwrap();
+        assert!(!path.points.is_empty());
+
+        let mut guided = FullMissionSession::new(OperationalRole::GuidedOperator).unwrap();
+        guided.prepare().unwrap();
+        guided.advance_one_release().unwrap();
+        assert_eq!(
+            guided.global_display_definition().available_source_mask
+                & ksa64_presentation::GLOBAL_DISPLAY_SOURCE_SIM_TRUTH,
+            0
+        );
+        assert!(guided.global_display_samples_after(0)[0]
+            .sources
+            .iter()
+            .all(|source| source.source != ksa64_presentation::GlobalDisplaySourceId::SimTruth));
+        assert!(guided
+            .global_display_path_chunk(
+                ksa64_presentation::GlobalDisplaySourceId::SimTruth,
+                ksa64_presentation::GlobalDisplayFrameId::EarthFixedEcef,
+                ksa64_presentation::GlobalDisplayPathLod::Exact,
+                0,
+            )
+            .is_err());
     }
 }

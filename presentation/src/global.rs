@@ -173,6 +173,9 @@ impl GlobalDisplayReplayEntryKind {
 pub struct GlobalDisplayAnchorV1 {
     pub identity: u32,
     pub geodetic_q28_q12: [i32; 3],
+    /// Rust-resolved absolute ECEF position in the accepted Q12-kilometre
+    /// representation. Renderers consume this directly and never redo geodesy.
+    pub ecef_position_q12_km: [i32; 3],
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -206,6 +209,8 @@ impl GlobalDisplayDefinitionV1 {
             || self.mission_identity == 0
             || self.launch_anchor.identity == 0
             || self.recovery_anchor.identity == 0
+            || self.launch_anchor.ecef_position_q12_km == [0; 3]
+            || self.recovery_anchor.ecef_position_q12_km == [0; 3]
             || self.semi_major_q12_km <= 0
             || self.semi_minor_q12_km <= 0
             || self.inverse_flattening_q20 <= 0
@@ -300,7 +305,15 @@ impl GlobalDisplaySampleV1 {
     pub fn filter_for_role(mut self, role: PresentationRole) -> Self {
         if !role.permits_private_truth() {
             self.sources
-                .retain(|p| p.source != GlobalDisplaySourceId::SimTruth)
+                .retain(|p| p.source != GlobalDisplaySourceId::SimTruth);
+            // These values describe private physical world state rather than an
+            // operational estimate. Public roles retain estimate-derived
+            // geodetic position/altitude plus public component/status fields.
+            self.mach_q24 = 0;
+            self.dynamic_pressure_q14_pa = 0;
+            self.total_mass_q21_kg = 0;
+            self.main_propellant_q21_kg = 0;
+            self.rcs_propellant_q21_kg = 0;
         }
         self
     }
@@ -333,12 +346,16 @@ impl GlobalDisplaySampleV1 {
             && self.active_frame == next.active_frame
             && self.segment == next.segment
             && self.continuity_identity == next.continuity_identity
+            && self.event_mask == 0
+            && next.event_mask == 0
             && self.discontinuity_mask == 0
             && next.discontinuity_mask == 0
             && self.sources.len() == next.sources.len()
             && self.sources.iter().zip(&next.sources).all(|(a, b)| {
                 a.source == b.source
+                    && a.active_frame == b.active_frame
                     && a.model_identity == b.model_identity
+                    && a.estimate_identity == b.estimate_identity
                     && a.validity_mask == b.validity_mask
             })
     }
@@ -350,6 +367,10 @@ pub struct GlobalDisplayPathPointV1 {
     pub mission_time_q16: u32,
     pub segment: GlobalDisplaySegment,
     pub event_mask: u16,
+    /// Nonzero only for LocalEnu paths. Consumers must start a new line strip
+    /// when this identity changes so launch and recovery coordinates cannot be
+    /// spliced into one false local-space segment.
+    pub anchor_identity: u32,
     pub position_q12_km: [i32; 3],
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -388,6 +409,11 @@ impl GlobalDisplayPathChunkV1 {
             if prev.is_some_and(|(e, t)| p.release_epoch <= e || p.mission_time_q16 <= t) {
                 return Err(Kps1Error::Sequence);
             }
+            if (self.display_frame == GlobalDisplayFrameId::LocalEnu && p.anchor_identity == 0)
+                || (self.display_frame != GlobalDisplayFrameId::LocalEnu && p.anchor_identity != 0)
+            {
+                return Err(Kps1Error::Identity);
+            }
             prev = Some((p.release_epoch, p.mission_time_q16));
         }
         Ok(())
@@ -406,10 +432,13 @@ pub struct GlobalDisplayTransitionV1 {
     pub transition_identity: u32,
     pub transform_identity: u32,
     pub anchor_identity: u32,
-    pub position_delta_q12_km: [i32; 3],
-    pub velocity_delta_q24_km_s: [i32; 3],
-    pub attitude_delta_q30: i32,
-    pub angular_rate_delta_q24: [i32; 3],
+    /// Maximum absolute raw position-component continuity delta.
+    pub position_max_delta_raw: i32,
+    /// Maximum absolute raw velocity-component continuity delta.
+    pub velocity_max_delta_raw: i32,
+    pub attitude_max_delta_raw: i32,
+    /// Maximum absolute raw angular-rate-component continuity delta.
+    pub angular_rate_max_delta_raw: i32,
     pub checksum: u32,
 }
 impl GlobalDisplayTransitionV1 {
@@ -613,6 +642,7 @@ pub fn encode_global_display_path_payload(
         w.u8(p.segment as u8);
         w.zeros(1);
         w.u16(p.event_mask);
+        w.u32(p.anchor_identity);
         w.i32s(&p.position_q12_km)
     }
     w.finish()
@@ -645,11 +675,13 @@ pub fn decode_global_display_path_payload(
         let segment = GlobalDisplaySegment::from_raw(r.u8()?).ok_or(Kps1Error::Enum)?;
         r.reserved(1)?;
         let event_mask = r.u16()?;
+        let anchor_identity = r.u32()?;
         points.push(GlobalDisplayPathPointV1 {
             release_epoch,
             mission_time_q16,
             segment,
             event_mask,
+            anchor_identity,
             position_q12_km: r.i32s()?,
         })
     }
@@ -688,10 +720,10 @@ pub fn encode_global_display_transition_payload(
     w.u32(v.transition_identity);
     w.u32(v.transform_identity);
     w.u32(v.anchor_identity);
-    w.i32s(&v.position_delta_q12_km);
-    w.i32s(&v.velocity_delta_q24_km_s);
-    w.i32(v.attitude_delta_q30);
-    w.i32s(&v.angular_rate_delta_q24);
+    w.i32(v.position_max_delta_raw);
+    w.i32(v.velocity_max_delta_raw);
+    w.i32(v.attitude_max_delta_raw);
+    w.i32(v.angular_rate_max_delta_raw);
     w.u32(v.checksum);
     w.finish()
 }
@@ -718,10 +750,10 @@ pub fn decode_global_display_transition_payload(
         transition_identity: r.u32()?,
         transform_identity: r.u32()?,
         anchor_identity: r.u32()?,
-        position_delta_q12_km: r.i32s()?,
-        velocity_delta_q24_km_s: r.i32s()?,
-        attitude_delta_q30: r.i32()?,
-        angular_rate_delta_q24: r.i32s()?,
+        position_max_delta_raw: r.i32()?,
+        velocity_max_delta_raw: r.i32()?,
+        attitude_max_delta_raw: r.i32()?,
+        angular_rate_max_delta_raw: r.i32()?,
         checksum: r.u32()?,
     };
     r.finish()?;
@@ -796,14 +828,118 @@ pub fn decode_global_replay_index_payload(input: &[u8]) -> Result<GlobalReplayIn
     Ok(v)
 }
 
+pub const GLOBAL_DISPLAY_RANGE_MAX_COUNT: u16 = 256;
+pub const GLOBAL_DISPLAY_RESYNC_SAMPLE: u32 = 1 << 0;
+pub const GLOBAL_DISPLAY_RESYNC_TRANSITION: u32 = 1 << 1;
+pub const GLOBAL_DISPLAY_RESYNC_PATH: u32 = 1 << 2;
+pub const GLOBAL_DISPLAY_RESYNC_REPLAY: u32 = 1 << 3;
+pub const GLOBAL_DISPLAY_RESYNC_MASK: u32 = 0x0f;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GlobalDisplayRangeRequestV1 {
+    pub start_release: u32,
+    pub max_count: u16,
+}
+impl GlobalDisplayRangeRequestV1 {
+    pub const fn validate(self) -> Result<(), Kps1Error> {
+        if self.max_count == 0 || self.max_count > GLOBAL_DISPLAY_RANGE_MAX_COUNT {
+            return Err(Kps1Error::Cursor);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct GlobalDisplayCursorStateV1 {
+    pub sample_count: u32,
+    pub oldest_sample_release: u32,
+    pub newest_sample_release: u32,
+    pub transition_count: u32,
+    pub path_generation: u32,
+    pub replay_generation: u32,
+    pub resync_mask: u32,
+}
+impl GlobalDisplayCursorStateV1 {
+    pub const fn validate(self) -> Result<(), Kps1Error> {
+        if self.resync_mask & !GLOBAL_DISPLAY_RESYNC_MASK != 0
+            || (self.sample_count == 0
+                && (self.oldest_sample_release != 0 || self.newest_sample_release != 0))
+            || (self.sample_count != 0 && self.oldest_sample_release > self.newest_sample_release)
+        {
+            return Err(Kps1Error::Cursor);
+        }
+        Ok(())
+    }
+}
+
+pub fn encode_global_display_range_request_payload(
+    value: GlobalDisplayRangeRequestV1,
+) -> Result<Vec<u8>, Kps1Error> {
+    value.validate()?;
+    let mut writer = Writer::new(*b"PGR1");
+    writer.u32(value.start_release);
+    writer.u16(value.max_count);
+    writer.zeros(2);
+    writer.finish()
+}
+
+pub fn decode_global_display_range_request_payload(
+    input: &[u8],
+) -> Result<GlobalDisplayRangeRequestV1, Kps1Error> {
+    let mut reader = Reader::new(input, *b"PGR1")?;
+    let value = GlobalDisplayRangeRequestV1 {
+        start_release: reader.u32()?,
+        max_count: reader.u16()?,
+    };
+    reader.reserved(2)?;
+    reader.finish()?;
+    value.validate()?;
+    Ok(value)
+}
+
+pub fn encode_global_display_cursor_state_payload(
+    value: GlobalDisplayCursorStateV1,
+) -> Result<Vec<u8>, Kps1Error> {
+    value.validate()?;
+    let mut writer = Writer::new(*b"PGC1");
+    writer.u32(value.sample_count);
+    writer.u32(value.oldest_sample_release);
+    writer.u32(value.newest_sample_release);
+    writer.u32(value.transition_count);
+    writer.u32(value.path_generation);
+    writer.u32(value.replay_generation);
+    writer.u32(value.resync_mask);
+    writer.finish()
+}
+
+pub fn decode_global_display_cursor_state_payload(
+    input: &[u8],
+) -> Result<GlobalDisplayCursorStateV1, Kps1Error> {
+    let mut reader = Reader::new(input, *b"PGC1")?;
+    let value = GlobalDisplayCursorStateV1 {
+        sample_count: reader.u32()?,
+        oldest_sample_release: reader.u32()?,
+        newest_sample_release: reader.u32()?,
+        transition_count: reader.u32()?,
+        path_generation: reader.u32()?,
+        replay_generation: reader.u32()?,
+        resync_mask: reader.u32()?,
+    };
+    reader.finish()?;
+    value.validate()?;
+    Ok(value)
+}
+
 fn write_anchor(w: &mut Writer, v: GlobalDisplayAnchorV1) {
     w.u32(v.identity);
-    w.i32s(&v.geodetic_q28_q12)
+    w.i32s(&v.geodetic_q28_q12);
+    w.i32s(&v.ecef_position_q12_km)
 }
 fn read_anchor(r: &mut Reader<'_>) -> Result<GlobalDisplayAnchorV1, Kps1Error> {
     Ok(GlobalDisplayAnchorV1 {
         identity: r.u32()?,
         geodetic_q28_q12: r.i32s()?,
+        ecef_position_q12_km: r.i32s()?,
     })
 }
 fn write_pose(w: &mut Writer, v: GlobalDisplayResolvedPoseV1) {
@@ -1134,13 +1270,22 @@ mod tests {
             encode_global_display_samples_payload(&v, PresentationRole::GuidedOperator),
             Err(Kps1Error::Enum)
         );
+        let filtered = v[0]
+            .clone()
+            .filter_for_role(PresentationRole::GuidedOperator);
+        assert_eq!(filtered.sources.len(), 2);
+        assert_eq!(filtered.geodetic_q28_q12, v[0].geodetic_q28_q12);
+        assert_eq!(filtered.altitude_q12_km, v[0].altitude_q12_km);
         assert_eq!(
-            v[0].clone()
-                .filter_for_role(PresentationRole::GuidedOperator)
-                .sources
-                .len(),
-            2
-        )
+            [
+                filtered.mach_q24,
+                filtered.dynamic_pressure_q14_pa,
+                filtered.total_mass_q21_kg,
+                filtered.main_propellant_q21_kg,
+                filtered.rcs_propellant_q21_kg,
+            ],
+            [0; 5]
+        );
     }
     #[test]
     fn every_other_global_payload_round_trips() {
@@ -1158,10 +1303,12 @@ mod tests {
             launch_anchor: GlobalDisplayAnchorV1 {
                 identity: 4,
                 geodetic_q28_q12: [5, 6, 7],
+                ecef_position_q12_km: [100, 101, 102],
             },
             recovery_anchor: GlobalDisplayAnchorV1 {
                 identity: 8,
                 geodetic_q28_q12: [9, 10, 11],
+                ecef_position_q12_km: [103, 104, 105],
             },
             available_source_mask: GLOBAL_DISPLAY_PUBLIC_SOURCE_MASK,
             available_frame_mask: 7,
@@ -1192,6 +1339,7 @@ mod tests {
                 mission_time_q16: 65_536,
                 segment: GlobalDisplaySegment::EcefAscent,
                 event_mask: 0,
+                anchor_identity: 0,
                 position_q12_km: [1, 2, 3]
             }],
         };
@@ -1208,10 +1356,10 @@ mod tests {
             transition_identity: 1,
             transform_identity: 2,
             anchor_identity: 3,
-            position_delta_q12_km: [0; 3],
-            velocity_delta_q24_km_s: [0; 3],
-            attitude_delta_q30: 1,
-            angular_rate_delta_q24: [0; 3],
+            position_max_delta_raw: 0,
+            velocity_max_delta_raw: 0,
+            attitude_max_delta_raw: 1,
+            angular_rate_max_delta_raw: 0,
             checksum: 4,
         };
         let b = encode_global_display_transition_payload(t).unwrap();
@@ -1239,11 +1387,62 @@ mod tests {
     fn interpolation_requires_one_compatible_continuity_domain() {
         let a = sample(PresentationRole::GuidedOperator);
         let mut b = a.clone();
+        let mut a = a;
+        a.event_mask = 0;
         b.sequence = 2;
         b.release_epoch += 1;
         b.mission_time_q16 += 2_048;
+        b.event_mask = 0;
         assert!(a.interpolation_compatible(&b));
+        b.event_mask = 1;
+        assert!(!a.interpolation_compatible(&b));
+        b.event_mask = 0;
+        b.sources[0].estimate_identity ^= 1;
+        assert!(!a.interpolation_compatible(&b));
+        b.sources[0].estimate_identity ^= 1;
         b.discontinuity_mask = GLOBAL_DISCONTINUITY_FRAME;
         assert!(!a.interpolation_compatible(&b));
+    }
+
+    #[test]
+    fn global_range_and_cursor_payloads_are_strict() {
+        let request = GlobalDisplayRangeRequestV1 {
+            start_release: 12_669,
+            max_count: 128,
+        };
+        let encoded = encode_global_display_range_request_payload(request).unwrap();
+        assert_eq!(
+            decode_global_display_range_request_payload(&encoded),
+            Ok(request)
+        );
+        assert_eq!(
+            GlobalDisplayRangeRequestV1 {
+                max_count: 0,
+                ..request
+            }
+            .validate(),
+            Err(Kps1Error::Cursor)
+        );
+        let state = GlobalDisplayCursorStateV1 {
+            sample_count: 22_015,
+            oldest_sample_release: 0,
+            newest_sample_release: 22_014,
+            transition_count: 4,
+            path_generation: 1,
+            replay_generation: 1,
+            resync_mask: 0,
+        };
+        let encoded = encode_global_display_cursor_state_payload(state).unwrap();
+        assert_eq!(
+            decode_global_display_cursor_state_payload(&encoded),
+            Ok(state)
+        );
+        let mut corrupt = encoded;
+        let final_byte = corrupt.len() - 1;
+        corrupt[final_byte] ^= 1;
+        assert_eq!(
+            decode_global_display_cursor_state_payload(&corrupt),
+            Err(Kps1Error::Cursor)
+        );
     }
 }

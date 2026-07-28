@@ -1,9 +1,11 @@
 /// <reference lib="webworker" />
 
+import { GLOBAL_DISPLAY_V1_CAPABILITY } from "../protocol/globalDisplay";
 import { decodeKps1 } from "../protocol/kps1";
 import { decodePresentationPayload, type ActionProposalView } from "../protocol/presentation";
 import {
   decodeKsr1Result,
+  decodeWasmReplayInfo,
   encodeKsw1Command,
   parseKpw1PublicationBundle,
   WasmWorkerCommandKind,
@@ -23,7 +25,7 @@ interface WasmExports {
 }
 
 type WorkerCommand =
-  | { readonly type: "initialize"; readonly connection: { readonly role?: string } }
+  | { readonly type: "initialize"; readonly connection: { readonly role?: string }; readonly experience?: "gnss-loss" | "nominal-global" }
   | { readonly type: "action"; readonly action: { readonly kind?: string } }
   | { readonly type: "pace"; readonly pace: "fast" | "realtime" }
   | { readonly type: "close" };
@@ -39,6 +41,9 @@ let clientActionSequence = 1;
 let proposal: ActionProposalView | undefined;
 let activePace: "fast" | "realtime" = "realtime";
 let fastGateHeld = false;
+let nominalReplay = false;
+let nominalReplayCursor = 0n;
+let nominalReplayFrameCount = 0n;
 
 function roleCode(role: string | undefined): number {
   switch (role) {
@@ -95,7 +100,7 @@ function publishPoll(): boolean {
 }
 
 function scheduleTick(): void {
-  if (closed || completed) return;
+  if (closed || completed || nominalReplay) return;
   timer = self.setTimeout(() => {
     void tick();
   }, activePace === "fast" ? 1 : RELEASE_PERIOD_MILLIS);
@@ -126,11 +131,67 @@ function freshSessionNonce(): bigint {
   return value === 0n ? 1n : value;
 }
 
-async function initialize(connection: { readonly role?: string }): Promise<void> {
+function pumpNominalReplay(): void {
+  if (closed || completed || !nominalReplay) return;
+  try {
+    const payload = invoke(WasmWorkerCommandKind.ReplayRead, [
+      Number(nominalReplayCursor & 0xffff_ffffn),
+      Number(nominalReplayCursor >> 32n),
+      256,
+      1024 * 1024,
+    ]);
+    const frames = parseKpw1PublicationBundle(payload);
+    if (frames.length === 0 && nominalReplayCursor !== nominalReplayFrameCount) {
+      throw new Error("nominal replay made no bounded progress");
+    }
+    for (const frame of frames) {
+      const decoded = decodeKps1(frame, { expectedSessionNonce: wasmSessionNonce });
+      nominalReplayCursor += 1n;
+      if (decoded.sequence !== nominalReplayCursor) {
+        throw new Error("nominal replay returned a nonconsecutive frame");
+      }
+      self.postMessage(frame, [frame]);
+    }
+    completed = nominalReplayCursor === nominalReplayFrameCount;
+    if (!completed) self.setTimeout(pumpNominalReplay, 0);
+  } catch (error) {
+    closed = true;
+    self.postMessage({ type: "incomplete", detail: error instanceof Error ? error.message : "nominal replay failed" });
+  }
+}
+
+async function initialize(
+  connection: { readonly role?: string },
+  experience: "gnss-loss" | "nominal-global" = "gnss-loss",
+): Promise<void> {
   wasmSessionNonce = freshSessionNonce();
   wasm = await loadWasm();
   invoke(WasmWorkerCommandKind.Catalog);
-  invoke(WasmWorkerCommandKind.Start, [roleCode(connection.role), Number(wasmSessionNonce & 0xffff_ffffn), Number(wasmSessionNonce >> 32n)]);
+  if (experience === "nominal-global") {
+    const metadata = decodeWasmReplayInfo(invoke(WasmWorkerCommandKind.OpenNominalGlobalReplay, [
+      roleCode(connection.role),
+      Number(wasmSessionNonce & 0xffff_ffffn),
+      Number(wasmSessionNonce >> 32n),
+      Number(GLOBAL_DISPLAY_V1_CAPABILITY & 0xffff_ffffn),
+      Number(GLOBAL_DISPLAY_V1_CAPABILITY >> 32n),
+    ]));
+    if (metadata.sessionNonce !== wasmSessionNonce || metadata.role !== roleCode(connection.role)) {
+      throw new Error("nominal replay violated immutable role or nonce binding");
+    }
+    nominalReplay = true;
+    nominalReplayCursor = 0n;
+    nominalReplayFrameCount = metadata.frameCount;
+    self.postMessage({ type: "ready", sessionNonce: wasmSessionNonce.toString() });
+    self.setTimeout(pumpNominalReplay, 0);
+    return;
+  }
+  invoke(WasmWorkerCommandKind.Start, [
+    roleCode(connection.role),
+    Number(wasmSessionNonce & 0xffff_ffffn),
+    Number(wasmSessionNonce >> 32n),
+    Number(GLOBAL_DISPLAY_V1_CAPABILITY & 0xffff_ffffn),
+    Number(GLOBAL_DISPLAY_V1_CAPABILITY >> 32n),
+  ]);
   invoke(WasmWorkerCommandKind.Prepare);
   invoke(WasmWorkerCommandKind.Pace, [2]);
   self.postMessage({ type: "ready", sessionNonce: wasmSessionNonce.toString() });
@@ -140,6 +201,7 @@ async function initialize(connection: { readonly role?: string }): Promise<void>
 
 function setPace(pace: "fast" | "realtime"): void {
   activePace = pace;
+  if (nominalReplay) return;
   fastGateHeld = false;
   invoke(WasmWorkerCommandKind.Pace, [pace === "fast" ? 1 : 2]);
   if (timer !== undefined) self.clearTimeout(timer);
@@ -180,7 +242,7 @@ function submitAction(action: { readonly kind?: string }): void {
 self.onmessage = (event: MessageEvent<WorkerCommand>) => {
   switch (event.data.type) {
     case "initialize":
-      void initialize(event.data.connection).catch((error: unknown) => {
+      void initialize(event.data.connection, event.data.experience).catch((error: unknown) => {
         closed = true;
         self.postMessage({ type: "incomplete", detail: error instanceof Error ? error.message : "local authority initialization failed" });
       });

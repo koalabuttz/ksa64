@@ -1,6 +1,6 @@
 # Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: Phase 12A and Phase 12B are complete and accepted. Phase 12B.5 software implementation and local acceptance are complete from entry commit `b9f2c79`; hosted portable-runtime qualification is complete; full acceptance remains pending the required physical Duet, Vita3K emulator, and physical Vita gates.
+Status: Phase 12A and Phase 12B are complete and accepted. Phase 12B.5 software implementation and local acceptance are complete from entry commit `b9f2c79`; hosted portable-runtime qualification is complete; full acceptance remains pending the required physical Duet, Vita3K emulator, and physical Vita gates. Phase 12C implementation is under completion audit from entry commit `eb666cb`; no Phase 12C completion or renderer-performance claim has been made yet.
 
 Phase 12 began with an accepted native-Windows Unreal presentation and now
 expands through portable Rust authority, desktop Unreal, web/PWA, SDL2/Vita,
@@ -15,7 +15,7 @@ The work is divided so that each slice proves one coherent boundary:
 | 12A | **Complete:** pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaged smoke test, and optional MCP feasibility |
 | 12B | **Complete:** accepted 674.71875-second GNSS-loss mission, human-scale operations, multi-axis outcomes, packaged 2-D command desk, 17/17 automation, exact evidence, and bounded presentation-service timing |
 | 12B.5 | **Software- and hosted-portable-runtime-qualified; device acceptance pending:** portable session/KPS1 authority, bridge/platform packaging, secure loopback and paired LAN, compact React/Babylon PWA, exact Rust/WASM authority, and Vita/SDL2; device and emulator gates remain open |
-| 12C | **In progress:** renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2 |
+| 12C | **Implementation under completion audit:** renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2; packaged renderer parity and runtime metrics remain pending |
 | 12C.5 | Portable web/PWA, Vita/SDL2, Android, and iOS operations clients |
 | 12D | Mission Foundry vehicle/mission authoring and GUI/headless compiler parity |
 | 12E | Production visual assets, NASA-derived reference material, effects, quality tiers, and visual performance |
@@ -38,7 +38,17 @@ The work is divided so that each slice proves one coherent boundary:
 - [PHASE12C_HANDOFF.md](PHASE12C_HANDOFF.md) — historical frozen Phase 12B global-viewer boundary.
 - [PHASE12C_PLAN.md](PHASE12C_PLAN.md) — accepted global-display, renderer,
   replay, role, compatibility, and completion contract.
+- [PHASE12C_NOMINAL_COMPATIBILITY.md](PHASE12C_NOMINAL_COMPATIBILITY.md) —
+  fail-closed treatment of the frozen nominal reference and current exact
+  display re-execution lineages.
+- [PHASE12C_COMPLETION.md](PHASE12C_COMPLETION.md) — draft completion ledger,
+  explicit pending renderer/runtime evidence, and acceptance thresholds.
+- [PHASE12C5_HANDOFF.md](PHASE12C5_HANDOFF.md) — draft portable-operations
+  productization boundary that activates only after Phase 12C acceptance.
 - [complete-phase12b.ps1](complete-phase12b.ps1) — composed Phase 12A, Rust, C++ harness, and explicit optional Unreal audit.
+- [complete-phase12c.ps1](complete-phase12c.ps1) — deterministic
+  portable/contracts/replay audit with explicit, fail-closed Unreal, browser,
+  packaging, parity, and runtime completion gates.
 - [ENGINE_DECISION.md](ENGINE_DECISION.md) — accepted engine, authority, and
   rollout decision, including deliberate changes to the supplied Unreal guide.
 - [TOOLCHAIN.md](TOOLCHAIN.md) — native-Windows setup, verification, and lock
@@ -101,3 +111,45 @@ The web stack is React plus TypeScript and Vite for the PWA, Babylon.js for 3-D,
 PlayStation Vita is a first-class constrained SDL2 target. Its initial product is Mission Control, replay, and high-level operations; bounded host-world/Vita-flight and selected Vita-world placements follow exact compile, vector, and physical timing evidence.
 
 The explicit native/Vita paired-LAN host lane is separate from the loopback browser broker. `ksa64-paired-lan` accepts only a user-selected private or link-local interface, requires a locally compared Noise XX code before storing a peer, binds the peer to immutable Guided Operator authority, supports local list/revocation, and uses Noise IK for reconnect. Its host identity and peer registry are local noncanonical configuration; physical Vita/Vita3K acceptance remains pending.
+
+## Phase 12C direction
+
+Phase 12C adds one Rust-owned `GlobalDisplayV1` product for the frozen nominal
+Phase 10 mission and the accepted live GNSS-loss operations session. Rust
+resolves ENU/ECEF/GCRF state, role filtering, source identity, transitions,
+continuity, events, path levels, replay indices, and final dispositions.
+Unreal and Babylon receive only these presentation products and may perform
+camera-relative origin subtraction and compatible-sample interpolation.
+
+KPS1 remains version 1.0. New global-display messages require explicit
+capability negotiation and are never emitted to legacy clients. ABI-v1 remains
+unchanged; native renderers discover an optional, size-tagged
+`GlobalDisplayApiV1` table. Nominal planned/reference evidence remains distinct
+from current exact-release re-execution and is labelled accordingly.
+
+The default completion audit proves the frozen inputs, portable contracts,
+exact nominal and GNSS replays, bridge, broker, WebAssembly, and web build. It
+does not claim product completion without explicit Unreal build/automation,
+packaging, real rendered-browser, cross-renderer semantic, and runtime
+performance evidence. See
+[the draft completion ledger](PHASE12C_COMPLETION.md).
+
+## Strict renderer-parity evidence
+
+Phase 12C completion does not accept a hand-written pass/fail summary. The native
+C++ GlobalDisplay harness, packaged Unreal producer, and rendered-browser producer
+remain the raw sources of evidence. Each binds its source build and referenced raw
+artifacts by SHA-256. Run:
+
+```powershell
+node phase12/compare-phase12c-renderers.mjs --native <native.json> --unreal <unreal.json> --browser <browser.json> --output <parity.json> --source-commit <full-commit>
+```
+
+The comparator reopens and hashes the bridge DLL/manifest, Unreal semantic captures
+and screenshots, and browser raw records/screenshots. It compares the nine reviewed
+nominal releases (four transitions, burnout, apogee, two recovery deployments, and
+landing), role-filtered source availability, frame/segment ownership, exact snapping,
+paths, dispositions, and measured runtime data. When operational action/fault
+milestones are supplied, both renderers must supply the same ordered releases and
+kinds. The completion audit recomputes this manifest and requires byte identity with
+the recorded copy, so editable booleans cannot satisfy the gate.

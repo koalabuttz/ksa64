@@ -43,6 +43,16 @@ FVector3d Ksa64RightHandedToUnrealCentimetres(
     return Ksa64RightHandedToUnrealCentimetres(Wide, OriginQ12Km);
 }
 
+FQuat Ksa64BodyToFrameQuaternionToUnreal(const int32 QuaternionQ30[4])
+{
+    const double Scale = 1.0 / static_cast<double>(1ll << 30);
+    return FQuat(
+        -static_cast<double>(QuaternionQ30[1]) * Scale,
+        static_cast<double>(QuaternionQ30[2]) * Scale,
+        -static_cast<double>(QuaternionQ30[3]) * Scale,
+        static_cast<double>(QuaternionQ30[0]) * Scale).GetNormalized();
+}
+
 bool ShouldSnap(
     const FKsa64GlobalSceneSample& Previous,
     const FKsa64GlobalSceneSample& Current)

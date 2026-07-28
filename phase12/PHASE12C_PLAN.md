@@ -44,6 +44,17 @@ Phase 12C preserves:
   exact/smooth modes, accessibility, and evidence finalization; and
 - every accepted Phase 0-12B.5 regression artifact.
 
+### Phase 10 nominal lineage audit
+
+The frozen Phase 10 nominal artifacts and the current portable re-execution
+have a small, pre-existing post-recovery fixed-point disagreement. Phase 12C
+changes neither. Before nominal replay is exposed, a fail-closed audit strictly
+validates the frozen hashes and records, requires the reviewed current hashes,
+and checks exact event identity plus bounded physical deltas. The frozen
+lineage supplies the labelled planned path; current re-execution supplies
+separately identified exact-release SIM truth. See
+PHASE12C_NOMINAL_COMPATIBILITY.md.
+
 ## Global display boundary
 
 Add a noncanonical `GlobalDisplayV1` product containing:

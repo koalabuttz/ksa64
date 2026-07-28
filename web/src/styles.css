@@ -1134,6 +1134,7 @@ footer {
   align-items: center;
   height: 1.7rem;
   margin-top: 0.55rem;
+  transform-origin: 48% 50%;
 }
 
 .vehicle-inset-nose {

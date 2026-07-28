@@ -80,4 +80,30 @@ describe("remote WebSocket presentation transport", () => {
       .getBigUint64(24, true)).toBe(2n);
     await transport.disconnect();
   });
+
+  it("negotiates GlobalDisplayV1 and issues an explicit resumable range request", async () => {
+    globalThis.WebSocket = FakeSocket as unknown as typeof WebSocket;
+    const transport = new RemoteWebSocketTransport({
+      url: new URL("ws://127.0.0.1:9000/session"),
+      browserToken: "ef".repeat(32),
+      pollIntervalMillis: 60_000,
+    });
+    const connecting = transport.connect({ role: "guided-operator", clientInstance: 88n });
+    const socket = sockets[0]!;
+    socket.emit("open", {});
+    const response = encodeKps1({ kind: Kps1MessageKind.HandshakeResponse, flags: Kps1Flag.Response,
+      sessionNonce: 100n, sequence: 1n, correlationId: 1n,
+      payload: encodeHandshakePayload({ role: 2, clientInstance: 88n, capabilityMask: 1n << 8n,
+        cursors: initialPresentationCursors() }) });
+    socket.emit("message", { data: response.buffer });
+    await connecting;
+    const kinds = socket.sent.slice(1).map((bytes) => decodeKps1(bytes).kind);
+    expect(kinds).toContain(Kps1MessageKind.GlobalDisplayRangeRequest);
+    const rangeFrame = socket.sent.slice(1).map((bytes) => decodeKps1(bytes))
+      .find((frame) => frame.kind === Kps1MessageKind.GlobalDisplayRangeRequest)!;
+    expect(new TextDecoder().decode(rangeFrame.payload.subarray(0, 4))).toBe("PGR1");
+    expect(new DataView(rangeFrame.payload.buffer, rangeFrame.payload.byteOffset, rangeFrame.payload.byteLength)
+      .getUint32(12, true)).toBe(0);
+    await transport.disconnect();
+  });
 });

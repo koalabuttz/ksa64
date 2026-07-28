@@ -36,9 +36,11 @@ export enum Kps1MessageKind {
   GlobalDisplayPathChunk = 0x0112,
   GlobalDisplayTransition = 0x0113,
   GlobalReplayIndex = 0x0114,
+  GlobalDisplayCursorState = 0x0115,
   ActionIntent = 0x0200,
   ActionReceipt = 0x0201,
   ActionProposal = 0x0202,
+  GlobalDisplayRangeRequest = 0x0210,
   EvidenceMetadata = 0x0300,
   EvidenceChunk = 0x0301,
   Error = 0x7fff,
@@ -120,7 +122,8 @@ function correlationRequiresNonzero(kind: Kps1MessageKind): boolean {
     kind === Kps1MessageKind.LifecycleControl ||
     kind === Kps1MessageKind.PaceControl ||
     kind === Kps1MessageKind.ReplayControl ||
-    kind === Kps1MessageKind.ActionIntent
+    kind === Kps1MessageKind.ActionIntent ||
+    kind === Kps1MessageKind.GlobalDisplayRangeRequest
   );
 }
 
@@ -134,6 +137,11 @@ function correlationRequiresZero(kind: Kps1MessageKind): boolean {
     kind === Kps1MessageKind.ReleaseSampleBatch ||
     kind === Kps1MessageKind.TransportStatus ||
     kind === Kps1MessageKind.EventBatch ||
+    kind === Kps1MessageKind.GlobalDisplayDefinition ||
+    kind === Kps1MessageKind.GlobalDisplaySampleBatch ||
+    kind === Kps1MessageKind.GlobalDisplayPathChunk ||
+    kind === Kps1MessageKind.GlobalDisplayTransition ||
+    kind === Kps1MessageKind.GlobalReplayIndex ||
     kind === Kps1MessageKind.ActionProposal ||
     kind === Kps1MessageKind.EvidenceMetadata ||
     kind === Kps1MessageKind.EvidenceChunk

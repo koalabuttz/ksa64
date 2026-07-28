@@ -775,3 +775,76 @@ Phase 12C supplies one renderer-neutral global display model to desktop Unreal
 and Babylon.js WebGPU/WebGL2. Phase 12C.5 productizes portable web, Vita/SDL2,
 Android, and iOS clients and accepts the polished all-browser world plus viewer.
 Rendering quality and placement remain outside simulation and evidence identity.
+
+
+## Phase 12C global-display boundary
+
+Phase 12C adds a renderer-neutral presentation model above the accepted world,
+flight, operations, and evidence owners:
+
+```text
+Phase 10/11 Rust authority
+  exact world + navigation + operations + evidence
+                         |
+              role-filtered derivation
+                         v
+                GlobalDisplayV1
+  definition + exact samples + paths + transitions + replay index
+             /                          \
+            v                            v
+ Unreal Global Viewer             Babylon/PWA viewer
+ LWC + local origin               right-handed + local origin
+ camera/render only               camera/render only
+```
+
+Rust resolves every permitted source into accepted ECEF, GCRF, and applicable
+launch/recovery ENU forms. It also owns source and model identity, validity and
+age, exact events, frame/segment ownership, continuity identities, path levels,
+role filtering, and mission disposition. A renderer cannot reconstruct a
+missing pose, combine ground position with onboard attitude, parse canonical
+evidence, or derive an event from visual state.
+
+KPS1 remains version 1.0. The `GLOBAL_DISPLAY_V1` capability gates additive
+definition, sample-batch, path, transition, replay-index, cursor-state, and
+range-request messages. A connection that did not negotiate the capability
+receives exactly the legacy Phase 12B.5 stream. Native clients discover the
+same products through a separately size-tagged `GlobalDisplayApiV1` function
+table; no accepted ABI-v1 symbol or layout changes.
+
+### Exact time, continuity, and replay
+
+Every 32-Hz release can produce an exact display sample. Smoothing uses only
+linear position and shortest-arc quaternion interpolation between adjacent
+samples with matching source, model, frame, segment, domain, continuity, and
+valid position/attitude. The renderer snaps at transitions, deployments,
+attitude retirement, invalidity, source replacement, seeks, retention gaps,
+terminal events, and every other declared discontinuity. One-sample display
+latency is presentation state and never feeds back into authority.
+
+Rust builds the exact release index and event-preserving exact, one-second, and
+four-second path levels. Live sessions can pause, step, and change pace but
+never rewind. Verified replay may seek, step, jump to named events, and change
+playback speed without changing the accepted evidence. Reconnect gaps are
+reported explicitly and require bounded resynchronization rather than hidden
+interpolation.
+
+### Large-world presentation
+
+Absolute positions cross the display boundary in Phase 10 signed Q12
+kilometres. Renderer-local origins are disposable: Earth-centred views use an
+Earth-centred origin, while local and chase views subtract a quantized
+target-relative origin. Unreal performs one tested right-handed-to-engine
+conversion and uses LWC doubles; Babylon uses right-handed mode. Rebasing may
+change floating-point camera coordinates but cannot change an absolute pose,
+selected release, path identity, semantic snapshot, or evidence.
+
+Vehicle and trajectory geometry remain true scale. A labelled screen-space
+locator and a separate true-scale local inset provide visibility at planetary
+scale; silent vehicle magnification is forbidden. SIM truth is structurally
+absent from non-director products and starts hidden with a persistent label in
+a director session.
+
+The frozen nominal reference path and the current exact nominal re-execution
+are separately identified lineages. Their narrow compatibility audit is
+recorded in `phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`; renderers may not
+collapse or relabel them.

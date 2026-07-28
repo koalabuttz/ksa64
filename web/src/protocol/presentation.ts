@@ -2,7 +2,8 @@ import { Kps1MessageKind, type Kps1Frame } from "./kps1";
 import {
   decodeGlobalDisplayDefinitionPayload, decodeGlobalDisplayPathPayload,
   decodeGlobalDisplaySamplesPayload, decodeGlobalDisplayTransitionPayload,
-  decodeGlobalReplayIndexPayload, type GlobalDisplayDefinitionV1,
+  decodeGlobalDisplayCursorStatePayload, decodeGlobalReplayIndexPayload,
+  type GlobalDisplayCursorStateV1, type GlobalDisplayDefinitionV1,
   type GlobalDisplayPathChunkV1, type GlobalDisplaySampleV1,
   type GlobalDisplayTransitionV1, type GlobalReplayIndexV1,
 } from "./globalDisplay";
@@ -234,6 +235,7 @@ export type DecodedPresentationPayload =
   | { readonly kind: "global-path"; readonly value: GlobalDisplayPathChunkV1 }
   | { readonly kind: "global-transition"; readonly value: GlobalDisplayTransitionV1 }
   | { readonly kind: "global-replay-index"; readonly value: GlobalReplayIndexV1 }
+  | { readonly kind: "global-cursor"; readonly value: GlobalDisplayCursorStateV1 }
   | { readonly kind: "evidence"; readonly value: EvidenceMetadata }
   | { readonly kind: "evidence-chunk"; readonly value: EvidenceChunk }
   | { readonly kind: "error"; readonly value: PresentationErrorView }
@@ -530,6 +532,7 @@ export function decodePresentationPayload(frame: Kps1Frame, expectedRole?: Numer
     case Kps1MessageKind.GlobalDisplayPathChunk: return { kind: "global-path", value: decodeGlobalDisplayPathPayload(frame.payload, expectedRole ?? 1) };
     case Kps1MessageKind.GlobalDisplayTransition: return { kind: "global-transition", value: decodeGlobalDisplayTransitionPayload(frame.payload) };
     case Kps1MessageKind.GlobalReplayIndex: return { kind: "global-replay-index", value: decodeGlobalReplayIndexPayload(frame.payload) };
+    case Kps1MessageKind.GlobalDisplayCursorState: return { kind: "global-cursor", value: decodeGlobalDisplayCursorStatePayload(frame.payload) };
     case Kps1MessageKind.EvidenceMetadata: return { kind: "evidence", value: decodeEvidence(frame.payload) };
     case Kps1MessageKind.EvidenceChunk: return { kind: "evidence-chunk", value: decodeEvidenceChunk(frame.payload) };
     case Kps1MessageKind.Error: return { kind: "error", value: decodeError(frame.payload) };

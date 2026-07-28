@@ -17,6 +17,8 @@ public class Ksa64GlobalViewer : ModuleRules
         PrivateDependencyModuleNames.AddRange(new[]
         {
             "ApplicationCore",
+            "ImageCore",
+            "ImageWrapper",
             "InputCore",
             "Json",
             "RenderCore",

@@ -159,20 +159,23 @@ public:
         if (!FKsa64BridgeModule::IsAvailable()) return false;
         FKsa64BridgeModule& Module = FKsa64BridgeModule::Get();
         bTyped = Module.SupportsFeature(KSA64_VIEWER_FEATURE_OPERATIONS_V1);
-        ActionGate.Reset();
-        bHasLastOperational = false;
-        LastOperational = {};
-        CurrentProposal = {};
-        CurrentReceipt = {};
-        CachedPrediction.Reset();
-        CachedPredictionIdentity = 0;
-        CachedPlannedReference.Reset();
-        CachedOnboardEstimate.Reset();
-        CachedGroundEstimate.Reset();
-        CachedPlannedReferenceIdentity = 0;
-        CachedOnboardEstimateIdentity = 0;
-        CachedGroundEstimateIdentity = 0;
-        return bTyped ? Module.StartGuidedOperationsV1() : Module.StartGuidedGnssLoss();
+        ResetSessionCaches();
+        const bool bStarted = bTyped
+            ? Module.StartGuidedOperationsV1()
+            : Module.StartGuidedGnssLoss();
+        bGlobalDisplaySession = bStarted && Module.SupportsGlobalDisplayV1();
+        return bStarted;
+    }
+
+    virtual bool StartNominalGlobalReplay() override
+    {
+        if (!FKsa64BridgeModule::IsAvailable()) return false;
+        FKsa64BridgeModule& Module = FKsa64BridgeModule::Get();
+        bTyped = false;
+        ResetSessionCaches();
+        const bool bStarted = Module.StartNominalGlobalReplayV1();
+        bGlobalDisplaySession = bStarted && Module.SupportsGlobalDisplayV1();
+        return bStarted;
     }
 
     virtual void Close() override
@@ -188,6 +191,7 @@ public:
             }
         }
         bTyped = false;
+        bGlobalDisplaySession = false;
     }
 
     virtual EKsa64OperationsAdapterResult AdvanceOneRelease() override
@@ -475,6 +479,71 @@ public:
         }
     }
 
+    virtual bool SupportsGlobalDisplayV1() const override
+    {
+        return bGlobalDisplaySession
+            && FKsa64BridgeModule::IsAvailable()
+            && FKsa64BridgeModule::Get().SupportsGlobalDisplayV1();
+    }
+
+    virtual EKsa64OperationsAdapterResult GlobalDisplayAvailability(
+        Ksa64GlobalDisplayAvailabilityV1& OutAvailability) const override
+    {
+        return SupportsGlobalDisplayV1()
+            ? MapResult(FKsa64BridgeModule::Get().GlobalDisplayAvailability(OutAvailability))
+            : EKsa64OperationsAdapterResult::Unsupported;
+    }
+
+    virtual EKsa64OperationsAdapterResult GlobalDisplayDefinition(
+        TArray<uint8>& OutPayload) const override
+    {
+        return SupportsGlobalDisplayV1()
+            ? MapResult(FKsa64BridgeModule::Get().GlobalDisplayDefinition(OutPayload))
+            : EKsa64OperationsAdapterResult::Unsupported;
+    }
+
+    virtual EKsa64OperationsAdapterResult PollGlobalDisplaySample(
+        TArray<uint8>& OutPayload) const override
+    {
+        return SupportsGlobalDisplayV1()
+            ? MapResult(FKsa64BridgeModule::Get().PollGlobalDisplaySample(OutPayload))
+            : EKsa64OperationsAdapterResult::Unsupported;
+    }
+
+    virtual EKsa64OperationsAdapterResult GlobalDisplaySampleRange(
+        const Ksa64GlobalDisplaySampleRangeRequestV1& Request,
+        TArray<uint8>& OutPayload) const override
+    {
+        return SupportsGlobalDisplayV1()
+            ? MapResult(FKsa64BridgeModule::Get().GlobalDisplaySampleRange(Request, OutPayload))
+            : EKsa64OperationsAdapterResult::Unsupported;
+    }
+
+    virtual EKsa64OperationsAdapterResult PollGlobalDisplayTransition(
+        TArray<uint8>& OutPayload) const override
+    {
+        return SupportsGlobalDisplayV1()
+            ? MapResult(FKsa64BridgeModule::Get().PollGlobalDisplayTransition(OutPayload))
+            : EKsa64OperationsAdapterResult::Unsupported;
+    }
+
+    virtual EKsa64OperationsAdapterResult GlobalReplayIndex(
+        TArray<uint8>& OutPayload) const override
+    {
+        return SupportsGlobalDisplayV1()
+            ? MapResult(FKsa64BridgeModule::Get().GlobalReplayIndex(OutPayload))
+            : EKsa64OperationsAdapterResult::Unsupported;
+    }
+
+    virtual EKsa64OperationsAdapterResult GlobalPathChunk(
+        const Ksa64GlobalDisplayPathRequestV1& Request,
+        TArray<uint8>& OutPayload) const override
+    {
+        return SupportsGlobalDisplayV1()
+            ? MapResult(FKsa64BridgeModule::Get().GlobalPathChunk(Request, OutPayload))
+            : EKsa64OperationsAdapterResult::Unsupported;
+    }
+
     virtual EKsa64OperationsAdapterResult ReviewAction() override
     {
         if (!bTyped || !ActionGate.Review(LastOperational.release_epoch))
@@ -522,6 +591,24 @@ public:
     }
 
 private:
+    void ResetSessionCaches()
+    {
+        ActionGate.Reset();
+        bHasLastOperational = false;
+        LastOperational = {};
+        CurrentProposal = {};
+        CurrentReceipt = {};
+        CachedPrediction.Reset();
+        CachedPredictionIdentity = 0;
+        CachedPlannedReference.Reset();
+        CachedOnboardEstimate.Reset();
+        CachedGroundEstimate.Reset();
+        CachedPlannedReferenceIdentity = 0;
+        CachedOnboardEstimateIdentity = 0;
+        CachedGroundEstimateIdentity = 0;
+        bGlobalDisplaySession = false;
+    }
+
     void RefreshPrediction()
     {
         if (!bTyped || !FKsa64BridgeModule::IsAvailable()) return;
@@ -633,6 +720,7 @@ private:
     }
 
     bool bTyped = false;
+    bool bGlobalDisplaySession = false;
     FKsa64OperationsActionGate ActionGate;
     bool bHasLastOperational = false;
     uint32 CachedPredictionIdentity = 0;

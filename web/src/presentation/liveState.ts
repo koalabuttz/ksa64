@@ -3,8 +3,8 @@ import { decodePresentationPayload, type ActionProposalView, type ActionReceiptV
   type PredictionPathView, type PresentationErrorView, type PresentationEventView,
   type ProcedureView, type ReleaseSampleView, type TimelineEventView, type TransportStatusView,
 } from "../protocol/presentation";
-import type { GlobalDisplayDefinitionV1, GlobalDisplayPathChunkV1, GlobalDisplaySampleV1,
-  GlobalDisplayTransitionV1, GlobalReplayIndexV1 } from "../protocol/globalDisplay";
+import type { GlobalDisplayCursorStateV1, GlobalDisplayDefinitionV1, GlobalDisplayPathChunkV1,
+  GlobalDisplaySampleV1, GlobalDisplayTransitionV1, GlobalReplayIndexV1 } from "../protocol/globalDisplay";
 import type { PresentationTransportEvent, PresentationTransportState } from "../transport";
 import { appendEvidenceChunk, beginEvidenceAssembly, type EvidenceAssembly } from "./evidenceAssembly";
 
@@ -28,6 +28,7 @@ export interface LivePresentationState {
   readonly globalPaths: ReadonlyMap<string, GlobalDisplayPathChunkV1>;
   readonly globalTransitions: readonly GlobalDisplayTransitionV1[];
   readonly globalReplayIndex?: GlobalReplayIndexV1;
+  readonly globalCursor?: GlobalDisplayCursorStateV1;
   readonly evidence?: EvidenceMetadata;
   readonly evidenceAssembly?: EvidenceAssembly;
   readonly sealedEvidence?: Uint8Array;
@@ -101,6 +102,7 @@ export function reduceTransportEvent(
           (value) => (BigInt(value.releaseEpoch) << 32n) | BigInt(value.transitionIdentity), 64),
         decodeError: undefined };
       case "global-replay-index": return { ...state, globalReplayIndex: decoded.value, decodeError: undefined };
+      case "global-cursor": return { ...state, globalCursor: decoded.value, decodeError: undefined };
       case "evidence": {
         const evidenceAssembly = beginEvidenceAssembly(state.evidenceAssembly, decoded.value);
         return { ...state, evidence: decoded.value, evidenceAssembly,

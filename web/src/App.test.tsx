@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { Kps1MessageKind, type Kps1Frame } from "./protocol/kps1";
@@ -41,6 +41,24 @@ describe("live compact Mission Control desk", () => {
     expect(screen.queryByText("Contingency success")).not.toBeInTheDocument();
     act(() => transport.emit(testFrame(Kps1MessageKind.Snapshot, snapshotPayload(2))));
     expect(await screen.findByText("6,000 / 21,591")).toBeInTheDocument();
+  });
+
+  it("labels early navigation and prediction metrics as pending until their validity bits arrive", async () => {
+    const transport = new TestTransport(); render(<App transport={transport} />);
+    act(() => transport.emit(testFrame(Kps1MessageKind.Snapshot, snapshotPayload(2, false, 1n, 1n))));
+    await screen.findByText("6,000 / 21,591");
+    const navigationPanel = screen.getByRole("heading", { name: "Navigation residuals" }).closest("section");
+    expect(navigationPanel).not.toBeNull();
+    expect(within(navigationPanel!).getAllByText("Pending")).toHaveLength(3);
+    expect(screen.queryByText("-0.02 km")).not.toBeInTheDocument();
+  });
+
+  it("opens nominal global replay as a read-only SIM Director presentation mode", async () => {
+    render(<App transport={new TestTransport()} experience="nominal-global" />);
+    expect(await screen.findByText("KSA-G10R · Nominal global replay")).toBeInTheDocument();
+    expect(screen.getByText("Global Flight Computer")).toBeInTheDocument();
+    expect(screen.getByText("0 / 22,015")).toBeInTheDocument();
+    expect(screen.getByText("KSA64 · Sim Director")).toBeInTheDocument();
   });
 
   it("submits Review, Stage, then Commit through the high-level transport", async () => {

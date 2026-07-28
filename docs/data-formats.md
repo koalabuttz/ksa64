@@ -440,3 +440,53 @@ Existing ABI-v1 symbols and layouts remain byte-for-byte compatible. The Phase 1
 Unreal receives typed, role-filtered views and Rust-generated proposal identities. It does not parse canonical KSB11 segments, construct KUL11/KUA11 bytes, or derive missing evidence. Multi-axis outcome classifications are views over accepted records; they do not replace owning physical or operational summaries.
 
 The accepted Phase 12B completion JSON, bridge manifest, automation reports, screenshot/semantic manifests, performance samples, and package audits are noncanonical validation metadata. They bind the qualified ABI-v1 build `0x120B0001` and accepted product evidence without becoming mission inputs or canonical records. The frozen evidence and limitations are indexed by `phase12/PHASE12B_COMPLETION.md`; Phase 12C inherits the same ownership rule.
+
+
+## Phase 12C GlobalDisplay presentation records
+
+Phase 12C introduces no canonical `K*` record and changes no Phase 0–12B.5
+format. KTT10, KPH10, KSR10, and KSB11 remain owned by their strict existing
+parsers. `GlobalDisplayV1` records are noncanonical, renderer-neutral
+presentation products derived and role-filtered in Rust.
+
+KPS1 remains major/minor 1.0 and retains its 48-byte envelope. Capability bit
+`KPS1_CAPABILITY_GLOBAL_DISPLAY_V1 = 1 << 8` gates these additive message
+kinds:
+
+| Message | Kind | Direction |
+|---|---:|---|
+| Global display definition | `0x0110` | authority to client |
+| Exact sample batch | `0x0111` | authority to client |
+| Path chunk | `0x0112` | authority to client |
+| Frame/segment transition | `0x0113` | authority to client |
+| Replay index | `0x0114` | authority to client |
+| Cursor state | `0x0115` | authority to client |
+| Exact range request | `0x0210` | client to authority |
+
+Clients that do not negotiate bit 8 never receive or submit these kinds. All
+legacy KPS1 vectors, limits, CRC behavior, nonce/sequence rules, cursor gaps,
+and correlation rules remain exact. Ordinary records retain the 256-KiB KPS1
+payload limit; sample and path queries are additionally bounded by their typed
+contracts.
+
+The typed family comprises `GlobalDisplayDefinitionV1`,
+`GlobalDisplaySampleV1`, `GlobalDisplaySourcePoseV1`,
+`GlobalDisplayPathChunkV1`, `GlobalDisplayTransitionV1`,
+`GlobalReplayIndexV1`, `GlobalDisplayCursorStateV1`, and
+`GlobalDisplayRangeRequestV1`. They carry fixed-width numeric values and
+identities, not canonical record internals. Role filtering removes SIM-truth
+source poses and paths before encoding for an unauthorized role.
+
+Native ABI-v1 remains unchanged. `ksa64_viewer_global_display_api_v1` returns
+an optional, versioned, size-tagged function table for definition, exact sample
+ranges, paths, replay indices, and nominal replay startup. Callers must validate
+the base bridge manifest and the optional table before use. Old libraries and
+manifests remain valid because absence of the optional table means unsupported,
+not corrupt.
+
+Browser and Unreal semantic snapshots, screenshots, path-memory reports,
+origin-change logs, backend/fallback results, and runtime measurements are
+noncanonical validation metadata. The draft schemas
+`ksa64.phase12c.browser-evidence.v1` and
+`ksa64.phase12c.runtime-evidence.v1` are completion-audit inputs only; no
+pending or partial record may masquerade as accepted evidence.

@@ -48,9 +48,11 @@ pub enum PresentationMessageKind {
     GlobalDisplayPathChunk = 0x0112,
     GlobalDisplayTransition = 0x0113,
     GlobalReplayIndex = 0x0114,
+    GlobalDisplayCursorState = 0x0115,
     ActionIntent = 0x0200,
     ActionReceipt = 0x0201,
     ActionProposal = 0x0202,
+    GlobalDisplayRangeRequest = 0x0210,
     EvidenceMetadata = 0x0300,
     EvidenceChunk = 0x0301,
     Error = 0x7fff,
@@ -77,9 +79,11 @@ impl PresentationMessageKind {
             0x0112 => Some(Self::GlobalDisplayPathChunk),
             0x0113 => Some(Self::GlobalDisplayTransition),
             0x0114 => Some(Self::GlobalReplayIndex),
+            0x0115 => Some(Self::GlobalDisplayCursorState),
             0x0200 => Some(Self::ActionIntent),
             0x0201 => Some(Self::ActionReceipt),
             0x0202 => Some(Self::ActionProposal),
+            0x0210 => Some(Self::GlobalDisplayRangeRequest),
             0x0300 => Some(Self::EvidenceMetadata),
             0x0301 => Some(Self::EvidenceChunk),
             0x7fff => Some(Self::Error),
@@ -94,7 +98,8 @@ impl PresentationMessageKind {
             | Self::LifecycleControl
             | Self::PaceControl
             | Self::ReplayControl
-            | Self::ActionIntent => CorrelationRule::Required,
+            | Self::ActionIntent
+            | Self::GlobalDisplayRangeRequest => CorrelationRule::Required,
             Self::Snapshot
             | Self::Procedure
             | Self::Disposition
@@ -111,7 +116,9 @@ impl PresentationMessageKind {
             | Self::ActionProposal
             | Self::EvidenceMetadata
             | Self::EvidenceChunk => CorrelationRule::Zero,
-            Self::ActionReceipt | Self::Error => CorrelationRule::Either,
+            Self::ActionReceipt | Self::GlobalDisplayCursorState | Self::Error => {
+                CorrelationRule::Either
+            }
         }
     }
 
@@ -125,7 +132,9 @@ impl PresentationMessageKind {
             | Self::GlobalDisplaySampleBatch
             | Self::GlobalDisplayPathChunk
             | Self::GlobalDisplayTransition
-            | Self::GlobalReplayIndex => KPS1_CAPABILITY_GLOBAL_DISPLAY_V1,
+            | Self::GlobalReplayIndex
+            | Self::GlobalDisplayCursorState
+            | Self::GlobalDisplayRangeRequest => KPS1_CAPABILITY_GLOBAL_DISPLAY_V1,
             _ => 0,
         }
     }
@@ -582,6 +591,18 @@ mod tests {
         assert!(!PresentationMessageKind::GlobalDisplaySampleBatch.is_negotiated_by(0));
         assert!(PresentationMessageKind::GlobalDisplaySampleBatch
             .is_negotiated_by(KPS1_CAPABILITY_GLOBAL_DISPLAY_V1));
+        for kind in [
+            PresentationMessageKind::GlobalDisplayDefinition,
+            PresentationMessageKind::GlobalDisplaySampleBatch,
+            PresentationMessageKind::GlobalDisplayPathChunk,
+            PresentationMessageKind::GlobalDisplayTransition,
+            PresentationMessageKind::GlobalReplayIndex,
+            PresentationMessageKind::GlobalDisplayCursorState,
+            PresentationMessageKind::GlobalDisplayRangeRequest,
+        ] {
+            assert!(!kind.is_negotiated_by(0));
+            assert!(kind.is_negotiated_by(KPS1_CAPABILITY_GLOBAL_DISPLAY_V1));
+        }
         assert!(PresentationMessageKind::Snapshot.is_negotiated_by(0));
     }
 

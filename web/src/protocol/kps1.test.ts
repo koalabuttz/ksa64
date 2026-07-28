@@ -40,6 +40,8 @@ describe("KPS1 protocol", () => {
     }
     expect(Kps1MessageKind.EventBatch).toBe(0x0107);
     expect(Kps1MessageKind.ActionProposal).toBe(0x0202);
+    expect(Kps1MessageKind.GlobalDisplayCursorState).toBe(0x0115);
+    expect(Kps1MessageKind.GlobalDisplayRangeRequest).toBe(0x0210);
   });
 
   it("enforces Rust-compatible correlation and handshake rules", () => {

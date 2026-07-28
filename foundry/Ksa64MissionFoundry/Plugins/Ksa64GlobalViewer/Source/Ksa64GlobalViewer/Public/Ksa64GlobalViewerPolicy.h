@@ -11,6 +11,7 @@ constexpr int64 LocalOriginQuantumQ12 = 100 * Q12OneKilometre;
 
 double Q12Kilometres(int64 Raw);
 int64 QuantizeOriginQ12(int64 Raw, int64 Quantum = LocalOriginQuantumQ12);
+FQuat Ksa64BodyToFrameQuaternionToUnreal(const int32 QuaternionQ30[4]);
 FVector3d Ksa64RightHandedToUnrealCentimetres(
     const int32 PositionQ12Km[3],
     const int64 OriginQ12Km[3]);

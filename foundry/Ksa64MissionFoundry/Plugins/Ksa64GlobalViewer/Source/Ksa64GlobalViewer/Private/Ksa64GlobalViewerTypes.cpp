@@ -11,6 +11,8 @@ FString FKsa64GlobalSemanticState::ToDeterministicJson() const
     Writer->WriteObjectStart();
     Writer->WriteValue(TEXT("schema"), Schema);
     Writer->WriteValue(TEXT("layout"), static_cast<uint32>(Layout));
+    Writer->WriteValue(TEXT("experience_mode"), static_cast<uint32>(ExperienceMode));
+    Writer->WriteValue(TEXT("replay_pace"), static_cast<uint32>(ReplayPace));
     Writer->WriteValue(TEXT("requested_camera"), static_cast<uint32>(RequestedCamera));
     Writer->WriteValue(TEXT("resolved_camera"), static_cast<uint32>(ResolvedCamera));
     Writer->WriteValue(
@@ -31,6 +33,10 @@ FString FKsa64GlobalSemanticState::ToDeterministicJson() const
     Writer->WriteValue(TEXT("onboard_path_points"), OnboardPathPoints);
     Writer->WriteValue(TEXT("ground_path_points"), GroundPathPoints);
     Writer->WriteValue(TEXT("transition_markers"), TransitionMarkers);
+    Writer->WriteValue(TEXT("replay_oldest_release"), ReplayOldestRelease);
+    Writer->WriteValue(TEXT("replay_newest_release"), ReplayNewestRelease);
+    Writer->WriteValue(TEXT("replay_selected_release"), ReplaySelectedRelease);
+    Writer->WriteValue(TEXT("replay_bookmark_count"), ReplayBookmarkCount);
     Writer->WriteValue(TEXT("overall_disposition"), OverallDisposition);
     Writer->WriteValue(TEXT("objective_disposition"), ObjectiveDisposition);
     Writer->WriteValue(TEXT("vehicle_disposition"), VehicleDisposition);
@@ -45,6 +51,7 @@ FString FKsa64GlobalSemanticState::ToDeterministicJson() const
     }
     Writer->WriteArrayEnd();
     Writer->WriteValue(TEXT("scene_ready"), bSceneReady);
+    Writer->WriteValue(TEXT("acceptance_eligible"), bAcceptanceEligible);
     Writer->WriteValue(TEXT("session_open"), bSessionOpen);
     Writer->WriteValue(TEXT("exact_snap"), bExactSnap);
     Writer->WriteValue(TEXT("operations_desk_visible"), bOperationsDeskVisible);
