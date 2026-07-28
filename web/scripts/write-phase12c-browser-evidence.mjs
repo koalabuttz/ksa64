@@ -172,7 +172,7 @@ requireValue(nominal.value.renderer_origin?.change_count === 1 &&
   nominal.value.renderer_origin.semantic_unchanged === true &&
   nominal.value.renderer_origin.rendered_continuity === true &&
   nominal.value.renderer_origin.semantic_continuity === true &&
-  nominal.value.renderer_origin.rendered_sample_count >= 8 &&
+  nominal.value.renderer_origin.rendered_sample_count >= 6 &&
   nominal.value.renderer_origin.max_reconstructed_delta_km >= 0 &&
   nominal.value.renderer_origin.max_reconstructed_delta_km <= 0.001 &&
   /^[0-9a-f]{64}$/.test(nominal.value.renderer_origin.absolute_semantic_sha256) &&

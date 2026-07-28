@@ -86,6 +86,7 @@ export function GlobalMissionViewer({
   const container = useRef<HTMLDivElement>(null);
   const renderer = useRef<GlobalMissionRenderer | undefined>(undefined);
   const latestRelease = model.samples.at(-1)?.releaseEpoch ?? model.replay.selectedRelease;
+  const previousLatestRelease = useRef(latestRelease);
   const [selectedRelease, setSelectedRelease] = useState(latestRelease);
   const [preference, setPreference] = useState<RendererPreference>("auto");
   const [backend, setBackend] = useState<RendererBackend | "initializing">("initializing");
@@ -104,7 +105,9 @@ export function GlobalMissionViewer({
   const [originProbe, setOriginProbe] = useState<GlobalRendererOriginProbe | undefined>(undefined);
 
   useEffect(() => {
-    if (!replay || playing || selectedRelease >= latestRelease) setSelectedRelease(latestRelease);
+    const previousLatest = previousLatestRelease.current;
+    previousLatestRelease.current = latestRelease;
+    if (!replay || playing || selectedRelease >= previousLatest) setSelectedRelease(latestRelease);
   }, [latestRelease, playing, replay, selectedRelease]);
 
   const sampleIndex = useMemo(() => {

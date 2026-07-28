@@ -73,6 +73,28 @@ describe("global mission viewer", () => {
     expect(screen.getByLabelText("Exact release")).toHaveValue("101");
   });
 
+  it("follows a growing replay until the operator deliberately scrubs away", async () => {
+    const complete = model();
+    const first = { ...complete, samples: complete.samples.slice(0, 1) };
+    const { rerender } = render(<GlobalMissionViewer model={first} replay layout="hybrid" deskOpen
+      onLayoutChange={vi.fn()} onDeskOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText("Exact release")).toHaveValue("100"));
+
+    rerender(<GlobalMissionViewer model={complete} replay layout="hybrid" deskOpen
+      onLayoutChange={vi.fn()} onDeskOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText("Exact release")).toHaveValue("101"));
+
+    fireEvent.change(screen.getByLabelText("Exact release"), { target: { value: "100" } });
+    await waitFor(() => expect(screen.getByLabelText("Exact release")).toHaveValue("100"));
+    const extended = { ...complete, samples: [...complete.samples, sample(102, ["onboard", "ground"])],
+      replay: { ...complete.replay, lastRelease: 102 } };
+    rerender(<GlobalMissionViewer model={extended} replay layout="hybrid" deskOpen
+      onLayoutChange={vi.fn()} onDeskOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText("Exact release")).toHaveValue("100"));
+    fireEvent.click(screen.getByRole("button", { name: "Latest" }));
+    await waitFor(() => expect(screen.getByLabelText("Exact release")).toHaveValue("102"));
+  });
+
   it("keeps truth hidden by default and reveals it only from a permitted director stream", async () => {
     render(<GlobalMissionViewer model={model(["planned", "onboard", "ground", "truth"])} replay
       layout="hybrid" deskOpen onLayoutChange={vi.fn()} onDeskOpenChange={vi.fn()} />);

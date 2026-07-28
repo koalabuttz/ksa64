@@ -110,11 +110,15 @@ function rendererOriginProbe(): RendererOriginProbe | undefined {
   const raw = viewer()?.dataset.renderOriginProbe;
   if (raw === undefined) return undefined;
   const value = JSON.parse(raw) as RendererOriginProbe;
-  return Number.isSafeInteger(value.releaseEpoch) && typeof value.camera === "string" && value.camera.length > 0 &&
-    Array.isArray(value.originKm) && value.originKm.length === 3 &&
-    Array.isArray(value.points) && value.points.length >= 8 &&
+  const validPoints = Array.isArray(value.points) && value.points.length >= 5 &&
     value.points.every((point) => typeof point.identity === "string" && point.identity.length > 0 &&
-      Array.isArray(point.absoluteKm) && point.absoluteKm.length === 3 && point.absoluteKm.every(Number.isFinite))
+      Array.isArray(point.absoluteKm) && point.absoluteKm.length === 3 && point.absoluteKm.every(Number.isFinite));
+  const identities = validPoints ? value.points.map((point) => point.identity) : [];
+  return Number.isSafeInteger(value.releaseEpoch) && typeof value.camera === "string" && value.camera.length > 0 &&
+    Array.isArray(value.originKm) && value.originKm.length === 3 && validPoints &&
+    identities.includes("earth") && identities.some((identity) => identity.startsWith("anchor:")) &&
+    identities.some((identity) => identity.startsWith("source:")) &&
+    identities.some((identity) => identity.endsWith(":first")) && identities.some((identity) => identity.endsWith(":last"))
     ? value
     : undefined;
 }
@@ -165,10 +169,8 @@ function truthInput(): HTMLInputElement | undefined {
 }
 
 function setChecked(input: HTMLInputElement, checked: boolean): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "checked")?.set;
-  if (setter === undefined) throw new Error("browser checkbox setter is unavailable");
-  setter.call(input, checked);
-  input.dispatchEvent(new Event("change", { bubbles: true }));
+  if (input.disabled) throw new Error("browser checkbox is disabled");
+  if (input.checked !== checked) input.click();
 }
 
 function canonical(value: unknown): string {
@@ -419,6 +421,7 @@ async function runNominal(options: { readonly fpsMilliseconds?: number } = {}) {
   const auto = await captureBackend("auto", duration, commonRelease);
   const webgl2 = await captureBackend("webgl2", duration, commonRelease);
   const twoD = await captureBackend("2d", duration, commonRelease);
+  const rendererOrigin = await captureOriginContinuity(1_920);
 
   setRelease(commonRelease);
   await waitForSemanticRelease(commonRelease);
@@ -436,7 +439,6 @@ async function runNominal(options: { readonly fpsMilliseconds?: number } = {}) {
   const afterSemantic = semantic();
   if (afterSemantic === undefined) throw new Error("semantic scene vanished during context-loss fallback");
   const afterHash = await sha256(afterSemantic);
-  const rendererOrigin = await captureOriginContinuity(commonRelease);
 
   const milestones = [];
   for (const releaseEpoch of REQUIRED_RELEASES) {

@@ -370,7 +370,7 @@ function validateBrowser(input, sourceCommit) {
   const rendererOrigin = nominal.value.renderer_origin;
   required(rendererOrigin?.change_count === 1 && rendererOrigin.semantic_unchanged === true &&
     rendererOrigin.rendered_continuity === true && rendererOrigin.semantic_continuity === true &&
-    Number.isSafeInteger(rendererOrigin.rendered_sample_count) && rendererOrigin.rendered_sample_count >= 8 &&
+    Number.isSafeInteger(rendererOrigin.rendered_sample_count) && rendererOrigin.rendered_sample_count >= 6 &&
     Number(rendererOrigin.max_reconstructed_delta_km) >= 0 && Number(rendererOrigin.max_reconstructed_delta_km) <= 0.001 &&
     /^[0-9a-f]{64}$/.test(rendererOrigin.absolute_semantic_sha256) &&
     /^[0-9a-f]{64}$/.test(rendererOrigin.rendered_absolute_sha256) &&

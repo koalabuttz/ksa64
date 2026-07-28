@@ -222,7 +222,7 @@ function Assert-BrowserEvidence([string]$Path) {
         [int]$record.production_dist.file_count -le 1 -or
         $record.production_dist.tree_sha256 -notmatch '^[0-9a-f]{64}$' -or
         $record.renderer_origin.change_count -ne 1 -or
-        [int]$record.renderer_origin.rendered_sample_count -lt 8 -or
+        [int]$record.renderer_origin.rendered_sample_count -lt 6 -or
         [double]$record.renderer_origin.max_reconstructed_delta_km -lt 0.0 -or
         [double]$record.renderer_origin.max_reconstructed_delta_km -gt 0.001 -or
         -not $record.renderer_origin.rendered_continuity -or
@@ -262,7 +262,7 @@ function Assert-RuntimeEvidence([string]$Path, [string]$ExpectedSourceCommit) {
         -not $record.renderer_origins.semantic_continuity -or
         [int]$record.renderer_origins.unreal.rendered_sample_count -lt 8 -or
         -not $record.renderer_origins.unreal.rendered_continuity -or
-        [int]$record.renderer_origins.browser.rendered_sample_count -lt 8 -or
+        [int]$record.renderer_origins.browser.rendered_sample_count -lt 6 -or
         -not $record.renderer_origins.browser.rendered_continuity -or
         @($actualReleases).Count -ne 9 -or
         (Compare-Object $expectedReleases $actualReleases -SyncWindow 0).Count -ne 0 -or

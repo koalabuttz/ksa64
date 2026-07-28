@@ -193,13 +193,19 @@ pub fn build_global_display_path_chunk(
         || sample.discontinuity_mask & GLOBAL_DISCONTINUITY_TERMINAL != 0;
     let stale = latest_lineage_pose.is_none()
         || latest_lineage_pose.is_some_and(|pose| pose.age_releases > 32);
+    // A source may legitimately become valid after mission start (for
+    // example, delayed ground tracking). Compare against the first resolvable
+    // sample for this source and frame rather than the first multi-source
+    // authority sample; a later first retained point still exposes real loss.
+    let first_source_release = path_samples.iter().find_map(|sample| {
+        let pose = sample.sources.iter().find(|pose| pose.source == source)?;
+        resolved_position(pose, display_frame, sample.segment).map(|_| sample.release_epoch)
+    });
     let incomplete = !terminal
         || latest_lineage_pose.is_none()
-        || points.first().is_some_and(|point| {
-            point.release_epoch
-                > path_samples
-                    .first()
-                    .map_or(point.release_epoch, |sample| sample.release_epoch)
+        || first_source_release.is_none()
+        || points.first().is_none_or(|point| {
+            point.release_epoch > first_source_release.unwrap_or(point.release_epoch)
         });
     let resync_required = path_samples
         .iter()
@@ -1622,6 +1628,65 @@ mod exact_replay_tests {
             )
             .unwrap();
         assert_ne!(stale_ground.flags & GLOBAL_PATH_FLAG_STALE, 0);
+
+        // A delayed operational source has a complete path once its retained
+        // history reaches the terminal sample; it does not need to fabricate
+        // a pose at mission start.
+        frame.step = 4;
+        frame.mission_time_q16 = 6_144;
+        frame.events = EVENT_LANDING;
+        let terminal_ground = GroundEstimate {
+            measurement_epoch: 3,
+            production_epoch: 3,
+            ..ground
+        };
+        publisher.publish(
+            &fixtures,
+            3,
+            frame,
+            [0; 3],
+            Some(terminal_ground),
+            [FrameTransitionRecord::ZERO; 4],
+            true,
+        );
+        let completed_ground = publisher
+            .path_chunk_with_pins(
+                PresentationRole::GuidedOperator,
+                GlobalDisplaySourceId::GroundEstimate,
+                GlobalDisplayFrameId::EarthFixedEcef,
+                GlobalDisplayPathLod::OneSecond,
+                0,
+                &[],
+            )
+            .unwrap();
+        assert_ne!(completed_ground.flags & GLOBAL_PATH_FLAG_TERMINAL, 0);
+        assert_eq!(completed_ground.flags & GLOBAL_PATH_FLAG_INCOMPLETE, 0);
+        assert_eq!(completed_ground.points.first().unwrap().release_epoch, 1);
+        assert_eq!(completed_ground.points.last().unwrap().release_epoch, 3);
+
+        let mut omitted_source_start =
+            publisher.samples_from_release(0, 4, PresentationRole::GuidedOperator);
+        omitted_source_start[1].event_mask = 0;
+        omitted_source_start[1].discontinuity_mask = 0;
+        let incomplete_ground = build_global_display_path_chunk(
+            PresentationRole::GuidedOperator,
+            definition.display_identity,
+            definition.launch_anchor.identity,
+            definition.recovery_anchor.identity,
+            &omitted_source_start,
+            &[],
+            GlobalDisplaySourceId::GroundEstimate,
+            GlobalDisplayFrameId::EarthFixedEcef,
+            GlobalDisplayPathLod::OneSecond,
+            0,
+            &[],
+        )
+        .unwrap();
+        assert_ne!(
+            incomplete_ground.flags & GLOBAL_PATH_FLAG_INCOMPLETE,
+            0,
+            "omitting the first resolvable source sample must remain visible"
+        );
     }
 
     #[test]

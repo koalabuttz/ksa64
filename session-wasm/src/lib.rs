@@ -7,9 +7,10 @@ use ksa64_interface::phase11::OperationalRole;
 use ksa64_presentation::{
     encode_typed_payload, write_kps1_frame, ActionProposalView, GlobalDisplayCursorStateV1,
     GlobalDisplayFrameId, GlobalDisplayPathLod, GlobalDisplaySourceId, Kps1Header,
-    PresentationActionIntent, PresentationActionOperation, PresentationPace, PresentationPayload,
-    PresentationRole, PresentationSession, SealedEvidenceChunk, KPS1_CAPABILITY_GLOBAL_DISPLAY_V1,
-    KPS1_EVIDENCE_CHUNK_DATA_MAX_LENGTH, KPS1_EVIDENCE_OBJECT_MAX_LENGTH, KPS1_FLAG_RESPONSE,
+    PresentationActionIntent, PresentationActionOperation, PresentationCursors, PresentationPace,
+    PresentationPayload, PresentationRole, PresentationSession, SealedEvidenceChunk,
+    KPS1_CAPABILITY_GLOBAL_DISPLAY_V1, KPS1_EVIDENCE_CHUNK_DATA_MAX_LENGTH,
+    KPS1_EVIDENCE_OBJECT_MAX_LENGTH, KPS1_FLAG_RESPONSE,
 };
 use ksa64_session::{
     phase11_live::MissionSessionError,
@@ -31,6 +32,7 @@ pub const RESULT_HEADER_LENGTH: usize = 12;
 pub const REPLAY_INFO_LENGTH: usize = 72;
 pub const REPLAY_READ_MAX_FRAMES: u32 = 256;
 const GLOBAL_DISPLAY_SAMPLE_POLL_LIMIT: usize = 256;
+const PRESENTATION_STREAM_POLL_LIMIT: usize = 2_048;
 pub const REPLAY_READ_MAX_BYTES: usize = 1024 * 1024;
 pub const EXPECTED_RELEASE_EPOCH: u32 = 21_591;
 pub const EXPECTED_EVIDENCE_LENGTH: usize = 2_911_464;
@@ -200,6 +202,7 @@ pub struct WasmAuthority {
     global_final_paths_published: bool,
     global_next_sample_release: u32,
     global_transition_index: u32,
+    stream_cursors: PresentationCursors,
     last_result: Vec<u8>,
 }
 
@@ -220,6 +223,7 @@ impl Default for WasmAuthority {
             global_final_paths_published: false,
             global_next_sample_release: 0,
             global_transition_index: 0,
+            stream_cursors: PresentationCursors::default(),
             last_result: Vec::new(),
         }
     }
@@ -261,6 +265,7 @@ impl WasmAuthority {
                 self.global_final_paths_published = false;
                 self.global_next_sample_release = 0;
                 self.global_transition_index = 0;
+                self.stream_cursors = PresentationCursors::default();
                 self.session = Some(FullMissionPresentationSession::new(role)?);
                 self.evidence = None;
                 self.completed_summary = None;
@@ -305,6 +310,7 @@ impl WasmAuthority {
                 self.global_final_paths_published = false;
                 self.global_next_sample_release = 0;
                 self.global_transition_index = 0;
+                self.stream_cursors = PresentationCursors::default();
                 self.session_nonce = 0;
                 self.server_sequence = 1;
                 self.incomplete = false;
@@ -445,6 +451,75 @@ impl WasmAuthority {
         let role = self.role;
         let session = self.session.as_ref().ok_or(WorkerError::Session)?;
         let mut payloads = Vec::new();
+        let mut stream_cursors = self.stream_cursors;
+        loop {
+            let batch = session
+                .read_events(stream_cursors.events, PRESENTATION_STREAM_POLL_LIMIT)
+                .map_err(|_| WorkerError::Presentation)?;
+            stream_cursors.events = batch.next_cursor;
+            if batch.records.is_empty() {
+                break;
+            }
+            payloads.push(PresentationPayload::EventBatch(
+                batch
+                    .records
+                    .into_iter()
+                    .map(|record| record.value)
+                    .collect(),
+            ));
+        }
+        loop {
+            let batch = session
+                .read_timeline(stream_cursors.timeline, PRESENTATION_STREAM_POLL_LIMIT)
+                .map_err(|_| WorkerError::Presentation)?;
+            stream_cursors.timeline = batch.next_cursor;
+            if batch.records.is_empty() {
+                break;
+            }
+            payloads.extend(
+                batch
+                    .records
+                    .into_iter()
+                    .map(|record| PresentationPayload::TimelineEvent(record.value)),
+            );
+        }
+        loop {
+            let batch = session
+                .read_action_receipts(
+                    stream_cursors.action_receipts,
+                    PRESENTATION_STREAM_POLL_LIMIT,
+                )
+                .map_err(|_| WorkerError::Presentation)?;
+            stream_cursors.action_receipts = batch.next_cursor;
+            if batch.records.is_empty() {
+                break;
+            }
+            payloads.extend(
+                batch
+                    .records
+                    .into_iter()
+                    .map(|record| PresentationPayload::ActionReceipt(record.value)),
+            );
+        }
+        loop {
+            let batch = session
+                .read_release_samples(
+                    stream_cursors.release_samples,
+                    PRESENTATION_STREAM_POLL_LIMIT,
+                )
+                .map_err(|_| WorkerError::Presentation)?;
+            stream_cursors.release_samples = batch.next_cursor;
+            if batch.records.is_empty() {
+                break;
+            }
+            payloads.push(PresentationPayload::ReleaseSampleBatch(
+                batch
+                    .records
+                    .into_iter()
+                    .map(|record| record.value)
+                    .collect(),
+            ));
+        }
         payloads.push(PresentationPayload::Snapshot(session.latest_snapshot()));
         if let Some(value) = session.current_procedure() {
             payloads.push(PresentationPayload::Procedure(value));
@@ -556,6 +631,7 @@ impl WasmAuthority {
                 },
             ));
         }
+        self.stream_cursors = stream_cursors;
         let mut frames = Vec::new();
         for value in payloads {
             self.push_payload(&mut frames, value, 0, role)?;
@@ -651,6 +727,12 @@ impl WasmAuthority {
             0,
             role,
         )?;
+        self.stream_cursors.action_receipts = self.stream_cursors.action_receipts.max(
+            receipt
+                .publication_sequence
+                .checked_add(1)
+                .ok_or(WorkerError::Presentation)?,
+        );
         Ok(encode_publication_bundle(&frames))
     }
 
@@ -1197,6 +1279,161 @@ mod tests {
         }
         assert_eq!(at, payload.len());
         values
+    }
+
+    fn sequenced_publication_payloads(
+        payload: &[u8],
+        role: PresentationRole,
+    ) -> Vec<(u64, PresentationPayload)> {
+        assert_eq!(&payload[..4], b"KPW1");
+        let count = usize::from(get_u16(payload, 6));
+        let mut at = 8_usize;
+        let mut values = Vec::with_capacity(count);
+        for _ in 0..count {
+            let length = get_u32(payload, at) as usize;
+            at += 4;
+            let frame = ksa64_presentation::parse_kps1_frame(&payload[at..at + length]).unwrap();
+            values.push((
+                frame.header.sequence,
+                ksa64_presentation::decode_typed_payload(frame.header.kind, frame.payload, role)
+                    .unwrap(),
+            ));
+            at += length;
+        }
+        assert_eq!(at, payload.len());
+        values
+    }
+
+    #[test]
+    fn live_poll_drains_ordered_streams_without_repeating_action_receipts() {
+        let mut worker = WasmAuthority::default();
+        assert_eq!(
+            parse_result(&worker.execute(&command(
+                WorkerCommandKind::Start,
+                [2, 878133587, 1263747382, 0, 0],
+            )))
+            .unwrap()
+            .0,
+            0,
+        );
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Prepare, [0; 5])))
+                .unwrap()
+                .0,
+            0,
+        );
+        assert_eq!(
+            parse_result(&worker.execute(&command(WorkerCommandKind::Pace, [1, 0, 0, 0, 0],)))
+                .unwrap()
+                .0,
+            0,
+        );
+
+        let mut last_server_sequence = 0_u64;
+        let mut last_event_sequence = 0_u64;
+        let mut last_timeline_sequence = 0_u64;
+        let mut last_sample_sequence = 0_u64;
+        let mut timeline = Vec::new();
+        while worker
+            .session
+            .as_ref()
+            .unwrap()
+            .authority()
+            .snapshot()
+            .release_epoch
+            < UPDATE_STAGE_RELEASE
+        {
+            let advance = worker.execute(&command(WorkerCommandKind::Advance, [32, 0, 0, 0, 0]));
+            assert_eq!(parse_result(&advance).unwrap().0, 0);
+            let poll = worker.execute(&command(WorkerCommandKind::Poll, [0; 5]));
+            let (status, bytes) = parse_result(&poll).unwrap();
+            assert_eq!(status, 0);
+            let mut prior_stream_rank = 0_u8;
+            let mut reached_non_stream = false;
+            for (server_sequence, payload) in
+                sequenced_publication_payloads(bytes, PresentationRole::GuidedOperator)
+            {
+                assert_eq!(server_sequence, last_server_sequence + 1);
+                last_server_sequence = server_sequence;
+                let stream_rank = match &payload {
+                    PresentationPayload::EventBatch(records) => {
+                        for record in records {
+                            assert!(record.sequence > last_event_sequence);
+                            last_event_sequence = record.sequence;
+                        }
+                        Some(1)
+                    }
+                    PresentationPayload::TimelineEvent(record) => {
+                        assert!(record.sequence > last_timeline_sequence);
+                        last_timeline_sequence = record.sequence;
+                        timeline.push(record.clone());
+                        Some(2)
+                    }
+                    PresentationPayload::ActionReceipt(_) => Some(3),
+                    PresentationPayload::ReleaseSampleBatch(records) => {
+                        for record in records {
+                            assert!(record.sequence > last_sample_sequence);
+                            last_sample_sequence = record.sequence;
+                        }
+                        Some(4)
+                    }
+                    _ => None,
+                };
+                if let Some(rank) = stream_rank {
+                    assert!(!reached_non_stream);
+                    assert!(rank >= prior_stream_rank);
+                    prior_stream_rank = rank;
+                } else {
+                    reached_non_stream = true;
+                }
+            }
+        }
+
+        assert!(timeline.iter().any(|record| {
+            record.release_epoch == 5_760 && record.label == "GNSS observations missing"
+        }));
+        assert!(timeline.iter().any(|record| {
+            record.release_epoch == 5_824
+                && record.label == "GNSS loss qualified after three missing fixes"
+        }));
+
+        for (operation, client_sequence) in [(1_u32, 1_u32), (2, 2)] {
+            let action = worker.execute(&command(
+                WorkerCommandKind::Action,
+                [operation, 0, 0, 0, client_sequence],
+            ));
+            let (status, bytes) = parse_result(&action).unwrap();
+            assert_eq!(status, 0);
+            let publications =
+                sequenced_publication_payloads(bytes, PresentationRole::GuidedOperator);
+            assert_eq!(publications.len(), 1);
+            assert_eq!(publications[0].0, last_server_sequence + 1);
+            last_server_sequence = publications[0].0;
+            let PresentationPayload::ActionReceipt(receipt) = &publications[0].1 else {
+                panic!("action response did not contain its receipt")
+            };
+            assert_eq!(receipt.operation as u32, operation);
+            assert!(receipt.accepted);
+
+            let poll = worker.execute(&command(WorkerCommandKind::Poll, [0; 5]));
+            let (poll_status, poll_bytes) = parse_result(&poll).unwrap();
+            assert_eq!(poll_status, 0);
+            for (server_sequence, payload) in
+                sequenced_publication_payloads(poll_bytes, PresentationRole::GuidedOperator)
+            {
+                assert_eq!(server_sequence, last_server_sequence + 1);
+                last_server_sequence = server_sequence;
+                assert!(!matches!(payload, PresentationPayload::ActionReceipt(_)));
+            }
+        }
+        assert_eq!(worker.stream_cursors.action_receipts, 3);
+        assert!(worker.stream_cursors.events > 1);
+        assert!(worker.stream_cursors.timeline > 1);
+        assert!(worker.stream_cursors.release_samples > 1);
+
+        let destroyed = worker.execute(&command(WorkerCommandKind::Destroy, [0; 5]));
+        assert_eq!(parse_result(&destroyed).unwrap().0, 0);
+        assert_eq!(worker.stream_cursors, PresentationCursors::default());
     }
 
     #[test]
