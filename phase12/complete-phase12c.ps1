@@ -14,7 +14,8 @@ param(
     [string]$BrowserEvidenceManifest = "",
     [string]$NativeHarnessEvidenceManifest = "",
     [string]$UnrealEvidenceManifest = "",
-    [string]$RuntimeEvidenceManifest = ""
+    [string]$RuntimeEvidenceManifest = "",
+    [string]$CompletionEvidenceDirectory = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -233,6 +234,152 @@ function Invoke-UnrealAutomation {
         throw "Unreal Phase 12C automation did not pass every discovered test"
     }
     Assert-NoUnrealProcess
+}
+
+function Get-CompletionEvidenceFileRecord([string]$EvidenceDirectory, [string]$Path) {
+    $relative = [IO.Path]::GetRelativePath($EvidenceDirectory, $Path).Replace('\', '/')
+    return [ordered]@{
+        path = $relative
+        bytes = [int64](Get-Item -LiteralPath $Path).Length
+        sha256 = Get-Sha256 $Path
+    }
+}
+
+function Preserve-UnrealAutomationEvidence([string]$SourceCommit) {
+    if (-not $RunUnrealAutomation) {
+        throw "cannot preserve Unreal automation evidence without -RunUnrealAutomation"
+    }
+    if ($SourceCommit -notmatch '^[0-9a-f]{40}$') {
+        throw "completion evidence requires a full lower-case source commit"
+    }
+
+    $head = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+    Check
+    if ($head -ne $SourceCommit) {
+        throw "completion evidence source commit changed during the audit"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($CompletionEvidenceDirectory)) {
+        $completionRoot = Join-Path $targetRoot ("phase12c-completion-" + $SourceCommit)
+    }
+    else {
+        $completionRoot = [IO.Path]::GetFullPath($CompletionEvidenceDirectory)
+    }
+    $stableDirectory = Join-Path $completionRoot "unreal-automation"
+    if (Test-Path -LiteralPath $stableDirectory) {
+        throw "completion automation evidence requires a fresh destination: $stableDirectory"
+    }
+
+    $report = Join-Path $auditRoot "unreal-phase12c-automation"
+    $log = Join-Path $auditRoot "unreal-phase12c-automation.log"
+    $index = Join-Path $report "index.json"
+    $html = Join-Path $report "index.html"
+    foreach ($required in @($report, $log, $index, $html)) {
+        if (-not (Test-Path -LiteralPath $required)) {
+            throw "cannot preserve missing Unreal automation evidence: $required"
+        }
+    }
+
+    $result = Get-Content -LiteralPath $index -Raw | ConvertFrom-Json
+    if (
+        [int]$result.succeeded -lt 9 -or
+        [int]$result.failed -ne 0 -or
+        [int]$result.notRun -ne 0 -or
+        [int]$result.inProcess -ne 0
+    ) {
+        throw "cannot preserve failed or incomplete Unreal automation evidence"
+    }
+
+    New-Item -ItemType Directory -Path $completionRoot -Force | Out-Null
+    $stagingDirectory = Join-Path $completionRoot (".unreal-automation-" + [Guid]::NewGuid().ToString("N") + ".staging")
+    $published = $false
+    try {
+        New-Item -ItemType Directory -Path $stagingDirectory | Out-Null
+        $stagedReport = Join-Path $stagingDirectory "report"
+        $stagedLogs = Join-Path $stagingDirectory "logs"
+        New-Item -ItemType Directory -Path $stagedReport, $stagedLogs | Out-Null
+        Get-ChildItem -LiteralPath $report -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $stagedReport -Recurse
+        }
+        Copy-Item -LiteralPath $log -Destination (Join-Path $stagedLogs "unreal-phase12c-automation.log")
+        foreach ($buildLogName in @("unreal-build.stdout.log", "unreal-build.stderr.log")) {
+            $buildLog = Join-Path $auditRoot $buildLogName
+            if (Test-Path -LiteralPath $buildLog -PathType Leaf) {
+                Copy-Item -LiteralPath $buildLog -Destination (Join-Path $stagedLogs $buildLogName)
+            }
+        }
+
+        $files = @(
+            Get-ChildItem -LiteralPath $stagingDirectory -File -Recurse |
+                Sort-Object { [IO.Path]::GetRelativePath($stagingDirectory, $_.FullName).Replace('\', '/') } |
+                ForEach-Object { Get-CompletionEvidenceFileRecord $stagingDirectory $_.FullName }
+        )
+        $manifest = [ordered]@{
+            schema = "ksa64.phase12c.unreal-automation-evidence.v1"
+            source = [ordered]@{
+                commit = $SourceCommit
+                filter = "KSA64.Phase12C"
+            }
+            result = [ordered]@{
+                succeeded = [int]$result.succeeded
+                failed = [int]$result.failed
+                not_run = [int]$result.notRun
+                in_process = [int]$result.inProcess
+                duration_seconds = [double]$result.totalDuration
+            }
+            files = $files
+        }
+        $manifestPath = Join-Path $stagingDirectory "phase12c-unreal-automation-evidence.json"
+        $temporaryManifest = $manifestPath + ".tmp"
+        try {
+            $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $temporaryManifest -Encoding utf8NoBOM
+            [IO.File]::Move($temporaryManifest, $manifestPath)
+        }
+        finally {
+            if (Test-Path -LiteralPath $temporaryManifest -PathType Leaf) {
+                Remove-Item -LiteralPath $temporaryManifest -Force
+            }
+        }
+
+        $validated = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+        if (
+            $validated.schema -ne "ksa64.phase12c.unreal-automation-evidence.v1" -or
+            $validated.source.commit -ne $SourceCommit -or
+            $validated.result.succeeded -ne [int]$result.succeeded -or
+            $validated.result.failed -ne 0 -or
+            $validated.result.not_run -ne 0 -or
+            $validated.result.in_process -ne 0
+        ) {
+            throw "staged Unreal automation evidence manifest is invalid"
+        }
+        foreach ($file in @($validated.files)) {
+            if (
+                [string]::IsNullOrWhiteSpace($file.path) -or
+                $file.path.StartsWith("/") -or
+                $file.path.Contains("..") -or
+                $file.path.Contains("\")
+            ) {
+                throw "staged Unreal automation evidence manifest contains an unsafe path"
+            }
+            $candidate = Join-Path $stagingDirectory ($file.path.Replace("/", [IO.Path]::DirectorySeparatorChar))
+            if (-not (Test-Path -LiteralPath $candidate -PathType Leaf) -or (Get-Sha256 $candidate) -ne $file.sha256) {
+                throw "staged Unreal automation evidence manifest does not match its payload"
+            }
+        }
+        if (Test-Path -LiteralPath $stableDirectory) {
+            throw "completion automation evidence destination appeared during staging: $stableDirectory"
+        }
+        [IO.Directory]::Move($stagingDirectory, $stableDirectory)
+        $published = $true
+    }
+    finally {
+        if (-not $published -and (Test-Path -LiteralPath $stagingDirectory)) {
+            Remove-Item -LiteralPath $stagingDirectory -Recurse -Force
+        }
+    }
+    $publishedManifest = Join-Path $stableDirectory "phase12c-unreal-automation-evidence.json"
+    Write-Host "Preserved Unreal automation completion evidence at $stableDirectory"
+    return $publishedManifest
 }
 
 function Assert-BrowserEvidence([string]$Path) {
@@ -573,6 +720,11 @@ try {
             if ((Get-Sha256 $recorded) -ne (Get-Sha256 $recomputedEvidence)) {
                 throw "recorded runtime/parity manifest is not the deterministic output of the current raw producer artifacts"
             }
+        }
+        Gate "preserve Unreal automation completion evidence" {
+            $sourceCommit = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+            Check
+            Preserve-UnrealAutomationEvidence $sourceCommit | Out-Null
         }
         Write-Host "PHASE 12C COMPLETION AUDIT: PASS"
     }

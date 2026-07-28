@@ -1,5 +1,6 @@
 import { crc32, Kps1MessageKind, type Kps1Frame } from "../protocol/kps1";
 import type { ActionOperation, NumericRole } from "../protocol/presentation";
+import type { GlobalDisplayPathChunkV1 } from "../protocol/globalDisplay";
 
 class Writer {
   readonly bytes: number[] = new Array(12).fill(0);
@@ -84,4 +85,43 @@ export function evidenceChunkPayload(bytes: Uint8Array, chunkLength: number, ind
   const data = bytes.slice(start, Math.min(bytes.byteLength, start + chunkLength));
   const w = new Writer("PEC1"); w.u32(identity); w.u32(index); w.u32(Math.ceil(bytes.byteLength / chunkLength));
   w.u64(BigInt(start)); w.u32(data.byteLength); w.bytes.push(...data); return w.finish();
+}
+
+export function globalPathPayload(
+  chunkIndex: number,
+  chunkCount: number,
+  overrides: Partial<GlobalDisplayPathChunkV1> = {},
+): Uint8Array {
+  const value: GlobalDisplayPathChunkV1 = {
+    pathIdentity: 0x12c2_0001,
+    source: 2,
+    displayFrame: 2,
+    lod: 2,
+    flags: 4,
+    modelIdentity: 0x12c2_0002,
+    estimateIdentity: 0x12c2_0003,
+    sourceChecksum: 0x12c2_0004,
+    continuityIdentity: 0x12c2_0005,
+    chunkIndex,
+    chunkCount,
+    points: [{
+      releaseEpoch: 100 + chunkIndex,
+      missionTimeQ16: (100 + chunkIndex) * 2_048,
+      segment: 2,
+      eventMask: 0,
+      anchorIdentity: 0,
+      positionQ12Km: [chunkIndex, 0, 0],
+    }],
+    ...overrides,
+  };
+  const w = new Writer("PGP1");
+  w.u32(value.pathIdentity); w.u8(value.source); w.u8(value.displayFrame); w.u8(value.lod); w.reserved(1);
+  w.u16(value.flags); w.u16(value.chunkIndex); w.u16(value.chunkCount); w.u16(value.points.length);
+  w.u32(value.modelIdentity); w.u32(value.estimateIdentity); w.u32(value.sourceChecksum); w.u32(value.continuityIdentity);
+  for (const point of value.points) {
+    w.u32(point.releaseEpoch); w.u32(point.missionTimeQ16); w.u8(point.segment); w.reserved(1);
+    w.u16(point.eventMask); w.u32(point.anchorIdentity);
+    w.i32(point.positionQ12Km[0]); w.i32(point.positionQ12Km[1]); w.i32(point.positionQ12Km[2]);
+  }
+  return w.finish();
 }
