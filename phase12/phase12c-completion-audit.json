@@ -1,0 +1,202 @@
+{
+  "schema": "ksa64.phase12c.completion-audit.v1",
+  "status": "complete",
+  "accepted": true,
+  "date": "2026-07-28",
+  "entry_commit": "eb666cbaf3b8950218656a7ad7fe135b05385813",
+  "accepted_source_commit": "64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1",
+  "source_dirty": false,
+  "authority": {
+    "simulation": "rust",
+    "renderers": [
+      "unreal",
+      "babylon"
+    ],
+    "renderer_authoritative": false
+  },
+  "frozen": {
+    "catalog_entries": 13,
+    "catalog_sha256": "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13",
+    "nominal": {
+      "releases": 22015,
+      "first_release": 0,
+      "last_release": 22014,
+      "transitions": 4,
+      "ktt10_sha256": "a50b4b32b1c0feb44a54fc9041c40833717b9032ce127af67a9d34c3488e824a",
+      "kph10_sha256": "cd664e8b72eff7aff1e3c4a5b7fb6859bb9d5178d3b6b6d4c2c06f2c61ed9cf2",
+      "ksr10_sha256": "9e8691933789ce6d870d561218d6888f65acb04ef24e02796be33a704c8678aa"
+    },
+    "gnss_loss": {
+      "releases": 21591,
+      "accepted_actions": 4,
+      "ksb11_bytes": 2911464,
+      "ksb11_sha256": "7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4"
+    },
+    "kps1_version": "1.0",
+    "bridge_abi_major": 1
+  },
+  "contracts": {
+    "global_display": "GlobalDisplayV1",
+    "global_display_api_version": 1,
+    "global_display_api_table_size": 144,
+    "legacy_kps1_exact": true,
+    "legacy_abi_v1_exact": true,
+    "live_replay_normalized_parity": true,
+    "role_filtering_pass": true,
+    "non_director_truth_absent": true,
+    "director_truth_hidden_by_default": true
+  },
+  "gates": {
+    "formatting": true,
+    "clippy_warnings_denied": true,
+    "native_workspace": true,
+    "protocol_vectors": true,
+    "path_products": true,
+    "broker_and_role_isolation": true,
+    "wasm_exactness": true,
+    "nominal_replay": true,
+    "gnss_loss_replay": true,
+    "unreal_editor_build": true,
+    "unreal_automation": {
+      "succeeded": 13,
+      "failed": 0,
+      "duration_seconds": 9.659319877624512
+    },
+    "packaged_win64_d3d12": true,
+    "babylon_webgpu": true,
+    "babylon_webgl2": true,
+    "babylon_2d": true,
+    "context_loss_fallback": true,
+    "cross_renderer_parity": true,
+    "render_invariance": true,
+    "frozen_regressions": true
+  },
+  "milestones": {
+    "nominal": [
+      29,
+      1920,
+      3579,
+      8124,
+      12669,
+      15255,
+      15257,
+      20929,
+      22014
+    ],
+    "guided": [
+      5760,
+      5824,
+      6080,
+      6240,
+      6560,
+      6720
+    ]
+  },
+  "performance": {
+    "unreal": {
+      "resolution": "1920x1080",
+      "frames_per_second": 192.25995383839916,
+      "display_service_p99_ns": 305300,
+      "display_service_max_ns": 366300,
+      "scope": "GlobalDisplayV1 poll+decode+semantic+origin+procedural-scene"
+    },
+    "bridge": {
+      "availability_p99_ns": 8500,
+      "range_p99_ns": 364600,
+      "path_fetch_p99_ns": 2593300
+    },
+    "babylon": {
+      "webgpu_frames_per_second": 71.895,
+      "webgl2_frames_per_second": 74.384,
+      "two_d_frames_per_second": 75.562,
+      "context_loss_fallback": true
+    }
+  },
+  "storage": {
+    "unreal_executable_bytes": 340359680,
+    "unreal_packaged_application_bytes": 958121179,
+    "unreal_packaged_application_files": 14,
+    "unreal_archive_bytes": 1036404342,
+    "unreal_archive_files": 54,
+    "web_dist_bytes": 3340231,
+    "web_dist_files": 115,
+    "nominal_replay_bytes": 16043524,
+    "exact_path_bytes": 3503288,
+    "exact_path_points": 124921,
+    "active_window_path_bytes": 28716,
+    "active_window_path_points": 1024
+  },
+  "origins": {
+    "unreal": {
+      "change_count": 35,
+      "semantic_unchanged": true,
+      "semantic_continuity": true,
+      "rendered_continuity": true,
+      "max_reconstructed_delta_cm": 32.425937245513815
+    },
+    "browser": {
+      "change_count": 1,
+      "semantic_unchanged": true,
+      "semantic_continuity": true,
+      "rendered_continuity": true,
+      "max_reconstructed_delta_km": 0.000090345
+    }
+  },
+  "evidence": {
+    "cross_renderer": {
+      "path": "target/phase12c-cross-renderer-64d72f2.json",
+      "schema": "ksa64.phase12c.cross-renderer-evidence.v2",
+      "sha256": "c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e"
+    },
+    "native_harness": {
+      "path": "viewer-bridge/harness/bin/phase12c-global-display-evidence.json",
+      "sha256": "ac2a848926a6e027d7ca508082f56fb9ecb059ee3884984be433de5ae689242c"
+    },
+    "browser": {
+      "path": "target/phase12c-browser-capture-64d72f2/browser-evidence.json",
+      "sha256": "20e988752baf1c692d4f71a68ea979e9a3252458f63af64623dec6faf2330315"
+    },
+    "unreal_runtime": {
+      "path": "target/phase12c-package-64d72f2/Windows/Ksa64MissionFoundry/Saved/KSA64/GlobalViewerEvidence/phase12c-global-viewer-evidence.json",
+      "sha256": "8ee6ba9b182666f329f356f92906fe15e9ce5bacf9665ed2100cce0c3d6d39cd"
+    },
+    "unreal_validation": {
+      "path": "target/phase12c-package-64d72f2/phase12c-global-viewer-evidence-validation.json",
+      "sha256": "a33f0a9e3d97e00df60ef7fad424e56aa4702154284333d94cdfe05851ca1d33"
+    },
+    "unreal_automation": {
+      "path": "target/phase12c-completion-64d72f2/unreal-automation/phase12c-unreal-automation-evidence.json",
+      "sha256": "82cc65374ffcd044c7af1ae5e08b584c51e078573ed29f22415dc858d9b98a6e"
+    },
+    "package_audit": {
+      "path": "target/phase12c-package-64d72f2/phase12a-package-audit.json",
+      "sha256": "beb0f264d76b2ae7c291731fc26e18b12a7fae7f89663408e48e657ca90e25b0"
+    },
+    "package_inventory": {
+      "path": "target/phase12c-package-64d72f2/phase12c-packaged-directory-inventory.json",
+      "sha256": "1b73e4790cf206463ab88b77047801c17d4351667e21de3bae1f59514051acf2",
+      "tree_sha256": "a0509377e0fd245b72cae881eb3d53d9bd677cc3cad9fe76d8d8cdd7b0378846"
+    },
+    "web_dist": {
+      "tree_sha256": "a815caaedcc783164da4ef18285e042aa34582a41b44eb68be164779b7dd6933"
+    }
+  },
+  "phase12b5_device_qualification": {
+    "status": "open-independent-workstream",
+    "blocks_phase12c": false,
+    "physical_duet_pending": true,
+    "vita3k_pending": true,
+    "physical_vita_pending": true
+  },
+  "handoff": {
+    "phase12c5": "accepted-input-for-device-productization",
+    "phase12d": "accepted-input-for-mission-authoring"
+  },
+  "limitations": [
+    "procedural engineering visuals are not production art",
+    "NASA imagery and production visual assets remain Phase 12E",
+    "Linux Vulkan and macOS Metal Unreal packaging await qualified hosts",
+    "physical Duet, Vita3K, and physical Vita qualification remains open",
+    "renderer evidence is not launch approval, certification, regulation, or safety authority"
+  ]
+}

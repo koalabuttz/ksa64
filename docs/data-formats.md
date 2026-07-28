@@ -520,7 +520,6 @@ are:
 - `ksa64.global-scene-semantic.v1` for renderer-neutral semantic snapshots; and
 - `ksa64.phase12c.cross-renderer-evidence.v2` for the strict joined result.
 
-These records are completion-audit inputs only. The v2 cross-renderer record
-is generated from and SHA-256-binds the raw native, packaged-Unreal, browser,
-semantic, screenshot, bridge, and distribution artifacts. No pending, partial,
-or hand-edited record may masquerade as accepted evidence.
+These records are completion-audit inputs only. The v2 cross-renderer record is generated from and SHA-256-binds the raw native, packaged-Unreal, browser, semantic, screenshot, bridge, and distribution artifacts. No pending, partial, or hand-edited record may masquerade as accepted evidence.
+
+The accepted source-bound Phase 12C record is `target/phase12c-cross-renderer-64d72f2.json`, schema `ksa64.phase12c.cross-renderer-evidence.v2`, SHA-256 `c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e`, and source commit `64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`. It preserves the catalog SHA-256 `b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13`, binds the commit-qualified bridge, immutable packaged application inventory, WASM authority, production web tree, raw semantic products, screenshots, and comparator source, and records `pass: true`. This acceptance does not promote any GlobalDisplay, screenshot, browser, Unreal, package, or performance manifest into canonical mission evidence.

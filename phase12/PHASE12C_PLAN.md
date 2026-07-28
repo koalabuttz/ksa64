@@ -1,6 +1,6 @@
 # Phase 12C implementation contract
 
-Status: implementation in progress.
+Status: **complete and accepted**.
 
 Entry commit: `eb666cbaf3b8950218656a7ad7fe135b05385813`
 
@@ -130,23 +130,30 @@ quality-tier polish remain Phase 12E.
 
 ## Implementation gates
 
-1. Freeze and document the baseline and Phase 12B.5 decoupling.
-2. Implement portable display DTOs, capability negotiation, codecs, and the
-   additive bridge interface.
-3. Implement the Rust display publisher, frame products, roles, and fixtures.
-4. Implement accepted nominal/GNSS sources, replay indexing, and path LODs.
-5. Implement interpolation, discontinuities, axis mappings, and origin policy.
-6. Implement and package the Unreal procedural global viewer.
-7. Implement the Babylon WebGPU/WebGL2/2-D global viewer.
-8. Integrate layouts, operations, actions, outcomes, and replay UX.
-9. Prove cross-renderer semantic parity and bounded performance.
-10. Complete frozen audits, documentation, completion evidence, and handoffs.
+All ten gates are accepted:
 
-Each accepted gate receives its own commit.
+1. **Accepted** — frozen baseline and Phase 12B.5 decoupling.
+2. **Accepted** — portable display DTOs, capability negotiation, codecs, and
+   additive bridge interface.
+3. **Accepted** — Rust display publisher, frame products, roles, and fixtures.
+4. **Accepted** — nominal/GNSS sources, replay indexing, and path LODs.
+5. **Accepted** — interpolation, discontinuities, axis mappings, and origin
+   policy.
+6. **Accepted** — packaged Unreal procedural global viewer.
+7. **Accepted** — Babylon WebGPU/WebGL2/2-D global viewer.
+8. **Accepted** — layouts, operations, actions, outcomes, and replay UX.
+9. **Accepted** — strict cross-renderer semantic parity and bounded
+   performance.
+10. **Accepted** — frozen audits, documentation, completion evidence, and
+    handoffs.
+
+The source-bound completion evidence is recorded in
+[PHASE12C_COMPLETION.md](PHASE12C_COMPLETION.md) and
+[`phase12c-completion-audit.json`](phase12c-completion-audit.json).
 
 ## Completion boundary
 
-Phase 12C is complete only when:
+Phase 12C satisfied the following accepted boundary:
 
 - all frozen artifacts remain exact;
 - old KPS1 and ABI-v1 clients remain compatible;
@@ -159,3 +166,12 @@ Phase 12C is complete only when:
 - packaged Win64/D3D12 works without Editor, MCP, or Python;
 - Babylon works through WebGPU, WebGL2, and complete 2-D fallback; and
 - the viewer never equates plan deviation with mission failure.
+
+## Accepted result
+
+The completion audit accepted source commit
+`64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`. Unreal and Babylon reproduced
+the same role-filtered global-display semantics at all nine nominal and six
+guided milestones, while all frozen evidence and legacy boundaries remained
+exact. The outstanding physical Duet, Vita3K, and physical Vita Phase 12B.5
+qualification remains an independent open workstream.

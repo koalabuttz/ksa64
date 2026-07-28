@@ -482,13 +482,7 @@ Explicit non-goals remain new physics, avionics, formats, target implementations
 
 ## Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: Phase 12A and Phase 12B are complete and accepted. Phase 12B.5
-software implementation, local acceptance, and hosted portable-runtime qualification are complete under
-`phase12/PHASE12B5_PLAN.md`; full acceptance remains pending the required physical Duet, Vita3K emulator, and physical Vita evidence. Phase 11.5 and its accepted hardening amendment
-remain the frozen product, application, and live-session foundation. Phase 12A
-completion evidence is in `phase12/COMPLETION.md`; Phase 12B acceptance is in
-`phase12/PHASE12B_COMPLETION.md`; and the next boundary is
-`phase12/PHASE12B5_HANDOFF.md`.
+Status: Phase 12A, Phase 12B, and Phase 12C are complete and accepted. Phase 12B.5 software implementation, local acceptance, and hosted portable-runtime qualification are complete under `phase12/PHASE12B5_PLAN.md`; full device acceptance remains independently pending the required physical Duet, Vita3K emulator, and physical Vita evidence. Phase 11.5 and its accepted hardening amendment remain the frozen product, application, and live-session foundation. Phase 12A completion evidence is in `phase12/COMPLETION.md`, Phase 12B acceptance is in `phase12/PHASE12B_COMPLETION.md`, and Phase 12C acceptance is in `phase12/PHASE12C_COMPLETION.md`. The next active boundaries are `phase12/PHASE12C5_HANDOFF.md` and `phase12/PHASE12D_HANDOFF.md`.
 
 The hard entry criterion applies to every Phase 12 subphase: a graphical client
 operates a live mission only through `LiveMissionSession`. It may not build
@@ -578,12 +572,7 @@ execution remain measured follow-ons rather than assumptions.
 
 ### Phase 12C: complete global engineering viewer
 
-Status: implementation is hardened and under completion audit from entry commit
-`eb666cb`. The accepted implementation contract is
-`phase12/PHASE12C_PLAN.md`; the fail-closed nominal-lineage decision is
-`phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`; and
-`phase12/PHASE12C_COMPLETION.md` remains a draft ledger until its source-bound
-packaged, browser, parity, and measured-runtime gates pass.
+Status: complete and accepted at source commit `64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`. The implementation contract is `phase12/PHASE12C_PLAN.md`, the fail-closed nominal-lineage decision is `phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`, and the accepted source-bound evidence ledger is `phase12/PHASE12C_COMPLETION.md`.
 
 The remaining physical Duet, Vita3K, and physical Vita Phase 12B.5
 qualifications are an independent follow-up workstream. They no longer gate
@@ -610,22 +599,7 @@ renderer implementation. Low, medium, and high
 presentation budgets begin here, and no high-end Unreal feature may become an
 authority or base-tier requirement.
 
-Completion is deliberately two-level. The default
-`phase12/complete-phase12c.ps1` invocation can certify frozen inputs, portable
-contracts, exact replays, role filtering, broker/WASM publication, bridge
-compatibility, and the production web build. It cannot certify the phase. A
-completion PASS also requires explicit Unreal build and automation, a packaged
-Win64/D3D12 smoke, real rendered WebGPU/WebGL2/2-D evidence, cross-renderer
-semantic parity, and source-bound runtime metrics meeting the 1080p60/30-fps
-and 1-ms publication/polling budgets. Parity covers all nine nominal and six
-guided action/fault milestones, complete source/path products, event and
-discontinuity masks, continuity identity, raw path-state flags, and one
-normalized camera/display-frame view mode. Path checksums bind release, time,
-segment, event, anchor, and XYZ. The joined record schema is
-`ksa64.phase12c.cross-renderer-evidence.v2`. UE Launcher project modules compile
-with `RayTracingMode=Inline` solely to match the precompiled Renderer ABI while
-`r.RayTracing=False` keeps runtime ray tracing disabled. Skipped or unavailable
-visual gates stay pending rather than becoming inferred passes.
+Completion remains deliberately two-level. The default `phase12/complete-phase12c.ps1` invocation certifies frozen inputs, portable contracts, exact replays, role filtering, broker/WASM publication, bridge compatibility, and the production web build but cannot by itself certify the phase. The accepted source-bound completion run supplied explicit Unreal build and automation, a packaged Win64/D3D12 smoke, real rendered WebGPU/WebGL2/2-D evidence, cross-renderer semantic parity, and runtime metrics meeting the 1080p60/30-fps and 1-ms publication/polling budgets. The strict joined `ksa64.phase12c.cross-renderer-evidence.v2` record covers all nine nominal and six guided action/fault milestones, complete source/path products, event and discontinuity masks, continuity identity, raw path-state flags, and one normalized camera/display-frame view mode. Path checksums bind release, time, segment, event, anchor, and XYZ. UE Launcher project modules compile with `RayTracingMode=Inline` solely to match the precompiled Renderer ABI while `r.RayTracing=False` keeps runtime ray tracing disabled.
 
 The nominal viewer preserves the frozen KTT10/KPH10/KSR10 bytes as the planned
 reference while using the current checked-in portable re-execution for
@@ -634,16 +608,11 @@ separately labelled, and checked against reviewed divergence limits before the
 display stream is exposed. This is a narrow compatibility decision, not a new
 canonical mission or permission for future drift.
 
-The Phase 12C.5 handoff is drafted in `phase12/PHASE12C5_HANDOFF.md` but does
-not activate until the Phase 12C completion ledger records every required
-renderer, parity, and runtime gate. The separate Phase 12D authoring boundary
-is drafted in `phase12/PHASE12D_HANDOFF.md`; it consumes accepted session and
-display services and does not depend on carried Duet/Vita product
-qualification.
+The Phase 12C.5 handoff in `phase12/PHASE12C5_HANDOFF.md` and the separate Phase 12D authoring boundary in `phase12/PHASE12D_HANDOFF.md` are now active. Both consume the accepted session and display services. Neither may infer completion of the carried physical Duet, Vita3K, or physical Vita qualification lane.
 
 ### Phase 12C.5: portable operations clients
 
-Status: planned after the renderer-neutral Phase 12C display contract.
+Status: next; activated by accepted Phase 12C display and renderer-parity evidence.
 
 Purpose: productize constrained and mobile presentations without forcing the
 desktop Unreal application onto every device.
@@ -672,10 +641,7 @@ thermal, memory, and exact-evidence gates pass.
 
 ### Phase 12D: Mission Foundry authoring and compiler parity
 
-Status: planned after the Phase 12C viewer/session/application boundaries are
-accepted. The carried Duet, Vita3K, and physical Vita qualification remains a
-separate Phase 12C.5 product workstream and does not block desktop authoring
-architecture, compiler parity, or evidence.
+Status: next; activated by the accepted Phase 12C viewer/session/application boundary. The carried Duet, Vita3K, and physical Vita qualification remains a separate Phase 12C.5 product workstream and does not block desktop authoring architecture, compiler parity, or evidence.
 
 Purpose: provide a KSP/Juno-inspired host authoring experience while keeping
 compiled packs, authority lanes, provenance, and evidence maturity distinct.

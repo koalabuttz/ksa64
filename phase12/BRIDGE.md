@@ -147,7 +147,7 @@ The accepted build is `ksa64_viewer_bridge-423c116cf586-120b0001.dll` with SHA-2
 The frozen manifest's historical header-digest discrepancy and the exact, fail-closed compatibility treatment are recorded in [FROZEN_BRIDGE_HEADER_AUDIT.md](FROZEN_BRIDGE_HEADER_AUDIT.md). The manifest, DLL, accepted source header, and canonical evidence remain unchanged.
 
 
-## Phase 12C optional global-display extension
+## Accepted Phase 12C optional global-display extension
 
 Phase 12C preserves every ABI-v1 export and structure. New native consumers
 discover the separately size-tagged `GlobalDisplayApiV1` function table; an
@@ -176,3 +176,27 @@ For the UE 5.8 Launcher build, project modules compile with
 precompiled Renderer ABI. Runtime ray tracing remains disabled with
 `r.RayTracing=False`; no bridge or global-display capability depends on
 ray-tracing hardware.
+
+Phase 12C accepted this additive extension without changing any ABI-v1 symbol,
+field, structure, or behavior. The accepted source commit is
+`64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`; its commit-qualified bridge is
+`ksa64_viewer_bridge_64d72f2a4ee0.dll` with SHA-256
+`b8c5f1b3890fa94b0a182a39bf25a017741a061974b7424addeda56c9c998c85`.
+The adjacent manifest has SHA-256
+`e505095789d94189791963b82bbc4947c588479380b5210c50dfd6c59ca49777`.
+
+The strict joined `ksa64.phase12c.cross-renderer-evidence.v2` record has
+SHA-256
+`c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e`.
+It binds the native bridge harness, the packaged Unreal evidence, and the
+rendered-browser evidence; compares all nine reviewed nominal milestones and
+six guided action/fault milestones; and requires complete source/path
+products, event/discontinuity masks, continuity identities, raw path-state
+flags, normalized view mode, role filtering, and terminal disposition.
+
+The accepted bridge polling thresholds apply only to availability and exact
+sample-range service calls: 8,500 ns p99 and 364,600 ns p99 respectively.
+Path retrieval is measured separately and is not covered by the sub-millisecond
+polling claim. The packaged Unreal viewer reused the operations plugin's single
+loaded bridge and recorded 305,300 ns p99 display-publication service time;
+this is not total GPU frame latency.

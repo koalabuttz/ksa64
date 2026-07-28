@@ -1,6 +1,12 @@
 # Phase 12: Unreal feasibility, live operations, and Mission Foundry
 
-Status: Phase 12A and Phase 12B are complete and accepted. Phase 12B.5 software implementation and local acceptance are complete from entry commit `b9f2c79`; hosted portable-runtime qualification is complete; full acceptance remains pending the required physical Duet, Vita3K emulator, and physical Vita gates. Phase 12C implementation is hardened and under completion audit from entry commit `eb666cb`; its strict v2 parity-evidence pipeline now compares complete source/path/event/continuity products through one normalized shared view mode, but no Phase 12C completion or renderer-performance claim has been made yet.
+Status: Phase 12A, Phase 12B, and Phase 12C are complete and accepted. Phase
+12B.5 software implementation, local acceptance, and hosted portable-runtime
+qualification are complete from entry commit `b9f2c79`; its required physical
+Duet, Vita3K emulator, and physical Vita qualification remains open as an
+independent device workstream. Phase 12C was accepted from entry commit
+`eb666cb` against source commit
+`64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`.
 
 Phase 12 began with an accepted native-Windows Unreal presentation and now
 expands through portable Rust authority, desktop Unreal, web/PWA, SDL2/Vita,
@@ -15,9 +21,9 @@ The work is divided so that each slice proves one coherent boundary:
 | 12A | **Complete:** pinned UE 5.8 toolchain, versioned live bridge, native harness, minimal runtime plugin, packaged smoke test, and optional MCP feasibility |
 | 12B | **Complete:** accepted 674.71875-second GNSS-loss mission, human-scale operations, multi-axis outcomes, packaged 2-D command desk, 17/17 automation, exact evidence, and bounded presentation-service timing |
 | 12B.5 | **Software- and hosted-portable-runtime-qualified; device acceptance pending:** portable session/KPS1 authority, bridge/platform packaging, secure loopback and paired LAN, compact React/Babylon PWA, exact Rust/WASM authority, and Vita/SDL2; device and emulator gates remain open |
-| 12C | **Implementation hardened; completion audit in progress:** renderer-neutral Phase 10 global engineering viewer through desktop Unreal and Babylon.js WebGPU/WebGL2; packaged source-bound parity evidence and final runtime metrics remain pending |
-| 12C.5 | Portable web/PWA, Vita/SDL2, Android, and iOS operations clients |
-| 12D | Mission Foundry vehicle/mission authoring and GUI/headless compiler parity |
+| 12C | **Complete:** accepted Rust-owned `GlobalDisplayV1`, exact nominal and GNSS-loss replay, packaged Unreal and Babylon global viewers, strict source-bound cross-renderer parity, role isolation, and measured runtime evidence |
+| 12C.5 | **Ready for planning:** portable web/PWA, Vita/SDL2, Android, and iOS operations productization, including the independent carried Duet/Vita qualification gates |
+| 12D | **Ready for planning:** Mission Foundry vehicle/mission authoring and GUI/headless compiler parity, independent of portable-device qualification |
 | 12E | Production visual assets, NASA-derived reference material, effects, quality tiers, and visual performance |
 
 ## Phase 12 records
@@ -41,11 +47,14 @@ The work is divided so that each slice proves one coherent boundary:
 - [PHASE12C_NOMINAL_COMPATIBILITY.md](PHASE12C_NOMINAL_COMPATIBILITY.md) —
   fail-closed treatment of the frozen nominal reference and current exact
   display re-execution lineages.
-- [PHASE12C_COMPLETION.md](PHASE12C_COMPLETION.md) — draft completion ledger,
-  explicit pending renderer/runtime evidence, and acceptance thresholds.
-- [PHASE12C5_HANDOFF.md](PHASE12C5_HANDOFF.md) — draft portable-operations
-  productization boundary that activates only after Phase 12C acceptance.
-- [PHASE12D_HANDOFF.md](PHASE12D_HANDOFF.md) — draft Mission Foundry
+- [PHASE12C_COMPLETION.md](PHASE12C_COMPLETION.md) — accepted completion
+  ledger, renderer/runtime evidence, measurements, and limitations.
+- [phase12c-completion-audit.json](phase12c-completion-audit.json) —
+  machine-readable Phase 12C compatibility, renderer-parity, performance, and
+  handoff evidence.
+- [PHASE12C5_HANDOFF.md](PHASE12C5_HANDOFF.md) — active portable-operations
+  productization boundary, including the independently open Duet/Vita gates.
+- [PHASE12D_HANDOFF.md](PHASE12D_HANDOFF.md) — active Mission Foundry
   authoring boundary that consumes accepted display/session contracts without
   becoming a second simulator.
 - [complete-phase12b.ps1](complete-phase12b.ps1) — composed Phase 12A, Rust, C++ harness, and explicit optional Unreal audit.
@@ -115,7 +124,7 @@ PlayStation Vita is a first-class constrained SDL2 target. Its initial product i
 
 The explicit native/Vita paired-LAN host lane is separate from the loopback browser broker. `ksa64-paired-lan` accepts only a user-selected private or link-local interface, requires a locally compared Noise XX code before storing a peer, binds the peer to immutable Guided Operator authority, supports local list/revocation, and uses Noise IK for reconnect. Its host identity and peer registry are local noncanonical configuration; physical Vita/Vita3K acceptance remains pending.
 
-## Phase 12C direction
+## Accepted Phase 12C global viewer
 
 Phase 12C adds one Rust-owned `GlobalDisplayV1` product for the frozen nominal
 Phase 10 mission and the accepted live GNSS-loss operations session. Rust
@@ -130,15 +139,31 @@ unchanged; native renderers discover an optional, size-tagged
 `GlobalDisplayApiV1` table. Nominal planned/reference evidence remains distinct
 from current exact-release re-execution and is labelled accordingly.
 
-The default completion audit proves the frozen inputs, portable contracts,
-exact nominal and GNSS replays, bridge, broker, WebAssembly, and web build. It
-does not claim product completion without explicit Unreal build/automation,
-packaging, real rendered-browser, cross-renderer semantic, and runtime
-performance evidence. The joined audit record uses
-`ksa64.phase12c.cross-renderer-evidence.v2`. UE Launcher modules use
-`RayTracingMode=Inline` only to match the precompiled Renderer ABI; runtime ray
-tracing remains disabled with `r.RayTracing=False`. See
-[the draft completion ledger](PHASE12C_COMPLETION.md).
+The accepted completion audit proves the frozen inputs, portable contracts,
+exact 22,015-release nominal replay, exact 21,591-release guided replay,
+bridge, broker, WebAssembly, browser build, packaged Unreal runtime, real
+rendered-browser modes, source-bound cross-renderer semantics, and measured
+performance. The strict joined record uses
+`ksa64.phase12c.cross-renderer-evidence.v2`, is bound to source commit
+`64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`, and has SHA-256
+`c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e`.
+It proves nine nominal and six guided action/fault milestones, all four frame
+transitions, truth filtering, exact snaps, complete visible source/path
+products, and unchanged terminal dispositions.
+
+The packaged 1920×1080 Unreal/D3D12 viewer measured 192.260 frames/s and
+305,300 ns p99 display-publication service time. The rendered Babylon lanes
+measured 71.895 frames/s in WebGPU, 74.384 in forced WebGL2, and 75.562 in the
+complete 2-D fallback, with context-loss fallback exercised. Bridge
+availability polling measured 8,500 ns p99 and exact sample-range polling
+364,600 ns p99. These service and rendered-lane measurements are scoped to the
+accepted workstation and are not universal device guarantees. The packaged
+Unreal payload is 958,121,179 bytes across 14 immutable files; the production
+web distribution is 3,340,231 bytes across 115 files.
+
+UE Launcher modules use `RayTracingMode=Inline` only to match the precompiled
+Renderer ABI; runtime ray tracing remains disabled with
+`r.RayTracing=False`. See [the accepted completion record](PHASE12C_COMPLETION.md).
 
 ## Strict renderer-parity evidence
 

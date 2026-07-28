@@ -1606,7 +1606,7 @@ the authoritative worker did not advance.
 
 Date: 2026-07-27
 
-Status: implemented; full acceptance pending hosted and physical qualification.
+Status: software and hosted portable-runtime qualified; physical Duet, Vita3K, and physical Vita acceptance remains pending.
 
 Enter Phase 12B.5 at commit `b9f2c79a2603a71cd51c7329fcb0ab763f2f2615`. Preserve all accepted Phase 0-12B artifacts, the 13-entry catalog, ABI-v1 layouts, and the exact 2,911,464-byte guided GNSS-loss KSB11. Extract exact session authority into `ksa64-session` and role-filtered, renderer-neutral DTOs plus the noncanonical KPS1 protocol into `ksa64-presentation`; desktop services remain in `ksa64-host`.
 
@@ -1619,7 +1619,7 @@ Use loopback-only browser transport by default. Native and Vita LAN clients requ
 
 Date: 2026-07-28
 
-Status: implemented; final renderer/runtime acceptance pending.
+Status: accepted with Phase 12C at source commit `64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`.
 
 Use one noncanonical `GlobalDisplayV1` layer, derived in Rust, for Unreal,
 Babylon, remote broker, local WebAssembly, and verified replay. Rust owns frame
@@ -1665,7 +1665,7 @@ pass.
 
 Date: 2026-07-28
 
-Status: implemented; packaged acceptance evidence pending.
+Status: accepted with packaged Phase 12C evidence.
 
 The UE 5.8 Launcher build ships a precompiled Renderer whose scene-proxy
 virtual layout includes declarations guarded by `RHI_RAYTRACING`. A packaged
@@ -1693,7 +1693,7 @@ satisfy the packaged-runtime gate.
 
 Date: 2026-07-28
 
-Status: implemented; final measured renderer evidence pending.
+Status: accepted with source-bound cross-renderer evidence.
 
 Do not accept point count, geometry-only hashes, screenshots, or aggregate pass
 booleans as cross-renderer parity. Preserve each visible source's model,
@@ -1726,3 +1726,17 @@ the applicable local ENU anchor, Earth-fixed uses ECEF, inertial/free-orbit use
 GCRF, and chase/inspection use the authoritative sample frame. Automatic
 direction resolves through the same mapping. Unreal and Babylon may not expose
 or compare arbitrary mismatched camera/frame combinations.
+
+## D-122: Accept Phase 12C and activate portable-client and authoring handoffs
+
+Date: 2026-07-28
+
+Status: accepted.
+
+Accept Phase 12C at source commit `64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`. The strict joined `ksa64.phase12c.cross-renderer-evidence.v2` record has SHA-256 `c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e` and binds the native harness, commit-qualified bridge, packaged Unreal application, browser semantic captures and screenshots, production web distribution, WASM authority, and parity comparator.
+
+Accept exact semantic parity at nine nominal milestones and six Guided Operator fault/action milestones, four nominal frame transitions, role-filtered source availability, raw path state, event/discontinuity and continuity identities, renderer-origin continuity, and Rust-owned dispositions. Accept the packaged 1920x1080 Unreal/D3D12 result at 192.26 fps and 305.3 microseconds p99 scoped display service, plus Babylon at 71.895 fps WebGPU, 74.384 fps WebGL2, and 75.562 fps in complete 2-D fallback. These are qualified-lane measurements, not broad hardware guarantees.
+
+Preserve every Phase 0-12B.5 canonical artifact, KPS1 1.0 behavior, ABI-v1 layout, 13-entry catalog, Phase 10 nominal evidence, and the exact guided GNSS-loss KSB11. `GlobalDisplayV1` and all renderer manifests remain noncanonical presentation or validation metadata. Renderers remain passive and cannot acquire physics, frame, event, role, action, outcome, or evidence authority.
+
+Activate Phase 12C.5 portable-client productization and Phase 12D Mission Foundry authoring as parallel next boundaries. Do not infer completion of the independent Phase 12B.5 physical Lenovo Duet, Vita3K, or physical Vita qualification; those gates remain open and belong to the portable-client workstream.

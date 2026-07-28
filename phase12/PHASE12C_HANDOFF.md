@@ -1,9 +1,9 @@
 # Phase 12C handoff — complete global engineering viewer
 
-Status: historical scope boundary consumed by `PHASE12C_PLAN.md`. Phase 12C
-implementation is hardened and its completion audit is in progress. The
-remaining Phase 12B.5 physical-device qualifications are tracked independently
-and no longer gate Phase 12C.
+Status: **historical scope boundary fully consumed and accepted**. Phase 12C
+completed against source commit `64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`.
+The remaining Phase 12B.5 physical-device qualifications continue as an
+independent workstream and do not gate the accepted Phase 12C result.
 
 Date: 2026-07-27
 
@@ -118,3 +118,17 @@ Phase 12C does not own:
 - certification, launch approval, regulatory acceptance, or safety authority.
 
 See [PHASE12B_COMPLETION.md](PHASE12B_COMPLETION.md) and [phase12b-completion-audit.json](phase12b-completion-audit.json) for the accepted entry evidence.
+
+## Accepted exit boundary
+
+Phase 12C satisfied every entry expectation above. The accepted result includes
+the packaged Unreal global viewer, Babylon WebGPU/WebGL2/2-D lanes, exact
+nominal and GNSS-loss replay, role-filtered global-display products, origin
+continuity, and strict semantic parity at nine nominal and six guided
+milestones. See [PHASE12C_COMPLETION.md](PHASE12C_COMPLETION.md) and
+[`phase12c-completion-audit.json`](phase12c-completion-audit.json).
+
+The handoff is now active for Phase 12C.5 cross-platform product qualification
+and Phase 12D mission authoring. Physical Duet, Vita3K, and physical Vita
+qualification remains open under the independent Phase 12B.5/12C.5 device
+workstream; it is not silently marked complete here.

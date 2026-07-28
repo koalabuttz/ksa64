@@ -1,6 +1,6 @@
 # Phase 12C.5 handoff — portable operations productization
 
-Status: **draft; activates only after Phase 12C acceptance**.
+Status: **active planning boundary; Phase 12C entry evidence accepted**.
 
 Date: 2026-07-28
 
@@ -8,9 +8,10 @@ Phase 12C.5 consumes the renderer-neutral `GlobalDisplayV1` and the accepted
 Phase 12B.5 presentation/session boundary. It does not reopen coordinate,
 authority, role, replay, evidence, or mission-disposition decisions.
 
-## Required entry evidence
+## Accepted entry evidence
 
-Every item is pending until the Phase 12C completion record is accepted:
+Phase 12C accepted all required entry evidence against source commit
+`64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`:
 
 - exact 22,015-release nominal global display replay;
 - exact 21,591-release guided GNSS-loss display replay;
@@ -28,6 +29,29 @@ Every item is pending until the Phase 12C completion record is accepted:
 - recorded package, memory, path, publication, polling, and frame-rate metrics;
   and
 - an accepted [Phase 12C completion record](PHASE12C_COMPLETION.md).
+
+The strict joined `ksa64.phase12c.cross-renderer-evidence.v2` record has
+SHA-256
+`c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e`.
+It binds the 22,015-release nominal replay, the 21,591-release guided replay,
+the nine nominal milestones, the six guided action/fault milestones, the
+packaged Win64 viewer, and the rendered WebGPU, WebGL2, context-loss, and 2-D
+browser lanes.
+
+## Independent carried qualification
+
+The physical Lenovo Duet, Vita3K, and physical Vita gates from Phase 12B.5
+remain open. They were deliberately excluded from Phase 12C acceptance and do
+not retroactively weaken it. They are Phase 12C.5 product gates for claims
+about those devices:
+
+- the physical 8 GB Duet must reproduce native ARM64 and local-WASM evidence
+  and record its lifecycle and performance;
+- Vita3K must complete the repeatable emulator smoke/input lane; and
+- a physical Vita must qualify layout, controls, paired encrypted LAN,
+  disconnect/reconnect, suspend/resume, memory, and timing.
+
+These gates may proceed independently of Phase 12D desktop authoring work.
 
 ## Phase 12C.5 owns
 

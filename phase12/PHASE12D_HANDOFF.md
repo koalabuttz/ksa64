@@ -1,10 +1,18 @@
 # Phase 12D handoff — Mission Foundry authoring and compiler parity
 
-Status: **draft; activates after the accepted Phase 12C display/session boundary and a reviewed Phase 12D plan**.
+Status: **active planning boundary; Phase 12C display/session contracts accepted**.
 
 Date: 2026-07-28
 
 Phase 12D turns the accepted host application, live-session, evidence, and global-display services into a graphical vehicle and mission authoring workflow. It does not create another simulator and does not promote a user project into the accepted product catalog.
+
+Phase 12C accepted the renderer-neutral boundary against source commit
+`64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`. Its strict
+`ksa64.phase12c.cross-renderer-evidence.v2` record has SHA-256
+`c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e`
+and proves exact nominal and guided replay, role-filtered source/path products,
+all four frame transitions, nine nominal milestones, six guided action/fault
+milestones, and passive Unreal/Babylon parity.
 
 ## Required entry contracts
 
@@ -17,7 +25,10 @@ Phase 12D consumes, without redefining:
 - role-filtered KPS1 and `GlobalDisplayV1` presentation products, including exact replay, source labels, frame transitions, and multidimensional disposition; and
 - the accepted Phase 12C renderer-authority rule: Rust owns frames, events, source validity, role filtering, mission outcomes, and evidence; Unreal and Babylon remain passive views.
 
-The carried physical Duet, Vita3K, and physical Vita qualification work belongs to Phase 12C.5 product acceptance. It does not block authoring architecture, compiler parity, or desktop authoring evidence in Phase 12D.
+The carried physical Duet, Vita3K, and physical Vita qualification work remains
+open under Phase 12C.5 product acceptance. It does not block Phase 12D
+planning, authoring architecture, compiler parity, or desktop authoring
+evidence, and Phase 12D may not silently claim those portable-device lanes.
 
 ## Phase 12D owns
 

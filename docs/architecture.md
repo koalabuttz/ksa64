@@ -894,3 +894,13 @@ The frozen nominal reference path and the current exact nominal re-execution
 are separately identified lineages. Their narrow compatibility audit is
 recorded in `phase12/PHASE12C_NOMINAL_COMPATIBILITY.md`; renderers may not
 collapse or relabel them.
+
+### Accepted Phase 12C renderer topology
+
+Phase 12C is accepted at source commit `64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`. The source-bound native, packaged-Unreal, and browser products are joined by `ksa64.phase12c.cross-renderer-evidence.v2` rather than by screenshot similarity or aggregate pass flags. It binds the unchanged 13-entry catalog hash, the native bridge and manifest, packaged executable and inventory, browser raw semantic products, WASM authority, production distribution, screenshots, and comparator source.
+
+The accepted nominal stream contains 22,015 releases, four frame transitions, and nine semantic milestones from ENU-to-ECEF through landing. The accepted Guided Operator comparison contains the two GNSS-fault milestones and four staged/committed action milestones. At each point Unreal and Babylon preserve the same permitted source availability, source/model identities, path semantics, frame and segment, event and discontinuity masks, continuity identity, selected release, role filtering, and Rust-owned disposition. Renderer-local origins remain outside semantic identity; the accepted evidence records semantic continuity across 35 Unreal origin changes and one browser origin change.
+
+The packaged Win64 application is an immutable 14-file, 958,121,179-byte payload excluding `Saved`, with tree SHA-256 `a0509377e0fd245b72cae881eb3d53d9bd677cc3cad9fe76d8d8cdd7b0378846`. At 1920x1080 it measured 192.26 fps and 305.3 microseconds p99 for the scoped GlobalDisplay poll, decode, semantic, origin, and procedural-scene work. The browser production distribution is 115 files and 3,340,231 bytes with tree SHA-256 `a815caaedcc783164da4ef18285e042aa34582a41b44eb68be164779b7dd6933`; rendered evidence measured 71.895 fps WebGPU, 74.384 fps WebGL2, and 75.562 fps in the complete 2-D fallback. These are scoped acceptance measurements, not promises for unqualified hardware.
+
+The physical Lenovo Duet, Vita3K, and physical Vita Phase 12B.5 qualification remains a separate open lane. Phase 12C acceptance activates both Phase 12C.5 portable-client productization and Phase 12D desktop Mission Foundry authoring without treating those device gates as passed.

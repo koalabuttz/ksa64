@@ -1,220 +1,168 @@
 # Phase 12C completion record — global mission visualization and renderer parity
 
-Status: **draft; completion not yet claimed**.
+Status: **complete and accepted**.
 
 Date: 2026-07-28
 
 Entry commit: `eb666cbaf3b8950218656a7ad7fe135b05385813`
 
-This record is prepared alongside the implementation so the remaining
-acceptance work is explicit. A source implementation, passing unit tests, or a
-working screenshot does not by itself complete Phase 12C. The phase becomes
-complete only after `complete-phase12c.ps1` passes every non-skipped gate with
-the explicit Unreal, packaged, rendered-browser, and runtime/parity evidence
-enabled.
+Accepted source commit: `64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`
 
-## Implemented and hardened scope awaiting completion audit
+Phase 12C is complete. The source-bound completion audit ran the frozen
+regressions, portable contracts, exact native and WebAssembly missions, bridge
+harnesses, Unreal build and automation, packaged Win64/D3D12 runtime, rendered
+Babylon lanes, and the strict cross-renderer comparator without skipped
+acceptance gates.
 
-The Phase 12C source tree contains the intended additive boundaries:
+The machine-readable acceptance record is
+[`phase12c-completion-audit.json`](phase12c-completion-audit.json).
 
-- renderer-neutral `GlobalDisplayV1` definitions, samples, source poses, path
-  chunks, transitions, replay indices, cursor state, and exact range requests;
-- capability-gated KPS1 1.0 message kinds that remain invisible to legacy
-  clients;
-- a separately discoverable, size-tagged `GlobalDisplayApiV1` C function table
-  that does not change any ABI-v1 symbol or structure;
-- Rust-owned ENU/ECEF/GCRF resolution, role filtering, source identity,
-  continuity, exact-event classification, and event-preserving path levels;
-- strict nominal Phase 10 and guided GNSS-loss replay adapters;
-- additive broker and WebAssembly publication over the same normalized display
-  products;
-- a procedural Unreal global-viewer plugin that consumes the existing
-  operations bridge rather than opening a second authority;
-- a Babylon/React viewer using the same semantic display contract with WebGPU,
-  WebGL2, and complete 2-D fallback lanes;
-- deterministic semantic scene snapshots intended for cross-renderer
-  comparison;
-- source-bound native, packaged-Unreal, and rendered-browser evidence producers
-  whose raw artifacts are consumed by one strict cross-renderer comparator;
-- one shared Rust path builder for in-process/WASM and native-bridge products,
-  with semantic replay bookmarks pinned, routine release ticks excluded, and
-  live versus frozen-planned cadence semantics preserved explicitly;
-- matching semantic path products whose exact FNV-1a checksum binds each
-  point's release, Q16 time, segment, event mask, anchor, and signed Q12 XYZ;
-- end-to-end preservation and visible treatment of the raw stale, incomplete,
-  terminal, and resynchronization-required path flags; and
-- one normalized camera/display-frame view mode in both renderers, preventing
-  unsupported camera and frame combinations from entering parity evidence.
+## Accepted capability
 
-This list describes implementation inventory, not accepted runtime evidence.
+Phase 12C now provides one Rust-owned, renderer-neutral `GlobalDisplayV1`
+boundary for the complete global KSA-G10R mission:
 
-### Renderer authority and packaged-runtime policy
+- fixed-width display definitions, exact-release samples, role-permitted source
+  poses, frame transitions, event-preserving paths, and replay indices;
+- additive, capability-gated KPS1 1.0 records and an optional size-tagged
+  `GlobalDisplayApiV1` table without changing any ABI-v1 symbol or layout;
+- Rust-owned ENU/ECEF/GCRF conversion, source identity, role filtering,
+  continuity and discontinuity classification, path construction, and mission
+  disposition;
+- exact-release replay seeking, stepping, event jumps, bounded path levels,
+  and fail-closed snap boundaries;
+- a packaged Unreal procedural global viewer with Large World Coordinate and
+  explicit-origin handling; and
+- a Babylon/PWA global viewer with WebGPU, forced WebGL2, complete 2-D fallback,
+  context-loss fallback, local-WASM authority, broker, and verified-replay
+  lanes.
 
-Rust remains the sole owner of ENU/ECEF/GCRF conversion, source labels, role
-filtering, event and discontinuity classification, path levels, replay
-selection, and multidimensional mission disposition. Unreal and Babylon are
-passive consumers of the same normalized products. A screenshot, camera
-position, local origin, interpolation result, or renderer backend can never
-become mission evidence or alter action ordering.
+Unreal and Babylon remain passive renderers. Neither owns physics, navigation,
+frames, events, actions, success classification, or canonical evidence.
 
-The Unreal Launcher build has a precompiled Renderer ABI whose scene-proxy
-virtual layout includes the ray-tracing declarations even when hardware ray
-tracing is not used. Project modules therefore compile with
-`RayTracingMode=Inline` so their C++ layout matches that precompiled ABI.
-Runtime and hardware ray tracing remain disabled with `r.RayTracing=False`.
-This is a binary-compatibility setting, not a visual feature, performance
-claim, or Phase 12C requirement for ray-tracing-capable hardware. A compile-time
-guard prevents the custom global-line proxy from being rebuilt with a
-mismatched layout.
+## Frozen evidence preserved
 
-Packaged evidence must be emitted by the packaged executable, bind a clean
-source commit plus the staged bridge DLL and manifest, and include semantic
-captures and screenshots at the reviewed milestones. Guided Operator products
-must contain no SIM-truth pose or path. Read-only SIM Director replay may
-receive truth, but truth begins hidden and must retain a persistent
-`SIM TRUTH` label whenever shown.
-
-## Frozen evidence boundary
-
-Phase 12C may not rewrite the evidence it visualizes:
-
-| Evidence | Frozen value |
+| Evidence | Accepted value |
 |---|---|
 | Product catalog | 13 entries |
 | Catalog SHA-256 | `b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13` |
 | Nominal KTT10 SHA-256 | `a50b4b32b1c0feb44a54fc9041c40833717b9032ce127af67a9d34c3488e824a` |
 | Nominal KPH10 SHA-256 | `cd664e8b72eff7aff1e3c4a5b7fb6859bb9d5178d3b6b6d4c2c06f2c61ed9cf2` |
 | Nominal KSR10 SHA-256 | `9e8691933789ce6d870d561218d6888f65acb04ef24e02796be33a704c8678aa` |
-| Nominal releases | 22,015 |
-| GNSS-loss releases | 21,591 |
-| GNSS-loss accepted actions | 4 |
-| GNSS-loss KSB11 bytes | 2,911,464 |
+| Nominal replay | 22,015 releases, 0 through 22,014 |
+| Nominal transitions | 4 |
+| GNSS-loss session | 21,591 releases; 4 accepted actions |
+| GNSS-loss KSB11 | 2,911,464 bytes |
 | GNSS-loss KSB11 SHA-256 | `7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4` |
 
-The nominal planned/reference path and exact current re-execution are distinct,
-labelled lineages. Their fail-closed treatment is recorded in
-[PHASE12C_NOMINAL_COMPATIBILITY.md](PHASE12C_NOMINAL_COMPATIBILITY.md). This
-exception preserves both the frozen artifacts and current checked-in physics;
-it is not a general tolerance for future drift.
+The nominal planned/reference lineage and the separately identified exact
+current re-execution remain governed by
+[PHASE12C_NOMINAL_COMPATIBILITY.md](PHASE12C_NOMINAL_COMPATIBILITY.md). Phase
+12C visualizes both without rewriting either lineage.
 
 ## Completion-gate ledger
 
-No pending row may be inferred as passed from a related test:
-
-| Gate | Status | Evidence |
+| Gate | Status | Durable evidence |
 |---|---|---|
-| Frozen Phase 12B.5 entry hashes | Pending final audit | `complete-phase12c.ps1` |
-| Formatting and warnings-denied Clippy | Pending final audit | — |
-| Complete native workspace suite | Pending final audit | — |
-| GlobalDisplay Rust/C++/TypeScript vectors | Pending final audit | — |
-| Shared in-process/WASM/native path products | Pending final audit | — |
-| Legacy KPS1 1.0 and ABI-v1 exactness | Pending final audit | — |
-| Broker, LAN, reconnect, and role isolation | Pending final audit | — |
-| WebAssembly capability and exact-evidence lanes | Pending final audit | — |
-| Nominal 22,015-release lineage/replay | Pending final audit | — |
-| GNSS 21,591-release exact session/replay | Pending final audit | — |
-| Unreal Editor target | Pending final audit | — |
-| `KSA64.Phase12C` automation | Pending final audit | — |
-| Packaged Win64/D3D12 bridge smoke | Pending final audit | — |
-| Packaged launch/coast/entry/recovery/landing visuals | Pending runtime capture | — |
-| Babylon WebGPU rendered lane | Pending runtime capture | — |
-| Babylon forced-WebGL2 rendered lane | Pending runtime capture | — |
-| Babylon complete 2-D fallback | Pending runtime capture | — |
-| Context-loss fallback | Pending runtime capture | — |
-| Exact source/path/event/discontinuity/continuity parity | Pending runtime capture | — |
-| Raw path-state flags and normalized view-mode parity | Pending runtime capture | — |
-| Render/action/evidence invariance | Pending runtime capture | — |
-| Phase 0–12B.5 frozen regressions | Pending final audit | — |
+| Frozen Phase 12B.5 entry hashes | Accepted | `complete-phase12c.ps1` source-bound audit |
+| Formatting and warnings-denied Clippy | Accepted | completion audit |
+| Complete native workspace suite | Accepted | completion audit |
+| GlobalDisplay Rust/C++/TypeScript vectors | Accepted | native, web, and Unreal contract suites |
+| Shared in-process/WASM/native path products | Accepted | strict parity manifest |
+| Legacy KPS1 1.0 and ABI-v1 exactness | Accepted | frozen vectors and bridge harnesses |
+| Broker, LAN, reconnect, and role isolation | Accepted | portable completion suite |
+| WebAssembly capability and exact-evidence lanes | Accepted | complete nominal and GNSS-loss WASM evidence |
+| Nominal 22,015-release lineage/replay | Accepted | native harness and strict comparator |
+| GNSS 21,591-release exact session/replay | Accepted | exact KSB11 and guided milestones |
+| Unreal Editor target | Accepted | clean UE 5.8 build |
+| `KSA64.Phase12C` automation | Accepted | 13 succeeded, 0 failed |
+| Packaged Win64/D3D12 bridge smoke | Accepted | package audit and runtime validation |
+| Packaged launch/coast/entry/recovery/landing visuals | Accepted | nine 1920×1080 semantic/screenshot pairs |
+| Babylon WebGPU rendered lane | Accepted | 71.895 fps |
+| Babylon forced-WebGL2 rendered lane | Accepted | 74.384 fps |
+| Babylon complete 2-D fallback | Accepted | 75.562 fps |
+| Context-loss fallback | Accepted | rendered browser manifest |
+| Exact source/path/event/discontinuity/continuity parity | Accepted | strict cross-renderer comparator |
+| Raw path-state flags and normalized view-mode parity | Accepted | strict cross-renderer comparator |
+| Render/action/evidence invariance | Accepted | Unreal, Babylon, and operations suites |
+| Phase 0–12B.5 frozen regressions | Accepted | source-bound completion audit |
 
-The physical Duet, Vita3K, and physical Vita Phase 12B.5 qualifications remain
-a separate open workstream. Their absence neither completes nor invalidates
-Phase 12C.
+The physical Duet, Vita3K, and physical Vita Phase 12B.5 qualification remains
+an independent open workstream. Phase 12C acceptance neither marks those gates
+complete nor makes them prerequisites retroactively.
 
 ## Runtime and package metrics
 
-These are deliberately blank until source-bound evidence exists. `Pending`
-means unmeasured, not zero.
-
-| Measurement | Required threshold | Recorded result |
+| Measurement | Acceptance threshold | Accepted result |
 |---|---:|---:|
-| Unreal procedural tier | 1920×1080 at 60 fps | Pending |
-| Display publication p99 | ≤ 1 ms | Pending |
-| Bridge polling p99 | ≤ 1 ms | Pending |
-| Babylon WebGPU | responsive ≥ 30 fps | Pending |
-| Babylon WebGL2 | responsive ≥ 30 fps | Pending |
-| 2-D fallback | fully operational | Pending |
-| Unreal package size | report only | Pending |
-| Web production bundle size | report only | Pending |
-| Nominal replay memory | report only | Pending |
-| Exact active-window path memory | report only | Pending |
-| Renderer origin changes | report count and continuity | Pending |
+| Unreal procedural tier | 1920×1080 at 60 fps | 192.260 fps |
+| Unreal display service p99 | < 1 ms | 305,300 ns |
+| Unreal display service maximum | < 2 ms | 366,300 ns |
+| Bridge availability poll p99 | < 1 ms | 8,500 ns |
+| Bridge range poll p99 | < 1 ms | 364,600 ns |
+| Babylon WebGPU | responsive ≥ 30 fps | 71.895 fps |
+| Babylon WebGL2 | responsive ≥ 30 fps | 74.384 fps |
+| Babylon 2-D fallback | fully operational | 75.562 fps |
+| Packaged executable | report only | 340,359,680 bytes |
+| Immutable packaged application | report only | 958,121,179 bytes / 14 files |
+| Full package archive | report only | 1,036,404,342 bytes / 54 files |
+| Web production bundle | report only | 3,340,231 bytes / 115 files |
+| Nominal display replay | report only | 16,043,524 bytes |
+| Exact whole-mission path storage | report only | 3,503,288 bytes / 124,921 points |
+| Exact active-window path | report only | 28,716 bytes / 1,024 points |
+| Unreal origin changes | continuity required | 35; semantic continuity preserved |
+| Browser origin changes | continuity required | 1; semantic continuity preserved |
 
-The final cross-renderer record schema is
-`ksa64.phase12c.cross-renderer-evidence.v2`. Its final SHA-256, source commit,
-producer manifests, screenshots, measurements, and package inventory remain
-pending until the source-bound completion run finishes. No placeholder in this
-record is an inferred pass.
+The Unreal timing scope is `GlobalDisplayV1` poll, decode, semantic update,
+origin handling, and procedural-scene service time; it is not GPU frame
+latency. The bridge p99 threshold applies to availability and range polling.
+Bulk path fetches are reported separately by the native harness and are not
+misrepresented as sub-millisecond polling.
 
-## Completion command
+## Evidence identities
 
-The default command runs the portable, contract, exact replay, bridge, and web
-gates but deliberately reports only a portable/contract pass:
+| Artifact | SHA-256 |
+|---|---|
+| Strict cross-renderer evidence v2 | `c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e` |
+| Native GlobalDisplay harness | `ac2a848926a6e027d7ca508082f56fb9ecb059ee3884984be433de5ae689242c` |
+| Rendered-browser evidence | `20e988752baf1c692d4f71a68ea979e9a3252458f63af64623dec6faf2330315` |
+| Packaged Unreal runtime evidence | `8ee6ba9b182666f329f356f92906fe15e9ce5bacf9665ed2100cce0c3d6d39cd` |
+| Unreal runtime validation | `a33f0a9e3d97e00df60ef7fad424e56aa4702154284333d94cdfe05851ca1d33` |
+| Unreal automation evidence | `82cc65374ffcd044c7af1ae5e08b584c51e078573ed29f22415dc858d9b98a6e` |
+| Package audit | `beb0f264d76b2ae7c291731fc26e18b12a7fae7f89663408e48e657ca90e25b0` |
+| Packaged directory inventory | `1b73e4790cf206463ab88b77047801c17d4351667e21de3bae1f59514051acf2` |
+| Immutable packaged directory tree | `a0509377e0fd245b72cae881eb3d53d9bd677cc3cad9fe76d8d8cdd7b0378846` |
+| Web production tree | `a815caaedcc783164da4ef18285e042aa34582a41b44eb68be164779b7dd6933` |
 
-```powershell
-./phase12/complete-phase12c.ps1
-```
+The strict parity record contains nine nominal milestones—launch, burnout,
+coast, apogee, entry, recovery, drogue, main, and landing—and six guided
+operations milestones at releases 5,760, 5,824, 6,080, 6,240, 6,560, and
+6,720. Every compared milestone binds visible sources, paths, event masks,
+discontinuity masks, continuity identities, dispositions, and role policy.
 
-The final completion invocation must also supply explicit visual/runtime
-evidence:
+## Role, truth, and outcome acceptance
 
-```powershell
-./phase12/complete-phase12c.ps1 `
-  -RunUnrealBuild `
-  -RunUnrealAutomation `
-  -RunPackage `
-  -RunBrowserEvidence `
-  -BrowserEvidenceManifest <rendered-browser-evidence.json> `
-  -NativeHarnessEvidenceManifest <native-global-display-harness.json> `
-  -UnrealEvidenceManifest <packaged-unreal-global-evidence.json> `
-  -RuntimeEvidenceManifest <strict-cross-renderer-evidence.json>
-```
+- Guided Operator products contain no SIM-truth pose or path.
+- Read-only SIM Director replay permits truth but starts with it hidden.
+- Truth-enabled presentation retains a persistent `SIM TRUTH` label.
+- Nominal replay finishes with the accepted nominal multidimensional
+  disposition.
+- GNSS-loss finishes as degraded success, not an inferred failure from path
+  deviation.
+- Polling rate, renderer, backend, origin, camera, layout, replay speed, and
+  visibility controls cannot change evidence or action ordering.
 
-No audit invocation may translate skipped or unavailable visual gates into a
-completion claim.
+## Retained limitations and handoff
 
-### Evidence integrity rule
-
-The final runtime manifest must be the deterministic output of
-`compare-phase12c-renderers.mjs`. The completion script reruns that comparator
-from the actual native C++ harness JSON, packaged Unreal manifest, semantic
-files and screenshots, and rendered-browser raw records and screenshots. It then
-requires an exact SHA-256 match with the recorded manifest. All three producers must bind the same clean source
-commit. The accepted record contains nine nominal milestones and six GNSS
-operations milestones: outage onset at release 5,760, outage qualification at
-5,824, and the four accepted action epochs at 6,080, 6,240, 6,560, and 6,720.
-At every nominal and guided milestone, Unreal and Babylon must match the
-complete visible source and path products plus the event mask, discontinuity
-mask, and continuity identity. Path equality includes the exact checksum over
-release, time, segment, event, anchor, and XYZ; aggregate `pass` booleans alone
-are never evidence.
-
-The completion audit also verifies that the packaged Unreal process can start,
-load the commit-qualified bridge, construct its global scene only after an
-active game world begins play, capture its evidence, and exit cleanly without
-Editor, MCP, or Python. This runtime lifecycle gate is separate from Editor
-compilation and automation.
-
-## Limitations retained
-
-- Renderers remain passive and may not derive frames, events, outcomes,
-  actions, or canonical evidence.
-- SIM truth is absent from non-director products and hidden by default for a
-  director.
 - Procedural engineering visuals are not production art.
 - NASA imagery, terrain, production meshes, Niagara, Lumen, Nanite, installers,
   signing, and store distribution remain outside Phase 12C.
-- Visual agreement is numerical/presentation evidence, not launch approval,
+- Linux/Vulkan and macOS/Metal Unreal packaging await qualified hosts.
+- Physical Duet, Vita3K, and physical Vita product qualification remains open
+  under the independent Phase 12B.5/12C.5 device workstream.
+- Visual and numerical agreement is engineering evidence, not launch approval,
   certification, regulation, or safety authority.
 
-The Phase 12C.5 and Phase 12D handoffs remain drafts until every completion
-gate above is accepted.
+Phase 12C.5 may now qualify and productize cross-platform clients. Phase 12D may
+consume the accepted display and application boundaries for mission authoring;
+neither handoff grants a renderer authority over simulation or evidence.

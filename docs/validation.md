@@ -559,8 +559,7 @@ Client polling, rendering backend, reconnect, or replay may never become an auth
 
 ## Phase 12C global-display and renderer-parity validation
 
-Status: implementation audit in progress; renderer/runtime completion evidence
-is pending. No results in this section imply a Phase 12C acceptance claim.
+Status: complete and accepted at source commit `64d72f2a4ee0848bf7ff73c345fcd1cf56579ba1`.
 
 The frozen entry gate requires the Phase 12B.5 entry commit to remain in
 history, the 13-entry catalog hash to remain exact, the accepted 21,591-release
@@ -638,6 +637,18 @@ gate and explicit Unreal build, automation, package, rendered-browser,
 cross-renderer parity, and runtime-evidence input passes. Skipped gates remain
 pending. The strict joined record must use
 `ksa64.phase12c.cross-renderer-evidence.v2`, be regenerated from the raw
-producer artifacts, and match the submitted record byte for byte. Current
-measurements and their pending status are recorded in
-`phase12/PHASE12C_COMPLETION.md`.
+producer artifacts, and match the submitted record byte for byte. The accepted measurements and source-bound evidence are recorded in `phase12/PHASE12C_COMPLETION.md`.
+
+The accepted completion run passed the full frozen audit, native and WASM exact missions, strict replay and corruption gates, both native C++ harnesses, all 74 web tests, the production web build, Unreal Editor build and automation, package/cook, packaged D3D12 runtime, rendered browser evidence, and strict source-bound parity reconstruction. The joined record is `target/phase12c-cross-renderer-64d72f2.json`, schema `ksa64.phase12c.cross-renderer-evidence.v2`, SHA-256 `c869a5dbc341ea6b5272e901882fe803dd2e15f1ab49cbeff48788527c01e50e`.
+
+Accepted parity covers all nine nominal releases 29, 1,920, 3,579, 8,124, 12,669, 15,255, 15,257, 20,929, and 22,014, plus Guided Operator fault/action releases 5,760, 5,824, 6,080, 6,240, 6,560, and 6,720. Nominal replay contains 22,015 releases and four frame transitions. Non-director evidence remains truth-free; the source availability masks are 11 for SIM Director and 3 for Guided Operator, with truth disabled in the captured views.
+
+Measured results satisfy the declared budgets:
+
+- packaged Unreal/D3D12: 192.26 fps at 1920x1080, with 305,300 ns p99 and 366,300 ns maximum scoped display service;
+- bridge availability polling: 8,500 ns p99; exact-range polling: 364,600 ns p99;
+- Babylon: 71.895 fps WebGPU, 74.384 fps WebGL2, and 75.562 fps complete 2-D fallback, with context-loss fallback passing;
+- origin continuity: 35 Unreal changes and one browser change without semantic discontinuity; and
+- packaged viewer: 14 immutable files and 958,121,179 bytes excluding `Saved`; production web: 115 files and 3,340,231 bytes.
+
+These measurements are bound to the accepted Windows/RTX 2080 Super and automated browser lanes. They do not qualify the physical Lenovo Duet, Vita3K, or physical Vita. Those Phase 12B.5 gates remain independently open and continue into Phase 12C.5.
