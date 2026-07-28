@@ -448,7 +448,7 @@ function Assert-RuntimeEvidence([string]$Path, [string]$ExpectedSourceCommit) {
         [int]$record.renderer_origins.browser.rendered_sample_count -lt 6 -or
         -not $record.renderer_origins.browser.rendered_continuity -or
         @($actualReleases).Count -ne 9 -or
-        (Compare-Object $expectedReleases $actualReleases -SyncWindow 0).Count -ne 0 -or
+        @(Compare-Object $expectedReleases $actualReleases -SyncWindow 0).Count -ne 0 -or
         $record.catalog_sha256 -ne $catalogSha256 -or
         $record.nominal.releases -ne 22015 -or
         $record.nominal.first_release -ne 0 -or
