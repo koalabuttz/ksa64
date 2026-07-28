@@ -10,11 +10,13 @@
 extern crate alloc;
 
 mod dto;
+mod global;
 mod protocol;
 mod stream;
 mod typed;
 
 pub use dto::*;
+pub use global::*;
 pub use protocol::*;
 pub use stream::*;
 pub use typed::*;

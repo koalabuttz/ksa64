@@ -22,6 +22,11 @@ pub enum PresentationPayload {
     TimelineEvent(TimelineEventView),
     EventBatch(Vec<PresentationEventView>),
     ReleaseSampleBatch(Vec<ReleaseSampleView>),
+    GlobalDisplayDefinition(GlobalDisplayDefinitionV1),
+    GlobalDisplaySampleBatch(Vec<GlobalDisplaySampleV1>),
+    GlobalDisplayPathChunk(GlobalDisplayPathChunkV1),
+    GlobalDisplayTransition(GlobalDisplayTransitionV1),
+    GlobalReplayIndex(GlobalReplayIndexV1),
     TransportStatus(TransportStatusView),
     ActionIntent(PresentationActionIntent),
     ActionReceipt(ActionReceiptView),
@@ -46,6 +51,11 @@ impl PresentationPayload {
             Self::TimelineEvent(_) => PresentationMessageKind::TimelineEvent,
             Self::EventBatch(_) => PresentationMessageKind::EventBatch,
             Self::ReleaseSampleBatch(_) => PresentationMessageKind::ReleaseSampleBatch,
+            Self::GlobalDisplayDefinition(_) => PresentationMessageKind::GlobalDisplayDefinition,
+            Self::GlobalDisplaySampleBatch(_) => PresentationMessageKind::GlobalDisplaySampleBatch,
+            Self::GlobalDisplayPathChunk(_) => PresentationMessageKind::GlobalDisplayPathChunk,
+            Self::GlobalDisplayTransition(_) => PresentationMessageKind::GlobalDisplayTransition,
+            Self::GlobalReplayIndex(_) => PresentationMessageKind::GlobalReplayIndex,
             Self::TransportStatus(_) => PresentationMessageKind::TransportStatus,
             Self::ActionIntent(_) => PresentationMessageKind::ActionIntent,
             Self::ActionReceipt(_) => PresentationMessageKind::ActionReceipt,
@@ -78,6 +88,19 @@ pub fn encode_typed_payload(
         PresentationPayload::TimelineEvent(value) => encode_timeline_event(value),
         PresentationPayload::EventBatch(value) => encode_event_batch(value),
         PresentationPayload::ReleaseSampleBatch(value) => encode_release_samples(value),
+        PresentationPayload::GlobalDisplayDefinition(value) => {
+            encode_global_display_definition_payload(*value, role)
+        }
+        PresentationPayload::GlobalDisplaySampleBatch(value) => {
+            encode_global_display_samples_payload(value, role)
+        }
+        PresentationPayload::GlobalDisplayPathChunk(value) => {
+            encode_global_display_path_payload(value, role)
+        }
+        PresentationPayload::GlobalDisplayTransition(value) => {
+            encode_global_display_transition_payload(*value)
+        }
+        PresentationPayload::GlobalReplayIndex(value) => encode_global_replay_index_payload(value),
         PresentationPayload::TransportStatus(value) => encode_transport_status(*value),
         PresentationPayload::ActionIntent(value) => {
             let mut bytes = alloc::vec![0; ACTION_INTENT_PAYLOAD_LENGTH];
@@ -140,6 +163,29 @@ pub fn decode_typed_payload(
         }
         PresentationMessageKind::ReleaseSampleBatch => {
             PresentationPayload::ReleaseSampleBatch(decode_release_samples(input)?)
+        }
+        PresentationMessageKind::GlobalDisplayDefinition => {
+            PresentationPayload::GlobalDisplayDefinition(decode_global_display_definition_payload(
+                input, role,
+            )?)
+        }
+        PresentationMessageKind::GlobalDisplaySampleBatch => {
+            PresentationPayload::GlobalDisplaySampleBatch(decode_global_display_samples_payload(
+                input, role,
+            )?)
+        }
+        PresentationMessageKind::GlobalDisplayPathChunk => {
+            PresentationPayload::GlobalDisplayPathChunk(decode_global_display_path_payload(
+                input, role,
+            )?)
+        }
+        PresentationMessageKind::GlobalDisplayTransition => {
+            PresentationPayload::GlobalDisplayTransition(decode_global_display_transition_payload(
+                input,
+            )?)
+        }
+        PresentationMessageKind::GlobalReplayIndex => {
+            PresentationPayload::GlobalReplayIndex(decode_global_replay_index_payload(input)?)
         }
         PresentationMessageKind::TransportStatus => {
             PresentationPayload::TransportStatus(decode_transport_status(input)?)

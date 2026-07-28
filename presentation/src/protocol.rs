@@ -19,6 +19,9 @@ pub const KPS1_FLAG_RESYNC_REQUIRED: u32 = 1 << 4;
 pub const KPS1_OPTIONAL_FLAG_MASK: u32 = 0x0000_ffff;
 pub const KPS1_REQUIRED_FLAG_MASK: u32 = 0xffff_0000;
 pub const KPS1_SUPPORTED_REQUIRED_FLAGS: u32 = 0;
+/// Optional global-display messages. Servers publish these only after both
+/// peers negotiate the capability in the existing KPS1 1.0 handshake.
+pub const KPS1_CAPABILITY_GLOBAL_DISPLAY_V1: u64 = 1 << 8;
 
 pub const ACTION_INTENT_PAYLOAD_LENGTH: usize = 32;
 pub const CURSORS_PAYLOAD_LENGTH: usize = 48;
@@ -40,6 +43,11 @@ pub enum PresentationMessageKind {
     ReleaseSampleBatch = 0x0105,
     TransportStatus = 0x0106,
     EventBatch = 0x0107,
+    GlobalDisplayDefinition = 0x0110,
+    GlobalDisplaySampleBatch = 0x0111,
+    GlobalDisplayPathChunk = 0x0112,
+    GlobalDisplayTransition = 0x0113,
+    GlobalReplayIndex = 0x0114,
     ActionIntent = 0x0200,
     ActionReceipt = 0x0201,
     ActionProposal = 0x0202,
@@ -64,6 +72,11 @@ impl PresentationMessageKind {
             0x0105 => Some(Self::ReleaseSampleBatch),
             0x0106 => Some(Self::TransportStatus),
             0x0107 => Some(Self::EventBatch),
+            0x0110 => Some(Self::GlobalDisplayDefinition),
+            0x0111 => Some(Self::GlobalDisplaySampleBatch),
+            0x0112 => Some(Self::GlobalDisplayPathChunk),
+            0x0113 => Some(Self::GlobalDisplayTransition),
+            0x0114 => Some(Self::GlobalReplayIndex),
             0x0200 => Some(Self::ActionIntent),
             0x0201 => Some(Self::ActionReceipt),
             0x0202 => Some(Self::ActionProposal),
@@ -90,6 +103,11 @@ impl PresentationMessageKind {
             | Self::ReleaseSampleBatch
             | Self::TransportStatus
             | Self::EventBatch
+            | Self::GlobalDisplayDefinition
+            | Self::GlobalDisplaySampleBatch
+            | Self::GlobalDisplayPathChunk
+            | Self::GlobalDisplayTransition
+            | Self::GlobalReplayIndex
             | Self::ActionProposal
             | Self::EvidenceMetadata
             | Self::EvidenceChunk => CorrelationRule::Zero,
@@ -99,6 +117,22 @@ impl PresentationMessageKind {
 
     const fn permits_zero_session(self) -> bool {
         matches!(self, Self::HandshakeRequest)
+    }
+
+    pub const fn required_capability_mask(self) -> u64 {
+        match self {
+            Self::GlobalDisplayDefinition
+            | Self::GlobalDisplaySampleBatch
+            | Self::GlobalDisplayPathChunk
+            | Self::GlobalDisplayTransition
+            | Self::GlobalReplayIndex => KPS1_CAPABILITY_GLOBAL_DISPLAY_V1,
+            _ => 0,
+        }
+    }
+
+    pub const fn is_negotiated_by(self, capability_mask: u64) -> bool {
+        let required = self.required_capability_mask();
+        required == 0 || capability_mask & required == required
     }
 }
 
@@ -537,6 +571,18 @@ mod tests {
             correlation_id: 0,
             payload_length: payload_length as u32,
         }
+    }
+
+    #[test]
+    fn global_display_kinds_require_explicit_capability_negotiation() {
+        assert_eq!(
+            PresentationMessageKind::GlobalDisplaySampleBatch.required_capability_mask(),
+            KPS1_CAPABILITY_GLOBAL_DISPLAY_V1
+        );
+        assert!(!PresentationMessageKind::GlobalDisplaySampleBatch.is_negotiated_by(0));
+        assert!(PresentationMessageKind::GlobalDisplaySampleBatch
+            .is_negotiated_by(KPS1_CAPABILITY_GLOBAL_DISPLAY_V1));
+        assert!(PresentationMessageKind::Snapshot.is_negotiated_by(0));
     }
 
     #[test]
