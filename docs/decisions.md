@@ -1706,7 +1706,10 @@ Use one Rust path builder for the in-process/WASM and native-bridge products.
 Pin sample events and discontinuities plus the semantic replay bookmarks for
 transitions, declared mission events, procedure actions, faults, and terminal
 state. Explicitly exclude routine release notifications so downsampled products
-cannot accidentally retain every 32-Hz sample.
+cannot accidentally retain every 32-Hz sample. Exact live sources use their
+zero-based release epochs for cadence. The already-sparse frozen planned source
+retains its initial point explicitly and applies the 32- or 128-release cadence
+to its accepted one-based sequence, never to the sparse array index.
 
 Define that checksum byte-explicitly as FNV-1a over each ordered path point's
 release epoch, Q16 mission time, segment identity, event mask, anchor identity,

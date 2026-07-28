@@ -159,7 +159,10 @@ stale/incomplete/terminal/resynchronization flags; semantic checksums bind
 release, time, segment, event, anchor, and XYZ. It does not expose canonical
 K-record internals or permit a renderer to own frames, events, mission
 outcomes, or actions. Camera and display-frame selections are normalized to one
-supported shared view mode before renderer semantics are compared.
+supported shared view mode before renderer semantics are compared. The shared
+Rust path builder applies exact-source cadence to live release epochs, preserves
+the frozen planned source's explicit initial point and one-based sparse
+sequence, pins semantic replay bookmarks, and excludes routine release ticks.
 
 The packaged Unreal global-viewer plugin reuses the operations plugin's loaded
 bridge and creates no second worker or authority. Its evidence binds the clean

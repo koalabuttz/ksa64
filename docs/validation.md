@@ -584,6 +584,8 @@ Portable validation covers:
 - transition/event-preserving exact, one-second, and four-second paths;
 - one shared in-process/WASM/native path builder, with routine release ticks
   excluded from the pin set and every semantic replay bookmark retained;
+- exact live-path release cadence plus the frozen planned source's explicit
+  initial point and accepted one-based sparse-sequence cadence;
 - path checksum vectors that bind release, Q16 time, segment, event mask,
   anchor, and signed Q12 XYZ rather than geometry alone;
 - preservation and presentation of raw stale, incomplete, terminal, and

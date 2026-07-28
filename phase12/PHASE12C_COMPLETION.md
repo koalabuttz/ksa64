@@ -37,7 +37,8 @@ The Phase 12C source tree contains the intended additive boundaries:
 - source-bound native, packaged-Unreal, and rendered-browser evidence producers
   whose raw artifacts are consumed by one strict cross-renderer comparator;
 - one shared Rust path builder for in-process/WASM and native-bridge products,
-  with semantic replay bookmarks pinned and routine release ticks excluded;
+  with semantic replay bookmarks pinned, routine release ticks excluded, and
+  live versus frozen-planned cadence semantics preserved explicitly;
 - matching semantic path products whose exact FNV-1a checksum binds each
   point's release, Q16 time, segment, event mask, anchor, and signed Q12 XYZ;
 - end-to-end preservation and visible treatment of the raw stale, incomplete,

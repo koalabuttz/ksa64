@@ -843,7 +843,11 @@ and discontinuity plus every semantic `GlobalReplayIndexV1` bookmark: frame
 transitions, declared mission events, procedure actions, faults, and the terminal
 state. Routine per-release notifications are explicitly not pins, so one- and
 four-second products remain bounded instead of silently becoming 32-Hz history.
-The in-process/WASM and native-bridge paths use that same builder.
+The in-process/WASM and native-bridge paths use that same builder. Exact live
+sources apply cadence to their zero-based release epochs. The frozen planned
+source is already sparse, so its initial point is retained explicitly and later
+points apply the accepted one-based sequence at the 32- or 128-release cadence;
+the sparse sample index is never mistaken for a live release epoch.
 
 Each renderer carries the path product's original source/model/estimate
 identities, source checksum, continuity identity, and raw

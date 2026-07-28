@@ -1365,6 +1365,14 @@ fn apply(
     }
     Ok((true, receipt))
 }
+fn initialize_global_planned_samples<T: Clone>(target: &mut Vec<T>, source: &[T]) -> bool {
+    if !target.is_empty() {
+        return false;
+    }
+    target.extend_from_slice(source);
+    true
+}
+
 #[allow(clippy::too_many_arguments)]
 fn publish_full(
     shared: &Arc<Mutex<Shared>>,
@@ -1388,7 +1396,6 @@ fn publish_full(
         .global_display_transitions_after(*global_transition_cursor)
         .to_vec();
     let global_replay_index = session.global_display_replay_index();
-    let global_planned_samples = session.global_display_planned_samples().to_vec();
     let global_role = ksa64_presentation::PresentationRole::from(session.role());
     let recommended = if let Some(load) = session.recommended_load() {
         let mut bytes = vec![0; KUL11_LENGTH];
@@ -1439,9 +1446,12 @@ fn publish_full(
     state.global_definition = Some(global_definition);
     state.global_accepted_exact = true;
     state.global_replay_index = Some(global_replay_index);
-    if state.global_planned_samples.is_empty() {
-        state.global_planned_samples = global_planned_samples;
-    }
+    // The accepted nominal reference is immutable for the session. Cloning
+    // its ~22k samples on every release makes live publication quadratic.
+    initialize_global_planned_samples(
+        &mut state.global_planned_samples,
+        session.global_display_planned_samples(),
+    );
     for sample in global_samples {
         if state.global_samples.len() == KSA64_VIEWER_SAMPLE_CAPACITY {
             state.global_samples.pop_front();
@@ -3103,6 +3113,20 @@ simple_export!(ksa64_viewer_test_panic_probe, Command::PanicProbe);
 mod tests {
     use super::*;
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn global_planned_samples_initialize_only_once() {
+        let mut cache = Vec::new();
+        assert!(initialize_global_planned_samples(&mut cache, &[1u32, 2, 3]));
+        let pointer = cache.as_ptr();
+        let length = cache.len();
+        let capacity = cache.capacity();
+        assert!(!initialize_global_planned_samples(&mut cache, &[7u32, 8]));
+        assert_eq!(cache.as_ptr(), pointer);
+        assert_eq!(cache.len(), length);
+        assert_eq!(cache.capacity(), capacity);
+        assert_eq!(cache, [1u32, 2, 3]);
+    }
 
     // The full Phase 12B fixture uses the accepted process-global reference
     // pack cache. Serialize the two FFI tests that construct that fixture so

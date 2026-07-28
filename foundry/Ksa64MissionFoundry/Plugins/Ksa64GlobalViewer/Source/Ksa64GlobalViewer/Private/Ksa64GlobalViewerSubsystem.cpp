@@ -53,6 +53,7 @@ constexpr int64 GlobalEvidenceMaximumLimitNanoseconds = 2'000'000;
 constexpr int32 GlobalEvidenceWidth = 1'920;
 constexpr int32 GlobalEvidenceHeight = 1'080;
 constexpr uint32 GlobalEvidenceReadyFrameLimit = 600;
+constexpr uint32 GlobalEvidenceGuidedSyncFrameLimit = 600;
 constexpr int32 GlobalEvidenceMinimumLuminanceRange = 24;
 constexpr int32 GlobalEvidenceMinimumColorBuckets = 8;
 
@@ -144,6 +145,24 @@ uint32 GlobalPathLodSeconds(uint8 Lod)
     case 2: return 1;
     case 3: return 4;
     default: return MAX_uint32;
+    }
+}
+
+uint8 GlobalPathLodForCamera(EKsa64GlobalCameraMode Camera)
+{
+    switch (Camera)
+    {
+    case EKsa64GlobalCameraMode::LaunchLocalEnu:
+    case EKsa64GlobalCameraMode::RecoveryLocalEnu:
+    case EKsa64GlobalCameraMode::VehicleChase:
+    case EKsa64GlobalCameraMode::TrueScaleInspection:
+        return 2;
+    case EKsa64GlobalCameraMode::EarthFixed:
+    case EKsa64GlobalCameraMode::EarthInertial:
+    case EKsa64GlobalCameraMode::FreeOrbit:
+        return 3;
+    default:
+        return 2;
     }
 }
 
@@ -946,12 +965,42 @@ bool UKsa64GlobalViewerSubsystem::ObserveGlobalDisplay(
         }
     }
 
-    if (bObservedSample
-        && (LastGlobalPathRefreshRelease == 0
+    const uint8 RequestedPathFrame = ResolveDisplayFrame();
+    const uint8 RequestedPathLod =
+        GlobalPathLodForCamera(SemanticState.ResolvedCamera);
+    bool bPathProductsMatchView = LastGlobalPathRefreshRelease != 0
+        && GlobalPathDisplayFrame == RequestedPathFrame;
+    if (bPathProductsMatchView)
+    {
+        for (uint8 Source = 1; Source <= 4; ++Source)
+        {
+            const uint32 SourceBit = 1u << (Source - 1u);
+            if ((PermittedGlobalSourceMask & SourceBit) == 0) continue;
+            const FKsa64GlobalFetchedPathState& State =
+                GlobalPathStates[Source - 1u];
+            if (!State.bValid
+                || State.DisplayFrame != RequestedPathFrame
+                || State.Lod != RequestedPathLod)
+            {
+                bPathProductsMatchView = false;
+                break;
+            }
+        }
+    }
+    // Verified replay paths are immutable. Exact-release display mode must not
+    // refetch and rebuild those whole-mission products on every observed
+    // sample; camera/frame/LOD changes still invalidate this view cache.
+    const bool bRefreshPathProducts = Operations.IsGlobalReplayMode()
+        ? !bPathProductsMatchView
+        : LastGlobalPathRefreshRelease == 0
             || CurrentSample.ReleaseEpoch - LastGlobalPathRefreshRelease >= 32
-            || CurrentSample.bExactSnap))
+            || CurrentSample.bExactSnap;
+    if (bObservedSample && bRefreshPathProducts)
     {
         RefreshGlobalPaths(Operations);
+        SemanticState.bAcceptanceEligible = bGlobalDefinitionValid
+            && bGlobalAcceptedExact
+            && bGlobalPathProductsValid;
     }
     else if (!bObservedSample && bHasPreviousSample)
     {
@@ -1115,27 +1164,13 @@ void UKsa64GlobalViewerSubsystem::RefreshGlobalPaths(
     UKsa64LiveMissionSubsystem& Operations)
 {
     const uint32 RequestedFrame = ResolveDisplayFrame();
-    uint32 RequestedLod = 2;
-    switch (SemanticState.ResolvedCamera)
-    {
-    case EKsa64GlobalCameraMode::LaunchLocalEnu:
-    case EKsa64GlobalCameraMode::RecoveryLocalEnu:
-    case EKsa64GlobalCameraMode::VehicleChase:
-    case EKsa64GlobalCameraMode::TrueScaleInspection:
-        // Planned/reference products intentionally begin at one-second LOD.
-        // Use the finest LOD shared by every visible source so Unreal and
-        // Babylon compare the same Rust-published path products.
-        RequestedLod = 2;
-        break;
-    case EKsa64GlobalCameraMode::EarthFixed:
-    case EKsa64GlobalCameraMode::EarthInertial:
-    case EKsa64GlobalCameraMode::FreeOrbit:
-        RequestedLod = 3;
-        break;
-    default:
-        break;
-    }
+    // Planned/reference products intentionally begin at one-second LOD.
+    // Use the finest LOD shared by every visible source so Unreal and
+    // Babylon compare the same Rust-published path products.
+    const uint8 RequestedLod =
+        GlobalPathLodForCamera(SemanticState.ResolvedCamera);
     GlobalPathDisplayFrame = static_cast<uint8>(RequestedFrame);
+    uint32 AvailableSourceMask = 0;
     for (uint32 Source = 1; Source <= 4; ++Source)
     {
         const int32 StateIndex = static_cast<int32>(Source - 1u);
@@ -1251,13 +1286,18 @@ void UKsa64GlobalViewerSubsystem::RefreshGlobalPaths(
                 TEXT("GLOBAL PATH REJECTED · source %u · %s"),
                 Source,
                 FailureReason.IsEmpty() ? TEXT("incomplete product") : *FailureReason);
-            bGlobalPathProductsValid = false;
-            SemanticState.bAcceptanceEligible = false;
             continue;
         }
         GlobalPaths[StateIndex] = MoveTemp(Candidate);
         GlobalPathStates[StateIndex] = CandidateState;
+        AvailableSourceMask |= SourceBit;
     }
+    bGlobalPathProductsValid =
+        Ksa64GlobalViewerPolicy::RequiredGlobalPathSourcesAvailable(
+            PermittedGlobalSourceMask, AvailableSourceMask);
+    SemanticState.bAcceptanceEligible = bGlobalDefinitionValid
+        && bGlobalAcceptedExact
+        && bGlobalPathProductsValid;
     LastGlobalPathRefreshRelease = CurrentSample.ReleaseEpoch;
     RefreshVisibleSemanticProducts();
     UpdatePaths(CurrentSample.FrameIdentity);
@@ -1775,7 +1815,9 @@ void UKsa64GlobalViewerSubsystem::CollectRenderedAbsolutePoints(
     AppendLines(OnboardPathLines, 16);
     AppendLines(GroundPathLines, 16);
     AppendLines(ObservedPathLines, 16);
-    AppendLines(TransitionMarkerLines, 32);
+    // Transition markers are camera-scaled presentation glyphs. Their
+    // semantic count is covered by ComputeOriginInvariant, while their visual
+    // radius is deliberately excluded from this origin-only geometry probe.
 }
 
 bool UKsa64GlobalViewerSubsystem::ValidateGlobalEvidenceOriginContinuity()
@@ -1785,7 +1827,11 @@ bool UKsa64GlobalViewerSubsystem::ValidateGlobalEvidenceOriginContinuity()
     const bool bSuspended = SemanticState.bAutoDirectorSuspended;
     const uint64 BeforeInvariant = ComputeOriginInvariant();
 
-    SemanticState.ResolvedCamera = EKsa64GlobalCameraMode::EarthFixed;
+    // Keep the authoritative GCRF display frame fixed at apogee while
+    // changing only the renderer-local origin policy. EarthFixed would also
+    // switch the display frame to ECEF and invalidate this origin-only probe.
+    SemanticState.ResolvedCamera = EKsa64GlobalCameraMode::EarthInertial;
+    const uint8 EarthDisplayFrame = ResolveDisplayFrame();
     UpdateDisplayOrigin(CurrentSample);
     UpdateVehicle(CurrentSample);
     UpdatePaths(CurrentSample.FrameIdentity);
@@ -1797,12 +1843,16 @@ bool UKsa64GlobalViewerSubsystem::ValidateGlobalEvidenceOriginContinuity()
     CollectRenderedAbsolutePoints(EarthPoints);
 
     SemanticState.ResolvedCamera = EKsa64GlobalCameraMode::VehicleChase;
+    const uint8 ChaseDisplayFrame = ResolveDisplayFrame();
     UpdateDisplayOrigin(CurrentSample);
     UpdateVehicle(CurrentSample);
     UpdatePaths(CurrentSample.FrameIdentity);
     const bool bChanged = EarthOrigin[0] != SemanticState.DisplayOriginQ12Km[0]
         || EarthOrigin[1] != SemanticState.DisplayOriginQ12Km[1]
         || EarthOrigin[2] != SemanticState.DisplayOriginQ12Km[2];
+    const bool bDisplayFrameStable = EarthDisplayFrame == 3
+        && ChaseDisplayFrame == EarthDisplayFrame
+        && CurrentGlobalProduct.ActiveFrame == EarthDisplayFrame;
     TArray<FVector3d> ChasePoints;
     CollectRenderedAbsolutePoints(ChasePoints);
 
@@ -1827,7 +1877,7 @@ bool UKsa64GlobalViewerSubsystem::ValidateGlobalEvidenceOriginContinuity()
     bGlobalEvidenceOriginSemanticUnchanged &= bSemanticUnchanged;
     bGlobalEvidenceOriginRenderedContinuity &= bRenderedContinuous;
     bGlobalEvidenceOriginContinuityValid &=
-        bChanged && bSemanticUnchanged && bRenderedContinuous;
+        bChanged && bDisplayFrameStable && bSemanticUnchanged && bRenderedContinuous;
 
     SemanticState.RequestedCamera = Requested;
     SemanticState.ResolvedCamera = Resolved;
@@ -1835,7 +1885,8 @@ bool UKsa64GlobalViewerSubsystem::ValidateGlobalEvidenceOriginContinuity()
     UpdateDisplayOrigin(CurrentSample);
     UpdateVehicle(CurrentSample);
     UpdatePaths(CurrentSample.FrameIdentity);
-    return bChanged && bSemanticUnchanged && bRenderedContinuous;
+    return bChanged && bDisplayFrameStable
+        && bSemanticUnchanged && bRenderedContinuous;
 }
 
 void UKsa64GlobalViewerSubsystem::ApplyOriginToStaticDomain()
@@ -2758,8 +2809,37 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
     UKsa64LiveMissionSubsystem* Operations = GetOperations();
     if (Operations == nullptr) return false;
     const FKsa64OperationsViewModel& View = Operations->GetViewModel();
-    if (SemanticState.ReleaseEpoch != View.ReleaseEpoch
-        || SemanticState.FrameIdentity != 3
+    const Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision SyncDecision =
+        Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
+            SemanticState.ReleaseEpoch,
+            View.ReleaseEpoch,
+            GlobalEvidenceGuidedSyncFrameLimit,
+            GlobalEvidenceGuidedSyncWaitFrames);
+    if (SyncDecision
+        == Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision::Wait)
+    {
+        return false;
+    }
+    if (SyncDecision
+        == Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision::RejectTimeout)
+    {
+        FailGlobalEvidence(FString::Printf(
+            TEXT("guided display did not reach operations release within %u frames: display=%u operations=%u"),
+            GlobalEvidenceGuidedSyncWaitFrames,
+            SemanticState.ReleaseEpoch,
+            View.ReleaseEpoch));
+        return false;
+    }
+    if (SyncDecision
+        == Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision::RejectAhead)
+    {
+        FailGlobalEvidence(FString::Printf(
+            TEXT("guided display crossed operations release: display=%u operations=%u"),
+            SemanticState.ReleaseEpoch,
+            View.ReleaseEpoch));
+        return false;
+    }
+    if (SemanticState.FrameIdentity != 3
         || SemanticState.SegmentIdentity != 3
         || SemanticState.SourceMask != 0x06u
         || SemanticState.bTruthPermitted
@@ -2773,13 +2853,16 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
                 || View.ActionProposalIdentity == 0)))
     {
         FailGlobalEvidence(FString::Printf(
-            TEXT("guided semantic state failed at release %u: frame=%u segment=%u sources=%08X truth=%u/%u gnss=%u receipt=%u/%u"),
+            TEXT("guided semantic state failed at release %u: display_release=%u frame=%u segment=%u sources=%08X truth=%u/%u filtered=%u accepted=%u gnss=%u receipt=%u/%u"),
             View.ReleaseEpoch,
+            SemanticState.ReleaseEpoch,
             SemanticState.FrameIdentity,
             SemanticState.SegmentIdentity,
             SemanticState.SourceMask,
             SemanticState.bTruthPermitted ? 1u : 0u,
             SemanticState.bTruthVisible ? 1u : 0u,
+            View.bTruthFiltered ? 1u : 0u,
+            SemanticState.bAcceptanceEligible ? 1u : 0u,
             View.GnssState,
             View.ActionReceiptState,
             View.ActionReceiptAccepted));
@@ -3611,6 +3694,7 @@ void UKsa64GlobalViewerSubsystem::TickGlobalEvidence(float DeltaSeconds)
             SetLayout(EKsa64GlobalViewerLayout::HybridMissionDirector);
             ResumeAutomaticDirector();
             GlobalEvidenceGuidedIndex = 0;
+            GlobalEvidenceGuidedSyncWaitFrames = 0;
             GlobalEvidenceAcceptedActions = 0;
             bGlobalEvidenceGuidedActionOutstanding = false;
             GlobalEvidencePhase = 8;

@@ -86,6 +86,34 @@ uint32 HashPathPoints(
     return Hash;
 }
 
+EKsa64GuidedDisplaySyncDecision ObserveGuidedDisplaySync(
+    uint32 DisplayRelease,
+    uint32 OperationsRelease,
+    uint32 FrameLimit,
+    uint32& WaitFrames)
+{
+    if (DisplayRelease < OperationsRelease)
+    {
+        ++WaitFrames;
+        return WaitFrames >= FrameLimit
+            ? EKsa64GuidedDisplaySyncDecision::RejectTimeout
+            : EKsa64GuidedDisplaySyncDecision::Wait;
+    }
+    if (DisplayRelease > OperationsRelease)
+    {
+        return EKsa64GuidedDisplaySyncDecision::RejectAhead;
+    }
+    WaitFrames = 0;
+    return EKsa64GuidedDisplaySyncDecision::Aligned;
+}
+
+bool RequiredGlobalPathSourcesAvailable(
+    uint32 RequiredSourceMask,
+    uint32 AvailableSourceMask)
+{
+    return (AvailableSourceMask & RequiredSourceMask) == RequiredSourceMask;
+}
+
 FLinearColor PathColorForFlags(const FLinearColor& Normal, uint16 Flags)
 {
     FLinearColor Result = Normal;

@@ -175,6 +175,7 @@ public:
         ResetSessionCaches();
         const bool bStarted = Module.StartNominalGlobalReplayV1();
         bGlobalDisplaySession = bStarted && Module.SupportsGlobalDisplayV1();
+        bNominalGlobalReplaySession = bGlobalDisplaySession;
         return bStarted;
     }
 
@@ -192,6 +193,7 @@ public:
         }
         bTyped = false;
         bGlobalDisplaySession = false;
+        bNominalGlobalReplaySession = false;
     }
 
     virtual EKsa64OperationsAdapterResult AdvanceOneRelease() override
@@ -578,8 +580,20 @@ public:
 
     virtual EKsa64OperationsAdapterResult RequestShutdown() override
     {
-        return bTyped && FKsa64BridgeModule::IsAvailable()
-            ? MapResult(FKsa64BridgeModule::Get().RequestShutdownV1())
+        if (!FKsa64BridgeModule::IsAvailable())
+        {
+            return EKsa64OperationsAdapterResult::Unsupported;
+        }
+        FKsa64BridgeModule& Module = FKsa64BridgeModule::Get();
+        if (bNominalGlobalReplaySession)
+        {
+            Module.CloseSession();
+            bGlobalDisplaySession = false;
+            bNominalGlobalReplaySession = false;
+            return EKsa64OperationsAdapterResult::Ok;
+        }
+        return bTyped
+            ? MapResult(Module.RequestShutdownV1())
             : EKsa64OperationsAdapterResult::Unsupported;
     }
 
@@ -607,6 +621,7 @@ private:
         CachedOnboardEstimateIdentity = 0;
         CachedGroundEstimateIdentity = 0;
         bGlobalDisplaySession = false;
+        bNominalGlobalReplaySession = false;
     }
 
     void RefreshPrediction()
@@ -721,6 +736,7 @@ private:
 
     bool bTyped = false;
     bool bGlobalDisplaySession = false;
+    bool bNominalGlobalReplaySession = false;
     FKsa64OperationsActionGate ActionGate;
     bool bHasLastOperational = false;
     uint32 CachedPredictionIdentity = 0;

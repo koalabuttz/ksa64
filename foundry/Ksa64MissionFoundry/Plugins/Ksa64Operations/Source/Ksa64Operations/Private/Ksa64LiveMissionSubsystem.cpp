@@ -492,6 +492,13 @@ bool UKsa64LiveMissionSubsystem::RequestShutdown()
         || Result == EKsa64OperationsAdapterResult::Queued)
     {
         ViewModel.bShutdownRequested = true;
+        if (bGlobalReplayMode)
+        {
+            bGlobalReplayMode = false;
+            ViewModel.bSessionOpen = false;
+            ViewModel.bAdvanceOutstanding = false;
+            AdvanceTracker.Reset();
+        }
         AppendTimeline(TEXT("SYSTEM"), TEXT("Graceful worker shutdown requested"));
         return true;
     }

@@ -198,6 +198,57 @@ bool FKsa64GlobalViewerPathProductTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64GlobalViewerPublicationRecoveryTest,
+    "KSA64.Phase12C.Publication.BoundedSyncAndPathRecovery",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64GlobalViewerPublicationRecoveryTest::RunTest(const FString&)
+{
+    using Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision;
+    uint32 WaitFrames = 0;
+    for (uint32 Frame = 1; Frame < 600; ++Frame)
+    {
+        TestEqual(
+            TEXT("trailing publication remains bounded wait before limit"),
+            Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
+                99, 100, 600, WaitFrames),
+            EKsa64GuidedDisplaySyncDecision::Wait);
+    }
+    TestEqual(TEXT("599 trailing frames were counted"), WaitFrames, 599u);
+    TestEqual(
+        TEXT("600th trailing frame fails closed"),
+        Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
+            99, 100, 600, WaitFrames),
+        EKsa64GuidedDisplaySyncDecision::RejectTimeout);
+    TestEqual(TEXT("timeout records its exact bound"), WaitFrames, 600u);
+    TestEqual(
+        TEXT("exact alignment recovers and resets the bound"),
+        Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
+            100, 100, 600, WaitFrames),
+        EKsa64GuidedDisplaySyncDecision::Aligned);
+    TestEqual(TEXT("alignment resets the wait counter"), WaitFrames, 0u);
+    TestEqual(
+        TEXT("display publication ahead of authority rejects immediately"),
+        Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
+            101, 100, 600, WaitFrames),
+        EKsa64GuidedDisplaySyncDecision::RejectAhead);
+
+    TestFalse(
+        TEXT("one missing required path source rejects the refresh"),
+        Ksa64GlobalViewerPolicy::RequiredGlobalPathSourcesAvailable(
+            0x06u, 0x02u));
+    TestTrue(
+        TEXT("a later complete refresh restores path eligibility"),
+        Ksa64GlobalViewerPolicy::RequiredGlobalPathSourcesAvailable(
+            0x06u, 0x06u));
+    TestTrue(
+        TEXT("unrequested source availability does not change eligibility"),
+        Ksa64GlobalViewerPolicy::RequiredGlobalPathSourcesAvailable(
+            0x06u, 0x0eu));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64GlobalViewerSnapPolicyTest,
     "KSA64.Phase12C.Temporal.ExactSnapBoundaries",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

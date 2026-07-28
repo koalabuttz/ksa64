@@ -877,6 +877,82 @@ bool FKsa64OperationsEvidenceStatusTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64OperationsReplayToGuidedLifecycleTest,
+    "KSA64.Operations.Lifecycle.NominalReplayToGuided",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64OperationsReplayToGuidedLifecycleTest::RunTest(const FString&)
+{
+    TUniquePtr<IKsa64OperationsBridgeAdapter> Adapter =
+        IKsa64OperationsBridgeAdapter::Create();
+    if (!Adapter.IsValid() || !Adapter->IsReady())
+    {
+        AddError(Adapter.IsValid()
+            ? Adapter->GetDiagnostic()
+            : TEXT("adapter unavailable"));
+        return false;
+    }
+    if (!Adapter->StartNominalGlobalReplay())
+    {
+        AddError(FString::Printf(
+            TEXT("nominal replay start failed: %s"),
+            *Adapter->GetDiagnostic()));
+        return false;
+    }
+    Ksa64GlobalDisplayAvailabilityV1 Availability = {};
+    TestEqual(
+        TEXT("nominal replay publishes GlobalDisplayV1"),
+        Adapter->GlobalDisplayAvailability(Availability),
+        EKsa64OperationsAdapterResult::Ok);
+    TestEqual(TEXT("nominal replay is SIM Director"), Availability.role, 5u);
+    TestEqual(
+        TEXT("nominal replay closes synchronously through its dedicated path"),
+        Adapter->RequestShutdown(),
+        EKsa64OperationsAdapterResult::Ok);
+    TestEqual(
+        TEXT("replay shutdown returns the bridge to ready"),
+        FKsa64BridgeModule::Get().GetStatus(),
+        EKsa64BridgeStatus::Ready);
+    Availability = {};
+    TestEqual(
+        TEXT("closed replay handle is no longer exposed"),
+        Adapter->GlobalDisplayAvailability(Availability),
+        EKsa64OperationsAdapterResult::Unsupported);
+
+    if (!Adapter->StartGuidedOperations())
+    {
+        AddError(FString::Printf(
+            TEXT("guided start after replay close failed: %s"),
+            *Adapter->GetDiagnostic()));
+        Adapter->Close();
+        return false;
+    }
+    FKsa64OperationsViewModel View;
+    const bool bGuidedReady = PollAdapterUntil(
+        *Adapter,
+        View,
+        15.0,
+        [](const FKsa64OperationsViewModel& Candidate)
+        {
+            return Candidate.ReleaseEpoch == 0
+                && Candidate.bTruthFiltered
+                && Candidate.RoleLabel.Equals(TEXT("GUIDED OPERATOR"));
+        });
+    if (!bGuidedReady)
+    {
+        AddError(FString::Printf(
+            TEXT("guided view after replay close failed: %s"),
+            *AdapterFailure));
+    }
+    CloseAdapterAndWait(*Adapter);
+    TestEqual(
+        TEXT("guided close preserves the typed asynchronous lifecycle"),
+        FKsa64BridgeModule::Get().GetStatus(),
+        EKsa64BridgeStatus::Ready);
+    return bGuidedReady;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64OperationsAsyncShutdownTest,
     "KSA64.Operations.Lifecycle.AsyncShutdown",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

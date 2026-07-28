@@ -10,6 +10,23 @@ constexpr int64 Q12OneKilometre = 4'096;
 constexpr double CentimetresPerKilometre = 100'000.0;
 constexpr int64 LocalOriginQuantumQ12 = 100 * Q12OneKilometre;
 
+enum class EKsa64GuidedDisplaySyncDecision : uint8
+{
+    Wait,
+    Aligned,
+    RejectAhead,
+    RejectTimeout,
+};
+
+EKsa64GuidedDisplaySyncDecision ObserveGuidedDisplaySync(
+    uint32 DisplayRelease,
+    uint32 OperationsRelease,
+    uint32 FrameLimit,
+    uint32& WaitFrames);
+bool RequiredGlobalPathSourcesAvailable(
+    uint32 RequiredSourceMask,
+    uint32 AvailableSourceMask);
+
 double Q12Kilometres(int64 Raw);
 int64 QuantizeOriginQ12(int64 Raw, int64 Quantum = LocalOriginQuantumQ12);
 FQuat Ksa64BodyToFrameQuaternionToUnreal(const int32 QuaternionQ30[4]);

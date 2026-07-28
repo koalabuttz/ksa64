@@ -480,7 +480,10 @@ source poses and paths before encoding for an unauthorized role.
 Path retention uses one shared Rust builder for in-process/WASM and native
 bridge clients. It pins sample events and discontinuities plus semantic replay
 bookmarks for transitions, declared mission events, procedure actions, faults,
-and terminal state. Routine release notifications are not pins.
+and terminal state. Routine release notifications are not pins. Exact live
+sources apply cadence to their zero-based release epochs. The already-sparse
+frozen planned source retains its initial point explicitly and applies cadence
+to its accepted one-based sequence for subsequent points.
 
 A semantic path record preserves its source/model/estimate identities, source
 checksum, continuity identity, anchor, strip, LOD, point count, and unmodified

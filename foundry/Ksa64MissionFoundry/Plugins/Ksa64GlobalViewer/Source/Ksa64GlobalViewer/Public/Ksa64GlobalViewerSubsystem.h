@@ -319,6 +319,7 @@ private:
     uint32 GlobalEvidenceMeasuredFrames = 0;
     uint32 GlobalEvidenceScreenshotWaitFrames = 0;
     uint32 GlobalEvidenceReadyWaitFrames = 0;
+    uint32 GlobalEvidenceGuidedSyncWaitFrames = 0;
     uint32 GlobalEvidencePerformanceStartRelease = 0;
     uint32 GlobalEvidencePerformanceEndRelease = 0;
     int64 GlobalEvidenceP99Nanoseconds = -1;
