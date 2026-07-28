@@ -251,7 +251,8 @@ mod tests {
 
         let directory = test_directory("permissions");
         let _ = load_or_create_server_identity(&directory).unwrap();
-        save_peer_registry(&directory, &PeerRegistry::new()).unwrap();
+        let registry = PeerRegistry::default().export_bounded().unwrap();
+        save_peer_registry(&directory, &registry).unwrap();
         for filename in [SERVER_IDENTITY_FILE, PEER_REGISTRY_FILE] {
             let mode = fs::metadata(directory.join(filename))
                 .unwrap()
