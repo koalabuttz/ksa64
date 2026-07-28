@@ -77,13 +77,24 @@ function directoryArtifact(path, excluded = new Set()) {
   return { path: root.replaceAll("\\", "/"), bytes, file_count: fileCount, tree_sha256: aggregate.digest("hex") };
 }
 function resolveArtifact(owner, value) { return isAbsolute(value) ? resolve(value) : resolve(dirname(owner), value); }
-function verifyPackageInventory(owner, record, sourceCommit) {
+function resolveWithinRoot(root, value, label) {
+  required(typeof value === "string" && value.length > 0 && !isAbsolute(value) && !value.includes("\\"), label + " path is not a portable relative path");
+  const parts = value.split("/");
+  required(parts.every((part) => part.length > 0 && part !== "." && part !== ".."), label + " path contains a forbidden segment");
+  const absolute = resolve(root, ...parts);
+  const contained = relative(root, absolute);
+  required(contained.length > 0 && !isAbsolute(contained) && !contained.split(sep).includes(".."), label + " path escapes its artifact root");
+  return absolute;
+}
+function verifyPackageInventory(owner, record, sourceCommit, artifactRoot = null) {
   required(record?.measurement === "immutable packaged application payload excluding Saved" &&
     Number.isSafeInteger(record.bytes) && record.bytes > 0 &&
     Number.isSafeInteger(record.file_count) && record.file_count > 1 &&
     /^[0-9a-f]{64}$/.test(record.tree_sha256) && typeof record.inventory_file === "string" &&
     /^[0-9a-f]{64}$/.test(record.inventory_sha256), "Unreal packaged-directory inventory record is malformed");
-  const inventoryPath = resolveArtifact(owner, record.inventory_file);
+  const inventoryPath = artifactRoot === null
+    ? resolveArtifact(owner, record.inventory_file)
+    : resolveWithinRoot(artifactRoot, record.inventory_file, "Unreal packaged-directory inventory");
   const inventoryArtifact = artifact(inventoryPath);
   required(inventoryArtifact.sha256 === record.inventory_sha256, "Unreal packaged-directory inventory hash mismatch");
   const inventory = readJson(inventoryPath, "ksa64.phase12c.packaged-directory-inventory.v1").value;
@@ -113,9 +124,11 @@ function verifyPackageInventory(owner, record, sourceCommit) {
     "Unreal packaged-directory tree accounting mismatch");
   return { ...record, inventory: inventoryArtifact, root: inventory.root, excluded: inventory.excluded };
 }
-function verifyArtifactRecord(owner, record, label) {
+function verifyArtifactRecord(owner, record, label, artifactRoot = null) {
   required(record && typeof record.path === "string" && Number.isSafeInteger(record.bytes) && /^[0-9a-f]{64}$/.test(record.sha256), label + " record is malformed");
-  const actual = artifact(resolveArtifact(owner, record.path));
+  const actual = artifact(artifactRoot === null
+    ? resolveArtifact(owner, record.path)
+    : resolveWithinRoot(artifactRoot, record.path, label));
   required(actual.bytes === record.bytes, label + " byte length mismatch");
   required(actual.sha256 === record.sha256, label + " SHA-256 mismatch");
   return actual;
@@ -189,11 +202,15 @@ function validateUnreal(input, sourceCommit) {
   required(value.accepted_exact === true && value.nominal_truth_permitted === true && value.nominal_truth_visible === false && value.guided_truth_permitted === false && value.guided_truth_visible === false, "Unreal exact/truth policy mismatch");
   required(value.nominal_terminal_release_epoch === 22014 && value.nominal_terminal_disposition === 1, "Unreal nominal terminal state mismatch");
   required(value.guided_terminal_release_epoch === 21591 && value.guided_terminal_disposition === 2, "Unreal guided terminal state mismatch");
-  const packagedArtifact = verifyArtifactRecord(input.absolute, value.package, "Unreal legacy packaged-executable record");
-  const executableArtifact = verifyArtifactRecord(input.absolute, value.executable, "Unreal packaged executable");
+  const manifestDirectory = dirname(input.absolute);
+  const archiveRoot = resolve(manifestDirectory, "..", "..", "..", "..", "..");
+  required(relative(archiveRoot, manifestDirectory).split(sep).join("/") === "Windows/Ksa64MissionFoundry/Saved/KSA64/GlobalViewerEvidence",
+    "Unreal evidence manifest is not in the required packaged archive location");
+  const packagedArtifact = verifyArtifactRecord(input.absolute, value.package, "Unreal legacy packaged-executable record", archiveRoot);
+  const executableArtifact = verifyArtifactRecord(input.absolute, value.executable, "Unreal packaged executable", archiveRoot);
   required(executableArtifact.path === packagedArtifact.path && executableArtifact.bytes === packagedArtifact.bytes && executableArtifact.sha256 === packagedArtifact.sha256,
     "Unreal legacy package record does not match the explicit executable record");
-  const packagedDirectory = verifyPackageInventory(input.absolute, value.packaged_directory, sourceCommit);
+  const packagedDirectory = verifyPackageInventory(input.absolute, value.packaged_directory, sourceCommit, archiveRoot);
   required(packagedDirectory.bytes > executableArtifact.bytes,
     "Unreal complete packaged-directory measurement is absent or invalid");
   const renderer = value.renderer;

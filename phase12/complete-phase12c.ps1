@@ -480,7 +480,26 @@ try {
         Gate "strict source-bound cross-renderer parity and runtime evidence" {
             $recomputedEvidence = Join-Path $auditRoot "phase12c-cross-renderer-recomputed.json"
             Invoke-CrossRendererEvidence $recomputedEvidence | Out-Null
-            $recorded = (Resolve-Path -LiteralPath $RuntimeEvidenceManifest).Path
+            $runtimeEvidencePath = [IO.Path]::GetFullPath($RuntimeEvidenceManifest)
+            if (Test-Path -LiteralPath $runtimeEvidencePath -PathType Container) {
+                throw "-RuntimeEvidenceManifest names a directory"
+            }
+            if (-not (Test-Path -LiteralPath $runtimeEvidencePath -PathType Leaf)) {
+                $runtimeEvidenceDirectory = [IO.Path]::GetDirectoryName($runtimeEvidencePath)
+                [IO.Directory]::CreateDirectory($runtimeEvidenceDirectory) | Out-Null
+                $runtimeEvidenceTemporary = Join-Path $runtimeEvidenceDirectory (([IO.Path]::GetFileName($runtimeEvidencePath)) + "." + [Guid]::NewGuid().ToString("N") + ".tmp")
+                try {
+                    [IO.File]::Copy($recomputedEvidence, $runtimeEvidenceTemporary, $false)
+                    [IO.File]::Move($runtimeEvidenceTemporary, $runtimeEvidencePath)
+                }
+                finally {
+                    if (Test-Path -LiteralPath $runtimeEvidenceTemporary -PathType Leaf) {
+                        Remove-Item -LiteralPath $runtimeEvidenceTemporary -Force
+                    }
+                }
+                Write-Host "Recorded strict runtime/parity evidence at $runtimeEvidencePath"
+            }
+            $recorded = (Resolve-Path -LiteralPath $runtimeEvidencePath).Path
             if ((Get-Sha256 $recorded) -ne (Get-Sha256 $recomputedEvidence)) {
                 throw "recorded runtime/parity manifest is not the deterministic output of the current raw producer artifacts"
             }
