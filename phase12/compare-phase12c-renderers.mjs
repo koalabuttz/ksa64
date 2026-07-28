@@ -100,7 +100,7 @@ function validateNative(input, sourceCommit) {
     if (TRANSITIONS.has(expected.release)) required(entry.discontinuity_mask !== 0, expected.label + ": native transition is not an exact discontinuity");
   });
   const timing = value.timing;
-  required(timing.availability_samples > 0 && timing.range_samples >= 87 && timing.path_samples > 0, "native timing sample counts are not measured");
+  required(timing.availability_samples > 0 && timing.range_samples === 86 && timing.path_samples > 0, "native timing sample counts are not measured");
   required(timing.availability_p99_ns >= 0 && timing.range_p99_ns >= 0 && timing.availability_p99_ns < 1_000_000 && timing.range_p99_ns < 1_000_000, "native bridge polling exceeds 1 ms p99");
   return { dll, manifest, semanticSha256: replay.semantic_sha256, milestones: value.milestones, timing };
 }

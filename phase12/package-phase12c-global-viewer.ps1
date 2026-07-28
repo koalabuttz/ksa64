@@ -74,12 +74,13 @@ $gameRelativePath = $gameExe.Substring($archive.Length + 1).Replace('\', '/')
 $packageAuditSha256 = Get-Sha256 $packageAuditPath
 
 $evidenceDirectory = Join-Path $gameRoot "Saved\KSA64\GlobalViewerEvidence"
+$manifestGameRelativePath = [IO.Path]::GetRelativePath($evidenceDirectory, $gameExe).Replace('\', '/')
 $runtimeManifestPath = Join-Path $evidenceDirectory "phase12c-global-viewer-evidence.json"
 $validationPath = Join-Path $archive "phase12c-global-viewer-evidence-validation.json"
 $logPath = Join-Path $archive "packaged-phase12c-global-viewer-evidence.log"
 foreach ($path in @($runtimeManifestPath, $validationPath, $logPath)) { if (Test-Path -LiteralPath $path) { throw "Phase 12C global-viewer evidence requires fresh fixed outputs; found $path" } }
 
-$arguments = @("-windowed", "-ResX=1920", "-ResY=1080", "-ForceRes", "-RenderOffscreen", "-Benchmark", "-UseFixedTimeStep", "-FPS=60", "-nosound", "-unattended", "-nosplash", "-DisablePlugins=ModelContextProtocol,ToolsetRegistry,AllToolsets,PythonScriptPlugin", "-Ksa64Phase12cGlobalEvidence", "-Ksa64SourceCommit=$commit", "-Ksa64ExecutableRelativePath=$gameRelativePath", "-Ksa64ExecutableBytes=$gameBytes", "-Ksa64ExecutableSha256=$gameSha256", "-Ksa64PackageAuditSha256=$packageAuditSha256", "-abslog=$logPath")
+$arguments = @("-windowed", "-ResX=1920", "-ResY=1080", "-ForceRes", "-RenderOffscreen", "-Benchmark", "-UseFixedTimeStep", "-FPS=60", "-nosound", "-unattended", "-nosplash", "-DisablePlugins=ModelContextProtocol,ToolsetRegistry,AllToolsets,PythonScriptPlugin", "-Ksa64Phase12cGlobalEvidence", "-Ksa64SourceCommit=$commit", "-Ksa64ExecutableRelativePath=$manifestGameRelativePath", "-Ksa64ExecutableBytes=$gameBytes", "-Ksa64ExecutableSha256=$gameSha256", "-Ksa64PackageAuditSha256=$packageAuditSha256", "-abslog=$logPath")
 $process = Start-Process -FilePath $gameExe -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $gameExe) -WindowStyle Hidden -PassThru
 # Intentionally unbounded: duration alone is not evidence that this run failed.
 $process.WaitForExit()
@@ -127,7 +128,7 @@ if ($manifest.schema -ne "ksa64.phase12c.unreal-global-evidence.v1" -or
     $manifest.nominal_terminal_disposition -ne 1 -or
     $manifest.guided_terminal_release_epoch -ne 21591 -or
     $manifest.guided_terminal_disposition -ne 2 -or
-    $manifest.package.path -ne $gameRelativePath -or
+    $manifest.package.path -ne $manifestGameRelativePath -or
     [int64]$manifest.package.bytes -ne $gameBytes -or
     $manifest.package.sha256 -ne $gameSha256 -or
     $manifest.package_binding.package_audit_sha256 -ne $packageAuditSha256 -or
