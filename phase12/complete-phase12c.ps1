@@ -21,8 +21,16 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
-$auditRoot = Join-Path $projectRoot (".phase12c-audit-" + [Guid]::NewGuid().ToString("N"))
+$targetRoot = Join-Path $projectRoot "target"
+$auditRoot = Join-Path $targetRoot ("phase12c-audit-" + [Guid]::NewGuid().ToString("N"))
 $unrealProject = Join-Path $projectRoot "foundry\Ksa64MissionFoundry\Ksa64MissionFoundry.uproject"
+$unrealConfigDirectory = Join-Path $projectRoot "foundry\Ksa64MissionFoundry\Config"
+$unrealEngineConfig = Join-Path $unrealConfigDirectory "DefaultEngine.ini"
+$unrealInputConfig = Join-Path $unrealConfigDirectory "DefaultInput.ini"
+$unrealEngineConfigSnapshot = $null
+$unrealInputConfigSnapshot = $null
+$unrealInputConfigExisted = $false
+$unrealConfigSnapshotCaptured = $false
 
 $entryCommit = "eb666cbaf3b8950218656a7ad7fe135b05385813"
 $catalogSha256 = "b7456cfdb250c4ee3434a244b75dd5ceb88fc4d8e3fb50058ea17b932df67d13"
@@ -93,6 +101,34 @@ function Assert-NoUnrealProcess {
     )
     if ($processes.Count -ne 0) {
         throw "Close Unreal/Mission Foundry process(es) before this gate: $($processes.Id -join ', ')"
+    }
+}
+
+function Save-UnrealGeneratedConfigSnapshot {
+    if (-not (Test-Path -LiteralPath $unrealEngineConfig -PathType Leaf)) {
+        throw "required Unreal config is missing: $unrealEngineConfig"
+    }
+    $script:unrealEngineConfigSnapshot = [IO.File]::ReadAllBytes($unrealEngineConfig)
+    $script:unrealInputConfigExisted = Test-Path -LiteralPath $unrealInputConfig -PathType Leaf
+    if ($script:unrealInputConfigExisted) {
+        $script:unrealInputConfigSnapshot = [IO.File]::ReadAllBytes($unrealInputConfig)
+    }
+    else {
+        $script:unrealInputConfigSnapshot = $null
+    }
+    $script:unrealConfigSnapshotCaptured = $true
+}
+
+function Restore-UnrealGeneratedConfig {
+    if (-not $script:unrealConfigSnapshotCaptured) {
+        return
+    }
+    [IO.File]::WriteAllBytes($unrealEngineConfig, $script:unrealEngineConfigSnapshot)
+    if ($script:unrealInputConfigExisted) {
+        [IO.File]::WriteAllBytes($unrealInputConfig, $script:unrealInputConfigSnapshot)
+    }
+    elseif (Test-Path -LiteralPath $unrealInputConfig -PathType Leaf) {
+        Remove-Item -LiteralPath $unrealInputConfig -Force
     }
 }
 
@@ -330,7 +366,11 @@ if (($RunUnrealAutomation -or $RunPackage) -and -not $RunUnrealBuild) {
     Write-Host "Unreal automation/package will use the currently built target because -RunUnrealBuild was not supplied."
 }
 
+New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $auditRoot | Out-Null
+if ($RunUnrealAutomation -or $RunPackage) {
+    Save-UnrealGeneratedConfigSnapshot
+}
 $auditSucceeded = $false
 Push-Location $projectRoot
 try {
@@ -441,29 +481,39 @@ try {
                 [IO.Path]::GetFullPath($DerivedDataCache),
                 "Process"
             )
-            Invoke-UnrealAutomation
+            try {
+                Invoke-UnrealAutomation
+            }
+            finally {
+                Restore-UnrealGeneratedConfig
+            }
         }
     }
 
     if ($RunPackage) {
         Gate "explicit Unreal package and packaged bridge smoke" {
             Assert-NoUnrealProcess
-            & phase12/package-phase12c-global-viewer.ps1 -RepositoryRoot $projectRoot `
-                -UnrealRoot $UnrealRoot `
-                -DerivedDataCache $DerivedDataCache `
-                -ArchiveDirectory $PackageArchive
-            Check
-            $packagedEvidence = Join-Path $PackageArchive "Windows\Ksa64MissionFoundry\Saved\KSA64\GlobalViewerEvidence\phase12c-global-viewer-evidence.json"
-            if (-not (Test-Path -LiteralPath $packagedEvidence -PathType Leaf)) {
-                throw "specialized Phase 12C package did not produce its bound Unreal evidence manifest"
+            try {
+                & phase12/package-phase12c-global-viewer.ps1 -RepositoryRoot $projectRoot `
+                    -UnrealRoot $UnrealRoot `
+                    -DerivedDataCache $DerivedDataCache `
+                    -ArchiveDirectory $PackageArchive
+                Check
+                $packagedEvidence = Join-Path $PackageArchive "Windows\Ksa64MissionFoundry\Saved\KSA64\GlobalViewerEvidence\phase12c-global-viewer-evidence.json"
+                if (-not (Test-Path -LiteralPath $packagedEvidence -PathType Leaf)) {
+                    throw "specialized Phase 12C package did not produce its bound Unreal evidence manifest"
+                }
+                if ([string]::IsNullOrWhiteSpace($script:UnrealEvidenceManifest)) {
+                    $script:UnrealEvidenceManifest = $packagedEvidence
+                }
+                elseif ([IO.Path]::GetFullPath($script:UnrealEvidenceManifest) -ne [IO.Path]::GetFullPath($packagedEvidence)) {
+                    throw "-UnrealEvidenceManifest must name the evidence produced under -PackageArchive when -RunPackage is selected"
+                }
             }
-            if ([string]::IsNullOrWhiteSpace($script:UnrealEvidenceManifest)) {
-                $script:UnrealEvidenceManifest = $packagedEvidence
+            finally {
+                Restore-UnrealGeneratedConfig
+                Assert-NoUnrealProcess
             }
-            elseif ([IO.Path]::GetFullPath($script:UnrealEvidenceManifest) -ne [IO.Path]::GetFullPath($packagedEvidence)) {
-                throw "-UnrealEvidenceManifest must name the evidence produced under -PackageArchive when -RunPackage is selected"
-            }
-            Assert-NoUnrealProcess
         }
     }
 
@@ -526,6 +576,7 @@ try {
     $auditSucceeded = $true
 }
 finally {
+    Restore-UnrealGeneratedConfig
     Pop-Location
     $resolved = [IO.Path]::GetFullPath($auditRoot)
     if (-not $resolved.StartsWith($projectRoot + [IO.Path]::DirectorySeparatorChar)) {
