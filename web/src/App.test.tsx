@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { Kps1MessageKind, type Kps1Frame } from "./protocol/kps1";
 import { BasePresentationTransport, type PresentationActionIntent, type PresentationConnection } from "./transport";
-import { proposalPayload, receiptPayload, snapshotPayload, testFrame } from "./test/presentationFixtures";
+import { globalReplayIndexPayload, proposalPayload, receiptPayload, snapshotPayload, testFrame } from "./test/presentationFixtures";
 
 vi.mock("./components/GlobalMissionViewer", () => ({
   GlobalMissionViewer: () => <section aria-label="Global mission director">Global viewer</section>,
@@ -54,11 +54,28 @@ describe("live compact Mission Control desk", () => {
   });
 
   it("opens nominal global replay as a read-only SIM Director presentation mode", async () => {
-    render(<App transport={new TestTransport()} experience="nominal-global" />);
+    const transport = new TestTransport();
+    render(<App transport={transport} experience="nominal-global" />);
     expect(await screen.findByText("KSA-G10R · Nominal global replay")).toBeInTheDocument();
     expect(screen.getByText("Global Flight Computer")).toBeInTheDocument();
     expect(screen.getByText("0 / 22,015")).toBeInTheDocument();
     expect(screen.getByText("KSA64 · Sim Director")).toBeInTheDocument();
+    act(() => transport.emit(testFrame(Kps1MessageKind.GlobalReplayIndex, globalReplayIndexPayload())));
+    const disposition = screen.getByRole("heading", { name: "Mission disposition" }).closest("section");
+    expect(disposition).not.toBeNull();
+    await waitFor(() => expect(within(disposition!).getByText("Primary achieved")).toBeInTheDocument());
+    const dispositionAxes = [...disposition!.querySelectorAll<HTMLElement>(".outcome-grid > div")];
+    expect(within(disposition!).getByText("Nominal success")).toBeInTheDocument();
+    expect(dispositionAxes.map((axis) => [axis.querySelector("dt")?.textContent, axis.querySelector("dd")?.textContent]))
+      .toEqual([
+        ["Objective", "Primary achieved"],
+        ["Vehicle", "Nominal"],
+        ["Procedure", "Completed"],
+        ["Operator", "Timely reference"],
+        ["Avionics", "Nominal"],
+        ["Evidence", "Complete"],
+      ]);
+    expect(dispositionAxes.every((axis) => axis.dataset.state === "success")).toBe(true);
   });
 
   it("submits Review, Stage, then Commit through the high-level transport", async () => {

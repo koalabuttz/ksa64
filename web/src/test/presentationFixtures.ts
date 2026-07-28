@@ -49,6 +49,15 @@ export function dispositionPayload(overall = 3): Uint8Array {
   const w = new Writer("PDS1"); w.u8(overall); w.u8(3); w.u8(3); w.u8(2); w.u8(2); w.u8(2); w.u8(1); w.reserved(1); w.u32(0x12b01001); return w.finish();
 }
 
+export function globalReplayIndexPayload(): Uint8Array {
+  const w = new Writer("PGI1");
+  w.u32(0x12c10001); w.u32(0x12c10002); w.u32(0); w.u32(22_014);
+  w.u8(1);
+  for (let index = 0; index < 6; index += 1) w.u8(1);
+  w.reserved(1); w.u16(0); w.reserved(2);
+  return w.finish();
+}
+
 export function proposalPayload(permissions = 3): Uint8Array {
   const w = new Writer("PAP1"); w.u32(0x47535504); w.u32(0x1010); w.u8(1); w.u8(permissions); w.reserved(2);
   w.u32(6001); w.u32(6002); w.u32(6010); w.u32(6200); w.u32(0x3344); w.u32(0); w.text("Proposal GSU-04"); return w.finish();

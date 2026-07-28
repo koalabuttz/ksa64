@@ -412,6 +412,11 @@ async function runNominal(options: { readonly fpsMilliseconds?: number } = {}) {
     return element?.dataset.quality === "global-display-v1" &&
       Number(input?.max) >= 22_014 && semantic()?.releaseEpoch === 22_014 ? true : undefined;
   }, 120_000, "complete nominal GlobalDisplayV1 replay");
+  await waitFor(() => {
+    const authority = authorityState();
+    return authority.overall === "Nominal success" && authority.axes.length === 6 &&
+      authority.axes.every((axis) => axis.state === "success") ? true : undefined;
+  }, 10_000, "nominal terminal mission disposition");
   setSelect("Global display motion", "exact");
   const duration = Math.max(500, Math.min(options.fpsMilliseconds ?? 1_500, 10_000));
   const build = await buildIdentity();

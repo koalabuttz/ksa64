@@ -7,6 +7,7 @@ import { buildExactGlobalDisplay, buildLegacySchematicDisplay, type GlobalDispla
 import { plannedTrajectory } from "./model/missionReference";
 import type { TrajectoryPoint } from "./model/trajectory";
 import { usePresentationSession } from "./presentation/usePresentationSession";
+import type { GlobalReplayIndexV1 } from "./protocol/globalDisplay";
 import type { ActionOperation, ActionReceiptView, DispositionView, PredictionPathView, ProcedureView,
   ReleaseSampleView, TimelineEventView } from "./protocol/presentation";
 import { createDefaultPresentationTransport, type PresentationActionKind,
@@ -124,6 +125,20 @@ function outcomeAxes(value?: DispositionView) {
   return axes.map((axis) => ({ ...axis, state: axisState(axis.value) }));
 }
 
+function replayDisposition(value?: GlobalReplayIndexV1): DispositionView | undefined {
+  if (value === undefined || value.dispositionAxes.length !== 6) return undefined;
+  return {
+    overall: value.terminalDisposition,
+    objective: value.dispositionAxes[0] ?? 0,
+    vehicle: value.dispositionAxes[1] ?? 0,
+    procedure: value.dispositionAxes[2] ?? 0,
+    operator: value.dispositionAxes[3] ?? 0,
+    avionics: value.dispositionAxes[4] ?? 0,
+    evidence: value.dispositionAxes[5] ?? 0,
+    reasonIdentity: 0,
+  };
+}
+
 function downloadEvidence(bytes: Uint8Array): void {
   const blob = new Blob([bytes.slice().buffer], { type: "application/octet-stream" });
   const url = URL.createObjectURL(blob);
@@ -160,6 +175,7 @@ export function App({ transport: suppliedTransport, role: suppliedRole, experien
 
   const snapshot = demo ? undefined : state.snapshot;
   const liveProcedure = demo ? undefined : state.procedure;
+  const acceptedDisposition = state.disposition ?? replayDisposition(state.globalReplayIndex);
   const onboardPath = demo ? demoOnboard : (pathPoints(state.paths.get(2)).length > 0 ? pathPoints(state.paths.get(2)) : samplePoints(state.samples, "onboard"));
   const groundPath = demo ? demoGround : (pathPoints(state.paths.get(3)).length > 0 ? pathPoints(state.paths.get(3)) : samplePoints(state.samples, "ground"));
   const procedure = demo ? demoProcedures : procedureItems(liveProcedure);
@@ -169,7 +185,7 @@ export function App({ transport: suppliedTransport, role: suppliedRole, experien
     { label: "Vehicle", value: "Recovered", state: "success" as const },
     { label: "Procedure", value: "In progress", state: "active" as const },
     { label: "Avionics", value: "Degraded operational", state: "warning" as const },
-  ] : outcomeAxes(state.disposition);
+  ] : outcomeAxes(acceptedDisposition);
   const navigationValid = snapshot !== undefined && (snapshot.validityMask & SNAPSHOT_VALID_NAVIGATION) !== 0n;
   const groundEstimateValid = snapshot !== undefined && (snapshot.validityMask & SNAPSHOT_VALID_GROUND_ESTIMATE) !== 0n;
   const predictionValid = snapshot !== undefined && (snapshot.validityMask & SNAPSHOT_VALID_PREDICTION) !== 0n;
@@ -208,7 +224,7 @@ export function App({ transport: suppliedTransport, role: suppliedRole, experien
   const evidenceComplete = state.evidence?.complete === true && state.sealedEvidence !== undefined &&
     BigInt(state.sealedEvidence.byteLength) === state.evidence.totalLength;
   const evidenceReceived = state.evidenceAssembly?.receivedLength ?? 0;
-  const dispositionLabel = overallLabels[state.disposition?.overall ?? state.globalReplayIndex?.terminalDisposition ?? 0];
+  const dispositionLabel = overallLabels[acceptedDisposition?.overall ?? 0];
   const overall = demo ? "Contingency success" : dispositionLabel || lifecycleName(snapshot?.lifecycle);
   const phase12cActionState = phase12cEvidenceMode ? JSON.stringify({
     release_epoch: snapshot?.releaseEpoch ?? 0,
