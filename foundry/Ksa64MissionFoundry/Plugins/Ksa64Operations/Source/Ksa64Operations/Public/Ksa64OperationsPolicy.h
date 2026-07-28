@@ -26,6 +26,9 @@ KSA64OPERATIONS_API FString TimelineSourceLabel(uint32 Value);
 KSA64OPERATIONS_API EKsa64OperationsActionState ActionStateFromReceipt(uint32 State);
 KSA64OPERATIONS_API FString Sha256Hex(const uint8* Data, uint64 Length);
 KSA64OPERATIONS_API int64 NearestRankP99Nanoseconds(const TArray<int64>& Samples);
+KSA64OPERATIONS_API void PreserveHostEvidenceIdentity(
+    const FKsa64OperationsViewModel& Current,
+    FKsa64OperationsViewModel& Candidate);
 
 class KSA64OPERATIONS_API FKsa64OperationsPacingController
 {

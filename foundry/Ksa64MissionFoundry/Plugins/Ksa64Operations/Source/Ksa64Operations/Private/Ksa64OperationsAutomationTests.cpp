@@ -877,8 +877,27 @@ bool FKsa64OperationsEvidenceStatusTest::RunTest(const FString&)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FKsa64OperationsEvidenceIdentityRetentionTest,
+    "KSA64.Phase12C.Operations.EvidenceIdentityRetention",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FKsa64OperationsEvidenceIdentityRetentionTest::RunTest(const FString&)
+{
+    FKsa64OperationsViewModel Saved;
+    Saved.EvidencePath = TEXT("C:/evidence/frozen.ksb11");
+    Saved.EvidenceSha256 = TEXT("7554111f28d8f3628ae3ca9d069fad34204e12f86252efd00ecf744c0ee0fcd4");
+    FKsa64OperationsViewModel Refreshed;
+    Refreshed.ReleaseEpoch = 21'591;
+    PreserveHostEvidenceIdentity(Saved, Refreshed);
+    TestEqual(TEXT("post-finalization poll preserves evidence path"), Refreshed.EvidencePath, Saved.EvidencePath);
+    TestEqual(TEXT("post-finalization poll preserves evidence SHA-256"), Refreshed.EvidenceSha256, Saved.EvidenceSha256);
+    TestEqual(TEXT("wire snapshot fields remain authoritative"), Refreshed.ReleaseEpoch, 21'591u);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FKsa64OperationsReplayToGuidedLifecycleTest,
-    "KSA64.Operations.Lifecycle.NominalReplayToGuided",
+    "KSA64.Phase12C.Operations.NominalReplayToGuided",
     EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FKsa64OperationsReplayToGuidedLifecycleTest::RunTest(const FString&)

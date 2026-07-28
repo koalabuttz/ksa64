@@ -196,6 +196,7 @@ bool UKsa64LiveMissionSubsystem::StartGuidedOperations()
     bAcceptanceVerified = false;
     ViewModel.bShutdownRequested = false;
     ViewModel.EvidencePath.Reset();
+    ViewModel.EvidenceSha256.Reset();
     ViewModel.EvidenceStatus = TEXT("EVIDENCE PENDING");
     ViewModel.bSessionOpen = true;
     ViewModel.SessionStatus = TEXT("OPENING");
@@ -925,7 +926,11 @@ bool UKsa64LiveMissionSubsystem::CopyCompletedEvidenceForAutomation(
 
 void UKsa64LiveMissionSubsystem::CloseForAutomation()
 {
-    if (Bridge.IsValid())
+    if (bGlobalReplayMode)
+    {
+        RequestShutdown();
+    }
+    else if (Bridge.IsValid())
     {
         Bridge->Close();
     }
@@ -1029,7 +1034,7 @@ void UKsa64LiveMissionSubsystem::PollBridge()
     const FKsa64OperationsViewModel Previous = ViewModel;
     Candidate.PresentationPace = ViewModel.PresentationPace;
     Candidate.bShutdownRequested = ViewModel.bShutdownRequested;
-    Candidate.EvidencePath = ViewModel.EvidencePath;
+    Ksa64OperationsPolicy::PreserveHostEvidenceIdentity(ViewModel, Candidate);
     Candidate.bAdvanceOutstanding = AdvanceTracker.IsOutstanding();
     ViewModel = MoveTemp(Candidate);
 

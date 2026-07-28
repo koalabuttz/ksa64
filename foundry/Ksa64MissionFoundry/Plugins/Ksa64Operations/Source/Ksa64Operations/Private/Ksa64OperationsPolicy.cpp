@@ -140,6 +140,14 @@ FString Sha256Hex(const uint8* Data, uint64 Length)
     return Output;
 }
 
+void PreserveHostEvidenceIdentity(
+    const FKsa64OperationsViewModel& Current,
+    FKsa64OperationsViewModel& Candidate)
+{
+    Candidate.EvidencePath = Current.EvidencePath;
+    Candidate.EvidenceSha256 = Current.EvidenceSha256;
+}
+
 bool IsTruthFilteredRole(uint32 Role)
 {
     // Unknown roles fail closed. SIM Director is the sole truth-bearing role.
