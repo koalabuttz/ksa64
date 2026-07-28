@@ -205,32 +205,46 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FKsa64GlobalViewerPublicationRecoveryTest::RunTest(const FString&)
 {
     using Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision;
+    uint32 ExpectedDisplayRelease = 0;
+    TestFalse(
+        TEXT("no display sample exists before the first operations boundary"),
+        Ksa64GlobalViewerPolicy::TryExpectedLatestGuidedDisplayRelease(
+            0, ExpectedDisplayRelease));
+    TestTrue(
+        TEXT("operations boundary maps to its last physically completed release"),
+        Ksa64GlobalViewerPolicy::TryExpectedLatestGuidedDisplayRelease(
+            100, ExpectedDisplayRelease));
+    TestEqual(
+        TEXT("boundary 100 last completed display release is 99"),
+        ExpectedDisplayRelease,
+        99u);
+
     uint32 WaitFrames = 0;
     for (uint32 Frame = 1; Frame < 600; ++Frame)
     {
         TestEqual(
             TEXT("trailing publication remains bounded wait before limit"),
             Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
-                99, 100, 600, WaitFrames),
+                98, ExpectedDisplayRelease, 600, WaitFrames),
             EKsa64GuidedDisplaySyncDecision::Wait);
     }
     TestEqual(TEXT("599 trailing frames were counted"), WaitFrames, 599u);
     TestEqual(
         TEXT("600th trailing frame fails closed"),
         Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
-            99, 100, 600, WaitFrames),
+            98, ExpectedDisplayRelease, 600, WaitFrames),
         EKsa64GuidedDisplaySyncDecision::RejectTimeout);
     TestEqual(TEXT("timeout records its exact bound"), WaitFrames, 600u);
     TestEqual(
-        TEXT("exact alignment recovers and resets the bound"),
+        TEXT("last completed release aligns and resets the bound"),
         Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
-            100, 100, 600, WaitFrames),
+            99, ExpectedDisplayRelease, 600, WaitFrames),
         EKsa64GuidedDisplaySyncDecision::Aligned);
     TestEqual(TEXT("alignment resets the wait counter"), WaitFrames, 0u);
     TestEqual(
-        TEXT("display publication ahead of authority rejects immediately"),
+        TEXT("display publication ahead of the completed release rejects immediately"),
         Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
-            101, 100, 600, WaitFrames),
+            100, ExpectedDisplayRelease, 600, WaitFrames),
         EKsa64GuidedDisplaySyncDecision::RejectAhead);
 
     TestFalse(

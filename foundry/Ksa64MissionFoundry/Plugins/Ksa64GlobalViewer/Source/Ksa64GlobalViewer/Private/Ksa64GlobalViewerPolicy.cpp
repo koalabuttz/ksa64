@@ -86,20 +86,34 @@ uint32 HashPathPoints(
     return Hash;
 }
 
+bool TryExpectedLatestGuidedDisplayRelease(
+    uint32 OperationsRelease,
+    uint32& OutDisplayRelease)
+{
+    if (OperationsRelease == 0)
+    {
+        return false;
+    }
+    // FullMissionSession::release_epoch is the next release boundary. The
+    // display product at that boundary is the interval that just completed.
+    OutDisplayRelease = OperationsRelease - 1;
+    return true;
+}
+
 EKsa64GuidedDisplaySyncDecision ObserveGuidedDisplaySync(
     uint32 DisplayRelease,
-    uint32 OperationsRelease,
+    uint32 ExpectedDisplayRelease,
     uint32 FrameLimit,
     uint32& WaitFrames)
 {
-    if (DisplayRelease < OperationsRelease)
+    if (DisplayRelease < ExpectedDisplayRelease)
     {
         ++WaitFrames;
         return WaitFrames >= FrameLimit
             ? EKsa64GuidedDisplaySyncDecision::RejectTimeout
             : EKsa64GuidedDisplaySyncDecision::Wait;
     }
-    if (DisplayRelease > OperationsRelease)
+    if (DisplayRelease > ExpectedDisplayRelease)
     {
         return EKsa64GuidedDisplaySyncDecision::RejectAhead;
     }

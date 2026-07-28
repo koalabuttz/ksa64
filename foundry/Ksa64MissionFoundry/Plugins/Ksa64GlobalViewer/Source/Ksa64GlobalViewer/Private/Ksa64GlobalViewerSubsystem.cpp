@@ -2809,10 +2809,18 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
     UKsa64LiveMissionSubsystem* Operations = GetOperations();
     if (Operations == nullptr) return false;
     const FKsa64OperationsViewModel& View = Operations->GetViewModel();
+    uint32 ExpectedDisplayRelease = 0;
+    if (!Ksa64GlobalViewerPolicy::TryExpectedLatestGuidedDisplayRelease(
+            View.ReleaseEpoch,
+            ExpectedDisplayRelease))
+    {
+        FailGlobalEvidence(TEXT("guided evidence cannot synchronize before the first release boundary"));
+        return false;
+    }
     const Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision SyncDecision =
         Ksa64GlobalViewerPolicy::ObserveGuidedDisplaySync(
             SemanticState.ReleaseEpoch,
-            View.ReleaseEpoch,
+            ExpectedDisplayRelease,
             GlobalEvidenceGuidedSyncFrameLimit,
             GlobalEvidenceGuidedSyncWaitFrames);
     if (SyncDecision
@@ -2824,9 +2832,10 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
         == Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision::RejectTimeout)
     {
         FailGlobalEvidence(FString::Printf(
-            TEXT("guided display did not reach operations release within %u frames: display=%u operations=%u"),
+            TEXT("guided display did not reach the completed release within %u frames: display=%u expected=%u operations_boundary=%u"),
             GlobalEvidenceGuidedSyncWaitFrames,
             SemanticState.ReleaseEpoch,
+            ExpectedDisplayRelease,
             View.ReleaseEpoch));
         return false;
     }
@@ -2834,8 +2843,9 @@ bool UKsa64GlobalViewerSubsystem::WriteGlobalEvidenceGuidedRecord(
         == Ksa64GlobalViewerPolicy::EKsa64GuidedDisplaySyncDecision::RejectAhead)
     {
         FailGlobalEvidence(FString::Printf(
-            TEXT("guided display crossed operations release: display=%u operations=%u"),
+            TEXT("guided display crossed the completed release: display=%u expected=%u operations_boundary=%u"),
             SemanticState.ReleaseEpoch,
+            ExpectedDisplayRelease,
             View.ReleaseEpoch));
         return false;
     }

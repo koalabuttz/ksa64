@@ -18,9 +18,12 @@ enum class EKsa64GuidedDisplaySyncDecision : uint8
     RejectTimeout,
 };
 
+bool TryExpectedLatestGuidedDisplayRelease(
+    uint32 OperationsRelease,
+    uint32& OutDisplayRelease);
 EKsa64GuidedDisplaySyncDecision ObserveGuidedDisplaySync(
     uint32 DisplayRelease,
-    uint32 OperationsRelease,
+    uint32 ExpectedDisplayRelease,
     uint32 FrameLimit,
     uint32& WaitFrames);
 bool RequiredGlobalPathSourcesAvailable(
