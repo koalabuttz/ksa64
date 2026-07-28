@@ -900,11 +900,32 @@ bool FKsa64OperationsReplayToGuidedLifecycleTest::RunTest(const FString&)
         return false;
     }
     Ksa64GlobalDisplayAvailabilityV1 Availability = {};
+    EKsa64OperationsAdapterResult AvailabilityResult =
+        EKsa64OperationsAdapterResult::NoData;
+    const double AvailabilityDeadline = FPlatformTime::Seconds() + 15.0;
+    do
+    {
+        AvailabilityResult = Adapter->GlobalDisplayAvailability(Availability);
+        if (AvailabilityResult == EKsa64OperationsAdapterResult::Ok)
+        {
+            break;
+        }
+        if (AvailabilityResult != EKsa64OperationsAdapterResult::NoData
+            && AvailabilityResult != EKsa64OperationsAdapterResult::Unchanged)
+        {
+            break;
+        }
+        FPlatformProcess::Sleep(0.0005f);
+    }
+    while (FPlatformTime::Seconds() < AvailabilityDeadline);
     TestEqual(
-        TEXT("nominal replay publishes GlobalDisplayV1"),
-        Adapter->GlobalDisplayAvailability(Availability),
+        TEXT("nominal replay publishes GlobalDisplayV1 within the bounded worker-publication gate"),
+        AvailabilityResult,
         EKsa64OperationsAdapterResult::Ok);
-    TestEqual(TEXT("nominal replay is SIM Director"), Availability.role, 5u);
+    if (AvailabilityResult == EKsa64OperationsAdapterResult::Ok)
+    {
+        TestEqual(TEXT("nominal replay is SIM Director"), Availability.role, 5u);
+    }
     TestEqual(
         TEXT("nominal replay closes synchronously through its dedicated path"),
         Adapter->RequestShutdown(),
