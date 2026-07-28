@@ -3,6 +3,10 @@
 #include "PrimitiveSceneProxy.h"
 #include "SceneManagement.h"
 
+#if PLATFORM_WINDOWS && !RHI_RAYTRACING
+#error "Ksa64GlobalViewer must match the UE 5.8 Launcher renderer ABI; keep RayTracingMode=Inline and runtime r.RayTracing=False"
+#endif
+
 namespace
 {
 class FKsa64GlobalLineSceneProxy final : public FPrimitiveSceneProxy
